@@ -9,3 +9,10 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+surf = { git = "git://github.com/http-rs/surf.git" }
+async-tar = "0.1.1"
+async-std = { version = "1.6.2", features = ["attributes"] }
+clap = { git = "https://github.com/clap-rs/clap" }
+anyhow = "1.0.31"
+smol = "0.1.18"
+async-compression = { version = "0.3.5", features = ["gzip", "futures-io"] }
