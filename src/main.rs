@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use anyhow;
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::prelude::*;
@@ -24,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     let uri = format!("{}/-/{}-{}.tgz", opts.pkg, opts.pkg, opts.version);
     let client = OroClient::new("https://registry.npmjs.org");
     let mut tasks = Vec::new();
-    for i in 0..20 {
+    for i in 0..10 {
         let path = format!("./cacache/{}", i);
         tasks.push(async { cache_contents(path, client.get(&uri).await?).await });
     }
@@ -43,7 +41,6 @@ async fn cache_contents(path: impl AsRef<std::path::Path>, resp: Response) -> an
     let mut ar = Archive::new(decoder);
     let mut entries = ar.entries()?;
     let mut n: u32 = 0;
-    let start = std::time::Instant::now();
 
     while let Some(file) = entries.next().await {
         n += 1;
