@@ -1322,6 +1322,7 @@ dependencies = [
  "bincode",
  "cacache",
  "futures 0.3.5",
+ "oro-error-code",
  "ssri",
  "thiserror",
 ]

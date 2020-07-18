@@ -19,6 +19,9 @@ impl OroClient {
     }
 
     pub async fn get(&self, uri: impl AsRef<str>) -> anyhow::Result<Response> {
-        self.client.get(self.base.join(uri.as_ref()).unwrap()).await.map_err(|e| anyhow::anyhow!(e))
+        self.client
+            .get(self.base.join(uri.as_ref()).unwrap())
+            .await
+            .map_err(|e| anyhow::anyhow!(e))
     }
 }
