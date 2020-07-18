@@ -1,14 +1,19 @@
+use std::collections::HashMap;
+
 use anyhow;
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::prelude::*;
 use async_tar::Archive;
-use cacache::Writer;
+use bincode;
+use cacache::WriteOpts;
 use clap::Clap;
 use futures;
 
 use client::{OroClient, Response};
+use integrity::AsyncIntegrity;
 
 mod client;
+mod integrity;
 
 #[derive(Clap)]
 struct Opts {
@@ -22,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     let uri = format!("{}/-/{}-{}.tgz", opts.pkg, opts.pkg, opts.version);
     let client = OroClient::new("https://registry.npmjs.org");
     let mut tasks = Vec::new();
-    for i in 0..10 {
+    for i in 0..1 {
         let path = format!("./cacache/{}", i);
         tasks.push(async { cache_contents(path, client.get(&uri).await?).await });
     }
@@ -32,47 +37,43 @@ async fn main() -> anyhow::Result<()> {
 
 async fn cache_contents(path: impl AsRef<std::path::Path>, resp: Response) -> anyhow::Result<()> {
     use async_std::fs;
-    use async_std::io::BufReader;
+    use async_std::io::{self, BufReader};
     let path = std::path::PathBuf::from(path.as_ref());
 
     fs::create_dir_all(&path).await?;
 
-    let decoder = GzipDecoder::new(BufReader::new(resp));
+    let sri_builder = AsyncIntegrity::new(resp);
+    let decoder = GzipDecoder::new(BufReader::new(sri_builder));
     let mut ar = Archive::new(decoder);
     let mut entries = ar.entries()?;
-    let mut n: u32 = 0;
+    let mut entry_hash = HashMap::new();
 
     while let Some(file) = entries.next().await {
-        n += 1;
-        let mut f = file?;
+        let f = file?;
         let size = f.header().size()?;
         let path = path.clone();
-        if size > 0 && size < 10 * 1024 * 1024 {
-            use std::fs::OpenOptions;
-            let mut buf = Vec::new();
-            f.read_to_end(&mut buf).await?;
-            async_std::task::spawn_blocking(move || {
-                let fd = OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .open(path.join(format!("{}", n)))?;
-                fd.set_len(size)?;
-                let mut mmap = unsafe { memmap::MmapMut::map_mut(&fd)? };
-                mmap.copy_from_slice(&buf);
-                mmap.flush_async()?;
-                Ok::<(), anyhow::Error>(())
-            })
+        let key = f.path()?.display().to_string();
+        let mut writer = WriteOpts::new()
+            .size(size as usize)
+            .open_hash(&path)
             .await?;
-        } else {
-            use async_std::fs::OpenOptions;
-            let fd = OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open(path.join(format!("{}", n)))
-                .await?;
-            async_std::io::copy(f, fd).await?;
-        }
+        io::copy(f, async_std::io::BufWriter::new(&mut writer)).await?;
+        let sri = writer.commit().await?;
+        entry_hash.insert(key, sri);
     }
+    std::mem::drop(entries);
+    let sri = ar
+        .into_inner()
+        .map_err(|_| anyhow::anyhow!("failed to get inner reader"))?
+        .into_inner()
+        .into_inner()
+        .opts
+        .result();
+    cacache::write(
+        &path,
+        format!("orogene::pkg::{}", sri),
+        bincode::serialize(&entry_hash)?,
+    )
+    .await?;
     Ok(())
 }
