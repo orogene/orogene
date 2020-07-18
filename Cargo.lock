@@ -323,7 +323,9 @@ dependencies = [
 
 [[package]]
 name = "cacache"
-version = "7.0.0"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "159f24b3d31d4498536a317776f6d766c0cbf22a4627a607d03ec8903d910c80"
 dependencies = [
  "async-std",
  "digest",
