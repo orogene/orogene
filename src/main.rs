@@ -67,7 +67,7 @@ async fn cache_contents(path: impl AsRef<std::path::Path>, resp: Response) -> an
         .map_err(|_| anyhow::anyhow!("failed to get inner reader"))?
         .into_inner()
         .into_inner()
-        .opts
+        .into_inner()
         .result();
     cacache::write(
         &path,

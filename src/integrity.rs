@@ -16,6 +16,10 @@ impl<R: AsyncBufRead + Unpin> AsyncIntegrity<R> {
             opts: IntegrityOpts::new(),
         }
     }
+
+    pub fn into_inner(self) -> IntegrityOpts {
+        self.opts
+    }
 }
 
 impl<R: AsyncBufRead + Unpin> AsyncRead for AsyncIntegrity<R> {
