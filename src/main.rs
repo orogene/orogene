@@ -1,12 +1,11 @@
 use anyhow;
 use clap::Clap;
 use futures::stream::{futures_unordered::FuturesUnordered, StreamExt};
+use rogga::cache;
 
 use client::OroClient;
 
-mod cache;
 mod client;
-mod integrity;
 
 #[derive(Clap)]
 struct Opts {
@@ -23,7 +22,9 @@ async fn main() -> anyhow::Result<()> {
     let mut futs = FuturesUnordered::new();
     for i in 0..opts.iterations {
         let path = format!("./cacache/{}", i);
-        futs.push(async { cache::from_tarball(path, client.get(&uri).await?).await });
+        futs.push(async {
+            Ok::<_, anyhow::Error>(cache::from_tarball(path, client.get(&uri).await?).await?)
+        });
     }
     while let Some(result) = futs.next().await {
         result?;

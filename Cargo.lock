@@ -1056,15 +1056,13 @@ dependencies = [
  "cacache",
  "clap",
  "embed-resource",
- "flate2",
  "futures 0.3.5",
  "http-types",
- "memmap",
  "pin-project-lite",
+ "rogga",
  "smol",
  "ssri",
  "surf",
- "tar",
 ]
 
 [[package]]
@@ -1249,6 +1247,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3acd125665422973a33ac9d3dd2df85edad0f4ae9b00dafb1a05e43a9f5ef8e7"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "rogga"
+version = "0.1.0"
+dependencies = [
+ "async-compression",
+ "async-std",
+ "async-tar",
+ "bincode",
+ "cacache",
+ "futures 0.3.5",
+ "ssri",
+ "thiserror",
 ]
 
 [[package]]
@@ -1601,18 +1613,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "tar"
-version = "0.4.29"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a4c1d0bee3230179544336c15eefb563cf0302955d962e456542323e8c2e8a"
-dependencies = [
- "filetime",
- "libc",
- "redox_syscall",
- "xattr",
 ]
 
 [[package]]
