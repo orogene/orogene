@@ -7,10 +7,11 @@ use async_tar::Archive;
 use bincode;
 use cacache::WriteOpts;
 use futures::{self, io::AsyncBufRead};
+use ssri::Integrity;
 
 use crate::integrity::AsyncIntegrity;
 
-pub async fn from_tarball<P, R>(cache: P, tarball: R) -> anyhow::Result<()>
+pub async fn from_tarball<P, R>(cache: P, tarball: R) -> anyhow::Result<Integrity>
 where
     P: AsRef<std::path::Path>,
     R: AsyncBufRead + Unpin + Send + Sync,
@@ -48,11 +49,10 @@ where
         .into_inner()
         .into_inner()
         .result();
-    cacache::write(
+    Ok(cacache::write(
         &path,
-        format!("orogene::pkg::{}", sri),
+        format!("orogene::pkg::{}", sri.to_string()),
         bincode::serialize(&entry_hash)?,
     )
-    .await?;
-    Ok(())
+    .await?)
 }
