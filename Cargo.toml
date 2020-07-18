@@ -11,6 +11,8 @@ build = "build.rs"
 members = ["crates/*"]
 
 [dependencies]
+oro-error-code = { path = "./crates/oro-error-code" }
+package-arg = { path = "./crates/package-arg" }
 rogga = { path = "./crates/rogga" }
 
 surf = { git = "git://github.com/http-rs/surf.git", default-features = false, features = ["h1-client"]}

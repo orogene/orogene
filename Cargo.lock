@@ -77,6 +77,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85bb70cc08ec97ca5450e6eba421deeea5f172c0fc61f78b5357b2a8e8be195f"
 
 [[package]]
+name = "arrayvec"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
+
+[[package]]
 name = "async-attributes"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -479,6 +485,17 @@ name = "data-encoding"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72aa14c04dfae8dd7d8a2b1cb7ca2152618cd01336dbfe704b8dcbf8d41dbd69"
+
+[[package]]
+name = "derive_more"
+version = "0.99.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "298998b1cf6b5b2c8a7b023dfd45821825ce3ba8a8af55c921a0e734e4653f76"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "digest"
@@ -898,6 +915,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
+name = "lexical-core"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db65c6da02e61f55dae90a0ae427b2a5f6b3e8db09f58d10efab23af92592616"
+dependencies = [
+ "arrayvec",
+ "bitflags",
+ "cfg-if",
+ "ryu",
+ "static_assertions",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -984,6 +1014,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nom"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+dependencies = [
+ "lexical-core",
+ "memchr",
+ "version_check",
+]
+
+[[package]]
 name = "num_cpus"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1045,6 +1086,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oro-error-code"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+]
+
+[[package]]
 name = "orogene"
 version = "0.1.0"
 dependencies = [
@@ -1058,6 +1106,8 @@ dependencies = [
  "embed-resource",
  "futures 0.3.5",
  "http-types",
+ "oro-error-code",
+ "package-arg",
  "pin-project-lite",
  "rogga",
  "smol",
@@ -1070,6 +1120,19 @@ name = "os_str_bytes"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06de47b848347d8c4c94219ad8ecd35eb90231704b067e67e6ae2e36ee023510"
+
+[[package]]
+name = "package-arg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "nom",
+ "oro-error-code",
+ "percent-encoding",
+ "semver",
+ "thiserror",
+ "url",
+]
 
 [[package]]
 name = "parking"
@@ -1507,6 +1570,12 @@ checksum = "b0437cfb83762844799a60e1e3b489d5ceb6a650fbacb86437badc1b6d87b246"
 dependencies = [
  "version_check",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stdweb"
