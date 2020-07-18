@@ -2,7 +2,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use futures::prelude::*;
-use ssri::IntegrityOpts;
+use ssri::{Algorithm, IntegrityOpts};
 
 pub struct AsyncIntegrity<R: AsyncBufRead> {
     pub opts: IntegrityOpts,
@@ -13,7 +13,7 @@ impl<R: AsyncBufRead + Unpin> AsyncIntegrity<R> {
     pub fn new(reader: R) -> Self {
         Self {
             reader,
-            opts: IntegrityOpts::new(),
+            opts: IntegrityOpts::new().algorithm(Algorithm::Sha256),
         }
     }
 
