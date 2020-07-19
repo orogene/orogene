@@ -56,23 +56,28 @@ impl OroClient {
                 parse_err @ Err(_) => match res.body_string().await {
                     Ok(msg) => msg,
                     body_err @ Err(_) => {
-                        return Err(OroClientError::res_err(&res, vec![
-                            format!("{}", Code::OR1002),
-                            format!("{:?}", parse_err),
-                            format!("{:?}", body_err)
-                        ]));
+                        return Err(OroClientError::res_err(
+                            &res,
+                            vec![
+                                format!("{}", Code::OR1002),
+                                format!("{:?}", parse_err),
+                                format!("{:?}", body_err),
+                            ],
+                        ));
                     }
                 },
             };
-            Err(OroClientError::res_err(&res, vec![
-                format!(
-                "{}",
-                Code::OR1003 {
-                    registry: self.base.to_string(),
-                    status: res.status(),
-                    message: msg,
-                })
-            ]))
+            Err(OroClientError::res_err(
+                &res,
+                vec![format!(
+                    "{}",
+                    Code::OR1003 {
+                        registry: self.base.to_string(),
+                        status: res.status(),
+                        message: msg,
+                    }
+                )],
+            ))
         } else {
             Ok(res)
         }

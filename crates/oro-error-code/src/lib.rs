@@ -21,8 +21,17 @@ pub enum OroErrCode {
     OR1002,
 
     /// Failed to ping
-    #[display(fmt = "OR1003: Error response from registry {}: {} {}", registry, status, message)]
-    OR1003 { registry: String, status: StatusCode, message: String },
+    #[display(
+        fmt = "OR1003: Error response from registry {}: {} {}",
+        registry,
+        status,
+        message
+    )]
+    OR1003 {
+        registry: String,
+        status: StatusCode,
+        message: String,
+    },
 
     /// Failed to parse response body in ping response
     #[display(fmt = "OR1004: Failed to parse response body")]
