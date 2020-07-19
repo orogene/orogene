@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::prelude::*;
 use async_tar::Archive;
-use bincode;
 use cacache::WriteOpts;
 use futures::{self, io::AsyncBufRead};
 use ssri::Integrity;

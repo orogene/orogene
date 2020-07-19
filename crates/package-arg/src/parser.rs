@@ -14,7 +14,7 @@ use nom::{Err, IResult};
 
 use crate::types::{PackageArg, PackageArgError, VersionReq};
 
-const JS_ENCODED: &'static AsciiSet = {
+const JS_ENCODED: &AsciiSet = {
     &NON_ALPHANUMERIC
         .remove(b'-')
         .remove(b'_')
@@ -33,15 +33,12 @@ pub fn parse_package_arg<I: AsRef<str>>(input: I) -> Result<PackageArg, PackageA
         Ok((_, arg)) => Ok(arg),
         Err(err) => Err(PackageArgError::ParseError(ErrCode::OR1000 {
             input: input.into(),
-            msg: format!(
-                "{}",
-                match err {
-                    Err::Error(e) => convert_error(input, e),
-                    Err::Failure(e) => convert_error(input, e),
-                    Err::Incomplete(_) => "More data was needed".into(),
-                }
-            ),
-        }))?,
+            msg: match err {
+                Err::Error(e) => convert_error(input, e),
+                Err::Failure(e) => convert_error(input, e),
+                Err::Incomplete(_) => "More data was needed".into(),
+            },
+        })),
     }
 }
 
@@ -218,7 +215,7 @@ where
 {
     map(
         recognize(tuple((tag("."), opt(tag(".")), many1(path_sep), rest))),
-        |p| PathBuf::from(p),
+        PathBuf::from,
     )(input)
 }
 
@@ -245,7 +242,7 @@ where
             ),
             rest,
         )),
-        |p| PathBuf::from(p),
+        PathBuf::from,
     )(input)
 }
 
