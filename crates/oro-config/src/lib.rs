@@ -15,7 +15,8 @@ impl Default for OroConfigOptions {
         OroConfigOptions {
             global: true,
             env: true,
-            global_config_file: ProjectDirs::from("dev", "orogene", "orogene")
+            // TODO: Move this to main app.
+            global_config_file: ProjectDirs::from("", "", "orogene")
                 .map(|d| d.config_dir().to_owned().join("ororc.toml")),
         }
     }
