@@ -1,6 +1,6 @@
-use anyhow::Result;
+use package_arg::{PackageArg, PackageArgError, VersionReq};
 
-use package_arg::{PackageArg, VersionReq};
+type Result<T> = std::result::Result<T, PackageArgError>;
 
 fn ppa(input: &str) -> Result<PackageArg> {
     input.parse()
@@ -94,7 +94,9 @@ fn npm_pkg_with_req() -> Result<()> {
         PackageArg::Npm {
             scope: None,
             name: "hello-world".into(),
-            requested: Some(VersionReq::Version(semver::Version::parse("1.2.3")?))
+            requested: Some(VersionReq::Version(
+                semver::Version::parse("1.2.3").unwrap()
+            ))
         }
     );
     Ok(())
@@ -122,7 +124,9 @@ fn npm_pkg_scoped_with_req() -> Result<()> {
         PackageArg::Npm {
             scope: Some("hello".into()),
             name: "world".into(),
-            requested: Some(VersionReq::Version(semver::Version::parse("1.2.3")?))
+            requested: Some(VersionReq::Version(
+                semver::Version::parse("1.2.3").unwrap()
+            ))
         }
     );
     Ok(())
@@ -136,7 +140,9 @@ fn npm_pkg_prefixed_with_req() -> Result<()> {
         PackageArg::Npm {
             scope: Some("hello".into()),
             name: "world".into(),
-            requested: Some(VersionReq::Version(semver::Version::parse("1.2.3")?))
+            requested: Some(VersionReq::Version(
+                semver::Version::parse("1.2.3").unwrap()
+            ))
         }
     );
     Ok(())

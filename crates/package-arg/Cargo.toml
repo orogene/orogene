@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 oro-error-code = { path = "../oro-error-code" }
 
-anyhow = "1.0.20"
 url = "2.1.0"
 semver = "0.9.0"
 nom = "5.0.1"

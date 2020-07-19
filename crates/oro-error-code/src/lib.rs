@@ -4,7 +4,7 @@ use derive_more::Display;
 /// codes have an M:N relationship to actual errors and are intended to
 /// provide users with additional context that they can easily look up in the
 /// `orogene` documentation.
-#[derive(Display)]
+#[derive(Debug, Display)]
 pub enum OroErrCode {
     /// Failed to parse a package arg for some reason. The message includes
     /// the actual error.

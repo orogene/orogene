@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use package_arg::{PackageArg, PackageArgError};
 
-use package_arg::PackageArg;
+type Result<T> = std::result::Result<T, PackageArgError>;
 
 fn ppa(input: &str) -> Result<PackageArg> {
     input.parse()

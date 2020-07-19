@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
 use oro_error_code::OroErrCode as ErrCode;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 
@@ -28,11 +27,11 @@ const JS_ENCODED: &'static AsciiSet = {
         .remove(b')')
 };
 
-pub fn parse_package_arg<I: AsRef<str>>(input: I) -> Result<PackageArg> {
+pub fn parse_package_arg<I: AsRef<str>>(input: I) -> Result<PackageArg, PackageArgError> {
     let input = &input.as_ref()[..];
     match all_consuming(package_arg::<VerboseError<&str>>)(input) {
         Ok((_, arg)) => Ok(arg),
-        Err(err) => Err(PackageArgError::ParseError).with_context(|| ErrCode::OR1000 {
+        Err(err) => Err(PackageArgError::ParseError(ErrCode::OR1000 {
             input: input.into(),
             msg: format!(
                 "{}",
@@ -42,7 +41,7 @@ pub fn parse_package_arg<I: AsRef<str>>(input: I) -> Result<PackageArg> {
                     Err::Incomplete(_) => "More data was needed".into(),
                 }
             ),
-        })?,
+        }))?,
     }
 }
 
@@ -194,11 +193,11 @@ where
     )(input)
 }
 
-fn no_url_encode(tag: &str) -> Result<&str> {
+fn no_url_encode(tag: &str) -> Result<&str, PackageArgError> {
     if format!("{}", utf8_percent_encode(tag, JS_ENCODED)) == tag {
         Ok(tag)
     } else {
-        Err(anyhow!("invalid characters"))
+        Err(PackageArgError::InvalidCharacters(tag.into()))
     }
 }
 
@@ -236,7 +235,7 @@ where
                         if c.is_alphabetic() {
                             Ok(c)
                         } else {
-                            Err(anyhow!("drive letters can only be alphabetic"))
+                            Err(PackageArgError::InvalidDriveLetter(c))
                         }
                     }),
                     tag(":"),
