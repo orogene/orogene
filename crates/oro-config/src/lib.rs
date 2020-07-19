@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
 use directories::ProjectDirs;
