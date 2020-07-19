@@ -118,7 +118,7 @@ pub enum OroCmd {
 #[async_trait]
 impl OroCommand for Orogene {
     async fn execute(self) -> Result<()> {
-        log::info!("Running command: {:?}", self.subcommand);
+        log::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
         }
