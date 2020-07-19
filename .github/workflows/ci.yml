@@ -15,7 +15,10 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          # This should be `stable`, but docs currently fail to build outside
+          # of nightly because of
+          # https://github.com/SergioBenitez/cookie-rs/issues/153
+          toolchain: nightly
           components: rustfmt
           override: true
       - name: rustfmt
