@@ -30,7 +30,13 @@ pub struct Orogene {
         conflicts_with = "quiet"
     )]
     loglevel: log::LevelFilter,
-    #[clap(global = true, about = "Disable all output", long, short = 'q', conflicts_with = "loglevel")]
+    #[clap(
+        global = true,
+        about = "Disable all output",
+        long,
+        short = 'q',
+        conflicts_with = "loglevel"
+    )]
     quiet: bool,
     #[clap(global = true, long, about = "Format output as JSON.")]
     json: bool,

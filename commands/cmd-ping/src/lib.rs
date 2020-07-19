@@ -80,7 +80,10 @@ impl OroCommand for PingCmd {
                 println!("{}", output);
             }
         } else if !quiet {
-            eprintln!("payload: {}", res.body_string().await.unwrap_or_else(|_| "".into()));
+            eprintln!(
+                "payload: {}",
+                res.body_string().await.unwrap_or_else(|_| "".into())
+            );
         }
         Ok(())
     }
