@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::{Clap, FromArgMatches, IntoApp};
-use oro_command::{ArgMatches, OroCommand};
+use oro_command::{ArgMatches, OroCommand, OroCommandLayerConfig};
 use oro_config::{OroConfig, OroConfigOptions};
 
 use cmd_ping::PingCmd;
@@ -63,6 +63,17 @@ pub enum OroCmd {
 
 #[async_trait]
 impl OroCommand for Orogene {
+    async fn execute(self) -> Result<()> {
+        match self.subcommand {
+            // DsCmd::Config(cfg) => cfg.execute().await,
+            OroCmd::Ping(ping) => ping.execute().await,
+            // DsCmd::Shell(shell) => shell.execute().await,
+        }
+    }
+}
+
+#[async_trait]
+impl OroCommandLayerConfig for Orogene {
     fn layer_config(&mut self, args: ArgMatches, conf: OroConfig) -> Result<()> {
         match self.subcommand {
             // DsCmd::Config(ref mut cfg) => {
@@ -73,14 +84,6 @@ impl OroCommand for Orogene {
             } // DsCmd::Shell(ref mut shell) => {
               //     shell.layer_config(args.subcommand_matches("shell").unwrap().clone(), conf)
               // }
-        }
-    }
-
-    async fn execute(self) -> Result<()> {
-        match self.subcommand {
-            // DsCmd::Config(cfg) => cfg.execute().await,
-            OroCmd::Ping(ping) => ping.execute().await,
-            // DsCmd::Shell(shell) => shell.execute().await,
         }
     }
 }

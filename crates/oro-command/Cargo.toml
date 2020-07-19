@@ -5,7 +5,9 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
+oro-config = { path = "../oro-config" }
+oro-command-derive = { path = "../oro-command-derive" }
+
 anyhow = "1.0.24"
 clap = { git = "https://github.com/clap-rs/clap" }
-oro-config = { path = "../oro-config" }
 async-trait = "0.1.19"
