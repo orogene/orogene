@@ -1,13 +1,17 @@
-use anyhow;
-use http_types::Url;
 use surf::Client;
+use thiserror::Error;
 
-// TODO: eventually wrap this?
-pub use surf::Response;
+pub use surf::{http::Url, Error as SurfError, Response};
 
 pub struct OroClient {
     base: Url,
     client: Client,
+}
+
+#[derive(Debug, Error)]
+pub enum OroClientError {
+    #[error("Request failed: {0}")]
+    RequestError(SurfError),
 }
 
 impl OroClient {
@@ -18,10 +22,10 @@ impl OroClient {
         }
     }
 
-    pub async fn get(&self, uri: impl AsRef<str>) -> anyhow::Result<Response> {
+    pub async fn get(&self, uri: impl AsRef<str>) -> Result<Response, OroClientError> {
         self.client
             .get(self.base.join(uri.as_ref()).unwrap())
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(OroClientError::RequestError)
     }
 }
