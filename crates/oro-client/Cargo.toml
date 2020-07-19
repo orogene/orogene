@@ -1,0 +1,12 @@
+[package]
+name = "oro-client"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.31"
+http-types = "2.3.0"
+surf = { git = "git://github.com/http-rs/surf.git", default-features = false, features = ["h1-client"]}

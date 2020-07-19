@@ -1,0 +1,23 @@
+[package]
+name = "cmd-ping"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+oro-client = { path = "../../crates/oro-client" }
+oro-command = { path = "../../crates/oro-command" }
+oro-error-code = { path = "../../crates/oro-error-code" }
+
+anyhow = "1.0.25"
+clap = { git = "https://github.com/clap-rs/clap" }
+url = "2.1.0"
+async-trait = "0.1.19"
+serde = { version = "1.0.103", features = ["derive"] }
+serde_json = "1.0.42"
+
+[dev-dependencies]
+mockito = "0.26.0"
+async-std = { version = "1.2.0", features = ["attributes"] }

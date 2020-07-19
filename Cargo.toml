@@ -8,15 +8,22 @@ license = "MIT"
 build = "build.rs"
 
 [workspace]
-members = ["crates/*"]
+members = [".", "crates/*", "commands/*"]
+default-members = [".", "crates/*", "commands/*"]
 
 [dependencies]
+# Commands
+cmd-ping = { path = "./commands/cmd-ping" }
+
+# Workspace Deps
+oro-client = { path = "./crates/oro-client" }
+oro-command = { path = "./crates/oro-command" }
 oro-error-code = { path = "./crates/oro-error-code" }
 oro-config = { path = "./crates/oro-config" }
 package-arg = { path = "./crates/package-arg" }
 rogga = { path = "./crates/rogga" }
 
-surf = { git = "git://github.com/http-rs/surf.git", default-features = false, features = ["h1-client"]}
+# Regular deps
 async-tar = "0.1.1"
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }
 clap = { git = "https://github.com/clap-rs/clap" }
@@ -28,6 +35,7 @@ cacache = "8.0.0"
 futures = "0.3.5"
 bincode = "1.3.1"
 ssri = "5.0.0"
+async-trait = "0.1.36"
 
 [build-dependencies]
 embed-resource = "1.3.3"
