@@ -16,11 +16,8 @@ where
     P: AsRef<std::path::Path>,
     R: AsyncBufRead + Unpin + Send + Sync,
 {
-    use async_std::fs;
     use async_std::io::{self, BufReader};
     let path = std::path::PathBuf::from(cache.as_ref());
-
-    fs::create_dir_all(&path).await.to_internal()?;
 
     let sri_builder = AsyncIntegrity::new(tarball);
     let decoder = GzipDecoder::new(BufReader::new(sri_builder));
