@@ -26,10 +26,7 @@ struct OroCommandField {
 
 impl ToTokens for OroCommand {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let OroCommand {
-            ref data,
-            ..
-        } = *self;
+        let OroCommand { ref data, .. } = *self;
         let fields = data
             .as_ref()
             .take_struct()

@@ -92,10 +92,7 @@ mod tests {
 
     #[test]
     fn missing_config() -> Result<()> {
-        let config = OroConfigOptions::new()
-            .global(false)
-            .env(false)
-            .load()?;
+        let config = OroConfigOptions::new().global(false).env(false).load()?;
         assert!(config.get_str("store").is_err());
         Ok(())
     }
