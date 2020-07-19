@@ -32,7 +32,6 @@ impl Orogene {
         let mut oro = Orogene::from_arg_matches(&matches);
         let cfg = if let Some(file) = &oro.config {
             OroConfigOptions::new()
-                .local(false)
                 .global_config_file(Some(file.clone()))
                 .load()?
         } else {
