@@ -1367,6 +1367,9 @@ dependencies = [
 name = "oro-client"
 version = "0.1.0"
 dependencies = [
+ "http-types",
+ "oro-error-code",
+ "serde 1.0.114",
  "surf",
  "thiserror",
 ]
@@ -1408,6 +1411,7 @@ name = "oro-error-code"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "http-types",
 ]
 
 [[package]]

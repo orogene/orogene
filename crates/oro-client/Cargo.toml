@@ -7,5 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+oro-error-code = { path = "../oro-error-code" }
+
 surf = { git = "git://github.com/http-rs/surf.git", default-features = false, features = ["h1-client"]}
 thiserror = "1.0.20"
+serde = "1.0.114"
+http-types = "2.3.0"

@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 derive_more = "0.99.2"
+http-types = "2.3.0"

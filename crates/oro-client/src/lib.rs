@@ -1,3 +1,6 @@
+use http_types::StatusCode;
+use oro_error_code::OroErrCode as Code;
+use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;
 
@@ -12,6 +15,25 @@ pub struct OroClient {
 pub enum OroClientError {
     #[error("Request failed: {0}")]
     RequestError(SurfError),
+    #[error("{}", context.join("\n  "))]
+    ResponseError {
+        code: StatusCode,
+        context: Vec<String>,
+    },
+}
+
+impl OroClientError {
+    fn res_err(res: &Response, ctx: Vec<String>) -> Self {
+        Self::ResponseError {
+            code: res.status(),
+            context: ctx,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct NpmError {
+    message: String,
 }
 
 impl OroClient {
@@ -23,9 +45,36 @@ impl OroClient {
     }
 
     pub async fn get(&self, uri: impl AsRef<str>) -> Result<Response, OroClientError> {
-        self.client
+        let mut res = self
+            .client
             .get(self.base.join(uri.as_ref()).unwrap())
             .await
-            .map_err(OroClientError::RequestError)
+            .map_err(OroClientError::RequestError)?;
+        if res.status().is_client_error() || res.status().is_server_error() {
+            let msg = match res.body_json::<NpmError>().await {
+                Ok(err) => err.message,
+                parse_err @ Err(_) => match res.body_string().await {
+                    Ok(msg) => msg,
+                    body_err @ Err(_) => {
+                        return Err(OroClientError::res_err(&res, vec![
+                            format!("{}", Code::OR1002),
+                            format!("{:?}", parse_err),
+                            format!("{:?}", body_err)
+                        ]));
+                    }
+                },
+            };
+            Err(OroClientError::res_err(&res, vec![
+                format!(
+                "{}",
+                Code::OR1003 {
+                    registry: self.base.to_string(),
+                    status: res.status(),
+                    message: msg,
+                })
+            ]))
+        } else {
+            Ok(res)
+        }
     }
 }
