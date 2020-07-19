@@ -1,0 +1,14 @@
+[package]
+name = "oro-config"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+[dependencies]
+config = { version = "0.9.3", features = ["toml"] }
+serde = { version = "1.0.103", features = ["derive"] }
+directories = "2.0.2"
+anyhow = "1.0.24"
+
+[dev-dependencies]
+tempfile = "3.1.0"
