@@ -1,4 +1,3 @@
-use std::io::{self, Write};
 use std::time::Instant;
 
 use anyhow::{anyhow, Context, Result};
@@ -18,8 +17,12 @@ pub struct PingCmd {
         default_value = "https://registry.npmjs.org"
     )]
     registry: Url,
-    #[clap(long, about = "Format output as JSON.")]
+    #[clap(from_global)]
+    loglevel: log::LevelFilter,
+    #[clap(from_global)]
     json: bool,
+    #[clap(from_global)]
+    quiet: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,9 +33,9 @@ struct NpmError {
 #[async_trait]
 impl OroCommand for PingCmd {
     async fn execute(self) -> Result<()> {
-        let (mut stdout, mut stderr) = (io::stdout(), io::stderr());
-        if !self.json {
-            writeln!(stderr, "PING: {}", self.registry)?;
+        let quiet = self.loglevel == log::LevelFilter::Off || self.quiet;
+        if !quiet && !self.json {
+            eprintln!("ping: {}", self.registry);
         }
         let start = Instant::now();
         let mut res = OroClient::new(self.registry.clone())
@@ -55,34 +58,29 @@ impl OroCommand for PingCmd {
                 "{}",
                 Code::OR1003 {
                     registry: self.registry.to_string(),
-                    message: msg.clone()
+                    message: msg,
                 }
             ));
         }
 
         let time = start.elapsed().as_micros() as f32 / 1000.0;
-        if !self.json {
-            writeln!(stderr, "PONG: {}ms", time)?;
+        if !quiet && !self.json {
+            eprintln!("pong: {}ms", time);
         }
         if self.json {
             let details: Value =
-                serde_json::from_str(&res.body_string().await.unwrap_or("{}".into()))
+                serde_json::from_str(&res.body_string().await.unwrap_or_else(|_| "{}".into()))
                     .context(Code::OR1004)?;
-            writeln!(
-                stdout,
-                "{}",
-                serde_json::to_string_pretty(&serde_json::json!({
-                    "registry": self.registry.to_string(),
-                    "time": time,
-                    "details": details,
-                }))?
-            )?;
-        } else {
-            writeln!(
-                stderr,
-                "PONG: {}",
-                res.body_string().await.unwrap_or("".into())
-            )?;
+            let output = serde_json::to_string_pretty(&serde_json::json!({
+                "registry": self.registry.to_string(),
+                "time": time,
+                "details": details,
+            }))?;
+            if !quiet {
+                println!("{}", output);
+            }
+        } else if !quiet {
+            eprintln!("payload: {}", res.body_string().await.unwrap_or_else(|_| "".into()));
         }
         Ok(())
     }

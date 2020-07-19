@@ -9,5 +9,5 @@ oro-config = { path = "../oro-config" }
 oro-command-derive = { path = "../oro-command-derive" }
 
 anyhow = "1.0.24"
-clap = { git = "https://github.com/clap-rs/clap" }
+clap = { git = "https://github.com/zkat/clap" }
 async-trait = "0.1.19"
