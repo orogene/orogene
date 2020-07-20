@@ -100,6 +100,21 @@ fn absolute_path_windows_multiple_drive_letters() -> Result<()> {
 }
 
 #[test]
+fn named() -> Result<()> {
+    let res = ppa("foo@./hey")?;
+    assert_eq!(
+        res,
+        PackageArg::Alias {
+            name: "foo".into(),
+            package: Box::new(PackageArg::Dir {
+                path: PathBuf::from("./hey")
+            })
+        }
+    );
+    Ok(())
+}
+
+#[test]
 fn spaces() -> Result<()> {
     // NOTE: This succeeds in NPM, but we treat it as an error because we
     // require ./ for relative paths.

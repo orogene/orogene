@@ -57,7 +57,7 @@ where
     )(input)
 }
 
-/// prefixed_package-arg := ( "npm:" npm-pkg ) | ( "ent:" ent-pkg ) | ( [ "file:" ] path )
+/// prefixed_package-arg := ( "npm:" npm-pkg ) | ( [ "file:" ] path )
 fn prefixed_package_arg<'a, E>(input: &'a str) -> IResult<&'a str, PackageArg, E>
 where
     E: ParseError<&'a str>,

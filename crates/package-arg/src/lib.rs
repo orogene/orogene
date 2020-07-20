@@ -10,11 +10,15 @@ impl PackageArg {
         parser::parse_package_arg(&s.as_ref())
     }
 
-    pub fn resolve(name: String, spec: String) -> Result<PackageArg, PackageArgError> {
+    pub fn resolve<N, S>(name: N, spec: S) -> Result<PackageArg, PackageArgError>
+    where
+        N: AsRef<str>,
+        S: AsRef<str>,
+    {
         let mut arg = String::new();
-        arg.push_str(&name);
+        arg.push_str(name.as_ref());
         arg.push_str("@");
-        arg.push_str(&spec);
+        arg.push_str(spec.as_ref());
         parser::parse_package_arg(&arg)
     }
 
