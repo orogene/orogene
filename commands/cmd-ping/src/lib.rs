@@ -13,7 +13,8 @@ use url::Url;
 pub struct PingCmd {
     #[clap(
         about = "Registry to ping.",
-        default_value = "https://registry.npmjs.org"
+        default_value = "https://registry.npmjs.org",
+        long
     )]
     registry: Url,
     #[clap(from_global)]
