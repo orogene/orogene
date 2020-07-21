@@ -1,25 +1,55 @@
+use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures::io::AsyncRead;
-// use oro_client::OroClient;
+use oro_client::OroClient;
+use semver::Version;
 
-use super::{Manifest, PackageFetcher, PackageFetcherError, Packument};
+use super::PackageFetcher;
 
-pub struct RegistryFetcher {}
+use crate::data::{Manifest, Packument};
+use crate::error::{Error, Internal, Result};
+use crate::package::Package;
+
+pub struct RegistryFetcher {
+    client: Arc<Mutex<OroClient>>,
+    packument: Option<Packument>,
+    manifest: Option<Manifest>,
+}
+
 impl RegistryFetcher {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(client: Arc<Mutex<OroClient>>) -> Self {
+        Self {
+            client,
+            packument: None,
+            manifest: None,
+        }
     }
 }
 
 #[async_trait]
 impl PackageFetcher for RegistryFetcher {
-    async fn manifest(&self) -> Result<Manifest, PackageFetcherError> {
-        unimplemented!()
+    async fn manifest(&mut self, pkg: &Package) -> Result<Manifest> {
+        todo!()
     }
-    async fn packument(&self) -> Result<Packument, PackageFetcherError> {
-        unimplemented!()
+
+    async fn packument(&mut self, pkg: &Package) -> Result<Packument> {
+        if self.packument.is_none() {
+            let client = self.client.lock().await;
+            self.packument = Some(
+                client
+                    .get(pkg.name().await?)
+                    .await
+                    .with_context(|| "Failed to get packument.".into())?
+                    .body_json::<Packument>()
+                    .await
+                    .map_err(|e| Error::MiscError(e.to_string()))?,
+            );
+        }
+        // Safe unwrap. We literally JUST assigned it :P
+        Ok(self.packument.clone().unwrap())
     }
-    async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>, PackageFetcherError> {
+
+    async fn tarball(&mut self, arg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>> {
         unimplemented!()
     }
 }

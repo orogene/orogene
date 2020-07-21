@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use futures::io::AsyncRead;
-use ssri::Integrity;
-use thiserror::Error;
+
+use crate::data::{Manifest, Packument};
+use crate::error::Result;
+use crate::package::Package;
 
 pub use dir::DirFetcher;
 pub use registry::RegistryFetcher;
@@ -9,20 +11,9 @@ pub use registry::RegistryFetcher;
 mod dir;
 mod registry;
 
-pub struct Manifest {
-    pub name: String,
-    pub version: String,
-    pub integrity: Option<Integrity>,
-    pub resolved: String,
-}
-pub struct Packument {}
-
-#[derive(Debug, Error)]
-pub enum PackageFetcherError {}
-
 #[async_trait]
-pub trait PackageFetcher {
-    async fn manifest(&self) -> Result<Manifest, PackageFetcherError>;
-    async fn packument(&self) -> Result<Packument, PackageFetcherError>;
-    async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>, PackageFetcherError>;
+pub trait PackageFetcher: Send + Sync {
+    async fn manifest(&mut self, pkg: &Package) -> Result<Manifest>;
+    async fn packument(&mut self, pkg: &Package) -> Result<Packument>;
+    async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>>;
 }

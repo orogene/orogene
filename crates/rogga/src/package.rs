@@ -1,69 +1,56 @@
-use std::str::FromStr;
-
+use async_std::sync::RwLock;
 use futures::io::AsyncRead;
-use package_arg::{PackageArg, PackageArgError};
+use package_arg::PackageArg;
 
-use crate::fetch::{
-    DirFetcher, Manifest, PackageFetcher, PackageFetcherError, Packument, RegistryFetcher,
-};
+use crate::data::{Manifest, Packument};
+use crate::error::Result;
+use crate::fetch::PackageFetcher;
+
 pub struct Package {
-    spec: PackageArg,
-    fetcher: Box<dyn PackageFetcher>,
+    pub(crate) spec: PackageArg,
+    pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 
+/// A representation of a particular package, as requested.
 impl Package {
-    /// Creates a Package from a plain string spec, i.e. `foo@1.2.3`.
-    pub fn from_arg<T: AsRef<str>>(arg: T) -> Result<Self, PackageArgError> {
-        let spec = PackageArg::from_string(arg.as_ref())?;
-        let fetcher = pick_fetcher(&spec);
-        Ok(Self { spec, fetcher })
-    }
-
-    /// Creates a Package from a two-part dependency declaration, such as
-    /// `dependencies` entries in a `package.json`.
-    pub fn from_dep<T: AsRef<str>, U: AsRef<str>>(
-        name: T,
-        spec: U,
-    ) -> Result<Self, PackageArgError> {
-        let spec = PackageArg::resolve(name.as_ref(), spec.as_ref())?;
-        let fetcher = pick_fetcher(&spec);
-        Ok(Self { spec, fetcher })
-    }
-
-    pub async fn name(&self) -> Result<String, PackageFetcherError> {
+    /// Fetches the canonical name for this Package. That is, the name node
+    /// would use to load it. This method is fallible because it might need to
+    /// make filesystem or network queries in order to resolve to an actual
+    /// name.
+    pub async fn name(&self) -> Result<String> {
         use PackageArg::*;
         match self.spec {
-            Dir { .. } => Ok(self.manifest().await?.name),
+            Dir { ref path } => Ok(self.manifest().await?.name.unwrap_or_else(|| {
+                if let Some(name) = path.file_name() {
+                    name.to_string_lossy().into()
+                } else {
+                    "".into()
+                }
+            })),
             Alias { ref name, .. } | Npm { ref name, .. } => Ok(name.clone()),
         }
     }
 
-    pub async fn manifest(&self) -> Result<Manifest, PackageFetcherError> {
-        self.fetcher.manifest().await
+    /// Resolves this package from a request into a concrete name, version,
+    /// and fetch location.
+    pub async fn resolve(&mut self) -> Result<()> {
+        todo!()
     }
 
-    pub async fn packument(&self) -> Result<Packument, PackageFetcherError> {
-        self.fetcher.packument().await
+    /// Returns a standardized Manifest with general information about the
+    /// package.
+    pub async fn manifest(&self) -> Result<Manifest> {
+        self.fetcher.write().await.manifest(&self).await
     }
 
-    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>, PackageFetcherError> {
-        self.fetcher.tarball().await
+    /// Returns the packument with general metadata about the package and its
+    /// various versions.
+    pub async fn packument(&self) -> Result<Packument> {
+        self.fetcher.write().await.packument(&self).await
     }
-}
 
-fn pick_fetcher(arg: &PackageArg) -> Box<dyn PackageFetcher> {
-    use PackageArg::*;
-    match *arg {
-        Dir { .. } => Box::new(DirFetcher::new()),
-        Alias { ref package, .. } => pick_fetcher(package),
-        Npm { .. } => Box::new(RegistryFetcher::new()),
-    }
-}
-
-impl FromStr for Package {
-    type Err = PackageArgError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Package::from_arg(s)
+    /// Returns an AsyncRead of package data.
+    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>> {
+        self.fetcher.write().await.tarball(&self).await
     }
 }
