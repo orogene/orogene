@@ -24,7 +24,7 @@ jobs:
       - name: rustfmt
         run: cargo fmt --all -- --check
       - name: docs
-        run: cargo doc
+        run: cargo doc --no-deps
 
   build_and_test:
     name: Build & Test
