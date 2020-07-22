@@ -1,0 +1,42 @@
+[package]
+name = "cacache"
+version = "8.0.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+description = "Content-addressable, key-value, high-performance, on-disk cache."
+license-file = "LICENSE.md"
+repository = "https://github.com/zkat/cacache-rs"
+homepage = "https://github.com/zkat/cacache-rs"
+readme = "README.md"
+categories = [
+    "caching",
+    "filesystem"
+]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+ssri = "5.0.0"
+hex = "0.4.0"
+tempfile = "3.1.0"
+sha-1 = "0.8.1"
+sha2 = "0.8.0"
+digest = "0.8.1"
+serde_json = "1.0.41"
+serde = "1.0.102"
+serde_derive = "1.0.102"
+walkdir = "2.2.9"
+either = "1.5.3"
+async-std = { version = "1.0.1", features = ["unstable"] }
+thiserror = "1.0.5"
+futures = "0.3.1"
+memmap = "0.7.0"
+
+[dev-dependencies]
+async-attributes = "1.1.1"
+criterion = "0.3.0"
+
+[[bench]]
+name = "benchmarks"
+harness = false

@@ -10,12 +10,12 @@ edition = "2018"
 oro-client = { path = "../oro-client" }
 oro-error-code = { path = "../oro-error-code" }
 package-arg = { path = "../../crates/package-arg" }
+cacache = { path = "../../crates/cacache", version = "8.0.0" }
 
 async-tar = "0.1.1"
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }
 async-compression = { version = "0.3.5", features = ["gzip", "futures-io"] }
 bincode = "1.3.1"
-cacache = "8.0.0"
 futures = "0.3.5"
 ssri = "5.0.0"
 thiserror = "1.0.20"
