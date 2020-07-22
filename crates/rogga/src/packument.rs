@@ -10,9 +10,9 @@ pub struct Dist {
 
     pub integrity: Option<String>,
     #[serde(rename = "fileCount")]
-    pub file_count: Option<i64>,
+    pub file_count: Option<usize>,
     #[serde(rename = "unpackedSize")]
-    pub unpacked_size: Option<i64>,
+    pub unpacked_size: Option<usize>,
     #[serde(rename = "npm-signature")]
     pub npm_signature: Option<String>,
 
