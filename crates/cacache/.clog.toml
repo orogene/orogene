@@ -1,0 +1,5 @@
+[clog]
+repository = "https://github.com/zkat/cacache-rs"
+subtitle = ""
+changelog = "CHANGELOG.md"
+from-latest-tag = true
