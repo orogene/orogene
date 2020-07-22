@@ -33,9 +33,7 @@ impl PackageFetcher for RegistryFetcher {
 
     async fn packument(&mut self, pkg: &PackageRequest) -> Result<Packument> {
         if self.packument.is_none() {
-            log::trace!("No packument. Fetching from remote");
             let client = self.client.lock().await;
-            log::trace!("Lock on client acquired. Proceeding.");
             self.packument = Some(
                 client
                     .get(pkg.name().await?)
@@ -45,7 +43,6 @@ impl PackageFetcher for RegistryFetcher {
                     .await
                     .map_err(|e| Error::MiscError(e.to_string()))?,
             );
-            log::trace!("Request complete! Got a packument!");
         }
         // Safe unwrap. We literally JUST assigned it :P
         Ok(self.packument.clone().unwrap())
