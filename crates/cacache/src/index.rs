@@ -11,7 +11,6 @@ use digest::Digest;
 use either::{Left, Right};
 use futures::io::{AsyncBufReadExt, AsyncWriteExt};
 use futures::stream::StreamExt;
-use hex;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha1::Sha1;
@@ -343,7 +342,6 @@ async fn bucket_entries_async(bucket: &Path) -> InternalResult<Vec<SerializableM
 mod tests {
     use super::*;
     use async_std::task;
-    use tempfile;
 
     const MOCK_ENTRY: &str = "\n251d18a2b33264ea8655695fd23c88bd874cdea2c3dc9d8f9b7596717ad30fec\t{\"key\":\"hello\",\"integrity\":\"sha1-deadbeef\",\"time\":1234567,\"size\":0,\"metadata\":null}";
 

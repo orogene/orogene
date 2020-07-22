@@ -89,7 +89,7 @@ impl Reader {
             Err(Error::EntryNotFound(
                 cache.as_ref().to_path_buf(),
                 key.as_ref().into(),
-            ))?
+            ))
         }
     }
 
@@ -146,7 +146,7 @@ where
         Err(Error::EntryNotFound(
             cache.as_ref().to_path_buf(),
             key.as_ref().into(),
-        ))?
+        ))
     }
 }
 
@@ -198,7 +198,7 @@ where
         Err(Error::EntryNotFound(
             cache.as_ref().to_path_buf(),
             key.as_ref().into(),
-        ))?
+        ))
     }
 }
 
@@ -313,7 +313,7 @@ impl SyncReader {
             Err(Error::EntryNotFound(
                 cache.as_ref().to_path_buf(),
                 key.as_ref().into(),
-            ))?
+            ))
         }
     }
 
@@ -366,7 +366,7 @@ where
         Err(Error::EntryNotFound(
             cache.as_ref().to_path_buf(),
             key.as_ref().into(),
-        ))?
+        ))
     }
 }
 
@@ -414,7 +414,7 @@ where
         Err(Error::EntryNotFound(
             cache.as_ref().to_path_buf(),
             key.as_ref().into(),
-        ))?
+        ))
     }
 }
 
@@ -459,11 +459,9 @@ pub fn exists_sync<P: AsRef<Path>>(cache: P, sri: &Integrity) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use async_attributes;
     use async_std::fs as afs;
     use async_std::prelude::*;
     use std::fs;
-    use tempfile;
 
     #[async_attributes::test]
     async fn test_open() {

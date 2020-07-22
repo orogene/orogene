@@ -144,7 +144,7 @@ impl Writer {
         let writer_sri = self.writer.close().await?;
         if let Some(sri) = &self.opts.sri {
             if sri.matches(&writer_sri).is_none() {
-                return Err(ssri::Error::IntegrityCheckError(sri.clone(), writer_sri))?;
+                return Err(ssri::Error::IntegrityCheckError(sri.clone(), writer_sri).into());
             }
         } else {
             self.opts.sri = Some(writer_sri.clone());
@@ -403,14 +403,14 @@ impl SyncWriter {
         let writer_sri = self.writer.close()?;
         if let Some(sri) = &self.opts.sri {
             if sri.matches(&writer_sri).is_none() {
-                return Err(ssri::Error::IntegrityCheckError(sri.clone(), writer_sri))?;
+                return Err(ssri::Error::IntegrityCheckError(sri.clone(), writer_sri).into());
             }
         } else {
             self.opts.sri = Some(writer_sri.clone());
         }
         if let Some(size) = self.opts.size {
             if size != self.written {
-                return Err(Error::SizeError(size, self.written))?;
+                return Err(Error::SizeError(size, self.written));
             }
         }
         if let Some(key) = self.key {
@@ -423,8 +423,6 @@ impl SyncWriter {
 
 #[cfg(test)]
 mod tests {
-    use async_attributes;
-
     #[async_attributes::test]
     async fn round_trip() {
         let tmp = tempfile::tempdir().unwrap();

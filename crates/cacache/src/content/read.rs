@@ -3,7 +3,6 @@ use std::path::Path;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use async_std;
 use futures::prelude::*;
 use ssri::{Algorithm, Integrity, IntegrityChecker};
 

@@ -16,7 +16,7 @@ use tempfile::NamedTempFile;
 use crate::content::path;
 use crate::errors::{Internal, Result};
 
-pub const MAX_MMAP_SIZE: usize = 1 * 1024 * 1024;
+pub const MAX_MMAP_SIZE: usize = 1024 * 1024;
 
 pub struct Writer {
     cache: PathBuf,
@@ -347,7 +347,6 @@ fn io_error(err: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> std::io
 mod tests {
     use super::*;
     use async_std::task;
-    use tempfile;
     #[test]
     fn basic_write() {
         let tmp = tempfile::tempdir().unwrap();
