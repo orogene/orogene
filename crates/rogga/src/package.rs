@@ -35,7 +35,7 @@ pub struct PackageRequest {
 }
 
 impl PackageRequest {
-    pub fn get_spec(&self) -> &PackageArg {
+    pub fn spec(&self) -> &PackageArg {
         &self.spec
     }
 
