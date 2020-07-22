@@ -72,12 +72,13 @@ impl PackageRequest {
     }
 
     // idk what `resolved` should be here? Probably an actual PackageVersion?
-    pub fn resolve(self, _resolved: String) -> Package {
+    pub fn resolve(self, _resolved: PackageResolution) -> Package {
         todo!()
     }
 }
 
-pub enum PackageVersion {
+/// Represents a fully-resolved, specific version of a package as it would be fetched.
+pub enum PackageResolution {
     Npm { version: Version, tarball: Url },
     Dir { path: PathBuf },
 }
@@ -87,7 +88,7 @@ pub enum PackageVersion {
 pub struct Package {
     pub from: PackageArg,
     pub name: String,
-    pub version: PackageVersion,
+    pub version: PackageResolution,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 impl Package {
