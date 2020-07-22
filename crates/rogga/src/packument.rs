@@ -4,17 +4,16 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Dist {
-    pub shasum: String,
-    pub tarball: String,
-
-    pub integrity: Option<String>,
-    #[serde(rename = "fileCount")]
-    pub file_count: Option<usize>,
-    #[serde(rename = "unpackedSize")]
-    pub unpacked_size: Option<usize>,
-    #[serde(rename = "npm-signature")]
-    pub npm_signature: Option<String>,
+pub struct Packument {
+    pub author: Option<Human>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub versions: HashMap<String, Version>,
+    pub time: HashMap<String, DateTime<Utc>>,
+    #[serde(rename = "dist-tags")]
+    pub tags: HashMap<String, String>,
+    pub maintainers: Vec<Human>,
+    pub users: Option<HashMap<String, bool>>,
 
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
@@ -52,16 +51,17 @@ pub struct Human {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Packument {
-    pub author: Option<Human>,
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub versions: HashMap<String, Version>,
-    pub time: HashMap<String, DateTime<Utc>>,
-    #[serde(rename = "dist-tags")]
-    pub tags: HashMap<String, String>,
-    pub maintainers: Vec<Human>,
-    pub users: Option<HashMap<String, bool>>,
+pub struct Dist {
+    pub shasum: String,
+    pub tarball: String,
+
+    pub integrity: Option<String>,
+    #[serde(rename = "fileCount")]
+    pub file_count: Option<usize>,
+    #[serde(rename = "unpackedSize")]
+    pub unpacked_size: Option<usize>,
+    #[serde(rename = "npm-signature")]
+    pub npm_signature: Option<String>,
 
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
