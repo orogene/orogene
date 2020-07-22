@@ -9,11 +9,13 @@ mod error;
 mod fetch;
 mod integrity;
 mod package;
+mod packument;
 
 pub use error::Error;
 use error::Result;
 use fetch::{DirFetcher, PackageFetcher, RegistryFetcher};
 pub use package::*;
+pub use packument::*;
 
 pub struct Rogga {
     client: Arc<Mutex<OroClient>>,
