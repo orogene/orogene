@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use async_std::sync::RwLock;
-use http_types::Url;
 use futures::io::AsyncRead;
+use http_types::Url;
 use package_arg::PackageArg;
 use semver::Version;
 use serde::Deserialize;
@@ -53,7 +53,7 @@ impl PackageRequest {
                         "".into()
                     }
                 }),
-                Alias { ref name, .. } | Npm { ref name, .. } => name.clone()
+                Alias { ref name, .. } | Npm { ref name, .. } => name.clone(),
             });
             Ok(name.clone().unwrap())
         }
@@ -78,13 +78,8 @@ impl PackageRequest {
 }
 
 pub enum PackageVersion {
-    Npm {
-        version: Version,
-        tarball: Url,
-    },
-    Dir {
-        path: PathBuf,
-    }
+    Npm { version: Version, tarball: Url },
+    Dir { path: PathBuf },
 }
 
 /// A resolved package. A concrete version has been determined from its

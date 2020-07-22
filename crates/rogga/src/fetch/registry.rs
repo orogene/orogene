@@ -6,7 +6,7 @@ use oro_client::OroClient;
 use super::PackageFetcher;
 
 use crate::error::{Error, Internal, Result};
-use crate::package::{Manifest, Packument, Package, PackageRequest};
+use crate::package::{Manifest, Package, PackageRequest, Packument};
 
 pub struct RegistryFetcher {
     client: Arc<Mutex<OroClient>>,

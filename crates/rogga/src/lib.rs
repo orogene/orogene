@@ -36,7 +36,12 @@ impl Rogga {
     pub fn arg_package<T: AsRef<str>>(&self, arg: T) -> Result<PackageRequest> {
         let spec = PackageArg::from_string(arg.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
-        Ok(PackageRequest { name: RwLock::new(None), packument: RwLock::new(None), spec, fetcher })
+        Ok(PackageRequest {
+            name: RwLock::new(None),
+            packument: RwLock::new(None),
+            spec,
+            fetcher,
+        })
     }
 
     /// Creates a Package from a two-part dependency declaration, such as
@@ -48,7 +53,12 @@ impl Rogga {
     ) -> Result<PackageRequest> {
         let spec = PackageArg::resolve(name.as_ref(), spec.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
-        Ok(PackageRequest { name: RwLock::new(Some(name.as_ref().into())), packument: RwLock::new(None), spec, fetcher })
+        Ok(PackageRequest {
+            name: RwLock::new(Some(name.as_ref().into())),
+            packument: RwLock::new(None),
+            spec,
+            fetcher,
+        })
     }
 
     fn pick_fetcher(&self, arg: &PackageArg) -> RwLock<Box<dyn PackageFetcher>> {

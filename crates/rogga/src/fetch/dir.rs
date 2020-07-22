@@ -4,7 +4,7 @@ use futures::io::AsyncRead;
 use super::PackageFetcher;
 
 use crate::error::Result;
-use crate::package::{Manifest, Packument, Package, PackageRequest};
+use crate::package::{Manifest, Package, PackageRequest, Packument};
 
 pub struct DirFetcher {}
 impl DirFetcher {
