@@ -2,18 +2,16 @@ use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use oro_client::OroClient;
-use semver::Version;
 
 use super::PackageFetcher;
 
-use crate::data::{Manifest, Packument};
 use crate::error::{Error, Internal, Result};
-use crate::package::Package;
+use crate::package::{Manifest, Packument, Package, PackageRequest};
 
 pub struct RegistryFetcher {
     client: Arc<Mutex<OroClient>>,
     packument: Option<Packument>,
-    manifest: Option<Manifest>,
+    _manifest: Option<Manifest>,
 }
 
 impl RegistryFetcher {
@@ -21,18 +19,18 @@ impl RegistryFetcher {
         Self {
             client,
             packument: None,
-            manifest: None,
+            _manifest: None,
         }
     }
 }
 
 #[async_trait]
 impl PackageFetcher for RegistryFetcher {
-    async fn manifest(&mut self, pkg: &Package) -> Result<Manifest> {
+    async fn manifest(&mut self, _pkg: &Package) -> Result<Manifest> {
         todo!()
     }
 
-    async fn packument(&mut self, pkg: &Package) -> Result<Packument> {
+    async fn packument(&mut self, pkg: &PackageRequest) -> Result<Packument> {
         if self.packument.is_none() {
             let client = self.client.lock().await;
             self.packument = Some(
@@ -49,7 +47,7 @@ impl PackageFetcher for RegistryFetcher {
         Ok(self.packument.clone().unwrap())
     }
 
-    async fn tarball(&mut self, arg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>> {
+    async fn tarball(&mut self, _arg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>> {
         unimplemented!()
     }
 }

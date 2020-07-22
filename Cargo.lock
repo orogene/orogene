@@ -1678,6 +1678,7 @@ dependencies = [
  "bincode",
  "cacache",
  "futures 0.3.5",
+ "http-types",
  "oro-client",
  "oro-error-code",
  "package-arg",

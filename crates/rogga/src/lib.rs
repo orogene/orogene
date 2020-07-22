@@ -1,20 +1,23 @@
+use std::path::{Path, PathBuf};
+
 use async_std::sync::{Arc, Mutex, RwLock};
 use oro_client::OroClient;
-use package_arg::{PackageArg, PackageArgError};
+use package_arg::PackageArg;
 
 pub mod cache;
-mod data;
 mod error;
 mod fetch;
 mod integrity;
 mod package;
 
+pub use error::Error;
+use error::Result;
 use fetch::{DirFetcher, PackageFetcher, RegistryFetcher};
 pub use package::*;
 
 pub struct Rogga {
     client: Arc<Mutex<OroClient>>,
-    cache: Option<String>,
+    cache: Option<PathBuf>,
 }
 
 impl Rogga {
@@ -25,15 +28,15 @@ impl Rogga {
         }
     }
 
-    pub fn cache<T: AsRef<str>>(&mut self, cache: Option<T>) {
+    pub fn set_cache<T: AsRef<Path>>(&mut self, cache: Option<T>) {
         self.cache = cache.map(|s| s.as_ref().into());
     }
 
     /// Creates a Package from a plain string spec, i.e. `foo@1.2.3`.
-    pub fn arg_package<T: AsRef<str>>(&self, arg: T) -> Result<Package, PackageArgError> {
+    pub fn arg_package<T: AsRef<str>>(&self, arg: T) -> Result<PackageRequest> {
         let spec = PackageArg::from_string(arg.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
-        Ok(Package { spec, fetcher })
+        Ok(PackageRequest { name: RwLock::new(None), packument: RwLock::new(None), spec, fetcher })
     }
 
     /// Creates a Package from a two-part dependency declaration, such as
@@ -42,10 +45,10 @@ impl Rogga {
         &self,
         name: T,
         spec: U,
-    ) -> Result<Package, PackageArgError> {
+    ) -> Result<PackageRequest> {
         let spec = PackageArg::resolve(name.as_ref(), spec.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
-        Ok(Package { spec, fetcher })
+        Ok(PackageRequest { name: RwLock::new(Some(name.as_ref().into())), packument: RwLock::new(None), spec, fetcher })
     }
 
     fn pick_fetcher(&self, arg: &PackageArg) -> RwLock<Box<dyn PackageFetcher>> {

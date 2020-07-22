@@ -1,3 +1,4 @@
+use package_arg::PackageArgError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -31,8 +32,13 @@ impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::resul
 /// Error type returned by all API calls.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Something went wrong while fetching a package.
     #[error("Something went wrong with fetching a package.")]
     PackageFetcherError(String),
+
+    /// Something went wrong while trying to parse a PackageArg
+    #[error(transparent)]
+    PackageArgError(#[from] PackageArgError),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
