@@ -26,7 +26,11 @@ struct OroCommandField {
 
 impl ToTokens for OroCommand {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let OroCommand { ref data, .. } = *self;
+        let OroCommand {
+            ref data,
+            ref ident,
+            ..
+        } = *self;
         let fields = data
             .as_ref()
             .take_struct()
@@ -57,7 +61,7 @@ impl ToTokens for OroCommand {
                 use clap::ArgMatches;
                 use oro_command::{OroConfig, OroCommandLayerConfig};
 
-                impl OroCommandLayerConfig for PingCmd {
+                impl OroCommandLayerConfig for #ident {
                     fn layer_config(&mut self, args: ArgMatches, config: OroConfig) -> Result<()> {
                         #(#field_defs)*
                         Ok(())

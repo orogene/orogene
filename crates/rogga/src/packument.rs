@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Dist {
     pub shasum: String,
     pub tarball: String,
@@ -20,7 +20,7 @@ pub struct Dist {
     pub rest: HashMap<String, Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Version {
     pub name: String,
     pub version: String,
@@ -45,16 +45,16 @@ pub struct Version {
     pub rest: HashMap<String, Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Human {
     pub name: String,
     pub email: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Packument {
     pub author: Option<Human>,
-    pub name: String,
+    pub name: Option<String>,
     pub description: Option<String>,
     pub versions: HashMap<String, Version>,
     pub time: HashMap<String, DateTime<Utc>>,

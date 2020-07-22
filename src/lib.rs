@@ -7,6 +7,7 @@ use oro_command::{ArgMatches, OroCommand, OroCommandLayerConfig};
 use oro_config::{OroConfig, OroConfigOptions};
 
 use cmd_ping::PingCmd;
+use cmd_view::ViewCmd;
 
 pub use oro_error_code::OroErrCode as Code;
 
@@ -107,6 +108,13 @@ pub enum OroCmd {
         setting = clap::AppSettings::DeriveDisplayOrder,
     )]
     Ping(PingCmd),
+    #[clap(
+        about = "Get information about a package",
+        setting = clap::AppSettings::ColoredHelp,
+        setting = clap::AppSettings::DisableHelpSubcommand,
+        setting = clap::AppSettings::DeriveDisplayOrder,
+    )]
+    View(ViewCmd),
     // #[clap(
     //     about = "Execute a new wrapped `node` shell.",
     //     alias = "sh",
@@ -121,6 +129,7 @@ impl OroCommand for Orogene {
         log::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
+            OroCmd::View(view) => view.execute().await,
         }
     }
 }
@@ -130,6 +139,9 @@ impl OroCommandLayerConfig for Orogene {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
                 ping.layer_config(args.subcommand_matches("ping").unwrap().clone(), conf)
+            }
+            OroCmd::View(ref mut view) => {
+                view.layer_config(args.subcommand_matches("view").unwrap().clone(), conf)
             }
         }
     }

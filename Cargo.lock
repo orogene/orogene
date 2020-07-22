@@ -515,6 +515,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmd-view"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "clap 3.0.0-beta.1",
+ "log",
+ "mockito",
+ "oro-client",
+ "oro-command",
+ "oro-error-code",
+ "rogga",
+ "serde 1.0.114",
+ "serde_json",
+ "url",
+]
+
+[[package]]
 name = "colored"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1595,6 +1614,7 @@ dependencies = [
  "cacache",
  "clap 3.0.0-beta.1",
  "cmd-ping",
+ "cmd-view",
  "embed-resource",
  "fern",
  "futures 0.3.5",
@@ -1894,6 +1914,7 @@ dependencies = [
  "chrono",
  "futures 0.3.5",
  "http-types",
+ "log",
  "oro-client",
  "oro-error-code",
  "package-arg",

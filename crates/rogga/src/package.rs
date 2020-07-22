@@ -10,6 +10,7 @@ use ssri::Integrity;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
+use crate::packument::Packument;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Manifest {
@@ -17,11 +18,6 @@ pub struct Manifest {
     pub version: Option<String>,
     pub integrity: Option<Integrity>,
     pub resolved: String,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct Packument {
-    pub name: Option<String>,
 }
 
 // Should this be an enum that mostly copies PackageArg? Should this replace
@@ -40,10 +36,12 @@ impl PackageRequest {
     }
 
     pub async fn name(&self) -> Result<String> {
-        if let Some(name) = self.name.read().await.clone() {
+        let read_name = self.name.read().await;
+        if let Some(name) = read_name.clone() {
             Ok(name)
         } else {
             use PackageArg::*;
+            std::mem::drop(read_name);
             let mut name = self.name.write().await;
             *name = Some(match self.spec {
                 Dir { ref path } => self.packument().await?.name.unwrap_or_else(|| {
@@ -62,10 +60,14 @@ impl PackageRequest {
     /// Returns the packument with general metadata about the package and its
     /// various versions.
     pub async fn packument(&self) -> Result<Packument> {
-        if let Some(packument) = self.packument.read().await.clone() {
+        let read_packument = self.packument.read().await;
+        if let Some(packument) = read_packument.clone() {
             Ok(packument)
         } else {
+            std::mem::drop(read_packument);
+            log::trace!("Grabbing write lock on PackageRequest.packument");
             let mut packument = self.packument.write().await;
+            log::trace!("Got the lock");
             *packument = Some(self.fetcher.write().await.packument(&self).await?);
             Ok(packument.clone().unwrap())
         }

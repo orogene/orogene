@@ -1,5 +1,5 @@
 [package]
-name = "cmd-ping"
+name = "cmd-view"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
@@ -8,6 +8,7 @@ edition = "2018"
 oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
 oro-error-code = { path = "../../crates/oro-error-code" }
+rogga = { path = "../../crates/rogga" }
 
 anyhow = "1.0.25"
 clap = { git = "https://github.com/zkat/clap" }
