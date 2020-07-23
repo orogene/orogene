@@ -26,7 +26,7 @@ pub struct Writer {
 }
 
 impl Writer {
-    pub fn new(cache: &Path, algo: Algorithm, size: Option<usize>) -> Result<Writer> {
+    pub fn new(cache: &Path, algo: Algorithm, size: Option<usize>) -> Result<Self> {
         let cache_path = cache.to_path_buf();
         let mut tmp_path = cache_path.clone();
         tmp_path.push("tmp");
@@ -35,21 +35,51 @@ impl Writer {
             .create(&tmp_path)
             .to_internal()?;
         let tmpfile = NamedTempFile::new_in(tmp_path).to_internal()?;
-        let mmap = if let Some(size) = size {
+
+        let mmap = size.and_then(|size| {
             if size <= MAX_MMAP_SIZE {
                 unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
             } else {
                 None
             }
-        } else {
-            None
-        };
+        });
+
         Ok(Writer {
             cache: cache_path,
             builder: IntegrityOpts::new().algorithm(algo),
             tmpfile,
             mmap,
         })
+    }
+
+    pub async fn new_async(cache: &Path, algo: Algorithm, size: Option<usize>) -> Result<smol::Unblock<Self>> {
+        let cache_path = cache.to_path_buf();
+        let mut tmp_path = cache_path.clone();
+        tmp_path.push("tmp");
+        afs::DirBuilder::new()
+            .recursive(true)
+            .create(&tmp_path)
+            .await
+            .to_internal()?;
+
+        let tmpfile = task::spawn_blocking(|| NamedTempFile::new_in(tmp_path))
+            .await
+            .to_internal()?;
+
+        let mmap = size.and_then(|size| {
+            if size <= MAX_MMAP_SIZE {
+                unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
+            } else {
+                None
+            }
+        });
+
+        Ok(smol::Unblock::new(Writer {
+            cache: cache_path,
+            builder: IntegrityOpts::new().algorithm(algo),
+            tmpfile,
+            mmap,
+        }))
     }
 
     pub fn close(self) -> Result<Integrity> {
@@ -68,6 +98,10 @@ impl Writer {
             std::fs::metadata(cpath).to_internal()?;
         }
         Ok(sri)
+    }
+
+    pub async fn close_async(self) -> Result<Integrity> {
+        smol::unblock!(self.close())
     }
 }
 

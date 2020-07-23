@@ -83,7 +83,7 @@ pub struct Writer {
     cache: PathBuf,
     key: Option<String>,
     written: usize,
-    pub(crate) writer: write::AsyncWriter,
+    pub(crate) writer: smol::Unblock<write::Writer>,
     opts: WriteOpts,
 }
 
@@ -141,7 +141,7 @@ impl Writer {
     /// otherwise everything will be thrown out.
     pub async fn commit(mut self) -> Result<Integrity> {
         let cache = self.cache;
-        let writer_sri = self.writer.close().await?;
+        let writer_sri = self.writer.into_inner().await.close_async().await?;
         if let Some(sri) = &self.opts.sri {
             if sri.matches(&writer_sri).is_none() {
                 return Err(ssri::Error::IntegrityCheckError(sri.clone(), writer_sri).into());
@@ -247,7 +247,7 @@ impl WriteOpts {
             cache: cache.as_ref().to_path_buf(),
             key: Some(String::from(key.as_ref())),
             written: 0,
-            writer: write::AsyncWriter::new(
+            writer: write::Writer::new_async(
                 cache.as_ref(),
                 *self.algorithm.as_ref().unwrap_or(&Algorithm::Sha256),
                 None,
@@ -266,7 +266,7 @@ impl WriteOpts {
             cache: cache.as_ref().to_path_buf(),
             key: None,
             written: 0,
-            writer: write::AsyncWriter::new(
+            writer: write::Writer::new_async(
                 cache.as_ref(),
                 *self.algorithm.as_ref().unwrap_or(&Algorithm::Sha256),
                 self.size,
