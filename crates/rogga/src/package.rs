@@ -72,7 +72,6 @@ impl PackageRequest {
             resolved,
             fetcher: self.fetcher,
             packument,
-            manifest: RwLock::new(None),
         })
     }
 }
@@ -91,20 +90,11 @@ pub struct Package {
     pub name: String,
     pub resolved: PackageResolution,
     pub packument: Packument,
-    manifest: RwLock<Option<Manifest>>,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 impl Package {
     pub async fn manifest(&self) -> Result<Manifest> {
-        let read_lock = self.manifest.read().await;
-        if let Some(manifest) = read_lock.clone() {
-            Ok(manifest)
-        } else {
-            std::mem::drop(read_lock);
-            let mut manifest = self.manifest.write().await;
-            *manifest = Some(self.fetcher.write().await.manifest(&self).await?);
-            Ok(manifest.clone().unwrap())
-        }
+        self.fetcher.write().await.manifest(&self).await
     }
 
     pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>> {
