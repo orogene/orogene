@@ -26,20 +26,26 @@ where
 
     while let Some(file) = entries.next().await {
         let f = file.to_internal()?;
-        let size = f.header().size().to_internal()?;
+        let header = f.header();
+        let mode = header.mode().to_internal()?;
+        let size = header.size().to_internal()?;
         let path = path.clone();
         let key = f.path().to_internal()?.display().to_string();
+
         let mut writer = WriteOpts::new()
             .size(size as usize)
             .open_hash(&path)
             .await
             .to_internal()?;
+
         io::copy(f, async_std::io::BufWriter::new(&mut writer))
             .await
             .to_internal()?;
+
         let sri = writer.commit().await.to_internal()?;
-        entry_hash.insert(key, (sri, size));
+        entry_hash.insert(key, (sri, size, mode));
     }
+
     std::mem::drop(entries);
     let sri = ar
         .into_inner()
@@ -49,6 +55,7 @@ where
         .into_inner()
         .into_inner()
         .result();
+
     Ok(cacache::write(
         &path,
         format!("orogene::pkg::{}", sri.to_string()),
