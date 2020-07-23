@@ -5,19 +5,18 @@ use futures::io::AsyncRead;
 use http_types::Url;
 use package_arg::PackageArg;
 use semver::Version;
-use serde::Deserialize;
 use ssri::Integrity;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::packument::Packument;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct Manifest {
     pub name: Option<String>,
-    pub version: Option<String>,
+    pub version: Option<Version>,
     pub integrity: Option<Integrity>,
-    pub resolved: String,
+    pub resolved: PackageResolution,
 }
 
 // Should this be an enum that mostly copies PackageArg? Should this replace
@@ -25,7 +24,6 @@ pub struct Manifest {
 // method that returns a reference?
 pub struct PackageRequest {
     pub(crate) name: RwLock<Option<String>>,
-    pub(crate) packument: RwLock<Option<Packument>>,
     pub(crate) spec: PackageArg,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
@@ -60,26 +58,27 @@ impl PackageRequest {
     /// Returns the packument with general metadata about the package and its
     /// various versions.
     pub async fn packument(&self) -> Result<Packument> {
-        let read_packument = self.packument.read().await;
-        if let Some(packument) = read_packument.clone() {
-            Ok(packument)
-        } else {
-            std::mem::drop(read_packument);
-            log::trace!("Grabbing write lock on PackageRequest.packument");
-            let mut packument = self.packument.write().await;
-            log::trace!("Got the lock");
-            *packument = Some(self.fetcher.write().await.packument(&self).await?);
-            Ok(packument.clone().unwrap())
-        }
+        self.fetcher.write().await.packument(&self).await
     }
 
     // idk what `resolved` should be here? Probably an actual PackageVersion?
-    pub fn resolve(self, _resolved: PackageResolution) -> Package {
-        todo!()
+    pub async fn resolve(self, resolved: PackageResolution) -> Result<Package> {
+        let name = self.name().await?;
+        // Is this really necessary? Maybe not all types need this??
+        let packument = self.packument().await?;
+        Ok(Package {
+            from: self.spec,
+            name,
+            resolved,
+            fetcher: self.fetcher,
+            packument,
+            manifest: RwLock::new(None),
+        })
     }
 }
 
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
+#[derive(Clone, Debug)]
 pub enum PackageResolution {
     Npm { version: Version, tarball: Url },
     Dir { path: PathBuf },
@@ -90,13 +89,24 @@ pub enum PackageResolution {
 pub struct Package {
     pub from: PackageArg,
     pub name: String,
-    pub version: PackageResolution,
+    pub resolved: PackageResolution,
+    pub packument: Packument,
+    manifest: RwLock<Option<Manifest>>,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 impl Package {
     pub async fn manifest(&self) -> Result<Manifest> {
-        todo!()
+        let read_lock = self.manifest.read().await;
+        if let Some(manifest) = read_lock.clone() {
+            Ok(manifest)
+        } else {
+            std::mem::drop(read_lock);
+            let mut manifest = self.manifest.write().await;
+            *manifest = Some(self.fetcher.write().await.manifest(&self).await?);
+            Ok(manifest.clone().unwrap())
+        }
     }
+
     pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>> {
         self.fetcher.write().await.tarball(&self).await
     }

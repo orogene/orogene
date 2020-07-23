@@ -45,9 +45,13 @@ impl OroClient {
     }
 
     pub async fn get(&self, uri: impl AsRef<str>) -> Result<Response, OroClientError> {
+        self.get_absolute(self.base.join(uri.as_ref()).unwrap())
+            .await
+    }
+    pub async fn get_absolute(&self, uri: impl AsRef<str>) -> Result<Response, OroClientError> {
         let mut res = self
             .client
-            .get(self.base.join(uri.as_ref()).unwrap())
+            .get(uri.as_ref())
             .await
             .map_err(OroClientError::RequestError)?;
         if res.status().is_client_error() || res.status().is_server_error() {

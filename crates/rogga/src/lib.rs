@@ -40,7 +40,6 @@ impl Rogga {
         let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {
             name: RwLock::new(None),
-            packument: RwLock::new(None),
             spec,
             fetcher,
         })
@@ -57,7 +56,6 @@ impl Rogga {
         let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {
             name: RwLock::new(Some(name.as_ref().into())),
-            packument: RwLock::new(None),
             spec,
             fetcher,
         })
