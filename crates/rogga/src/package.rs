@@ -64,14 +64,11 @@ impl PackageRequest {
     // idk what `resolved` should be here? Probably an actual PackageVersion?
     pub async fn resolve(self, resolved: PackageResolution) -> Result<Package> {
         let name = self.name().await?;
-        // Is this really necessary? Maybe not all types need this??
-        let packument = self.packument().await?;
         Ok(Package {
             from: self.spec,
             name,
             resolved,
             fetcher: self.fetcher,
-            packument,
         })
     }
 }
@@ -89,7 +86,6 @@ pub struct Package {
     pub from: PackageArg,
     pub name: String,
     pub resolved: PackageResolution,
-    pub packument: Packument,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 impl Package {
