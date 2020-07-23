@@ -248,7 +248,7 @@ impl WriteOpts {
             key: Some(String::from(key.as_ref())),
             written: 0,
             writer: write::Writer::new_async(
-                cache.as_ref(),
+                cache.as_ref().to_owned(),
                 *self.algorithm.as_ref().unwrap_or(&Algorithm::Sha256),
                 None,
             )
@@ -267,7 +267,7 @@ impl WriteOpts {
             key: None,
             written: 0,
             writer: write::Writer::new_async(
-                cache.as_ref(),
+                cache.as_ref().to_owned(),
                 *self.algorithm.as_ref().unwrap_or(&Algorithm::Sha256),
                 self.size,
             )
@@ -287,7 +287,7 @@ impl WriteOpts {
             key: Some(String::from(key.as_ref())),
             written: 0,
             writer: write::Writer::new(
-                cache.as_ref(),
+                cache.as_ref().to_owned(),
                 *self.algorithm.as_ref().unwrap_or(&Algorithm::Sha256),
                 self.size,
             )?,
@@ -305,7 +305,7 @@ impl WriteOpts {
             key: None,
             written: 0,
             writer: write::Writer::new(
-                cache.as_ref(),
+                cache.as_ref().to_owned(),
                 *self.algorithm.as_ref().unwrap_or(&Algorithm::Sha256),
                 self.size,
             )?,

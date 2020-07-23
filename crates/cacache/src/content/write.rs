@@ -1,14 +1,7 @@
 use std::fs::DirBuilder;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
-use std::pin::Pin;
-use std::sync::Mutex;
+use std::path::PathBuf;
 
-use async_std::fs as afs;
-use async_std::future::Future;
-use async_std::task::{self, Context, JoinHandle, Poll};
-use futures::io::AsyncWrite;
-use futures::prelude::*;
 use memmap::MmapMut;
 use ssri::{Algorithm, Integrity, IntegrityOpts};
 use tempfile::NamedTempFile;
@@ -26,8 +19,8 @@ pub struct Writer {
 }
 
 impl Writer {
-    pub fn new(cache: &Path, algo: Algorithm, size: Option<usize>) -> Result<Self> {
-        let cache_path = cache.to_path_buf();
+    pub fn new(cache: PathBuf, algo: Algorithm, size: Option<usize>) -> Result<Self> {
+        let cache_path = cache;
         let mut tmp_path = cache_path.clone();
         tmp_path.push("tmp");
         DirBuilder::new()
@@ -52,36 +45,6 @@ impl Writer {
         })
     }
 
-    pub async fn new_async(cache: &Path, algo: Algorithm, size: Option<usize>) -> Result<smol::Unblock<Self>> {
-        let cache_path = cache.to_path_buf();
-        let mut tmp_path = cache_path.clone();
-        tmp_path.push("tmp");
-        afs::DirBuilder::new()
-            .recursive(true)
-            .create(&tmp_path)
-            .await
-            .to_internal()?;
-
-        let tmpfile = task::spawn_blocking(|| NamedTempFile::new_in(tmp_path))
-            .await
-            .to_internal()?;
-
-        let mmap = size.and_then(|size| {
-            if size <= MAX_MMAP_SIZE {
-                unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
-            } else {
-                None
-            }
-        });
-
-        Ok(smol::Unblock::new(Writer {
-            cache: cache_path,
-            builder: IntegrityOpts::new().algorithm(algo),
-            tmpfile,
-            mmap,
-        }))
-    }
-
     pub fn close(self) -> Result<Integrity> {
         let sri = self.builder.result();
         let cpath = path::content_path(&self.cache, &sri);
@@ -98,6 +61,10 @@ impl Writer {
             std::fs::metadata(cpath).to_internal()?;
         }
         Ok(sri)
+    }
+
+    pub async fn new_async(cache: PathBuf, algo: Algorithm, size: Option<usize>) -> Result<smol::Unblock<Self>> {
+        smol::unblock!(Writer::new(cache, algo, size)).map(smol::Unblock::new)
     }
 
     pub async fn close_async(self) -> Result<Integrity> {
@@ -125,12 +92,11 @@ impl Write for Writer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_std::task;
     #[test]
     fn basic_write() {
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().to_owned();
-        let mut writer = Writer::new(&dir, Algorithm::Sha256, None).unwrap();
+        let mut writer = Writer::new(dir.clone(), Algorithm::Sha256, None).unwrap();
         writer.write_all(b"hello world").unwrap();
         let sri = writer.close().unwrap();
         assert_eq!(sri.to_string(), Integrity::from(b"hello world").to_string());
