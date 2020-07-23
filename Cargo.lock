@@ -1613,6 +1613,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oro-tree"
+version = "0.1.0"
+dependencies = [
+ "memmap",
+ "serde 1.0.114",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "orogene"
 version = "0.1.0"
 dependencies = [
