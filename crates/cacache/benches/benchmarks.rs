@@ -2,9 +2,7 @@ use async_std::{fs as afs, task};
 use std::fs::{self, File};
 use std::io::prelude::*;
 
-use cacache;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use tempfile;
 
 const NUM_REPEATS: usize = 10;
 

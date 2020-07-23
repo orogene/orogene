@@ -84,7 +84,7 @@ mod tests {
         fs::write(&file, "store = \"hello world\"")?;
         let config = OroConfigOptions::new()
             .env(false)
-            .global_config_file(Some(file.to_owned()))
+            .global_config_file(Some(file))
             .load()?;
         assert_eq!(config.get_str("store")?, String::from("hello world"));
         Ok(())

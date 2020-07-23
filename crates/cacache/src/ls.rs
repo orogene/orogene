@@ -12,7 +12,6 @@ pub fn list_sync<P: AsRef<Path>>(cache: P) -> impl Iterator<Item = Result<index:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile;
 
     #[test]
     fn test_list_sync() {
