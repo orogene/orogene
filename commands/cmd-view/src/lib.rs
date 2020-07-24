@@ -53,6 +53,7 @@ impl OroCommand for ViewCmd {
                 ref bin,
                 ref npm_user,
                 ref dist,
+                ref deprecated,
                 ..
             } = manifest;
             // name@version | license | deps: 123 | releases: 123
@@ -78,6 +79,10 @@ impl OroCommand for ViewCmd {
                 println!("{}", home.to_string().cyan());
             }
             println!();
+
+            if let Some(msg) = deprecated.as_ref() {
+                println!("{} - {}\n", "DEPRECATED".bright_red(), msg);
+            }
 
             // keywords: foo, bar, baz
             if !keywords.is_empty() {

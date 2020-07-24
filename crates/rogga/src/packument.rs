@@ -47,6 +47,7 @@ pub struct Version {
     pub has_shrinkwrap: Option<bool>,
     #[serde(default)]
     pub keywords: Vec<String>,
+    pub deprecated: Option<String>,
 
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
