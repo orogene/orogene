@@ -8,10 +8,10 @@ pub struct Packument {
     pub author: Option<Human>,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub versions: HashMap<String, Version>,
+    pub versions: HashMap<semver::Version, Version>,
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(rename = "dist-tags")]
-    pub tags: HashMap<String, String>,
+    pub tags: HashMap<String, semver::Version>,
     pub maintainers: Vec<Human>,
     pub users: Option<HashMap<String, bool>>,
 
@@ -22,7 +22,7 @@ pub struct Packument {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Version {
     pub name: String,
-    pub version: String,
+    pub version: semver::Version,
     pub description: Option<String>,
     pub license: Option<String>,
     pub licence: Option<String>,

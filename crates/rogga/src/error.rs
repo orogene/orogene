@@ -1,6 +1,8 @@
 use package_arg::PackageArgError;
 use thiserror::Error;
 
+use crate::package::ResolverError;
+
 #[derive(Error, Debug)]
 #[error("{source}\n\n  {}", context.join("\n  "))]
 pub struct InternalError {
@@ -39,6 +41,9 @@ pub enum Error {
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
     PackageArgError(#[from] PackageArgError),
+
+    #[error(transparent)]
+    ResolverError(#[from] ResolverError),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that

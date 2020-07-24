@@ -2,6 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
+use oro_classic_resolver::ClassicResolver;
 use rogga::Rogga;
 use url::Url;
 
@@ -22,10 +23,13 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let rogga = Rogga::new(&self.registry);
-        let req = rogga.arg_package(&self.pkg)?;
-        let packument = req.packument().await?;
-        println!("{:#?}", packument);
+        let manifest = Rogga::new(&self.registry)
+            .arg_package(&self.pkg)?
+            .resolve_with(ClassicResolver::new())
+            .await?
+            .manifest()
+            .await?;
+        println!("{:#?}", manifest);
         Ok(())
     }
 }

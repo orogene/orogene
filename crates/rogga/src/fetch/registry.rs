@@ -52,7 +52,7 @@ impl PackageFetcher for RegistryFetcher {
         // TODO: get rid of this .expect()
         let version = packument
             .versions
-            .get(&wanted.to_string())
+            .get(&wanted)
             .expect("What? It should be there");
         Ok(Manifest {
             name: packument.name.clone(),

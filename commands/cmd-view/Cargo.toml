@@ -8,6 +8,7 @@ edition = "2018"
 oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
 oro-error-code = { path = "../../crates/oro-error-code" }
+oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 rogga = { path = "../../crates/rogga" }
 
 anyhow = "1.0.25"

@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
 use async_std::sync::RwLock;
+use async_trait::async_trait;
 use futures::io::AsyncRead;
-use http_types::Url;
 use package_arg::PackageArg;
 use semver::Version;
 use ssri::Integrity;
+use thiserror::Error;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
@@ -61,8 +62,12 @@ impl PackageRequest {
         self.fetcher.write().await.packument(&self).await
     }
 
-    // idk what `resolved` should be here? Probably an actual PackageVersion?
-    pub async fn resolve(self, resolved: PackageResolution) -> Result<Package> {
+    pub async fn resolve_with<T: Resolver>(self, resolver: T) -> Result<Package> {
+        let resolution = resolver.resolve(&self).await?;
+        self.resolve_to(resolution).await
+    }
+
+    pub async fn resolve_to(self, resolved: PackageResolution) -> Result<Package> {
         let name = self.name().await?;
         Ok(Package {
             from: self.spec,
@@ -73,10 +78,23 @@ impl PackageRequest {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum ResolverError {
+    #[error("No matching version.")]
+    NoVersion,
+    #[error(transparent)]
+    OtherError(#[from] Box<dyn std::error::Error + Send + Sync>),
+}
+
+#[async_trait]
+pub trait Resolver {
+    async fn resolve(&self, wanted: &PackageRequest) -> std::result::Result<PackageResolution, ResolverError>;
+}
+
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
 #[derive(Clone, Debug)]
 pub enum PackageResolution {
-    Npm { version: Version, tarball: Url },
+    Npm { version: Version, tarball: String },
     Dir { path: PathBuf },
 }
 
