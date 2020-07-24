@@ -1,17 +1,49 @@
 use memmap::MmapOptions;
-use serde::Deserialize;
+use serde::{Deserialize, de::{Deserializer, Error as SerdeError}};
 use std::fs::File;
 use std::{collections::HashMap, path::Path};
 use thiserror::Error;
+use ssri::Integrity;
+use semver::{Version, VersionReq};
 
 fn default_as_false() -> bool {
     false
 }
 
+fn parse_integrity<'de, D>(deserializer: D) -> Result<Integrity, D::Error> where D: Deserializer<'de> {
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    s.parse().map_err(D::Error::custom)
+}
+
+fn parse_version<'de, D>(deserializer: D) -> Result<Version, D::Error> where D: Deserializer<'de> {
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    s.parse().map_err(D::Error::custom)
+}
+
+fn parse_version_req<'de, D>(deserializer: D) -> Result<VersionReq, D::Error> where D: Deserializer<'de> {
+    let s: &str = Deserialize::deserialize(deserializer)?;
+    s.parse().map_err(D::Error::custom)
+}
+
+fn deserialize_requires<'de, D>(deserializer: D) -> Result<HashMap<String, VersionReq>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrapper(#[serde(deserialize_with = "parse_version_req")] VersionReq);
+
+    let v = HashMap::<String, Wrapper>::deserialize(deserializer)?;
+    Ok(v.into_iter().map(|(k, Wrapper(v))| (k, v)).collect())
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Dependency {
-    version: String,
-    integrity: String,
+
+    #[serde(deserialize_with = "parse_version")]
+    version: Version,
+
+    #[serde(deserialize_with = "parse_integrity")]
+    integrity: Integrity,
 
     #[serde(default = "default_as_false")]
     dev: bool,
@@ -24,8 +56,8 @@ pub struct Dependency {
 
     resolved: Option<String>,
 
-    #[serde(default)]
-    requires: HashMap<String, String>,
+    #[serde(default, deserialize_with = "deserialize_requires")]
+    requires: HashMap<String, VersionReq>,
 
     #[serde(default)]
     dependencies: HashMap<String, Dependency>,
@@ -34,7 +66,9 @@ pub struct Dependency {
 #[derive(Deserialize, Debug)]
 pub struct Package {
     name: String,
-    version: String,
+
+    #[serde(deserialize_with = "parse_version")]
+    version: Version,
     requires: bool,
     dependencies: HashMap<String, Dependency>,
 }
