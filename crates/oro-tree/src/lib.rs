@@ -1,26 +1,38 @@
 use memmap::MmapOptions;
-use serde::{Deserialize, de::{Deserializer, Error as SerdeError}};
+use semver::{Version, VersionReq};
+use serde::{
+    de::{Deserializer, Error as SerdeError},
+    Deserialize,
+};
+use ssri::Integrity;
 use std::fs::File;
 use std::{collections::HashMap, path::Path};
 use thiserror::Error;
-use ssri::Integrity;
-use semver::{Version, VersionReq};
 
 fn default_as_false() -> bool {
     false
 }
 
-fn parse_integrity<'de, D>(deserializer: D) -> Result<Integrity, D::Error> where D: Deserializer<'de> {
+fn parse_integrity<'de, D>(deserializer: D) -> Result<Integrity, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let s: &str = Deserialize::deserialize(deserializer)?;
     s.parse().map_err(D::Error::custom)
 }
 
-fn parse_version<'de, D>(deserializer: D) -> Result<Version, D::Error> where D: Deserializer<'de> {
+fn parse_version<'de, D>(deserializer: D) -> Result<Version, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let s: &str = Deserialize::deserialize(deserializer)?;
     s.parse().map_err(D::Error::custom)
 }
 
-fn parse_version_req<'de, D>(deserializer: D) -> Result<VersionReq, D::Error> where D: Deserializer<'de> {
+fn parse_version_req<'de, D>(deserializer: D) -> Result<VersionReq, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let s: &str = Deserialize::deserialize(deserializer)?;
     s.parse().map_err(D::Error::custom)
 }
@@ -38,7 +50,6 @@ where
 
 #[derive(Deserialize, Debug)]
 pub struct Dependency {
-
     #[serde(deserialize_with = "parse_version")]
     version: Version,
 
