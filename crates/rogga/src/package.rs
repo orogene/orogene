@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 use package_arg::PackageArg;
 use semver::Version;
+use serde::{Serialize, Deserialize};
 use ssri::Integrity;
 use thiserror::Error;
 
@@ -12,7 +13,7 @@ use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::packument::Packument;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     pub name: Option<String>,
     pub version: Option<Version>,
@@ -95,7 +96,7 @@ pub trait Resolver {
 }
 
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageResolution {
     Npm { version: Version, tarball: String },
     Dir { path: PathBuf },

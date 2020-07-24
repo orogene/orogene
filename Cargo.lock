@@ -529,7 +529,6 @@ dependencies = [
  "oro-command",
  "oro-error-code",
  "rogga",
- "serde 1.0.114",
  "serde_json",
  "url",
 ]

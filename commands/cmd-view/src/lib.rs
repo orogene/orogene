@@ -29,7 +29,11 @@ impl OroCommand for ViewCmd {
             .await?
             .manifest()
             .await?;
-        println!("{:#?}", manifest);
+        if self.json {
+            println!("{}", serde_json::to_string_pretty(&manifest)?);
+        } else {
+            println!("{:#?}", manifest);
+        }
         Ok(())
     }
 }
