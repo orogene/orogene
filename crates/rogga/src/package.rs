@@ -6,7 +6,7 @@ use futures::io::AsyncRead;
 use http_types::Url;
 use package_arg::PackageArg;
 use semver::Version;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use ssri::Integrity;
 use thiserror::Error;
 
