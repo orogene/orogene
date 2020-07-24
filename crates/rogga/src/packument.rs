@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use http_types::Url;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -56,7 +57,7 @@ pub struct Human {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Dist {
     pub shasum: String,
-    pub tarball: String,
+    pub tarball: Url,
 
     pub integrity: Option<String>,
     #[serde(rename = "fileCount")]

@@ -1934,6 +1934,7 @@ dependencies = [
  "serde_json",
  "ssri",
  "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -2596,6 +2597,7 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+ "serde 1.0.114",
 ]
 
 [[package]]

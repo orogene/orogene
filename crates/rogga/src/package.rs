@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use async_std::sync::RwLock;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
+use http_types::Url;
 use package_arg::PackageArg;
 use semver::Version;
 use serde::{Serialize, Deserialize};
@@ -98,7 +99,7 @@ pub trait Resolver {
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageResolution {
-    Npm { version: Version, tarball: String },
+    Npm { version: Version, tarball: Url },
     Dir { path: PathBuf },
 }
 
