@@ -36,6 +36,10 @@ impl OroCommand for ViewCmd {
                 .expect("Why isn't the version there?"),
             _ => panic!("Package type not supported"),
         };
+        // TODO: oro view pkg [<field>[.<subfield>...]]
+        // Probably the best way to do this is to support doing raw
+        // packument/manifest requests that just deserialize to
+        // serde_json::Value?
         if self.json {
             // TODO: What should this be? NPM is actually a weird mishmash of
             // the packument and the manifest?
@@ -56,6 +60,9 @@ impl OroCommand for ViewCmd {
                 ref deprecated,
                 ..
             } = manifest;
+
+            // TODO: unpublished N days ago by Foo
+
             // name@version | license | deps: 123 | releases: 123
             println!(
                 "{}@{} | {} | deps: {} | releases: {}",
@@ -80,6 +87,7 @@ impl OroCommand for ViewCmd {
             }
             println!();
 
+            // DEPRECATED - <deprecation message>
             if let Some(msg) = deprecated.as_ref() {
                 println!("{} - {}\n", "DEPRECATED".bright_red(), msg);
             }
@@ -97,6 +105,7 @@ impl OroCommand for ViewCmd {
             }
 
             // bins: foo, bar
+            // TODO: directories.bin? (oof)
             if let Some(bin) = bin {
                 let bins = match bin {
                     Bin::Str(_) => vec![name],
@@ -119,7 +128,6 @@ impl OroCommand for ViewCmd {
                 println!(".integrity: {}", sri.to_string().yellow());
             }
             if let Some(unpacked) = dist.unpacked_size {
-                // TODO: render this nicely
                 println!(
                     ".unpackedSize: {}",
                     unpacked
@@ -186,9 +194,6 @@ impl OroCommand for ViewCmd {
                     println!();
                 }
             }
-
-            // TODO: unpublished N days ago by Foo
-            // TODO: go through view.js and see if there's any other missing bits?
         }
         Ok(())
     }
