@@ -9,11 +9,14 @@ pub struct Packument {
     pub name: Option<String>,
     pub description: Option<String>,
     pub versions: HashMap<semver::Version, Version>,
+    #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(rename = "dist-tags")]
     pub tags: HashMap<String, semver::Version>,
+    #[serde(default)]
     pub maintainers: Vec<Human>,
-    pub users: Option<HashMap<String, bool>>,
+    #[serde(default)]
+    pub users: HashMap<String, bool>,
 
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
