@@ -1,6 +1,6 @@
 use std::fs::DirBuilder;
-use std::io::prelude::*;
 use std::path::PathBuf;
+use std::io::Write;
 
 use memmap::MmapMut;
 use ssri::{Algorithm, Integrity, IntegrityOpts};
@@ -14,8 +14,36 @@ pub const MAX_MMAP_SIZE: usize = 1024 * 1024;
 pub struct Writer {
     cache: PathBuf,
     builder: IntegrityOpts,
-    mmap: Option<MmapMut>,
+    target: zstd::Encoder<MaybeMmap>
+}
+
+struct MaybeMmap {
+    mmap: Option<(MmapMut, usize)>,
     tmpfile: NamedTempFile,
+}
+
+impl Write for MaybeMmap {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if let Some((mmap, pos)) = self.mmap.as_mut() {
+            match (&mut mmap[*pos..]).write(&buf) {
+                Ok(written) => {
+                    *pos += written;
+                    Ok(written)
+                },
+                Err(e) => Err(e)
+            }
+        } else {
+            self.tmpfile.write(&buf)
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        if let Some((mmap, _)) = self.mmap.as_mut() {
+            mmap.flush_async()?;
+        }
+
+        self.tmpfile.flush()
+    }
 }
 
 impl Writer {
@@ -35,13 +63,15 @@ impl Writer {
             } else {
                 None
             }
-        });
+        }).map(|mmap| (mmap, 0));
 
         Ok(Writer {
             cache: cache_path,
             builder: IntegrityOpts::new().algorithm(algo),
-            tmpfile,
-            mmap,
+            target: zstd::Encoder::new(MaybeMmap {
+                tmpfile,
+                mmap,
+            }, 0).to_internal()?
         })
     }
 
@@ -53,7 +83,9 @@ impl Writer {
             // Safe unwrap. cpath always has multiple segments
             .create(cpath.parent().unwrap())
             .to_internal()?;
-        let res = self.tmpfile.persist(&cpath).to_internal();
+
+        let maybe_mmap = self.target.finish().to_internal()?;
+        let res = maybe_mmap.tmpfile.persist(&cpath).to_internal();
         if res.is_err() {
             // We might run into conflicts sometimes when persisting files.
             // This is ok. We can deal. Let's just make sure the destination
@@ -75,16 +107,11 @@ impl Writer {
 impl Write for Writer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.builder.input(&buf);
-        if let Some(mmap) = &mut self.mmap {
-            mmap.copy_from_slice(&buf);
-            Ok(buf.len())
-        } else {
-            self.tmpfile.write(&buf)
-        }
+        self.target.write(&buf)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.tmpfile.flush()
+        self.target.flush()
     }
 }
 
