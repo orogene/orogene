@@ -91,6 +91,9 @@ impl Resolver for ClassicResolver {
                 .is_some()
             && match spec {
                 PackageArg::Npm {
+                    requested: None, ..
+                } => true,
+                PackageArg::Npm {
                     requested: Some(VersionReq::Range(range)),
                     ..
                 } => range.matches(tag_version.as_ref().unwrap()),
