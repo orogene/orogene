@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use colored::*;
-use humansize::{FileSize, file_size_opts};
+use humansize::{file_size_opts, FileSize};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
 use rogga::{Bin, Human, Package, PackageResolution, Rogga, Version};
@@ -120,7 +120,13 @@ impl OroCommand for ViewCmd {
             }
             if let Some(unpacked) = dist.unpacked_size {
                 // TODO: render this nicely
-                println!(".unpackedSize: {}", unpacked.file_size(file_size_opts::DECIMAL).unwrap().yellow());
+                println!(
+                    ".unpackedSize: {}",
+                    unpacked
+                        .file_size(file_size_opts::DECIMAL)
+                        .unwrap()
+                        .yellow()
+                );
             }
             println!();
 
@@ -166,8 +172,14 @@ impl OroCommand for ViewCmd {
             // published N days ago by Foo
             if let Some(time) = packument.time.get(&version.to_string()) {
                 if let Some(Human { name, email }) = npm_user {
-                    let human = chrono_humanize::HumanTime::from(chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())?);
-                    print!("published {} by {}", human.to_string().yellow(), name.yellow());
+                    let human = chrono_humanize::HumanTime::from(
+                        chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())?,
+                    );
+                    print!(
+                        "published {} by {}",
+                        human.to_string().yellow(),
+                        name.yellow()
+                    );
                     if let Some(email) = email {
                         print!(" <{}>", email.cyan());
                     }
