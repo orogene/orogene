@@ -52,6 +52,11 @@ impl OroClient {
         let mut res = self
             .client
             .get(uri.as_ref())
+            // TODO: how tf do I abstract header-setting away while still controlling the output stuff??
+            // .set_header(
+            //     "accept",
+            //     "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+            // )
             .await
             .map_err(OroClientError::RequestError)?;
         if res.status().is_client_error() || res.status().is_server_error() {
