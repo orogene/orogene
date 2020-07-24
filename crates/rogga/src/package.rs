@@ -88,7 +88,10 @@ pub enum ResolverError {
 
 #[async_trait]
 pub trait Resolver {
-    async fn resolve(&self, wanted: &PackageRequest) -> std::result::Result<PackageResolution, ResolverError>;
+    async fn resolve(
+        &self,
+        wanted: &PackageRequest,
+    ) -> std::result::Result<PackageResolution, ResolverError>;
 }
 
 /// Represents a fully-resolved, specific version of a package as it would be fetched.

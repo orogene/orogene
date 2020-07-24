@@ -1,8 +1,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
-use oro_command::OroCommand;
 use oro_classic_resolver::ClassicResolver;
+use oro_command::OroCommand;
 use rogga::Rogga;
 use url::Url;
 
