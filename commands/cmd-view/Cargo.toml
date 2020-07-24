@@ -17,6 +17,12 @@ url = "2.1.0"
 async-trait = "0.1.19"
 serde_json = "1.0.56"
 log = "0.4.11"
+colored = "2.0.0"
+term_grid = "0.1.7"
+term_size = "0.3.2"
+chrono = "0.4.13"
+chrono-humanize = "0.0.11"
+humansize = "1.1.0"
 
 [dev-dependencies]
 mockito = "0.26.0"

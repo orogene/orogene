@@ -30,6 +30,10 @@ pub struct Version {
     pub description: Option<String>,
     pub license: Option<String>,
     pub licence: Option<String>,
+    pub homepage: Option<Url>,
+    pub bin: Option<Bin>,
+    #[serde(rename = "_npmUser")]
+    pub npm_user: Option<Human>,
     #[serde(default)]
     pub dependencies: HashMap<String, String>,
     #[serde(default, rename = "devDependencies")]
@@ -46,6 +50,13 @@ pub struct Version {
 
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Bin {
+    Str(String),
+    Hash(HashMap<String, String>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
