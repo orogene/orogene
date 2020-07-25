@@ -9,10 +9,6 @@ use std::fs::File;
 use std::{collections::HashMap, path::Path};
 use thiserror::Error;
 
-fn default_as_false() -> bool {
-    false
-}
-
 fn parse_integrity<'de, D>(deserializer: D) -> Result<Integrity, D::Error>
 where
     D: Deserializer<'de>,
@@ -56,13 +52,13 @@ pub struct Dependency {
     #[serde(deserialize_with = "parse_integrity")]
     integrity: Integrity,
 
-    #[serde(default = "default_as_false")]
+    #[serde(default)]
     dev: bool,
 
-    #[serde(default = "default_as_false")]
+    #[serde(default)]
     bundled: bool,
 
-    #[serde(default = "default_as_false")]
+    #[serde(default)]
     optional: bool,
 
     resolved: Option<String>,
