@@ -1,5 +1,5 @@
 use memmap::MmapOptions;
-use semver::{Version, VersionReq};
+use semver::Version;
 use serde::{
     de::{Deserializer, Error as SerdeError},
     Deserialize,
@@ -25,25 +25,6 @@ where
     s.parse().map_err(D::Error::custom)
 }
 
-fn parse_version_req<'de, D>(deserializer: D) -> Result<VersionReq, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: &str = Deserialize::deserialize(deserializer)?;
-    s.parse().map_err(D::Error::custom)
-}
-
-fn deserialize_requires<'de, D>(deserializer: D) -> Result<HashMap<String, VersionReq>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Wrapper(#[serde(deserialize_with = "parse_version_req")] VersionReq);
-
-    let v = HashMap::<String, Wrapper>::deserialize(deserializer)?;
-    Ok(v.into_iter().map(|(k, Wrapper(v))| (k, v)).collect())
-}
-
 #[derive(Deserialize, Debug)]
 pub struct Dependency {
     #[serde(deserialize_with = "parse_version")]
@@ -63,8 +44,8 @@ pub struct Dependency {
 
     resolved: Option<String>,
 
-    #[serde(default, deserialize_with = "deserialize_requires")]
-    requires: HashMap<String, VersionReq>,
+    #[serde(default)]
+    requires: HashMap<String, String>,
 
     #[serde(default)]
     dependencies: HashMap<String, Dependency>,
