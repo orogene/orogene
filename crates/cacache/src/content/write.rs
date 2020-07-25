@@ -128,7 +128,7 @@ mod tests {
         let sri = writer.close().unwrap();
         assert_eq!(sri.to_string(), Integrity::from(b"hello world").to_string());
         assert_eq!(
-            std::fs::read(path::content_path(&dir, &sri)).unwrap(),
+            zstd::decode_all(std::fs::File::open(path::content_path(&dir, &sri)).unwrap()).unwrap(),
             b"hello world"
         );
     }

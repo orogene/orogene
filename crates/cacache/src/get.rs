@@ -15,12 +15,15 @@ use crate::index::{self, Metadata};
 // Async API
 // ---------
 
-/// File handle for reading data asynchronously.
-///
-/// Make sure to call `.check()` when done reading to verify that the
-/// extracted data passes integrity verification.
-pub struct Reader {
-    reader: read::AsyncReader,
+pin_project_lite::pin_project! {
+    /// File handle for reading data asynchronously.
+    ///
+    /// Make sure to call `.check()` when done reading to verify that the
+    /// extracted data passes integrity verification.
+    pub struct Reader {
+        #[pin]
+        reader: smol::Unblock<read::Reader>,
+    }
 }
 
 impl AsyncRead for Reader {
@@ -29,7 +32,8 @@ impl AsyncRead for Reader {
         cx: &mut TaskContext<'_>,
         buf: &mut [u8],
     ) -> Poll<std::io::Result<usize>> {
-        Pin::new(&mut self.reader).poll_read(cx, buf)
+        let this = self.project();
+        this.reader.poll_read(cx, buf)
     }
 }
 
@@ -53,12 +57,12 @@ impl Reader {
     ///     let mut str = String::new();
     ///     fd.read_to_string(&mut str).await.expect("Failed to read to string");
     ///     // Remember to check that the data you got was correct!
-    ///     fd.check()?;
+    ///     fd.check().await?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn check(self) -> Result<Algorithm> {
-        self.reader.check()
+    pub async fn check(self) -> Result<Algorithm> {
+        self.reader.into_inner().await.check()
     }
     /// Opens a new file handle into the cache, looking it up in the index using
     /// `key`.
@@ -74,7 +78,7 @@ impl Reader {
     ///     let mut str = String::new();
     ///     fd.read_to_string(&mut str).await.expect("Failed to read to string");
     ///     // Remember to check that the data you got was correct!
-    ///     fd.check()?;
+    ///     fd.check().await?;
     ///     Ok(())
     /// }
     /// ```
@@ -107,7 +111,7 @@ impl Reader {
     ///     let mut str = String::new();
     ///     fd.read_to_string(&mut str).await.expect("Failed to read to string");
     ///     // Remember to check that the data you got was correct!
-    ///     fd.check()?;
+    ///     fd.check().await?;
     ///     Ok(())
     /// }
     /// ```
@@ -116,7 +120,7 @@ impl Reader {
         P: AsRef<Path>,
     {
         Ok(Reader {
-            reader: read::open_async(cache.as_ref(), sri).await?,
+            reader: smol::Unblock::new(read::open_async(cache.as_ref(), sri).await?),
         })
     }
 }
@@ -472,7 +476,7 @@ mod tests {
         let mut handle = crate::Reader::open(&dir, "my-key").await.unwrap();
         let mut str = String::new();
         handle.read_to_string(&mut str).await.unwrap();
-        handle.check().unwrap();
+        handle.check().await.unwrap();
         assert_eq!(str, String::from("hello world"));
     }
 
@@ -485,7 +489,7 @@ mod tests {
         let mut handle = crate::Reader::open_hash(&dir, sri).await.unwrap();
         let mut str = String::new();
         handle.read_to_string(&mut str).await.unwrap();
-        handle.check().unwrap();
+        handle.check().await.unwrap();
         assert_eq!(str, String::from("hello world"));
     }
 
@@ -600,7 +604,7 @@ mod tests {
         let dest = dir.join("data");
         let sri = crate::write_sync(&dir, "my-key", b"hello world").unwrap();
 
-        crate::copy_hash_sync(&dir, &sri, &dest).unwrap();
+        crate::copy_hash_sync(&dir, &sri, &dest).expect("copy_hash_sync should work");
         let data = fs::read(&dest).unwrap();
         assert_eq!(data, b"hello world");
     }

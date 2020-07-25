@@ -34,6 +34,7 @@ futures = "0.3.1"
 memmap = "0.7.0"
 smol = "0.3.1"
 zstd = "0.5.3"
+pin-project-lite = "0.1.7"
 
 [dev-dependencies]
 async-attributes = "1.1.1"

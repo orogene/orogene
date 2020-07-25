@@ -1,16 +1,14 @@
 use std::fs::{self, File};
-use std::path::Path;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::path::{ PathBuf, Path };
+use std::io::{ Read, BufReader };
 
-use futures::prelude::*;
 use ssri::{Algorithm, Integrity, IntegrityChecker};
 
 use crate::content::path;
 use crate::errors::{Internal, Result};
 
 pub struct Reader {
-    fd: File,
+    fd: zstd::Decoder<BufReader<File>>,
     checker: IntegrityChecker,
 }
 
@@ -26,75 +24,68 @@ impl Reader {
     pub fn check(self) -> Result<Algorithm> {
         Ok(self.checker.result()?)
     }
-}
 
-pub struct AsyncReader {
-    fd: async_std::fs::File,
-    checker: IntegrityChecker,
-}
-
-impl AsyncRead for AsyncReader {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<std::io::Result<usize>> {
-        let amt = futures::ready!(Pin::new(&mut self.fd).poll_read(cx, buf))?;
-        self.checker.input(&buf[..amt]);
-        Poll::Ready(Ok(amt))
+    fn instantiate(cpath: PathBuf, sri: Integrity) -> Result<Self> {
+        Ok(Reader {
+            fd: zstd::Decoder::with_buffer(BufReader::new(File::open(cpath).to_internal()?)).to_internal()?,
+            checker: IntegrityChecker::new(sri),
+        })
     }
-}
 
-impl AsyncReader {
-    pub fn check(self) -> Result<Algorithm> {
-        Ok(self.checker.result()?)
+    pub fn new(cache: &Path, sri: &Integrity) -> Result<Self> {
+        let cpath = path::content_path(&cache, &sri);
+        let sri = sri.clone();
+        Self::instantiate(cpath, sri)
+    }
+
+    pub fn consume(mut self) -> Result<Vec<u8>> {
+        let mut v = Vec::new();
+        self.read_to_end(&mut v).to_internal()?;
+        self.check()?;
+        Ok(v)
+    }
+
+    pub async fn new_async(cache: &Path, sri: &Integrity) -> Result<Self> {
+        let cpath = path::content_path(&cache, &sri);
+        let sri = sri.clone();
+        smol::unblock!(Self::instantiate(cpath, sri))
+    }
+
+    pub async fn consume_async(self) -> Result<Vec<u8>> {
+        smol::unblock!(self.consume())
     }
 }
 
 pub fn open(cache: &Path, sri: Integrity) -> Result<Reader> {
-    let cpath = path::content_path(&cache, &sri);
-    Ok(Reader {
-        fd: File::open(cpath).to_internal()?,
-        checker: IntegrityChecker::new(sri),
-    })
+    Reader::new(cache, &sri)
 }
 
-pub async fn open_async(cache: &Path, sri: Integrity) -> Result<AsyncReader> {
-    let cpath = path::content_path(&cache, &sri);
-    Ok(AsyncReader {
-        fd: async_std::fs::File::open(cpath).await.to_internal()?,
-        checker: IntegrityChecker::new(sri),
-    })
+pub async fn open_async(cache: &Path, sri: Integrity) -> Result<Reader> {
+    Reader::new_async(cache, &sri).await
 }
 
 pub fn read(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-    let cpath = path::content_path(&cache, &sri);
-    let ret = fs::read(&cpath).to_internal()?;
-    sri.check(&ret)?;
-    Ok(ret)
+    Reader::new(cache, sri)?.consume()
 }
 
-pub async fn read_async<'a>(cache: &'a Path, sri: &'a Integrity) -> Result<Vec<u8>> {
-    let cpath = path::content_path(&cache, &sri);
-    let ret = async_std::fs::read(&cpath).await.to_internal()?;
-    sri.check(&ret)?;
-    Ok(ret)
+pub async fn read_async<'a>(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
+    Reader::new_async(cache, sri).await?.consume_async().await
 }
 
 pub fn copy(cache: &Path, sri: &Integrity, to: &Path) -> Result<u64> {
-    let cpath = path::content_path(&cache, &sri);
-    let ret = fs::copy(&cpath, to).to_internal()?;
-    let data = fs::read(cpath).to_internal()?;
-    sri.check(data)?;
+    let mut reader = Reader::new(cache, sri)?;
+    // TODO: if we know the size of the file coming out, we could copy via mmap
+    let mut target = fs::OpenOptions::new().write(true).create(true).truncate(true).open(to).to_internal()?;
+    let ret = std::io::copy(&mut reader, &mut target).to_internal()?; 
+    reader.check()?;
     Ok(ret)
 }
 
 pub async fn copy_async<'a>(cache: &'a Path, sri: &'a Integrity, to: &'a Path) -> Result<u64> {
-    let cpath = path::content_path(&cache, &sri);
-    let ret = async_std::fs::copy(&cpath, to).await.to_internal()?;
-    let data = async_std::fs::read(cpath).await.to_internal()?;
-    sri.check(data)?;
-    Ok(ret)
+    let cache = cache.to_owned();
+    let sri = sri.to_owned();
+    let to = to.to_owned();
+    smol::unblock!(copy(&cache, &sri, &to))
 }
 
 pub fn has_content(cache: &Path, sri: &Integrity) -> Option<Integrity> {
