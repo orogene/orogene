@@ -1,6 +1,7 @@
 use std::fs::DirBuilder;
 use std::path::PathBuf;
 use std::io::Write;
+use std::io::Seek;
 
 use memmap::MmapMut;
 use ssri::{Algorithm, Integrity, IntegrityOpts};
@@ -14,12 +15,33 @@ pub const MAX_MMAP_SIZE: usize = 1024 * 1024;
 pub struct Writer {
     cache: PathBuf,
     builder: IntegrityOpts,
-    target: flate2::write::DeflateEncoder<MaybeMmap>
+    target: flate2::write::DeflateEncoder<MaybeMmap>,
+    expected_size: Option<usize>,
+    written: usize
 }
 
+#[derive(Debug)]
 struct MaybeMmap {
     mmap: Option<(MmapMut, usize)>,
     tmpfile: NamedTempFile,
+}
+
+impl Seek for MaybeMmap {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        if let Some((_, position)) = self.mmap.as_mut() {
+            match pos {
+                std::io::SeekFrom::Start(xs) => {
+                    *position = xs as usize;
+                    Ok(xs)
+                },
+                _ => {
+                    unimplemented!()
+                }
+            }
+        } else {
+            self.tmpfile.seek(pos)
+        }
+    }
 }
 
 impl Write for MaybeMmap {
@@ -65,13 +87,23 @@ impl Writer {
             }
         }).map(|mmap| (mmap, 0));
 
+        let mut writer = MaybeMmap {
+            tmpfile,
+            mmap,
+        };
+
+        size.and_then(|size| {
+            writer.write(&size.to_be_bytes()).ok()
+        }).or_else(|| {
+            writer.write(&0u64.to_be_bytes()).ok()
+        });
+
         Ok(Writer {
             cache: cache_path,
             builder: IntegrityOpts::new().algorithm(algo),
-            target: flate2::write::DeflateEncoder::new(MaybeMmap {
-                tmpfile,
-                mmap,
-            }, flate2::Compression::default())
+            target: flate2::write::DeflateEncoder::new(writer, flate2::Compression::default()),
+            expected_size: size,
+            written: 0
         })
     }
 
@@ -84,7 +116,23 @@ impl Writer {
             .create(cpath.parent().unwrap())
             .to_internal()?;
 
-        let maybe_mmap = self.target.finish().to_internal()?;
+        let mut maybe_mmap = self.target.finish().to_internal()?;
+
+        match self.expected_size {
+            None => {
+                maybe_mmap.seek(std::io::SeekFrom::Start(0)).to_internal()?;
+                let bytes = (self.written as u64).to_be_bytes();
+
+                maybe_mmap.write(&bytes).to_internal()?;
+                maybe_mmap.flush().to_internal()?;
+            },
+            Some(size) => {
+                if size != self.written {
+                    return Err(crate::errors::Error::SizeError(size, self.written));
+                }
+            }
+        };
+
         let res = maybe_mmap.tmpfile.persist(&cpath).to_internal();
         if res.is_err() {
             // We might run into conflicts sometimes when persisting files.
@@ -106,6 +154,7 @@ impl Writer {
 
 impl Write for Writer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.written += buf.len();
         self.builder.input(&buf);
         self.target.write(&buf)
     }
@@ -119,6 +168,8 @@ impl Write for Writer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Read;
+
     #[test]
     fn basic_write() {
         let tmp = tempfile::tempdir().unwrap();
@@ -127,9 +178,51 @@ mod tests {
         writer.write_all(b"hello world").unwrap();
         let sri = writer.close().unwrap();
         assert_eq!(sri.to_string(), Integrity::from(b"hello world").to_string());
+
+        let mut reader = std::fs::File::open(path::content_path(&dir, &sri)).unwrap();
+        let mut size_bytes = [0u8; 8];
+        reader.read_exact(&mut size_bytes).unwrap();
+        let size = u64::from_be_bytes(size_bytes) as usize;
+        let mut data = Vec::new();
+        flate2::read::DeflateDecoder::new(reader).read_to_end(&mut data).unwrap();
+
+        // we wrote the correct value.
         assert_eq!(
-            zstd::decode_all(std::fs::File::open(path::content_path(&dir, &sri)).unwrap()).unwrap(),
+            size,
+            11
+        );
+
+        assert_eq!(
+            data,
             b"hello world"
+        );
+    }
+
+    #[test]
+    fn sized_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().to_owned();
+        let input = b"hello world, how are you";
+        let mut writer = Writer::new(dir.clone(), Algorithm::Sha256, Some(input.len())).unwrap();
+        writer.write_all(input).unwrap();
+        let sri = writer.close().unwrap();
+        assert_eq!(sri.to_string(), Integrity::from(input).to_string());
+
+        let mut reader = std::fs::File::open(path::content_path(&dir, &sri)).unwrap();
+        let mut size_bytes = [0u8; 8];
+        reader.read_exact(&mut size_bytes).unwrap();
+        let size = u64::from_be_bytes(size_bytes) as usize;
+        let mut data = Vec::new();
+        flate2::read::DeflateDecoder::new(reader).read_to_end(&mut data).unwrap();
+
+        assert_eq!(
+            data.len(),
+            size
+        );
+
+        assert_eq!(
+            data,
+            input
         );
     }
 }

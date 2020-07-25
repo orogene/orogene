@@ -3,13 +3,36 @@ use std::path::{ PathBuf, Path };
 use std::io::{ Read, BufReader };
 
 use ssri::{Algorithm, Integrity, IntegrityChecker};
+use memmap::{ MmapMut, Mmap };
 
 use crate::content::path;
 use crate::errors::{Internal, Result};
 
+struct MaybeMmap {
+    mmap: Option<(Mmap, usize)>,
+    file: BufReader<File>,
+}
+
+impl std::io::Read for MaybeMmap {
+    fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
+        if let Some((mmap, pos)) = self.mmap.as_mut() {
+            match (&mmap[*pos..]).read(&mut buf) {
+                Ok(read) => {
+                    *pos += read;
+                    Ok(read)
+                },
+                Err(e) => Err(e)
+            }
+        } else {
+            self.file.read(&mut buf)
+        }
+    }
+}
+
 pub struct Reader {
-    fd: flate2::read::DeflateDecoder<BufReader<File>>,
+    fd: flate2::read::DeflateDecoder<MaybeMmap>,
     checker: IntegrityChecker,
+    expected_size: usize,
 }
 
 impl std::io::Read for Reader {
@@ -20,15 +43,32 @@ impl std::io::Read for Reader {
     }
 }
 
+pub const MAX_MMAP_READ_SIZE: usize = 1024 * 1024 * 10;
+
 impl Reader {
     pub fn check(self) -> Result<Algorithm> {
         Ok(self.checker.result()?)
     }
 
     fn instantiate(cpath: PathBuf, sri: Integrity) -> Result<Self> {
+        let mut reader = File::open(cpath).to_internal()?;
+        let mut bytes = [0u8; 8];
+        reader.read_exact(&mut bytes).to_internal()?;
+        let expected_size = u64::from_be_bytes(bytes) as usize;
+
+        let fd = MaybeMmap {
+            mmap: if expected_size > 0 && expected_size < MAX_MMAP_READ_SIZE {
+                unsafe { Mmap::map(&reader) }.ok().map(|mmap| (mmap, 8))
+            } else {
+                None
+            },
+            file: BufReader::new(reader)
+        };
+
         Ok(Reader {
-            fd: flate2::read::DeflateDecoder::new(BufReader::new(File::open(cpath).to_internal()?)),
+            fd: flate2::read::DeflateDecoder::new(fd),
             checker: IntegrityChecker::new(sri),
+            expected_size,
         })
     }
 
@@ -75,8 +115,19 @@ pub async fn read_async<'a>(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
 pub fn copy(cache: &Path, sri: &Integrity, to: &Path) -> Result<u64> {
     let mut reader = Reader::new(cache, sri)?;
     // TODO: if we know the size of the file coming out, we could copy via mmap
-    let mut target = fs::OpenOptions::new().write(true).create(true).truncate(true).open(to).to_internal()?;
-    let ret = std::io::copy(&mut reader, &mut target).to_internal()?; 
+    //
+    let mut target = fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(to).to_internal()?;
+    let ret = if reader.expected_size > 0 {
+        if let Ok(mut mmap) = unsafe { MmapMut::map_mut(&target) } {
+            let mut cursor = std::io::Cursor::new(&mut mmap[..]);
+            std::io::copy(&mut reader, &mut cursor).to_internal()
+        } else {
+            std::io::copy(&mut reader, &mut target).to_internal()
+        }
+    } else {
+        std::io::copy(&mut reader, &mut target).to_internal()
+    }?;
+
     reader.check()?;
     Ok(ret)
 }
