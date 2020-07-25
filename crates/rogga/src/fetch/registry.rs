@@ -40,7 +40,7 @@ impl RegistryFetcher {
                     .body_json::<Packument>()
                     .await
                     .map_err(|e| Error::MiscError(e.to_string()))?,
-            )
+            );
         }
         Ok(self.packument.as_ref().unwrap())
     }
@@ -78,7 +78,7 @@ impl PackageFetcher for RegistryFetcher {
         };
         Ok(Box::new(
             client
-                .get_absolute(url)
+                .send(client.opts(Method::Get, url))
                 .await
                 .with_context(|| "Failed to get packument.".into())?,
         ))

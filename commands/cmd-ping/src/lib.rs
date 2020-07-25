@@ -3,7 +3,7 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use clap::Clap;
-use oro_client::OroClient;
+use oro_client::{self, Method, OroClient};
 use oro_command::OroCommand;
 use oro_error_code::OroErrCode as Code;
 use serde_json::Value;
@@ -33,8 +33,10 @@ impl OroCommand for PingCmd {
         if !quiet && !self.json {
             eprintln!("ping: {}", self.registry);
         }
-        let mut res = OroClient::new(self.registry.clone())
-            .get("-/ping?write=true")
+        let client = OroClient::new(self.registry.clone());
+        let req = client.opts(Method::Get, "-/ping?write=true");
+        let mut res = client
+            .send(req)
             .await
             .with_context(|| Code::OR1001(self.registry.to_string()))?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
