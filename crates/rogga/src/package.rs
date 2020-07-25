@@ -7,20 +7,11 @@ use http_types::Url;
 use package_arg::PackageArg;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use ssri::Integrity;
 use thiserror::Error;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
-use crate::packument::Packument;
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Manifest {
-    pub name: Option<String>,
-    pub version: Option<Version>,
-    pub integrity: Option<Integrity>,
-    pub resolved: PackageResolution,
-}
+use crate::packument::{Manifest, Packument};
 
 // Should this be an enum that mostly copies PackageArg? Should this replace
 // PackageArg itself? Should this just expose PackageArg through a .get()

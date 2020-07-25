@@ -5,7 +5,7 @@ use colored::*;
 use humansize::{file_size_opts, FileSize};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
-use rogga::{Bin, Human, Package, PackageResolution, Rogga, Version};
+use rogga::{Bin, Human, Manifest, Rogga};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
@@ -28,14 +28,8 @@ impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
         let pkgreq = Rogga::new(&self.registry).arg_package(&self.pkg)?;
         let packument = pkgreq.packument().await?;
-        let Package { resolved, .. } = pkgreq.resolve_with(ClassicResolver::new()).await?;
-        let manifest = match resolved {
-            PackageResolution::Npm { ref version, .. } => packument
-                .versions
-                .get(version)
-                .expect("Why isn't the version there?"),
-            _ => panic!("Package type not supported"),
-        };
+        let pkg = pkgreq.resolve_with(ClassicResolver::new()).await?;
+        let manifest = pkg.manifest().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]
         // Probably the best way to do this is to support doing raw
         // packument/manifest requests that just deserialize to
@@ -43,9 +37,9 @@ impl OroCommand for ViewCmd {
         if self.json {
             // TODO: What should this be? NPM is actually a weird mishmash of
             // the packument and the manifest?
-            println!("{}", serde_json::to_string_pretty(&packument)?);
+            println!("{}", serde_json::to_string_pretty(&manifest)?);
         } else {
-            let Version {
+            let Manifest {
                 ref name,
                 ref description,
                 ref version,

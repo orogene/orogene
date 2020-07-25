@@ -9,7 +9,7 @@ pub struct Packument {
     pub author: Option<Human>,
     pub name: Option<String>,
     pub description: Option<String>,
-    pub versions: HashMap<semver::Version, Version>,
+    pub versions: HashMap<semver::Version, Manifest>,
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(rename = "dist-tags")]
@@ -24,7 +24,7 @@ pub struct Packument {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Version {
+pub struct Manifest {
     pub name: String,
     pub version: semver::Version,
     pub description: Option<String>,

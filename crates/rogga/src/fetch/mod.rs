@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 
 use crate::error::Result;
-use crate::package::{Manifest, Package, PackageRequest};
-use crate::packument::Packument;
+use crate::package::{Package, PackageRequest};
+use crate::packument::{Manifest, Packument};
 
 pub use dir::DirFetcher;
 pub use registry::RegistryFetcher;
