@@ -1,18 +1,17 @@
-use http_types::StatusCode;
 use oro_error_code::OroErrCode as Code;
 use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;
 
 pub use surf::{
-    http::{Method, Url},
+    http::{url::ParseError, Method, StatusCode, Url},
     Error as SurfError, RequestBuilder, Response,
 };
 
 #[derive(Debug, Error)]
 pub enum OroClientError {
     #[error(transparent)]
-    UrlParseError(#[from] http_types::url::ParseError),
+    UrlParseError(#[from] ParseError),
     #[error("Request failed: {0}")]
     RequestError(SurfError),
     #[error("{}", context.join("\n  "))]
