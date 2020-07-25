@@ -14,7 +14,7 @@ pub const MAX_MMAP_SIZE: usize = 1024 * 1024;
 pub struct Writer {
     cache: PathBuf,
     builder: IntegrityOpts,
-    target: zstd::Encoder<MaybeMmap>
+    target: flate2::write::DeflateEncoder<MaybeMmap>
 }
 
 struct MaybeMmap {
@@ -68,10 +68,10 @@ impl Writer {
         Ok(Writer {
             cache: cache_path,
             builder: IntegrityOpts::new().algorithm(algo),
-            target: zstd::Encoder::new(MaybeMmap {
+            target: flate2::write::DeflateEncoder::new(MaybeMmap {
                 tmpfile,
                 mmap,
-            }, 0).to_internal()?
+            }, flate2::Compression::default())
         })
     }
 

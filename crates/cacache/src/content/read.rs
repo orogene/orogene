@@ -8,7 +8,7 @@ use crate::content::path;
 use crate::errors::{Internal, Result};
 
 pub struct Reader {
-    fd: zstd::Decoder<BufReader<File>>,
+    fd: flate2::read::DeflateDecoder<BufReader<File>>,
     checker: IntegrityChecker,
 }
 
@@ -27,7 +27,7 @@ impl Reader {
 
     fn instantiate(cpath: PathBuf, sri: Integrity) -> Result<Self> {
         Ok(Reader {
-            fd: zstd::Decoder::with_buffer(BufReader::new(File::open(cpath).to_internal()?)).to_internal()?,
+            fd: flate2::read::DeflateDecoder::new(BufReader::new(File::open(cpath).to_internal()?)),
             checker: IntegrityChecker::new(sri),
         })
     }
