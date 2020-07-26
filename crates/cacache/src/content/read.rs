@@ -14,6 +14,7 @@ struct MaybeMmap {
 }
 
 impl std::io::Read for MaybeMmap {
+    #[inline]
     fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
         if let Some((mmap, pos)) = self.mmap.as_mut() {
             match (&mmap[*pos..]).read(&mut buf) {
@@ -36,6 +37,7 @@ pub struct Reader {
 }
 
 impl std::io::Read for Reader {
+    #[inline]
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let amt = self.fd.read(buf)?;
         self.checker.input(&buf[..amt]);
@@ -44,6 +46,7 @@ impl std::io::Read for Reader {
 }
 
 pub const MAX_MMAP_READ_SIZE: usize = 1024 * 1024 * 10;
+pub const MIN_MMAP_READ_SIZE: usize = 1024 * 1024;
 
 impl Reader {
     pub fn check(self) -> Result<Algorithm> {
@@ -57,7 +60,7 @@ impl Reader {
         let expected_size = u64::from_be_bytes(bytes) as usize;
 
         let fd = MaybeMmap {
-            mmap: if expected_size > 0 && expected_size < MAX_MMAP_READ_SIZE {
+            mmap: if expected_size >= MIN_MMAP_READ_SIZE && expected_size <= MAX_MMAP_READ_SIZE {
                 unsafe { Mmap::map(&reader) }.ok().map(|mmap| (mmap, 8))
             } else {
                 None
@@ -79,7 +82,7 @@ impl Reader {
     }
 
     pub fn consume(mut self) -> Result<Vec<u8>> {
-        let mut v = Vec::new();
+        let mut v = Vec::with_capacity(self.expected_size);
         self.read_to_end(&mut v).to_internal()?;
         self.check()?;
         Ok(v)
@@ -114,9 +117,14 @@ pub async fn read_async<'a>(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
 
 pub fn copy(cache: &Path, sri: &Integrity, to: &Path) -> Result<u64> {
     let mut reader = Reader::new(cache, sri)?;
-    // TODO: if we know the size of the file coming out, we could copy via mmap
-    //
-    let mut target = fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(to).to_internal()?;
+    let mut target = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(to)
+        .to_internal()?;
+
     let ret = if reader.expected_size > 0 {
         if let Ok(mut mmap) = unsafe { MmapMut::map_mut(&target) } {
             let mut cursor = std::io::Cursor::new(&mut mmap[..]);

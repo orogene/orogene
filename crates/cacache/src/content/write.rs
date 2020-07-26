@@ -10,7 +10,8 @@ use tempfile::NamedTempFile;
 use crate::content::path;
 use crate::errors::{Internal, Result};
 
-pub const MAX_MMAP_SIZE: usize = 1024 * 1024;
+pub const MAX_MMAP_WRITE_SIZE: usize = 1024 * 1024 * 10;
+pub const MIN_MMAP_WRITE_SIZE: usize = 1024 * 1024;
 
 pub struct Writer {
     cache: PathBuf,
@@ -45,6 +46,7 @@ impl Seek for MaybeMmap {
 }
 
 impl Write for MaybeMmap {
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         if let Some((mmap, pos)) = self.mmap.as_mut() {
             match (&mut mmap[*pos..]).write(&buf) {
@@ -59,6 +61,7 @@ impl Write for MaybeMmap {
         }
     }
 
+    #[inline]
     fn flush(&mut self) -> std::io::Result<()> {
         if let Some((mmap, _)) = self.mmap.as_mut() {
             mmap.flush_async()?;
@@ -80,7 +83,7 @@ impl Writer {
         let tmpfile = NamedTempFile::new_in(tmp_path).to_internal()?;
 
         let mmap = size.and_then(|size| {
-            if size <= MAX_MMAP_SIZE {
+            if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
                 unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
             } else {
                 None
