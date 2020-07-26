@@ -1,37 +1,26 @@
 use memmap::MmapOptions;
 use semver::Version;
-use serde::{
-    de::{Deserializer, Error as SerdeError},
-    Deserialize,
-};
-use ssri::Integrity;
+use serde::{Deserialize, de::{Deserializer, Error as SerdeError}};
 use std::fs::File;
 use std::{collections::HashMap, path::Path};
 use thiserror::Error;
+use ssri::Integrity;
 
-fn parse_integrity<'de, D>(deserializer: D) -> Result<Integrity, D::Error>
+fn parse_integrity<'de, D>(deserializer: D) -> Result<Option<Integrity>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: &str = Deserialize::deserialize(deserializer)?;
-    s.parse().map_err(D::Error::custom)
-}
-
-fn parse_version<'de, D>(deserializer: D) -> Result<Version, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: &str = Deserialize::deserialize(deserializer)?;
-    s.parse().map_err(D::Error::custom)
+    s.parse().map(Option::Some).map_err(D::Error::custom)
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Dependency {
-    #[serde(deserialize_with = "parse_version")]
     version: Version,
 
+    #[serde(default)]
     #[serde(deserialize_with = "parse_integrity")]
-    integrity: Integrity,
+    integrity: Option<Integrity>,
 
     #[serde(default)]
     dev: bool,
@@ -55,9 +44,12 @@ pub struct Dependency {
 pub struct Package {
     name: String,
 
-    #[serde(deserialize_with = "parse_version")]
     version: Version,
+
+    #[serde(default)]
     requires: bool,
+
+    #[serde(default)]
     dependencies: HashMap<String, Dependency>,
 }
 

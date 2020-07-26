@@ -5,10 +5,13 @@ name = "oro-tree"
 version = "0.1.0"
 [dependencies]
 memmap = "0.7.0"
-semver = "*"
 serde_json = "1.0.56"
 ssri = "*"
 thiserror = "*"
+
+[dependencies.semver]
+features = ["serde"]
+version = "*"
 
 [dependencies.serde]
 features = ["derive"]
