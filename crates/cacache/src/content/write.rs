@@ -15,7 +15,7 @@ pub const MAX_MMAP_SIZE: usize = 1024 * 1024;
 pub struct Writer {
     cache: PathBuf,
     builder: IntegrityOpts,
-    target: flate2::write::DeflateEncoder<MaybeMmap>,
+    target: MaybeMmap,
     expected_size: Option<usize>,
     written: usize
 }
@@ -101,7 +101,7 @@ impl Writer {
         Ok(Writer {
             cache: cache_path,
             builder: IntegrityOpts::new().algorithm(algo),
-            target: flate2::write::DeflateEncoder::new(writer, flate2::Compression::default()),
+            target: writer,
             expected_size: size,
             written: 0
         })
@@ -116,7 +116,7 @@ impl Writer {
             .create(cpath.parent().unwrap())
             .to_internal()?;
 
-        let mut maybe_mmap = self.target.finish().to_internal()?;
+        let mut maybe_mmap = self.target;
 
         match self.expected_size {
             None => {
@@ -184,7 +184,7 @@ mod tests {
         reader.read_exact(&mut size_bytes).unwrap();
         let size = u64::from_be_bytes(size_bytes) as usize;
         let mut data = Vec::new();
-        flate2::read::DeflateDecoder::new(reader).read_to_end(&mut data).unwrap();
+        reader.read_to_end(&mut data).unwrap();
 
         // we wrote the correct value.
         assert_eq!(
@@ -213,7 +213,7 @@ mod tests {
         reader.read_exact(&mut size_bytes).unwrap();
         let size = u64::from_be_bytes(size_bytes) as usize;
         let mut data = Vec::new();
-        flate2::read::DeflateDecoder::new(reader).read_to_end(&mut data).unwrap();
+        reader.read_to_end(&mut data).unwrap();
 
         assert_eq!(
             data.len(),
