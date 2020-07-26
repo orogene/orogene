@@ -107,7 +107,7 @@ impl Package {
         self.fetcher.write().await.manifest(&self).await
     }
 
-    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Send + Sync>> {
+    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
         self.fetcher.write().await.tarball(&self).await
     }
 }

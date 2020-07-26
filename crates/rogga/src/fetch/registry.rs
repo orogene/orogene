@@ -70,7 +70,7 @@ impl PackageFetcher for RegistryFetcher {
         Ok(self.packument_from_name(pkg.name().await?).await?.clone())
     }
 
-    async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>> {
+    async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
         let client = self.client.lock().await;
         let url = match pkg.resolved {
             PackageResolution::Npm { ref tarball, .. } => tarball,

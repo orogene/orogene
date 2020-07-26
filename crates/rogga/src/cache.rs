@@ -4,7 +4,7 @@ use async_compression::futures::bufread::GzipDecoder;
 use async_std::prelude::*;
 use async_tar::Archive;
 use cacache::WriteOpts;
-use futures::{self, io::AsyncBufRead};
+use futures::{self, io::AsyncRead};
 use ssri::Integrity;
 
 use crate::error::{Error, Internal, Result};
@@ -13,12 +13,12 @@ use crate::integrity::AsyncIntegrity;
 pub async fn from_tarball<P, R>(cache: P, tarball: R) -> Result<Integrity>
 where
     P: AsRef<std::path::Path>,
-    R: AsyncBufRead + Unpin + Send + Sync,
+    R: AsyncRead + Unpin + Send + Sync,
 {
     use async_std::io::{self, BufReader};
     let path = std::path::PathBuf::from(cache.as_ref());
 
-    let sri_builder = AsyncIntegrity::new(tarball);
+    let sri_builder = AsyncIntegrity::new(BufReader::new(tarball));
     let decoder = GzipDecoder::new(BufReader::new(sri_builder));
     let mut ar = Archive::new(decoder);
     let mut entries = ar.entries().to_internal()?;

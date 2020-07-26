@@ -589,6 +589,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmd-restore"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "clap 3.0.0-beta.1",
+ "futures 0.3.5",
+ "log",
+ "oro-command",
+ "oro-error-code",
+ "rogga",
+ "semver 0.10.0",
+ "serde 1.0.114",
+ "serde_json",
+ "ssri",
+ "url",
+]
+
+[[package]]
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
@@ -1772,6 +1792,7 @@ dependencies = [
  "cacache",
  "clap 3.0.0-beta.1",
  "cmd-ping",
+ "cmd-restore",
  "cmd-view",
  "embed-resource",
  "fern",

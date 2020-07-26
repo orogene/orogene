@@ -22,7 +22,7 @@ impl PackageFetcher for DirFetcher {
     async fn packument(&mut self, _pkg: &PackageRequest) -> Result<Packument> {
         unimplemented!()
     }
-    async fn tarball(&mut self, _pkg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>> {
+    async fn tarball(&mut self, _pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
         unimplemented!()
     }
 }
