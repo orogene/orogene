@@ -3,9 +3,9 @@ use std::fs::File;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::time::Instant;
+// use std::time::Instant;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
@@ -13,7 +13,7 @@ use oro_command::OroCommand;
 use rogga::{PackageArg, PackageRequest, PackageResolution, Resolver, ResolverError, Rogga};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use ssri::Integrity;
+// use ssri::Integrity;
 use url::Url;
 
 #[derive(Debug, Clap, OroCommand)]
@@ -115,7 +115,7 @@ impl RestoreCmd {
             futs.push(Box::pin(async {
                 let resolved = req.resolve_with(resolver).await?;
                 // TODO: skip the below if the package is already in our cache.
-                let start = std::time::Instant::now();
+                // let start = std::time::Instant::now();
                 let tarball = resolved.tarball().await?;
                 // println!("Fetching {}", resolved.name);
                 rogga::cache::from_tarball(&self.cache, tarball).await?;
