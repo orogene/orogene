@@ -35,6 +35,7 @@ struct NpmError {
     message: String,
 }
 
+#[derive(Clone)]
 pub struct OroClient {
     base: Url,
     client: Client,

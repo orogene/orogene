@@ -64,3 +64,30 @@ where
     .await
     .to_internal()?)
 }
+
+pub async fn tarball_itself<P, R>(cache: P, tarball: R) -> Result<Integrity>
+where
+    P: AsRef<std::path::Path>,
+    R: AsyncRead + Unpin + Send + Sync,
+{
+    use async_std::io::{self, BufReader};
+    let path = std::path::PathBuf::from(cache.as_ref());
+
+    let reader = BufReader::new(tarball);
+    let mut writer = WriteOpts::new()
+        .open_hash(&path)
+        .await
+        .to_internal()?;
+
+    io::copy(reader, async_std::io::BufWriter::new(&mut writer))
+        .await
+        .to_internal()?;
+
+    let sri = writer.commit().await.to_internal()?;
+
+    Ok(
+        cacache::write(&path, format!("orogene::pkg::{}", sri.to_string()), b"")
+            .await
+            .to_internal()?,
+    )
+}

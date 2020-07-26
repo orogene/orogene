@@ -6,11 +6,10 @@ use std::pin::Pin;
 use std::time::Instant;
 
 use anyhow::{Context, Result};
-use async_std::io::BufReader;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
-use oro_error_code::OroErrCode as Code;
+// use oro_error_code::OroErrCode as Code;
 use rogga::{PackageArg, PackageRequest, PackageResolution, Resolver, ResolverError, Rogga};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -25,7 +24,7 @@ pub struct RestoreCmd {
         long
     )]
     registry: Url,
-    #[clap(about = "cache to fill up")]
+    #[clap(about = "cache to fill up", long, short = 'C')]
     cache: PathBuf,
     #[clap(from_global)]
     loglevel: log::LevelFilter,
@@ -113,11 +112,22 @@ impl RestoreCmd {
                     futs.push(self.extract(rogga, name, dep));
                 }
             }
+            futs.push(Box::pin(async {
+                let resolved = req.resolve_with(resolver).await?;
+                // TODO: skip the below if the package is already in our cache.
+                let start = std::time::Instant::now();
+                let tarball = resolved.tarball().await?;
+                // println!("Fetching {}", resolved.name);
+                rogga::cache::from_tarball(&self.cache, tarball).await?;
+                // rogga::cache::tarball_itself(&self.cache, tarball).await?;
+                // println!(
+                //     "Downloaded {} in {}ms",
+                //     resolved.name,
+                //     start.elapsed().as_micros() as f32 / 1000.0
+                // );
+                Ok(())
+            }));
             futures::future::try_join_all(futs).await?;
-            let resolved = req.resolve_with(resolver).await?;
-            let tarball = resolved.tarball().await?;
-            rogga::cache::from_tarball(&self.cache, tarball).await?;
-            // println!("{:#?}", resolved.resolved);
             Ok(())
         })
     }

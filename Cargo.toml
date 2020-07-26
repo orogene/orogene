@@ -27,7 +27,6 @@ rogga = { path = "./crates/rogga" }
 cacache = { path = "./crates/cacache", version = "8.0.0" }
 
 # Regular deps
-async-tar = "0.1.1"
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }
 clap = { git = "https://github.com/zkat/clap" }
 anyhow = "1.0.31"
