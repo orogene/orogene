@@ -15,15 +15,12 @@ use crate::index::{self, Metadata};
 // Async API
 // ---------
 
-pin_project_lite::pin_project! {
-    /// File handle for reading data asynchronously.
-    ///
-    /// Make sure to call `.check()` when done reading to verify that the
-    /// extracted data passes integrity verification.
-    pub struct Reader {
-        #[pin]
-        reader: smol::Unblock<read::Reader>,
-    }
+/// File handle for reading data asynchronously.
+///
+/// Make sure to call `.check()` when done reading to verify that the
+/// extracted data passes integrity verification.
+pub struct Reader {
+    reader: smol::Unblock<read::Reader>,
 }
 
 impl AsyncRead for Reader {
@@ -32,8 +29,7 @@ impl AsyncRead for Reader {
         cx: &mut TaskContext<'_>,
         buf: &mut [u8],
     ) -> Poll<std::io::Result<usize>> {
-        let this = self.project();
-        this.reader.poll_read(cx, buf)
+        Pin::new(&mut self.reader).poll_read(cx, buf)
     }
 }
 
