@@ -5,6 +5,7 @@ use std::fs::File;
 use std::{collections::HashMap, path::Path};
 use thiserror::Error;
 use ssri::Integrity;
+use url::Url;
 
 fn parse_integrity<'de, D>(deserializer: D) -> Result<Option<Integrity>, D::Error>
 where
@@ -31,7 +32,8 @@ pub struct Dependency {
     #[serde(default)]
     optional: bool,
 
-    resolved: Option<String>,
+    #[serde(default)]
+    resolved: Option<Url>,
 
     #[serde(default)]
     requires: HashMap<String, String>,

@@ -16,3 +16,7 @@ version = "*"
 [dependencies.serde]
 features = ["derive"]
 version = "1.0.114"
+
+[dependencies.url]
+features = ["serde"]
+version = "2.1.1"
