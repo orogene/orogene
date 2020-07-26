@@ -74,10 +74,7 @@ where
     let path = std::path::PathBuf::from(cache.as_ref());
 
     let reader = BufReader::new(tarball);
-    let mut writer = WriteOpts::new()
-        .open_hash(&path)
-        .await
-        .to_internal()?;
+    let mut writer = WriteOpts::new().open_hash(&path).await.to_internal()?;
 
     io::copy(reader, async_std::io::BufWriter::new(&mut writer))
         .await
