@@ -20,8 +20,8 @@ where
 
     let sri_builder = AsyncIntegrity::new(BufReader::new(tarball));
     let decoder = GzipDecoder::new(BufReader::new(sri_builder));
-    let mut ar = Archive::new(decoder);
-    let mut entries = ar.entries().to_internal()?;
+    let ar = Archive::new(decoder);
+    let mut entries = ar.clone().entries().to_internal()?;
     let mut entry_hash = HashMap::new();
 
     while let Some(file) = entries.next().await {
