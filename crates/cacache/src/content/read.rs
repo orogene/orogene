@@ -31,7 +31,7 @@ impl std::io::Read for MaybeMmap {
 }
 
 pub struct Reader {
-    fd: flate2::read::DeflateDecoder<MaybeMmap>,
+    fd: snap::read::FrameDecoder<MaybeMmap>,
     checker: IntegrityChecker,
     expected_size: usize,
 }
@@ -69,7 +69,7 @@ impl Reader {
         };
 
         Ok(Reader {
-            fd: flate2::read::DeflateDecoder::new(fd),
+            fd: snap::read::FrameDecoder::new(fd),
             checker: IntegrityChecker::new(sri),
             expected_size,
         })
