@@ -81,21 +81,34 @@ impl Reader {
         Self::instantiate(cpath, sri)
     }
 
-    pub fn consume(mut self) -> Result<Vec<u8>> {
-        let mut v = Vec::with_capacity(self.expected_size);
-        self.read_to_end(&mut v).to_internal()?;
-        self.check()?;
-        Ok(v)
-    }
-
     pub async fn new_async(cache: &Path, sri: &Integrity) -> Result<Self> {
         let cpath = path::content_path(&cache, &sri);
         let sri = sri.clone();
         smol::unblock!(Self::instantiate(cpath, sri))
     }
 
-    pub async fn consume_async(self) -> Result<Vec<u8>> {
-        smol::unblock!(self.consume())
+    pub fn consume(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
+        let cpath = path::content_path(&cache, &sri);
+        let sri = sri.clone();
+        let mut reader = Self::instantiate(cpath, sri)?;
+
+        let mut v = Vec::with_capacity(reader.expected_size);
+        reader.read_to_end(&mut v).to_internal()?;
+        reader.check()?;
+        Ok(v)
+    }
+
+    pub async fn consume_async(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
+        let cpath = path::content_path(&cache, &sri);
+        let sri = sri.clone();
+        async_std::task::spawn_blocking(|| {
+            let mut reader = Self::instantiate(cpath, sri)?;
+
+            let mut v = Vec::with_capacity(reader.expected_size);
+            reader.read_to_end(&mut v).to_internal()?;
+            reader.check()?;
+            Ok(v)
+        }).await
     }
 }
 
@@ -108,11 +121,11 @@ pub async fn open_async(cache: &Path, sri: Integrity) -> Result<Reader> {
 }
 
 pub fn read(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-    Reader::new(cache, sri)?.consume()
+    Reader::consume(cache, sri)
 }
 
 pub async fn read_async<'a>(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-    Reader::new_async(cache, sri).await?.consume_async().await
+    Reader::consume_async(cache, sri).await
 }
 
 pub fn copy(cache: &Path, sri: &Integrity, to: &Path) -> Result<u64> {
