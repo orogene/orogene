@@ -1,10 +1,13 @@
 use memmap::MmapOptions;
 use semver::Version;
-use serde::{Deserialize, de::{Deserializer, Error as SerdeError}};
+use serde::{
+    de::{Deserializer, Error as SerdeError},
+    Deserialize,
+};
+use ssri::Integrity;
 use std::fs::File;
 use std::{collections::HashMap, path::Path};
 use thiserror::Error;
-use ssri::Integrity;
 use url::Url;
 
 fn parse_integrity<'de, D>(deserializer: D) -> Result<Option<Integrity>, D::Error>
