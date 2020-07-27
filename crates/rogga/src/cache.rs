@@ -53,9 +53,9 @@ where
         .to_internal()?
         .into_inner()
         .into_inner()
-        .into_inner()
         .result();
 
+    log::trace!("Finished caching tarball contents from stream");
     Ok(cacache::write(
         &path,
         format!("orogene::pkg::{}", sri.to_string()),
