@@ -3,6 +3,7 @@ authors = ["Felipe Sere <felipesere@gmail.com>"]
 edition = "2018"
 name = "oro-tree"
 version = "0.1.0"
+
 [dependencies]
 memmap = "0.7.0"
 serde_json = "1.0.56"
