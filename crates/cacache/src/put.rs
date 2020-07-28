@@ -421,7 +421,6 @@ impl SyncWriter {
             .open_sync(cache.as_ref(), key.as_ref())
     }
 
-
     /// Closes the Writer handle and writes content and index entries. Also
     /// verifies data against `size` and `integrity` options, if provided.
     /// Must be called manually in order to complete the writing process,

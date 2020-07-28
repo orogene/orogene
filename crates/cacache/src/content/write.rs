@@ -1,7 +1,7 @@
 use std::fs::DirBuilder;
-use std::path::PathBuf;
-use std::io::Write;
 use std::io::Seek;
+use std::io::Write;
+use std::path::PathBuf;
 
 use memmap::MmapMut;
 use ssri::{Algorithm, Integrity, IntegrityOpts};
@@ -18,7 +18,7 @@ pub struct Writer {
     builder: IntegrityOpts,
     target: snap::write::FrameEncoder<MaybeMmap>,
     expected_size: Option<usize>,
-    written: usize
+    written: usize,
 }
 
 #[derive(Debug)]
@@ -34,10 +34,8 @@ impl Seek for MaybeMmap {
                 std::io::SeekFrom::Start(xs) => {
                     *position = xs as usize;
                     Ok(xs)
-                },
-                _ => {
-                    unimplemented!()
                 }
+                _ => unimplemented!(),
             }
         } else {
             self.tmpfile.seek(pos)
@@ -53,8 +51,8 @@ impl Write for MaybeMmap {
                 Ok(written) => {
                     *pos += written;
                     Ok(written)
-                },
-                Err(e) => Err(e)
+                }
+                Err(e) => Err(e),
             }
         } else {
             self.tmpfile.write(&buf)
@@ -82,31 +80,27 @@ impl Writer {
             .to_internal()?;
         let tmpfile = NamedTempFile::new_in(tmp_path).to_internal()?;
 
-        let mmap = size.and_then(|size| {
-            if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
-                unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
-            } else {
-                None
-            }
-        }).map(|mmap| (mmap, 0));
+        let mmap = size
+            .and_then(|size| {
+                if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
+                    unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
+                } else {
+                    None
+                }
+            })
+            .map(|mmap| (mmap, 0));
 
-        let mut writer = MaybeMmap {
-            tmpfile,
-            mmap,
-        };
+        let mut writer = MaybeMmap { tmpfile, mmap };
 
-        size.and_then(|size| {
-            writer.write(&size.to_be_bytes()).ok()
-        }).or_else(|| {
-            writer.write(&0u64.to_be_bytes()).ok()
-        });
+        size.and_then(|size| writer.write(&size.to_be_bytes()).ok())
+            .or_else(|| writer.write(&0u64.to_be_bytes()).ok());
 
         Ok(Writer {
             cache: cache_path,
             builder: IntegrityOpts::new().algorithm(algo),
             target: snap::write::FrameEncoder::new(writer),
             expected_size: size,
-            written: 0
+            written: 0,
         })
     }
 
@@ -128,7 +122,7 @@ impl Writer {
 
                 maybe_mmap.write(&bytes).to_internal()?;
                 maybe_mmap.flush().to_internal()?;
-            },
+            }
             Some(size) => {
                 if size != self.written {
                     return Err(crate::errors::Error::SizeError(size, self.written));
@@ -146,7 +140,11 @@ impl Writer {
         Ok(sri)
     }
 
-    pub async fn new_async(cache: PathBuf, algo: Algorithm, size: Option<usize>) -> Result<smol::Unblock<Self>> {
+    pub async fn new_async(
+        cache: PathBuf,
+        algo: Algorithm,
+        size: Option<usize>,
+    ) -> Result<smol::Unblock<Self>> {
         smol::unblock!(Writer::new(cache, algo, size)).map(smol::Unblock::new)
     }
 
@@ -167,7 +165,6 @@ impl Write for Writer {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,18 +184,14 @@ mod tests {
         reader.read_exact(&mut size_bytes).unwrap();
         let size = u64::from_be_bytes(size_bytes) as usize;
         let mut data = Vec::new();
-        snap::read::FrameDecoder::new(reader).read_to_end(&mut data).unwrap();
+        snap::read::FrameDecoder::new(reader)
+            .read_to_end(&mut data)
+            .unwrap();
 
         // we wrote the correct value.
-        assert_eq!(
-            size,
-            11
-        );
+        assert_eq!(size, 11);
 
-        assert_eq!(
-            data,
-            b"hello world"
-        );
+        assert_eq!(data, b"hello world");
     }
 
     #[test]
@@ -216,16 +209,12 @@ mod tests {
         reader.read_exact(&mut size_bytes).unwrap();
         let size = u64::from_be_bytes(size_bytes) as usize;
         let mut data = Vec::new();
-        snap::read::FrameDecoder::new(reader).read_to_end(&mut data).unwrap();
+        snap::read::FrameDecoder::new(reader)
+            .read_to_end(&mut data)
+            .unwrap();
 
-        assert_eq!(
-            data.len(),
-            size
-        );
+        assert_eq!(data.len(), size);
 
-        assert_eq!(
-            data,
-            input
-        );
+        assert_eq!(data, input);
     }
 }

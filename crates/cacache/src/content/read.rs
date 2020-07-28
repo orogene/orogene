@@ -1,9 +1,9 @@
 use std::fs::{self, File};
-use std::path::{ PathBuf, Path };
-use std::io::{ Read, BufReader };
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
 
+use memmap::{Mmap, MmapMut};
 use ssri::{Algorithm, Integrity, IntegrityChecker};
-use memmap::{ MmapMut, Mmap };
 
 use crate::content::path;
 use crate::errors::{Internal, Result};
@@ -21,8 +21,8 @@ impl std::io::Read for MaybeMmap {
                 Ok(read) => {
                     *pos += read;
                     Ok(read)
-                },
-                Err(e) => Err(e)
+                }
+                Err(e) => Err(e),
             }
         } else {
             self.file.read(&mut buf)
@@ -65,7 +65,7 @@ impl Reader {
             } else {
                 None
             },
-            file: BufReader::new(reader)
+            file: BufReader::new(reader),
         };
 
         Ok(Reader {
@@ -108,7 +108,8 @@ impl Reader {
             reader.read_to_end(&mut v).to_internal()?;
             reader.check()?;
             Ok(v)
-        }).await
+        })
+        .await
     }
 }
 

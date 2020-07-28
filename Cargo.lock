@@ -465,17 +465,16 @@ dependencies = [
  "criterion",
  "digest",
  "either",
- "flate2",
  "futures 0.3.5",
  "hex 0.4.2",
  "memmap",
- "pin-project-lite",
  "serde 1.0.114",
  "serde_derive",
  "serde_json",
  "sha-1",
  "sha2",
  "smol 0.3.1",
+ "snap",
  "ssri",
  "tempfile",
  "thiserror",
@@ -2360,6 +2359,12 @@ dependencies = [
  "futures-lite",
  "num_cpus",
 ]
+
+[[package]]
+name = "snap"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da73c8f77aebc0e40c300b93f0a5f1bece7a248a36eee287d4e095f35c7b7d6e"
 
 [[package]]
 name = "socket2"
