@@ -125,14 +125,6 @@ pub async fn open_async(cache: &Path, sri: Integrity) -> Result<Reader> {
     Reader::new_async(cache, &sri).await
 }
 
-pub fn read(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-    Reader::consume(cache, sri)
-}
-
-pub async fn read_async<'a>(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-    Reader::consume_async(cache, sri).await
-}
-
 pub fn copy(cache: &Path, sri: &Integrity, to: &Path) -> Result<u64> {
     let mut reader = Reader::new(cache, sri)?;
     let mut target = fs::OpenOptions::new()
