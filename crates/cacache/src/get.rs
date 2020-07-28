@@ -169,7 +169,7 @@ pub async fn read_hash<P>(cache: P, sri: &Integrity) -> Result<Vec<u8>>
 where
     P: AsRef<Path>,
 {
-    Ok(read::read_async(cache.as_ref(), sri).await?)
+    Ok(read::Reader::consume_async(cache.as_ref(), sri).await?)
 }
 
 /// Copies cache data to a specified location. Returns the number of bytes
@@ -387,7 +387,7 @@ pub fn read_hash_sync<P>(cache: P, sri: &Integrity) -> Result<Vec<u8>>
 where
     P: AsRef<Path>,
 {
-    Ok(read::read(cache.as_ref(), sri)?)
+    Ok(read::Reader::consume(cache.as_ref(), sri)?)
 }
 
 /// Copies a cache entry by key to a specified location. Returns the number of

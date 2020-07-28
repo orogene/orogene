@@ -11,7 +11,10 @@ use crate::content::path;
 use crate::errors::{Internal, Result};
 
 pub const MAX_MMAP_WRITE_SIZE: usize = 1024 * 1024 * 10;
+#[cfg(not(target_os = "windows"))]
 pub const MIN_MMAP_WRITE_SIZE: usize = 1024 * 1024;
+#[cfg(target_os = "windows")]
+pub const MIN_MMAP_WRITE_SIZE: usize = 0;
 
 pub struct Writer {
     cache: PathBuf,

@@ -8,6 +8,12 @@ use ssri::{Algorithm, Integrity, IntegrityChecker};
 use crate::content::path;
 use crate::errors::{Internal, Result};
 
+pub const MAX_MMAP_READ_SIZE: usize = 1024 * 1024 * 10;
+#[cfg(not(target_os = "windows"))]
+pub const MIN_MMAP_READ_SIZE: usize = 1024 * 1024;
+#[cfg(target_os = "windows")]
+pub const MIN_MMAP_READ_SIZE: usize = 0;
+
 struct MaybeMmap {
     mmap: Option<(Mmap, usize)>,
     file: BufReader<File>,
@@ -44,9 +50,6 @@ impl std::io::Read for Reader {
         Ok(amt)
     }
 }
-
-pub const MAX_MMAP_READ_SIZE: usize = 1024 * 1024 * 10;
-pub const MIN_MMAP_READ_SIZE: usize = 1024 * 1024;
 
 impl Reader {
     pub fn check(self) -> Result<Algorithm> {
@@ -98,6 +101,7 @@ impl Reader {
         Ok(v)
     }
 
+    #[inline]
     pub async fn consume_async(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
         let cpath = path::content_path(&cache, &sri);
         let sri = sri.clone();
