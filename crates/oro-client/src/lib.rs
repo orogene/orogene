@@ -66,11 +66,7 @@ impl OroClient {
             .client
             .send(request)
             .await
-            .map_err(|e| {
-                println!("{:#?}", e);
-                OroClientError::RequestError(e)
-            })?;
-            // .map_err(OroClientError::RequestError)?;
+            .map_err(OroClientError::RequestError)?;
         if res.status().is_client_error() || res.status().is_server_error() {
             let msg = match res.body_json::<NpmError>().await {
                 Ok(err) => err.message,

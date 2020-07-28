@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use deadpool::managed::{Manager, Object, Pool, RecycleResult};
 use futures::future::BoxFuture;
 use futures::io::{AsyncRead, AsyncWrite};
-use futures::task::{Poll, Context};
+use futures::task::{Context, Poll};
 use http_client::{Error, HttpClient, Request, Response};
 use http_types::StatusCode;
 
@@ -52,7 +52,6 @@ impl AsyncWrite for TcpConnWrapper {
         Pin::new(&mut *self.conn).poll_close(cx)
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct TcpConnection {
@@ -126,22 +125,25 @@ impl AsyncWrite for TlsConnWrapper {
 #[async_trait]
 impl Manager<TlsStream<TcpStream>, Error> for TlsConnection {
     async fn create(&self) -> Result<TlsStream<TcpStream>, Error> {
-        log::trace!("Making new TLS connection to {}", self.host);
+        log::trace!("Creating new socket to {:?}", self.addr);
         let raw_stream = async_std::net::TcpStream::connect(self.addr).await?;
         let stream = async_native_tls::connect(&self.host, raw_stream).await?;
         Ok(stream)
     }
 
     async fn recycle(&self, _conn: &mut TlsStream<TcpStream>) -> RecycleResult<Error> {
-        log::trace!("Recycling connection to {}", self.host);
         Ok(())
     }
 }
+
+type HttpPool = HashMap<SocketAddr, Pool<TcpStream, std::io::Error>>;
+type HttpsPool = HashMap<SocketAddr, Pool<TlsStream<TcpStream>, Error>>;
+
 /// Async-h1 based HTTP Client.
 #[derive(Clone)]
 pub struct H1Client {
-    http_pool: Arc<Mutex<HashMap<SocketAddr, Pool<TcpStream, std::io::Error>>>>,
-    https_pool: Arc<Mutex<HashMap<SocketAddr, Pool<TlsStream<TcpStream>, Error>>>>,
+    http_pool: Arc<Mutex<HttpPool>>,
+    https_pool: Arc<Mutex<HttpsPool>>,
 }
 
 impl Debug for H1Client {
@@ -212,6 +214,8 @@ impl HttpClient for H1Client {
                         hash.insert(addr, pool);
                         hash.get(&addr).expect("oh COME ON")
                     };
+                    let pool = pool.clone();
+                    std::mem::drop(hash);
                     let stream = pool.get().await?;
                     req.set_peer_addr(stream.peer_addr().ok());
                     req.set_local_addr(stream.local_addr().ok());
@@ -223,12 +227,13 @@ impl HttpClient for H1Client {
                         pool
                     } else {
                         let manager = TlsConnection::new(host.clone(), addr);
-                        let pool = Pool::<TlsStream<TcpStream>, Error>::new(manager, 100);
+                        let pool = Pool::<TlsStream<TcpStream>, Error>::new(manager, 25);
                         hash.insert(addr, pool);
                         hash.get(&addr).expect("oh COME ON")
                     };
+                    let pool = pool.clone();
+                    std::mem::drop(hash);
                     let stream = pool.get().await.unwrap(); // TODO: remove unwrap
-                    // println!("Got https stream to {} (status: {:#?})", host, pool.status());
                     req.set_peer_addr(stream.get_ref().peer_addr().ok());
                     req.set_local_addr(stream.get_ref().local_addr().ok());
 

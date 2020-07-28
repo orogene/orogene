@@ -21,8 +21,8 @@ impl<R: AsyncBufRead + Unpin> AsyncIntegrity<R> {
     //     self.reader
     // }
 
-    pub fn result(self) -> ssri::Integrity {
-        self.opts.result()
+    pub fn inner_result(self) -> (ssri::Integrity, R) {
+        (self.opts.result(), self.reader)
     }
 }
 

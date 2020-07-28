@@ -47,13 +47,15 @@ where
     }
 
     std::mem::drop(entries);
-    let sri = ar
+    let (sri, mut reader) = ar
         .into_inner()
         .map_err(|_| Error::MiscError("Failed to get inner Read".into()))
         .to_internal()?
         .into_inner()
         .into_inner()
-        .result();
+        .inner_result();
+    let mut buf = Vec::new();
+    reader.read_to_end(&mut buf).await.to_internal()?;
 
     log::trace!("Finished caching tarball contents from stream");
     Ok(cacache::write(
