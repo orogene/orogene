@@ -4,7 +4,7 @@ Yet another JavaScript package manager, I guess.
 
 ## License
 
-Licensing decisions are controlled by [Cross-License Collaborative Members](#members), as
+Licensing decisions are controlled by [Cross-License Collaborative Members](MEMBERS.md), as
 defined in the [cross-licensing terms](CROSS_LICENSE.md).
 
 All contributions by Members are licensed under [the Parity
