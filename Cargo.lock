@@ -229,9 +229,9 @@ dependencies = [
 
 [[package]]
 name = "async-tar"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bf8c4fd45c1ef482f5f79c78e097c6c49b62f3faa0a048cd606e6a2e3fa4ad7"
+checksum = "5961069423b575e7508d89ce95b65061a3efda707b5487c0d6f3dbeecaebce15"
 dependencies = [
  "async-std",
  "filetime",
@@ -457,6 +457,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytes"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
+
+[[package]]
 name = "cacache"
 version = "8.0.0"
 dependencies = [
@@ -589,6 +595,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmd-restore"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "clap 3.0.0-beta.1",
+ "futures 0.3.5",
+ "log",
+ "oro-command",
+ "oro-error-code",
+ "rogga",
+ "semver 0.10.0",
+ "serde 1.0.114",
+ "serde_json",
+ "ssri",
+ "url",
+]
+
+[[package]]
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
@@ -658,6 +684,17 @@ dependencies = [
  "serde_json",
  "toml",
  "yaml-rust",
+]
+
+[[package]]
+name = "config"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19b076e143e1d9538dde65da30f8481c2a6c44040edb8e02b9bf1351edb92ce3"
+dependencies = [
+ "lazy_static 1.4.0",
+ "nom 5.1.2",
+ "serde 1.0.114",
 ]
 
 [[package]]
@@ -863,6 +900,20 @@ name = "data-encoding"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72aa14c04dfae8dd7d8a2b1cb7ca2152618cd01336dbfe704b8dcbf8d41dbd69"
+
+[[package]]
+name = "deadpool"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4aaff9a7a1de9893f4004fa08527b31cb2ae4121c44e053cf53f29203c73bd23"
+dependencies = [
+ "async-trait",
+ "config 0.10.1",
+ "crossbeam-queue",
+ "num_cpus",
+ "serde 1.0.114",
+ "tokio",
+]
 
 [[package]]
 name = "derive_more"
@@ -1700,6 +1751,15 @@ dependencies = [
 name = "oro-client"
 version = "0.1.0"
 dependencies = [
+ "async-h1",
+ "async-native-tls",
+ "async-std",
+ "async-trait",
+ "deadpool",
+ "futures 0.3.5",
+ "http-client",
+ "http-types",
+ "log",
  "oro-error-code",
  "serde 1.0.114",
  "surf",
@@ -1732,7 +1792,7 @@ name = "oro-config"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "config",
+ "config 0.9.3",
  "directories",
  "serde 1.0.114",
  "tempfile",
@@ -1766,12 +1826,12 @@ dependencies = [
  "anyhow",
  "async-compression",
  "async-std",
- "async-tar",
  "async-trait",
  "bincode",
  "cacache",
  "clap 3.0.0-beta.1",
  "cmd-ping",
+ "cmd-restore",
  "cmd-view",
  "embed-resource",
  "fern",
@@ -2505,7 +2565,7 @@ checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
 [[package]]
 name = "surf"
 version = "2.0.0-alpha.4"
-source = "git+git://github.com/Fishrock123/surf.git?branch=request-builder#2272bbda40d37ca228dc53232aaf3211cd5fce27"
+source = "git+git://github.com/Fishrock123/surf.git?branch=request-builder#4421645861130d3fa791de84da51908c12644263"
 dependencies = [
  "async-std",
  "futures 0.3.5",
@@ -2696,12 +2756,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53953d2d3a5ad81d9f844a32f14ebb121f50b650cd59d0ee2a07cf13c617efed"
 
 [[package]]
+name = "tokio"
+version = "0.2.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d34ca54d84bf2b5b4d7d31e901a8464f7b60ac145a284fba25ceb801f2ddccd"
+dependencies = [
+ "bytes 0.5.6",
+ "fnv",
+ "pin-project-lite",
+ "slab",
+]
+
+[[package]]
 name = "tokio-io"
 version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57fc868aae093479e3131e3d165c93b1c7474109d13c90ec0dda2a1bbfff0674"
 dependencies = [
- "bytes",
+ "bytes 0.4.12",
  "futures 0.1.29",
  "log",
 ]

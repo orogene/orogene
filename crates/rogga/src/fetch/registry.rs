@@ -27,7 +27,7 @@ impl RegistryFetcher {
 impl RegistryFetcher {
     async fn packument_from_name<T: AsRef<str>>(&mut self, name: T) -> Result<&Packument> {
         if self.packument.is_none() {
-            let client = self.client.lock().await;
+            let client = self.client.lock().await.clone();
             let opts = client.opts(Method::Get, name.as_ref());
             self.packument = Some(
                 client
@@ -53,7 +53,7 @@ impl PackageFetcher for RegistryFetcher {
             PackageResolution::Npm { ref version, .. } => version,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
-        let client = self.client.lock().await;
+        let client = self.client.lock().await.clone();
         let opts = client.opts(Method::Get, format!("{}/{}", pkg.name, wanted));
         let info = client
             .send(opts)
@@ -70,8 +70,11 @@ impl PackageFetcher for RegistryFetcher {
         Ok(self.packument_from_name(pkg.name().await?).await?.clone())
     }
 
-    async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Send + Sync>> {
-        let client = self.client.lock().await;
+    async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+        // NOTE: This .clone() is so we can free up the client lock, which
+        // would otherwise, you know, make it so we can only make one request
+        // at a time :(
+        let client = self.client.lock().await.clone();
         let url = match pkg.resolved {
             PackageResolution::Npm { ref tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),

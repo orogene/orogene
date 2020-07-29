@@ -12,3 +12,12 @@ oro-error-code = { path = "../oro-error-code" }
 surf = { git = "git://github.com/Fishrock123/surf.git", branch = "request-builder", default-features = false, features = ["h1-client"]}
 thiserror = "1.0.20"
 serde = "1.0.114"
+async-std = "1.6.2"
+async-h1 = "2.1.0"
+http-client = "4.0.0"
+http-types = "2.3.0"
+futures = "0.3.5"
+async-native-tls = "0.3.3"
+log = "0.4.11"
+deadpool = "0.5.2"
+async-trait = "0.1.36"

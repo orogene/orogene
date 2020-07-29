@@ -7,6 +7,7 @@ use oro_command::{ArgMatches, OroCommand, OroCommandLayerConfig};
 use oro_config::{OroConfig, OroConfigOptions};
 
 use cmd_ping::PingCmd;
+use cmd_restore::RestoreCmd;
 use cmd_view::ViewCmd;
 
 pub use oro_error_code::OroErrCode as Code;
@@ -109,6 +110,13 @@ pub enum OroCmd {
     )]
     Ping(PingCmd),
     #[clap(
+        about = "Restore required packages into the global cache",
+        setting = clap::AppSettings::ColoredHelp,
+        setting = clap::AppSettings::DisableHelpSubcommand,
+        setting = clap::AppSettings::DeriveDisplayOrder,
+    )]
+    Restore(RestoreCmd),
+    #[clap(
         about = "Get information about a package",
         setting = clap::AppSettings::ColoredHelp,
         setting = clap::AppSettings::DisableHelpSubcommand,
@@ -129,6 +137,7 @@ impl OroCommand for Orogene {
         log::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
+            OroCmd::Restore(restore) => restore.execute().await,
             OroCmd::View(view) => view.execute().await,
         }
     }
@@ -139,6 +148,9 @@ impl OroCommandLayerConfig for Orogene {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
                 ping.layer_config(args.subcommand_matches("ping").unwrap().clone(), conf)
+            }
+            OroCmd::Restore(ref mut restore) => {
+                restore.layer_config(args.subcommand_matches("restore").unwrap().clone(), conf)
             }
             OroCmd::View(ref mut view) => {
                 view.layer_config(args.subcommand_matches("view").unwrap().clone(), conf)

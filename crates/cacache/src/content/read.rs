@@ -12,7 +12,7 @@ pub const MAX_MMAP_READ_SIZE: usize = 1024 * 1024 * 10;
 #[cfg(not(target_os = "windows"))]
 pub const MIN_MMAP_READ_SIZE: usize = 1024 * 1024;
 #[cfg(target_os = "windows")]
-pub const MIN_MMAP_READ_SIZE: usize = 0;
+pub const MIN_MMAP_READ_SIZE: usize = 1;
 
 struct MaybeMmap {
     mmap: Option<(Mmap, usize)>,

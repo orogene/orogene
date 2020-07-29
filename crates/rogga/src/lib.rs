@@ -2,7 +2,8 @@ use std::path::{Path, PathBuf};
 
 use async_std::sync::{Arc, Mutex, RwLock};
 use oro_client::OroClient;
-use package_arg::PackageArg;
+
+pub use package_arg::PackageArg;
 
 pub mod cache;
 mod error;
@@ -34,8 +35,8 @@ impl Rogga {
         self.cache = cache.map(|s| s.as_ref().into());
     }
 
-    /// Creates a Package from a plain string spec, i.e. `foo@1.2.3`.
-    pub fn arg_package<T: AsRef<str>>(&self, arg: T) -> Result<PackageRequest> {
+    /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3`.
+    pub fn arg_request<T: AsRef<str>>(&self, arg: T) -> Result<PackageRequest> {
         let spec = PackageArg::from_string(arg.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {
@@ -45,9 +46,9 @@ impl Rogga {
         })
     }
 
-    /// Creates a Package from a two-part dependency declaration, such as
-    /// `dependencies` entries in a `package.json`.
-    pub fn dep_package<T: AsRef<str>, U: AsRef<str>>(
+    /// Creates a PackageRequest from a two-part dependency declaration, such
+    /// as `dependencies` entries in a `package.json`.
+    pub fn dep_request<T: AsRef<str>, U: AsRef<str>>(
         &self,
         name: T,
         spec: U,

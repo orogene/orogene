@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use oro_error_code::OroErrCode as Code;
 use serde::Deserialize;
 use surf::Client;
@@ -7,6 +9,10 @@ pub use surf::{
     http::{url::ParseError, Method, StatusCode, Url},
     Error as SurfError, RequestBuilder, Response,
 };
+
+use crate::http_client::PoolingClient;
+
+mod http_client;
 
 #[derive(Debug, Error)]
 pub enum OroClientError {
@@ -35,6 +41,7 @@ struct NpmError {
     message: String,
 }
 
+#[derive(Clone)]
 pub struct OroClient {
     base: Url,
     client: Client,
@@ -44,7 +51,7 @@ impl OroClient {
     pub fn new(registry_uri: impl AsRef<str>) -> Self {
         Self {
             base: Url::parse(registry_uri.as_ref()).expect("Invalid registry URI"),
-            client: Client::new(),
+            client: Client::with_http_client(Arc::new(PoolingClient::new())),
         }
     }
 
