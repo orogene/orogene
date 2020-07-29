@@ -40,4 +40,8 @@ pub enum OroErrCode {
     /// Failed to parse registry URL given to ping
     #[display(fmt = "OR1005: Failed to parse registry URL from `{}`", _0)]
     OR1005(String),
+
+    /// Failed to parse value from config
+    #[display(fmt = "OR1005: Failed read to value from conifg `{}`", _0)]
+    OR1006(String),
 }

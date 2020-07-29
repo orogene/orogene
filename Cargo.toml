@@ -19,6 +19,7 @@ default-members = [".", "crates/*", "commands/*"]
 cmd-ping = { path = "./commands/cmd-ping" }
 cmd-restore = { path = "./commands/cmd-restore" }
 cmd-view = { path = "./commands/cmd-view" }
+cmd-shell = { path = "./commands/cmd-shell" }
 
 # Workspace Deps
 oro-client = { path = "./crates/oro-client" }
