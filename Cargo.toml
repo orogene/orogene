@@ -1,10 +1,13 @@
 [package]
 name = "orogene"
 version = "0.1.0"
-authors = ["Kat Marchán <kzm@zkat.tech>"]
+authors = ["Orogene Collaborative Members", "Orogene Public Contributors"]
 edition = "2018"
 description = "wip"
-license = "Proprietary"
+license-file = "LICENSE.md"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
 build = "build.rs"
 
 [workspace]
