@@ -10,7 +10,7 @@ pub use surf::{
     Error as SurfError, RequestBuilder, Response,
 };
 
-use crate::http_client::H1Client;
+use crate::http_client::PoolingClient;
 
 mod http_client;
 
@@ -51,7 +51,7 @@ impl OroClient {
     pub fn new(registry_uri: impl AsRef<str>) -> Self {
         Self {
             base: Url::parse(registry_uri.as_ref()).expect("Invalid registry URI"),
-            client: Client::with_http_client(Arc::new(H1Client::new())),
+            client: Client::with_http_client(Arc::new(PoolingClient::new())),
         }
     }
 

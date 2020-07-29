@@ -1,164 +1,49 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::pin::Pin;
 use std::{fmt::Debug, sync::Arc};
 
 use async_h1::client;
 use async_native_tls::TlsStream;
 use async_std::net::TcpStream;
 use async_std::sync::Mutex;
-use async_trait::async_trait;
-use deadpool::managed::{Manager, Object, Pool, RecycleResult};
+use deadpool::managed::Pool;
 use futures::future::BoxFuture;
-use futures::io::{AsyncRead, AsyncWrite};
-use futures::task::{Context, Poll};
 use http_client::{Error, HttpClient, Request, Response};
 use http_types::StatusCode;
 
-pub struct TcpConnWrapper {
-    conn: Object<TcpStream, std::io::Error>,
-}
-impl TcpConnWrapper {
-    pub fn new(conn: Object<TcpStream, std::io::Error>) -> Self {
-        Self { conn }
-    }
-}
+use tcp::{TcpConnWrapper, TcpConnection};
+use tls::{TlsConnWrapper, TlsConnection};
 
-impl AsyncRead for TcpConnWrapper {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context,
-        buf: &mut [u8],
-    ) -> Poll<Result<usize, std::io::Error>> {
-        Pin::new(&mut *self.conn).poll_read(cx, buf)
-    }
-}
+mod tcp;
+mod tls;
 
-impl AsyncWrite for TcpConnWrapper {
-    fn poll_write(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &[u8],
-    ) -> Poll<std::io::Result<usize>> {
-        let amt = futures::ready!(Pin::new(&mut *self.conn).poll_write(cx, buf))?;
-        Poll::Ready(Ok(amt))
-    }
-
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut *self.conn).poll_flush(cx)
-    }
-
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut *self.conn).poll_close(cx)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct TcpConnection {
-    addr: SocketAddr,
-}
-impl TcpConnection {
-    pub fn new(addr: SocketAddr) -> Self {
-        Self { addr }
-    }
-}
-
-#[async_trait]
-impl Manager<TcpStream, std::io::Error> for TcpConnection {
-    async fn create(&self) -> Result<TcpStream, std::io::Error> {
-        Ok(TcpStream::connect(self.addr).await?)
-    }
-
-    async fn recycle(&self, _conn: &mut TcpStream) -> RecycleResult<std::io::Error> {
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct TlsConnection {
-    host: String,
-    addr: SocketAddr,
-}
-impl TlsConnection {
-    pub fn new(host: String, addr: SocketAddr) -> Self {
-        Self { host, addr }
-    }
-}
-
-pub struct TlsConnWrapper {
-    conn: Object<TlsStream<TcpStream>, Error>,
-}
-impl TlsConnWrapper {
-    pub fn new(conn: Object<TlsStream<TcpStream>, Error>) -> Self {
-        Self { conn }
-    }
-}
-
-impl AsyncRead for TlsConnWrapper {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context,
-        buf: &mut [u8],
-    ) -> Poll<Result<usize, std::io::Error>> {
-        Pin::new(&mut *self.conn).poll_read(cx, buf)
-    }
-}
-
-impl AsyncWrite for TlsConnWrapper {
-    fn poll_write(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &[u8],
-    ) -> Poll<std::io::Result<usize>> {
-        let amt = futures::ready!(Pin::new(&mut *self.conn).poll_write(cx, buf))?;
-        Poll::Ready(Ok(amt))
-    }
-
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut *self.conn).poll_flush(cx)
-    }
-
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut *self.conn).poll_close(cx)
-    }
-}
-#[async_trait]
-impl Manager<TlsStream<TcpStream>, Error> for TlsConnection {
-    async fn create(&self) -> Result<TlsStream<TcpStream>, Error> {
-        log::trace!("Creating new socket to {:?}", self.addr);
-        let raw_stream = async_std::net::TcpStream::connect(self.addr).await?;
-        let stream = async_native_tls::connect(&self.host, raw_stream).await?;
-        Ok(stream)
-    }
-
-    async fn recycle(&self, _conn: &mut TlsStream<TcpStream>) -> RecycleResult<Error> {
-        Ok(())
-    }
-}
+// TODO: Move this to a parameter. This current number is based on a few
+// random benchmarks and see whatever gave decent perf vs resource use.
+static MAX_CONCURRENT_CONNECTIONS: usize = 50;
 
 type HttpPool = HashMap<SocketAddr, Pool<TcpStream, std::io::Error>>;
 type HttpsPool = HashMap<SocketAddr, Pool<TlsStream<TcpStream>, Error>>;
 
-/// Async-h1 based HTTP Client.
+/// Async-h1 based connection-pooling HTTP client.
 #[derive(Clone)]
-pub struct H1Client {
+pub struct PoolingClient {
     http_pool: Arc<Mutex<HttpPool>>,
     https_pool: Arc<Mutex<HttpsPool>>,
 }
 
-impl Debug for H1Client {
+impl Debug for PoolingClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("H1Client")
     }
 }
 
-impl Default for H1Client {
+impl Default for PoolingClient {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl H1Client {
+impl PoolingClient {
     /// Create a new instance.
     pub fn new() -> Self {
         Self {
@@ -168,7 +53,7 @@ impl H1Client {
     }
 }
 
-impl HttpClient for H1Client {
+impl HttpClient for PoolingClient {
     fn send(&self, mut req: Request) -> BoxFuture<'static, Result<Response, Error>> {
         let http_pool = self.http_pool.clone();
         let https_pool = self.https_pool.clone();
@@ -210,7 +95,10 @@ impl HttpClient for H1Client {
                         pool
                     } else {
                         let manager = TcpConnection::new(addr);
-                        let pool = Pool::<TcpStream, std::io::Error>::new(manager, 25);
+                        let pool = Pool::<TcpStream, std::io::Error>::new(
+                            manager,
+                            MAX_CONCURRENT_CONNECTIONS,
+                        );
                         hash.insert(addr, pool);
                         hash.get(&addr).expect("oh COME ON")
                     };
@@ -227,7 +115,10 @@ impl HttpClient for H1Client {
                         pool
                     } else {
                         let manager = TlsConnection::new(host.clone(), addr);
-                        let pool = Pool::<TlsStream<TcpStream>, Error>::new(manager, 25);
+                        let pool = Pool::<TlsStream<TcpStream>, Error>::new(
+                            manager,
+                            MAX_CONCURRENT_CONNECTIONS,
+                        );
                         hash.insert(addr, pool);
                         hash.get(&addr).expect("oh COME ON")
                     };
