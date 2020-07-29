@@ -172,6 +172,47 @@ fn read_hash_async_big_data(c: &mut Criterion) {
     });
 }
 
+fn baseline_write_sync(c: &mut Criterion) {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("test_file");
+    let data = b"hello world";
+    std::fs::create_dir_all(&path).unwrap();
+    c.bench_function("baseline_write_sync", move |b| {
+        b.iter_custom(|iters| {
+            let start = std::time::Instant::now();
+            for i in 0..iters {
+                let mut fd = File::create(&path.join(format!("{}", i))).unwrap();
+                fd.write_all(data).unwrap();
+                drop(fd);
+            }
+            start.elapsed()
+        })
+    });
+}
+
+fn baseline_write_async(c: &mut Criterion) {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("test_file");
+    let data = b"hello world";
+    std::fs::create_dir_all(&path).unwrap();
+    c.bench_function("baseline_write_async", move |b| {
+        b.iter_custom(|iters| {
+            use async_std::io::prelude::WriteExt;
+            let start = std::time::Instant::now();
+            for i in 0..iters {
+                task::block_on(async {
+                    let mut fd = async_std::fs::File::create(&path.join(format!("{}", i)))
+                        .await
+                        .unwrap();
+                    fd.write_all(data).await.unwrap();
+                    drop(fd);
+                });
+            }
+            start.elapsed()
+        })
+    });
+}
+
 fn write_hash_async(c: &mut Criterion) {
     let tmp = tempfile::tempdir().unwrap();
     let cache = tmp.path().to_owned();
@@ -189,8 +230,10 @@ fn write_hash_async(c: &mut Criterion) {
 criterion_group!(
     benches,
     baseline_read_sync,
+    baseline_write_sync,
     baseline_read_many_sync,
     baseline_read_async,
+    baseline_write_async,
     baseline_read_many_async,
     read_hash_async,
     read_hash_many_async,
