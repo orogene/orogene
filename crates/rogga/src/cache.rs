@@ -90,3 +90,23 @@ where
             .to_internal()?,
     )
 }
+
+pub async fn tarball_to_mem<P, R>(cache: P, tarball: R) -> Result<Integrity>
+where
+    P: AsRef<std::path::Path>,
+    R: AsyncRead + Unpin + Send + Sync,
+{
+    use async_std::io::BufReader;
+    let path = std::path::PathBuf::from(cache.as_ref());
+
+    let mut reader = BufReader::new(tarball);
+    let mut buf = Vec::new();
+    reader.read_to_end(&mut buf).await.to_internal()?;
+    let sri = Integrity::from(&buf);
+
+    Ok(
+        cacache::write(&path, format!("orogene::pkg::{}", sri.to_string()), b"")
+            .await
+            .to_internal()?,
+    )
+}

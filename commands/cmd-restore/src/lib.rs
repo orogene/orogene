@@ -118,8 +118,9 @@ impl RestoreCmd {
                 // let start = std::time::Instant::now();
                 let tarball = resolved.tarball().await?;
                 // println!("Fetching {}", resolved.name);
-                rogga::cache::from_tarball(&self.cache, tarball).await?;
-                // rogga::cache::tarball_itself(&self.cache, tarball).await?;
+                // rogga::cache::from_tarball(&self.cache, tarball).await?;
+                rogga::cache::tarball_itself(&self.cache, tarball).await?;
+                // rogga::cache::tarball_to_mem(&self.cache, tarball).await?;
                 // println!(
                 //     "Downloaded {} in {}ms",
                 //     resolved.name,
