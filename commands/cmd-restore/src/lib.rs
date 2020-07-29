@@ -3,17 +3,14 @@ use std::fs::File;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
-// use std::time::Instant;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
-// use oro_error_code::OroErrCode as Code;
 use rogga::{PackageArg, PackageRequest, PackageResolution, Resolver, ResolverError, Rogga};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-// use ssri::Integrity;
 use url::Url;
 
 #[derive(Debug, Clap, OroCommand)]
@@ -114,18 +111,10 @@ impl RestoreCmd {
             }
             futs.push(Box::pin(async {
                 let resolved = req.resolve_with(resolver).await?;
-                // TODO: skip the below if the package is already in our cache.
-                // let start = std::time::Instant::now();
                 let tarball = resolved.tarball().await?;
-                // println!("Fetching {}", resolved.name);
-                // rogga::cache::from_tarball(&self.cache, tarball).await?;
-                rogga::cache::tarball_itself(&self.cache, tarball).await?;
+                rogga::cache::from_tarball(&self.cache, tarball).await?;
+                // rogga::cache::tarball_itself(&self.cache, tarball).await?;
                 // rogga::cache::tarball_to_mem(&self.cache, tarball).await?;
-                // println!(
-                //     "Downloaded {} in {}ms",
-                //     resolved.name,
-                //     start.elapsed().as_micros() as f32 / 1000.0
-                // );
                 Ok(())
             }));
             futures::future::try_join_all(futs).await?;
