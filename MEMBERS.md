@@ -1,6 +1,6 @@
 ## Members ✨
 
-The following are the official project members of the collaborative. ([emoji
+The following are the official project members of the [Collaborative](CROSS_LICENSE.md). ([emoji
 key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
