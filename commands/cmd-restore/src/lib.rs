@@ -84,6 +84,18 @@ impl RestoreCmd {
                 rogga::cache::from_tarball(&self.cache, tarball).await?;
                 // rogga::cache::tarball_itself(&self.cache, tarball).await?;
                 // rogga::cache::tarball_to_mem(&self.cache, tarball).await?;
+                // rogga::cache::to_node_modules(
+                //     &self.cache.join(format!(
+                //         "{}-{}",
+                //         resolved.name,
+                //         match resolved.resolved {
+                //             PackageResolution::Npm { version, .. } => version.to_string(),
+                //             PackageResolution::Dir { .. } => "path".into(),
+                //         }
+                //     )),
+                //     tarball,
+                // )
+                // .await?;
                 Ok(())
             }));
             futures::future::try_join_all(futs).await?;
