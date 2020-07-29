@@ -99,7 +99,7 @@
 //!   // Make sure to call `.check()` when you're done! It makes sure that what
 //!   // you just read is actually valid. `cacache` always verifies the data
 //!   // you get out is what it's supposed to be. The check is very cheap!
-//!   fd.check()?;
+//!   fd.check().await?;
 //!
 //!   Ok(())
 //! }

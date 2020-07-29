@@ -20,7 +20,7 @@ use crate::index::{self, Metadata};
 /// Make sure to call `.check()` when done reading to verify that the
 /// extracted data passes integrity verification.
 pub struct Reader {
-    reader: read::AsyncReader,
+    reader: smol::Unblock<read::Reader>,
 }
 
 impl AsyncRead for Reader {
@@ -53,12 +53,12 @@ impl Reader {
     ///     let mut str = String::new();
     ///     fd.read_to_string(&mut str).await.expect("Failed to read to string");
     ///     // Remember to check that the data you got was correct!
-    ///     fd.check()?;
+    ///     fd.check().await?;
     ///     Ok(())
     /// }
     /// ```
-    pub fn check(self) -> Result<Algorithm> {
-        self.reader.check()
+    pub async fn check(self) -> Result<Algorithm> {
+        self.reader.into_inner().await.check()
     }
     /// Opens a new file handle into the cache, looking it up in the index using
     /// `key`.
@@ -74,7 +74,7 @@ impl Reader {
     ///     let mut str = String::new();
     ///     fd.read_to_string(&mut str).await.expect("Failed to read to string");
     ///     // Remember to check that the data you got was correct!
-    ///     fd.check()?;
+    ///     fd.check().await?;
     ///     Ok(())
     /// }
     /// ```
@@ -107,7 +107,7 @@ impl Reader {
     ///     let mut str = String::new();
     ///     fd.read_to_string(&mut str).await.expect("Failed to read to string");
     ///     // Remember to check that the data you got was correct!
-    ///     fd.check()?;
+    ///     fd.check().await?;
     ///     Ok(())
     /// }
     /// ```
@@ -116,7 +116,7 @@ impl Reader {
         P: AsRef<Path>,
     {
         Ok(Reader {
-            reader: read::open_async(cache.as_ref(), sri).await?,
+            reader: smol::Unblock::new(read::open_async(cache.as_ref(), sri).await?),
         })
     }
 }
@@ -169,7 +169,7 @@ pub async fn read_hash<P>(cache: P, sri: &Integrity) -> Result<Vec<u8>>
 where
     P: AsRef<Path>,
 {
-    Ok(read::read_async(cache.as_ref(), sri).await?)
+    Ok(read::Reader::consume_async(cache.as_ref(), sri).await?)
 }
 
 /// Copies cache data to a specified location. Returns the number of bytes
@@ -387,7 +387,7 @@ pub fn read_hash_sync<P>(cache: P, sri: &Integrity) -> Result<Vec<u8>>
 where
     P: AsRef<Path>,
 {
-    Ok(read::read(cache.as_ref(), sri)?)
+    Ok(read::Reader::consume(cache.as_ref(), sri)?)
 }
 
 /// Copies a cache entry by key to a specified location. Returns the number of
@@ -472,7 +472,7 @@ mod tests {
         let mut handle = crate::Reader::open(&dir, "my-key").await.unwrap();
         let mut str = String::new();
         handle.read_to_string(&mut str).await.unwrap();
-        handle.check().unwrap();
+        handle.check().await.unwrap();
         assert_eq!(str, String::from("hello world"));
     }
 
@@ -485,7 +485,7 @@ mod tests {
         let mut handle = crate::Reader::open_hash(&dir, sri).await.unwrap();
         let mut str = String::new();
         handle.read_to_string(&mut str).await.unwrap();
-        handle.check().unwrap();
+        handle.check().await.unwrap();
         assert_eq!(str, String::from("hello world"));
     }
 
@@ -600,7 +600,7 @@ mod tests {
         let dest = dir.join("data");
         let sri = crate::write_sync(&dir, "my-key", b"hello world").unwrap();
 
-        crate::copy_hash_sync(&dir, &sri, &dest).unwrap();
+        crate::copy_hash_sync(&dir, &sri, &dest).expect("copy_hash_sync should work");
         let data = fs::read(&dest).unwrap();
         assert_eq!(data, b"hello world");
     }
