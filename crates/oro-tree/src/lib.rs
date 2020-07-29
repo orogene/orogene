@@ -19,66 +19,53 @@ where
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Dependency {
-    version: Version,
-
+pub struct Package {
+    pub version: String,
     #[serde(default)]
     #[serde(deserialize_with = "parse_integrity")]
-    integrity: Option<Integrity>,
-
+    pub integrity: Option<Integrity>,
     #[serde(default)]
-    dev: bool,
-
+    pub dev: bool,
     #[serde(default)]
-    bundled: bool,
-
+    pub bundled: bool,
     #[serde(default)]
-    optional: bool,
-
+    pub optional: bool,
     #[serde(default)]
-    resolved: Option<Url>,
-
+    pub resolved: Option<Url>,
     #[serde(default)]
-    requires: HashMap<String, String>,
-
+    pub requires: HashMap<String, String>,
     #[serde(default)]
-    dependencies: HashMap<String, Dependency>,
+    pub dependencies: HashMap<String, Package>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Package {
-    name: String,
-
-    version: Version,
-
+pub struct PkgLock {
+    pub name: String,
+    pub version: Version,
     #[serde(default)]
-    requires: bool,
-
+    pub requires: bool,
     #[serde(default)]
-    dependencies: HashMap<String, Dependency>,
+    pub dependencies: HashMap<String, Package>,
 }
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("file was not found")]
+    #[error(transparent)]
     FileNotFound {
         #[from]
         source: std::io::Error,
     },
-    #[error("json was invalid")]
+    #[error(transparent)]
     InvalidJson {
         #[from]
         source: serde_json::error::Error,
     },
 }
 
-pub fn read<P: AsRef<Path>>(path: P) -> Result<Package, Error> {
+pub fn read<P: AsRef<Path>>(path: P) -> Result<PkgLock, Error> {
     let file = File::open(path)?;
-
     let mmap = unsafe { MmapOptions::new().map(&file)? };
-
     let package = serde_json::from_slice(&mmap[..])?;
-
     Ok(package)
 }
 

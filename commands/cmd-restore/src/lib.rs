@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::fs::File;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
@@ -8,9 +6,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
+use oro_tree::{self, Package, PkgLock};
 use rogga::{PackageArg, PackageRequest, PackageResolution, Resolver, ResolverError, Rogga};
-use semver::Version;
-use serde::{Deserialize, Serialize};
 use url::Url;
 
 #[derive(Debug, Clap, OroCommand)]
@@ -31,38 +28,10 @@ pub struct RestoreCmd {
     quiet: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PkgLock {
-    name: Option<String>,
-    version: Option<Version>,
-    #[serde(rename = "lockfileVersion")]
-    lockfile_version: f32,
-    #[serde(default)]
-    requires: bool,
-    #[serde(default)]
-    dependencies: HashMap<String, PkgLockDep>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PkgLockDep {
-    version: String,
-    integrity: Option<String>,
-    resolved: Option<Url>,
-    #[serde(default)]
-    bundled: bool,
-    #[serde(default)]
-    dev: bool,
-    #[serde(default)]
-    optional: bool,
-    #[serde(default)]
-    requires: HashMap<String, String>,
-    #[serde(default)]
-    dependencies: HashMap<String, PkgLockDep>,
-}
-
 pub struct PkgLockResolver<'a> {
-    dep: &'a PkgLockDep,
+    dep: &'a Package,
 }
+
 #[async_trait]
 impl<'a> Resolver for PkgLockResolver<'a> {
     async fn resolve(
@@ -98,7 +67,7 @@ impl RestoreCmd {
         &'a self,
         rogga: &'a Rogga,
         name: &'a str,
-        dep: &'a PkgLockDep,
+        dep: &'a Package,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let mut futs = Vec::new();
@@ -126,8 +95,7 @@ impl RestoreCmd {
 #[async_trait]
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
-        let pkglock: PkgLock =
-            serde_json::from_reader(std::io::BufReader::new(File::open("./package-lock.json")?))?;
+        let pkglock: PkgLock = oro_tree::read("./package-lock.json")?;
         let rogga = Rogga::new(&self.registry);
         let mut futs = Vec::new();
         for (name, dep) in pkglock.dependencies.iter() {
