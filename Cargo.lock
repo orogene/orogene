@@ -2565,7 +2565,7 @@ checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
 [[package]]
 name = "surf"
 version = "2.0.0-alpha.4"
-source = "git+git://github.com/Fishrock123/surf.git?branch=request-builder#2272bbda40d37ca228dc53232aaf3211cd5fce27"
+source = "git+git://github.com/Fishrock123/surf.git?branch=request-builder#4421645861130d3fa791de84da51908c12644263"
 dependencies = [
  "async-std",
  "futures 0.3.5",
