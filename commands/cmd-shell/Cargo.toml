@@ -14,4 +14,6 @@ clap = { git = "https://github.com/zkat/clap" }
 
 anyhow = "1.0.25"
 async-trait = "0.1.19"
+directories = "2.0.2"
 log = "0.4.11"
+ssri = "5.0.0"

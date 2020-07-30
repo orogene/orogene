@@ -621,10 +621,12 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap 3.0.0-beta.1",
+ "directories",
  "log",
  "oro-command",
  "oro-config",
  "oro-error-code",
+ "ssri",
 ]
 
 [[package]]
