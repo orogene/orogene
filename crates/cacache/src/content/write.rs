@@ -1,6 +1,5 @@
-use std::fs::DirBuilder;
-use std::io::Seek;
-use std::io::Write;
+use std::fs::{DirBuilder, OpenOptions};
+use std::io::{Cursor, Seek, Write};
 use std::path::PathBuf;
 
 use memmap::MmapMut;
@@ -19,81 +18,78 @@ pub const MIN_MMAP_WRITE_SIZE: usize = 1;
 pub struct Writer {
     cache: PathBuf,
     builder: IntegrityOpts,
-    target: snap::write::FrameEncoder<MaybeMmap>,
+    target: snap::write::FrameEncoder<MaybeCursed>,
     expected_size: Option<usize>,
     written: usize,
 }
 
 #[derive(Debug)]
-struct MaybeMmap {
-    mmap: Option<(MmapMut, usize)>,
-    tmpfile: NamedTempFile,
+struct MaybeCursed {
+    cursor: Option<Cursor<Vec<u8>>>,
+    tmpfile: Option<NamedTempFile>,
 }
 
-impl Seek for MaybeMmap {
+impl Seek for MaybeCursed {
     fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
-        if let Some((_, position)) = self.mmap.as_mut() {
-            match pos {
-                std::io::SeekFrom::Start(xs) => {
-                    *position = xs as usize;
-                    Ok(xs)
-                }
-                _ => unimplemented!(),
-            }
+        if let Some(cursor) = self.cursor.as_mut() {
+            cursor.seek(pos)
+        } else if let Some(tmpfile) = self.tmpfile.as_mut() {
+            tmpfile.seek(pos)
         } else {
-            self.tmpfile.seek(pos)
+            unreachable!()
         }
     }
 }
 
-impl Write for MaybeMmap {
+impl Write for MaybeCursed {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if let Some((mmap, pos)) = self.mmap.as_mut() {
-            match (&mut mmap[*pos..]).write(&buf) {
-                Ok(written) => {
-                    *pos += written;
-                    Ok(written)
-                }
-                Err(e) => Err(e),
-            }
+        if let Some(cursor) = self.cursor.as_mut() {
+            cursor.write(&buf)
+        } else if let Some(tmpfile) = self.tmpfile.as_mut() {
+            tmpfile.write(&buf)
         } else {
-            self.tmpfile.write(&buf)
+            unreachable!()
         }
     }
 
     #[inline]
     fn flush(&mut self) -> std::io::Result<()> {
-        if let Some((mmap, _)) = self.mmap.as_mut() {
-            mmap.flush_async()?;
+        if let Some(tmpfile) = self.tmpfile.as_mut() {
+            tmpfile.flush()
+        } else {
+            Ok(())
         }
-
-        self.tmpfile.flush()
     }
 }
 
 impl Writer {
     pub fn new(cache: PathBuf, algo: Algorithm, size: Option<usize>) -> Result<Self> {
         let cache_path = cache;
-        let mut tmp_path = cache_path.clone();
-        tmp_path.push("tmp");
-        DirBuilder::new()
-            .recursive(true)
-            .create(&tmp_path)
-            .to_internal()?;
-        let tmpfile = NamedTempFile::new_in(tmp_path).to_internal()?;
 
-        let mmap = size
+        let cursor = size
             .and_then(|size| {
                 if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
-                    unsafe { MmapMut::map_mut(tmpfile.as_file()).ok() }
+                    Some(Cursor::new(Vec::with_capacity(size)))
                 } else {
                     None
                 }
             })
-            .map(|mmap| (mmap, 0));
+            .map(|cursor| cursor);
 
-        let mut writer = MaybeMmap { tmpfile, mmap };
+        let tmpfile = if cursor.is_none() {
+            let mut tmp_path = cache_path.clone();
+            tmp_path.push("tmp");
+            DirBuilder::new()
+                .recursive(true)
+                .create(&tmp_path)
+                .to_internal()?;
+            Some(NamedTempFile::new_in(tmp_path).to_internal()?)
+        } else {
+            None
+        };
+
+        let mut writer = MaybeCursed { tmpfile, cursor };
 
         size.and_then(|size| writer.write(&size.to_be_bytes()).ok())
             .or_else(|| writer.write(&0u64.to_be_bytes()).ok());
@@ -133,12 +129,26 @@ impl Writer {
             }
         };
 
-        let res = maybe_mmap.tmpfile.persist(&cpath).to_internal();
-        if res.is_err() {
-            // We might run into conflicts sometimes when persisting files.
-            // This is ok. We can deal. Let's just make sure the destination
-            // file actually exists, and we can move on.
-            std::fs::metadata(cpath).to_internal()?;
+        if let Some(tmpfile) = maybe_mmap.tmpfile.take() {
+            let res = tmpfile.persist(&cpath).to_internal();
+            if res.is_err() {
+                // We might run into conflicts sometimes when persisting files.
+                // This is ok. We can deal. Let's just make sure the destination
+                // file actually exists, and we can move on.
+                std::fs::metadata(cpath).to_internal()?;
+            }
+        } else if let Some(cursor) = maybe_mmap.cursor.take() {
+            let buf = cursor.into_inner();
+            let file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .read(true)
+                .open(&cpath)
+                .to_internal()?;
+            file.set_len(buf.len() as u64).to_internal()?;
+            let mut mmap = unsafe { MmapMut::map_mut(&file).to_internal()? };
+            mmap.copy_from_slice(&buf);
+            mmap.flush_async().to_internal()?;
         }
         Ok(sri)
     }
