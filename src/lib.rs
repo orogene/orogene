@@ -8,6 +8,7 @@ use oro_config::{OroConfig, OroConfigOptions};
 
 use cmd_ping::PingCmd;
 use cmd_restore::RestoreCmd;
+use cmd_shell::ShellCmd;
 use cmd_view::ViewCmd;
 
 pub use oro_error_code::OroErrCode as Code;
@@ -123,12 +124,14 @@ pub enum OroCmd {
         setting = clap::AppSettings::DeriveDisplayOrder,
     )]
     View(ViewCmd),
-    // #[clap(
-    //     about = "Execute a new wrapped `node` shell.",
-    //     alias = "sh",
-    //     setting = clap::AppSettings::TrailingVarArg
-    // )]
-    // Shell(ShellCmd),
+    #[clap(
+        about = "Execute a new wrapped `node` shell.",
+        alias = "sh",
+        setting = clap::AppSettings::ColoredHelp,
+        setting = clap::AppSettings::DisableHelpSubcommand,
+        setting = clap::AppSettings::DeriveDisplayOrder,
+    )]
+    Shell(ShellCmd),
 }
 
 #[async_trait]
@@ -139,6 +142,7 @@ impl OroCommand for Orogene {
             OroCmd::Ping(ping) => ping.execute().await,
             OroCmd::Restore(restore) => restore.execute().await,
             OroCmd::View(view) => view.execute().await,
+            OroCmd::Shell(shell) => shell.execute().await,
         }
     }
 }
@@ -154,6 +158,9 @@ impl OroCommandLayerConfig for Orogene {
             }
             OroCmd::View(ref mut view) => {
                 view.layer_config(args.subcommand_matches("view").unwrap().clone(), conf)
+            }
+            OroCmd::Shell(ref mut shell) => {
+                shell.layer_config(args.subcommand_matches("shell").unwrap().clone(), conf)
             }
         }
     }

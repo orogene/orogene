@@ -615,6 +615,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmd-shell"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "clap 3.0.0-beta.1",
+ "log",
+ "oro-command",
+ "oro-config",
+ "oro-error-code",
+]
+
+[[package]]
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
@@ -1838,6 +1851,7 @@ dependencies = [
  "clap 3.0.0-beta.1",
  "cmd-ping",
  "cmd-restore",
+ "cmd-shell",
  "cmd-view",
  "embed-resource",
  "fern",
