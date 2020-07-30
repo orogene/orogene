@@ -271,7 +271,10 @@ fn write_hash_many_async(c: &mut Criterion) {
                     let mut tasks = Vec::new();
                     for j in 0..NUM_REPEATS {
                         let j = j;
-                        tasks.push(cacache::write_hash(&cache, format!("hello world{}-{}", i, j)));
+                        tasks.push(cacache::write_hash(
+                            &cache,
+                            format!("hello world{}-{}", i, j),
+                        ));
                     }
                     futures::future::join_all(tasks).await;
                 });

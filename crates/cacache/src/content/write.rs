@@ -1,6 +1,6 @@
 use std::fs::{DirBuilder, OpenOptions};
 use std::io::{Cursor, Seek, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use memmap::MmapMut;
 use ssri::{Algorithm, Integrity, IntegrityOpts};
@@ -130,25 +130,17 @@ impl Writer {
         };
 
         if let Some(tmpfile) = maybe_mmap.tmpfile.take() {
-            let res = tmpfile.persist(&cpath).to_internal();
-            if res.is_err() {
+            if tmpfile.persist(&cpath).to_internal().is_err() {
                 // We might run into conflicts sometimes when persisting files.
                 // This is ok. We can deal. Let's just make sure the destination
                 // file actually exists, and we can move on.
                 std::fs::metadata(cpath).to_internal()?;
             }
         } else if let Some(cursor) = maybe_mmap.cursor.take() {
-            let buf = cursor.into_inner();
-            let file = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .read(true)
-                .open(&cpath)
-                .to_internal()?;
-            file.set_len(buf.len() as u64).to_internal()?;
-            let mut mmap = unsafe { MmapMut::map_mut(&file).to_internal()? };
-            mmap.copy_from_slice(&buf);
-            mmap.flush_async().to_internal()?;
+            if persist_cursor(cursor, &cpath).is_err() {
+                // Same as above
+                std::fs::metadata(cpath).to_internal()?;
+            }
         }
         Ok(sri)
     }
@@ -164,6 +156,21 @@ impl Writer {
     pub async fn close_async(self) -> Result<Integrity> {
         smol::unblock!(self.close())
     }
+}
+
+fn persist_cursor(cursor: Cursor<Vec<u8>>, cpath: impl AsRef<Path>) -> Result<()> {
+    let buf = cursor.into_inner();
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .read(true)
+        .open(cpath.as_ref())
+        .to_internal()?;
+    file.set_len(buf.len() as u64).to_internal()?;
+    let mut mmap = unsafe { MmapMut::map_mut(&file).to_internal()? };
+    mmap.copy_from_slice(&buf);
+    mmap.flush_async().to_internal()?;
+    Ok(())
 }
 
 impl Write for Writer {
