@@ -47,6 +47,165 @@ where
     writer.commit().await
 }
 
+
+pub trait FileLike : Read {
+    fn path(&self) -> Result<String>;
+    fn size(&self) -> usize;
+    fn mode(&self) -> Result<u32>;
+}
+
+struct SSRIStream<Inner> {
+    builder: ssri::IntegrityOpts,
+    inner: Inner
+}
+
+impl<R: Read> Read for SSRIStream<R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf).and_then(|size| {
+            self.builder.input(&buf[0..size]);
+            Ok(size)
+        })
+    }
+}
+
+impl<W: Write> Write for SSRIStream<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf).and_then(|size| {
+            self.builder.input(&buf[0..size]);
+            Ok(size)
+        })
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+impl<R> SSRIStream<R> {
+    fn into_inner(self) -> (ssri::Integrity, R) {
+        (self.builder.result(), self.inner)
+    }
+}
+
+/// Take a stream of file-like entries and write them as a "packfile" for
+/// fast random access to members in the future.
+pub async fn write_entries<P, I, D>(cache: P, mut entry_stream: D) -> Result<Integrity>
+where
+    P: AsRef<Path>,
+    I: FileLike,
+    D: futures::stream::Stream<Item = I> + std::marker::Unpin + Send + Sync + 'static {
+    let mut entry_hash = std::collections::HashMap::new();
+    let mut dest = SSRIStream {
+        inner: std::io::Cursor::new(Vec::with_capacity(1024 * 1024 * 10)),
+        builder: ssri::IntegrityOpts::new().algorithm(ssri::Algorithm::Sha256)
+    };
+    let mut pb = cache.as_ref().to_owned();
+
+    async_std::task::spawn(async move {
+        let mut offsets = std::collections::BTreeMap::new();
+        let mut offset = 0;
+        while let Some(entry) = entry_stream.next().await {
+            let path = entry.path();
+            if path.is_err() {
+                continue
+            }
+            let path = path.unwrap();
+            let size = entry.size();
+            let mode = entry.mode().unwrap_or(0o644);
+
+            offset += dest.write(size.to_be_bytes().as_ref()).to_internal()?;
+            let mut encoded = snap::write::FrameEncoder::new(dest);
+            let mut entry = SSRIStream {
+                inner: entry,
+                builder: ssri::IntegrityOpts::new().algorithm(ssri::Algorithm::Sha256)
+            };
+
+            offset += std::io::copy(&mut entry, &mut encoded).to_internal()? as usize;
+            let (sri, _) = entry.into_inner();
+            dest = encoded.into_inner().to_internal()?;
+
+            // Would be nice if SSRI provided "into_bytes()" possibly?
+            let hexed = sri.to_hex().1;
+            offsets.insert(hex::decode(hexed).to_internal()?, offset);
+            entry_hash.insert(path, (sri, size, mode));
+        }
+
+        std::mem::drop(entry_stream);
+
+        let index_object = bincode::serialize(&entry_hash).to_internal()?;
+        let index_size = index_object.len();
+        dest.write_all(index_size.to_be_bytes().as_ref()).to_internal()?;
+        let mut encoded = snap::write::FrameEncoder::new(dest);
+        let mut entry = SSRIStream {
+            inner: std::io::Cursor::new(index_object),
+            builder: ssri::IntegrityOpts::new().algorithm(ssri::Algorithm::Sha256)
+        };
+
+        std::io::copy(&mut entry, &mut encoded).to_internal()?;
+        let (index_sri, _) = entry.into_inner();
+
+        dest = encoded.into_inner().to_internal()?;
+        let (packfile_sri, mut output_cursor) = dest.into_inner();
+
+        let offsets = offsets.into_iter().collect::<Vec<_>>();
+        let mut fanout = [0u8; 2048];
+        let mut last_index = 0;
+
+        // the fanout is a table of 256 entries, keyed positionally.
+        // the index of this fanout represents the first byte of a given
+        // integrity hash. it is mapped to an offset in a stream of hashes+offsets
+        // that follows the packfile.
+        for i in 0..255 {
+            'inner:
+            for (integrity_bytes, offset) in &offsets[last_index..] {
+                if integrity_bytes[0] != i {
+                    break 'inner;
+                }
+
+                last_index += 1;
+            }
+
+            &mut fanout[i as usize * 8..].copy_from_slice((last_index as u64).to_be_bytes().as_ref());
+        }
+
+        // write a fanout, then write the objects
+        let mut output_packidx = std::io::Cursor::new(Vec::with_capacity(fanout.len() * 8 + offsets.len() * 40)); // 32 sri bytes + 8 offset bytes
+        output_packidx.write_all(&fanout).to_internal()?;
+        for (integrity_bytes, offset) in &offsets {
+            output_packidx.write_all(integrity_bytes).to_internal()?;
+            output_packidx.write_all(offset.to_be_bytes().as_ref()).to_internal()?;
+        }
+
+        let (_, packfile_sri_hex) = packfile_sri.to_hex();
+        pb.push("packed");
+        pb.push(format!("{}.idx", packfile_sri_hex));
+        output_packidx.seek(std::io::SeekFrom::Start(0)).to_internal()?;
+        persist_cursor(output_packidx, &pb)?;
+        pb.pop();
+        pb.push(format!("{}.pack", packfile_sri_hex));
+        output_cursor.seek(std::io::SeekFrom::Start(0)).to_internal()?;
+        persist_cursor(output_cursor, &pb)?;
+
+
+        Ok(packfile_sri)
+    }).await
+}
+
+fn persist_cursor(cursor: std::io::Cursor<Vec<u8>>, cpath: impl AsRef<Path>) -> Result<()> {
+    let buf = cursor.into_inner();
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .read(true)
+        .open(cpath.as_ref())
+        .to_internal()?;
+    file.set_len(buf.len() as u64).to_internal()?;
+    let mut mmap = unsafe { memmap::MmapMut::map_mut(&file).to_internal()? };
+    mmap.copy_from_slice(&buf);
+    mmap.flush_async().to_internal()?;
+    Ok(())
+}
+
 /// Writes `data` to the `cache`, skipping associating an index key with it.
 ///
 /// ## Example
