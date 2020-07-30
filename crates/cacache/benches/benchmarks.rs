@@ -4,7 +4,7 @@ use std::io::prelude::*;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-const NUM_REPEATS: usize = 10;
+const NUM_REPEATS: usize = 100;
 
 fn baseline_read_sync(c: &mut Criterion) {
     let tmp = tempfile::tempdir().unwrap();
@@ -213,6 +213,39 @@ fn baseline_write_async(c: &mut Criterion) {
     });
 }
 
+fn baseline_write_many_async(c: &mut Criterion) {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("test_file");
+    let data = b"hello world";
+    std::fs::create_dir_all(&path).unwrap();
+    c.bench_function("baseline_write_many_async", move |b| {
+        b.iter_custom(|iters| {
+            use async_std::io::prelude::WriteExt;
+            let start = std::time::Instant::now();
+            for i in 0..iters {
+                task::block_on(async {
+                    let mut tasks = Vec::new();
+                    for j in 0..NUM_REPEATS {
+                        let j = j;
+                        let path = path.clone();
+                        tasks.push(async move {
+                            let mut fd =
+                                async_std::fs::File::create(&path.join(format!("{}-{}", i, j)))
+                                    .await
+                                    .unwrap();
+                            fd.write_all(data).await.unwrap();
+                            fd.flush().await.unwrap();
+                            async_std::task::spawn_blocking(move || drop(fd)).await;
+                        })
+                    }
+                    futures::future::join_all(tasks).await;
+                });
+            }
+            start.elapsed()
+        })
+    });
+}
+
 fn write_hash_async(c: &mut Criterion) {
     let tmp = tempfile::tempdir().unwrap();
     let cache = tmp.path().to_owned();
@@ -227,22 +260,45 @@ fn write_hash_async(c: &mut Criterion) {
     });
 }
 
+fn write_hash_many_async(c: &mut Criterion) {
+    let tmp = tempfile::tempdir().unwrap();
+    let cache = tmp.path().to_owned();
+    c.bench_function("put::data_many", move |b| {
+        b.iter_custom(|iters| {
+            let start = std::time::Instant::now();
+            for i in 0..iters {
+                task::block_on(async {
+                    let mut tasks = Vec::new();
+                    for j in 0..NUM_REPEATS {
+                        let j = j;
+                        tasks.push(cacache::write_hash(&cache, format!("hello world{}-{}", i, j)));
+                    }
+                    futures::future::join_all(tasks).await;
+                });
+            }
+            start.elapsed()
+        })
+    });
+}
+
 criterion_group!(
     benches,
     baseline_read_sync,
-    baseline_write_sync,
-    baseline_read_many_sync,
     baseline_read_async,
-    baseline_write_async,
+    baseline_read_many_sync,
     baseline_read_many_async,
-    read_hash_async,
-    read_hash_many_async,
-    read_async,
-    write_hash_async,
+    baseline_write_sync,
+    baseline_write_async,
+    baseline_write_many_async,
     read_hash_sync,
+    read_hash_async,
     read_hash_many_sync,
+    read_hash_many_async,
+    write_hash_async,
+    write_hash_many_async,
     read_sync,
-    read_hash_async_big_data,
-    read_hash_sync_big_data
+    read_async,
+    read_hash_sync_big_data,
+    read_hash_async_big_data
 );
 criterion_main!(benches);
