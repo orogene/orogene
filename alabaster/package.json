@@ -1,0 +1,24 @@
+{
+  "name": "alabaster",
+  "private": true,
+  "version": "1.0.0",
+  "description": "javascript runtime",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --entry ./src/index.js --mode production --target node -o dist/alabaster.js",
+    "check": "prettier -c ./src/**",
+    "clean": "rimraf dist",
+    "format": "prettier --write ./src/**"
+  },
+  "devDependencies": {
+    "prettier": "^1.18.2",
+    "rimraf": "^2.6.3",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
+  },
+  "dependencies": {
+    "@babel/core": "^7.11.0",
+    "@babel/plugin-transform-react-jsx": "^7.10.0",
+    "@babel/plugin-transform-typescript": "^7.11.0"
+  }
+}
