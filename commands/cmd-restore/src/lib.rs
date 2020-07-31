@@ -78,8 +78,10 @@ impl RestoreCmd {
                     futs.push(self.extract(rogga, name, dep));
                 }
             }
+
             futs.push(Box::pin(async {
                 let resolved = req.resolve_with(resolver).await?;
+                eprintln!("{:?}", resolved.name);
                 let tarball = resolved.tarball().await?;
                 rogga::cache::from_tarball(&self.cache, tarball).await?;
                 // rogga::cache::tarball_itself(&self.cache, tarball).await?;

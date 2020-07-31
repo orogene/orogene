@@ -467,6 +467,7 @@ name = "cacache"
 version = "8.0.0"
 dependencies = [
  "async-attributes",
+ "async-compression",
  "async-std",
  "bincode",
  "criterion",

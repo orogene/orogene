@@ -48,15 +48,27 @@ where
 }
 
 
-pub trait FileLike : Read {
+pub trait FileLike : AsyncRead {
     fn path(&self) -> Result<String>;
-    fn size(&self) -> usize;
+    fn size(&self) -> Result<usize>;
     fn mode(&self) -> Result<u32>;
 }
 
 struct SSRIStream<Inner> {
     builder: ssri::IntegrityOpts,
     inner: Inner
+}
+
+impl<R: AsyncRead + std::marker::Unpin> AsyncRead for SSRIStream<R> {
+    fn poll_read(
+        mut self: std::pin::Pin<&mut Self>,
+        ctxt: &mut std::task::Context<'_>,
+        buf: &mut [u8]
+    ) -> std::task::Poll<std::result::Result<usize, std::io::Error>> {
+        let amt = futures::ready!(Pin::new(&mut self.inner).poll_read(ctxt, buf))?;
+        self.builder.input(&buf[..amt]);
+        Poll::Ready(Ok(amt))
+    }
 }
 
 impl<R: Read> Read for SSRIStream<R> {
@@ -81,6 +93,25 @@ impl<W: Write> Write for SSRIStream<W> {
     }
 }
 
+impl<R: AsyncWrite + std::marker::Unpin> AsyncWrite for SSRIStream<R> {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context,
+        buf: &[u8]
+    ) -> Poll<std::io::Result<usize>> {
+        let amt = futures::ready!(Pin::new(&mut self.inner).poll_write(cx, buf))?;
+        Poll::Ready(Ok(amt))
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_flush(cx)
+    }
+
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_close(cx)
+    }
+}
+
 impl<R> SSRIStream<R> {
     fn into_inner(self) -> (ssri::Integrity, R) {
         (self.builder.result(), self.inner)
@@ -92,8 +123,8 @@ impl<R> SSRIStream<R> {
 pub async fn write_entries<P, I, D>(cache: P, mut entry_stream: D) -> Result<Integrity>
 where
     P: AsRef<Path>,
-    I: FileLike,
-    D: futures::stream::Stream<Item = I> + std::marker::Unpin + Send + Sync + 'static {
+    I: FileLike + std::marker::Unpin + Send,
+    D: futures::stream::Stream<Item = std::io::Result<I>> + std::marker::Unpin + Send + Sync + 'static {
     let mut entry_hash = std::collections::HashMap::new();
     let mut dest = SSRIStream {
         inner: std::io::Cursor::new(Vec::with_capacity(1024 * 1024 * 10)),
@@ -105,12 +136,13 @@ where
         let mut offsets = std::collections::BTreeMap::new();
         let mut offset = 0;
         while let Some(entry) = entry_stream.next().await {
+            let entry = entry.to_internal()?;
             let path = entry.path();
             if path.is_err() {
                 continue
             }
             let path = path.unwrap();
-            let size = entry.size();
+            let size = entry.size().to_internal()?;
             let mode = entry.mode().unwrap_or(0o644);
 
             offset += dest.write(size.to_be_bytes().as_ref()).to_internal()?;
@@ -120,7 +152,9 @@ where
                 builder: ssri::IntegrityOpts::new().algorithm(ssri::Algorithm::Sha256)
             };
 
-            offset += std::io::copy(&mut entry, &mut encoded).to_internal()? as usize;
+            let mut entry_data = Vec::with_capacity(size);
+            entry.read_to_end(&mut entry_data).await.to_internal()?;
+            offset += encoded.write(&entry_data[..]).to_internal()?;
             let (sri, _) = entry.into_inner();
             dest = encoded.into_inner().to_internal()?;
 
@@ -148,29 +182,45 @@ where
         let (packfile_sri, mut output_cursor) = dest.into_inner();
 
         let offsets = offsets.into_iter().collect::<Vec<_>>();
-        let mut fanout = [0u8; 2048];
+        let mut fanout = [0u64; 256];
         let mut last_index = 0;
 
         // the fanout is a table of 256 entries, keyed positionally.
         // the index of this fanout represents the first byte of a given
         // integrity hash. it is mapped to an offset in a stream of hashes+offsets
         // that follows the packfile.
-        for i in 0..255 {
-            'inner:
-            for (integrity_bytes, offset) in &offsets[last_index..] {
-                if integrity_bytes[0] != i {
-                    break 'inner;
+        let mut fanout_idx: usize = 0;
+        let mut object_idx: usize = 0;
+        while fanout_idx < 256 && object_idx < offsets.len() {
+            while offsets[object_idx].0[0] as usize != fanout_idx {
+                fanout[fanout_idx] = (object_idx as u64).to_be();
+                fanout_idx += 1;
+                if fanout_idx == 256 {
+                    break;
                 }
-
-                last_index += 1;
             }
 
-            &mut fanout[i as usize * 8..].copy_from_slice((last_index as u64).to_be_bytes().as_ref());
+            while offsets[object_idx].0[0] as usize == fanout_idx {
+                object_idx += 1;
+                if object_idx >= offsets.len() {
+                    break;
+                }
+            }
+
+            fanout[fanout_idx] = (object_idx as u64).to_be();
+            fanout_idx += 1;
+        }
+
+        while fanout_idx < 256 {
+            fanout[fanout_idx] = (object_idx as u64).to_be();
+            fanout_idx += 1;
         }
 
         // write a fanout, then write the objects
         let mut output_packidx = std::io::Cursor::new(Vec::with_capacity(fanout.len() * 8 + offsets.len() * 40)); // 32 sri bytes + 8 offset bytes
-        output_packidx.write_all(&fanout).to_internal()?;
+
+        let fanout_bytes = unsafe { std::mem::transmute::<[u64; 256], [u8; 256 * 8]>(fanout) };
+        output_packidx.write_all(&fanout_bytes).to_internal()?;
         for (integrity_bytes, offset) in &offsets {
             output_packidx.write_all(integrity_bytes).to_internal()?;
             output_packidx.write_all(offset.to_be_bytes().as_ref()).to_internal()?;
@@ -178,6 +228,8 @@ where
 
         let (_, packfile_sri_hex) = packfile_sri.to_hex();
         pb.push("packed");
+        std::fs::DirBuilder::new().recursive(true).create(&pb).to_internal()?;
+
         pb.push(format!("{}.idx", packfile_sri_hex));
         output_packidx.seek(std::io::SeekFrom::Start(0)).to_internal()?;
         persist_cursor(output_packidx, &pb)?;
