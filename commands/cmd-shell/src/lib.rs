@@ -37,7 +37,7 @@ impl OroCommand for ShellCmd {
         let code = Command::new(&self.node)
             .env("DS_BIN", env::current_exe().context(Code::OR1006)?)
             .arg("-r")
-            .arg(require_oro_patches(self.data_dir)?)
+            .arg(require_alabaster(self.data_dir)?)
             .args(self.args)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -53,7 +53,7 @@ impl OroCommand for ShellCmd {
     }
 }
 
-fn require_oro_patches(dir_override: Option<PathBuf>) -> Result<PathBuf> {
+fn require_alabaster(dir_override: Option<PathBuf>) -> Result<PathBuf> {
     let dir = match dir_override {
         Some(dir) => dir,
         None => ProjectDirs::from("", "", "orogene") // TODO I'd rather get this from oro-config?
@@ -63,8 +63,7 @@ fn require_oro_patches(dir_override: Option<PathBuf>) -> Result<PathBuf> {
             .to_path_buf(),
     };
     fs::create_dir_all(&dir).with_context(|| Code::OR1010(dir.clone()))?;
-    // let data = include_bytes!("../../../oro/dist/dstopic.js").to_vec();
-    let data = "to_be_done".as_bytes();
+    let data = include_bytes!("../../../alabaster/dist/alabaster.js").to_vec();
     let hash = Integrity::from(&data).to_hex().1;
     let script = dir.join(format!("oro-{}", hash.to_string()));
     if !script.exists() {

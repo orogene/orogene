@@ -1,11 +1,11 @@
 {
-  "name": "oro_patches",
+  "name": "alabaster",
   "private": true,
   "version": "1.0.0",
   "description": "javascript runtime",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --entry ./src/index.js --mode production --target node -o dist/oro_patches.js",
+    "build": "webpack --entry ./src/index.js --mode production --target node -o dist/alabaster.js",
     "check": "prettier -c ./src/**",
     "clean": "rimraf dist",
     "format": "prettier --write ./src/**"
