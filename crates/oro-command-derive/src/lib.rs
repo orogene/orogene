@@ -35,9 +35,8 @@ fn inner_type_of_option(ty: &syn::Type) -> Option<&syn::Type> {
             }
 
             if let syn::PathArguments::AngleBracketed(ab) = &p.arguments {
-                match ab.args.first() {
-                    Some(syn::GenericArgument::Type(t)) => return Some(t),
-                    _ => {}
+                if let Some(syn::GenericArgument::Type(t)) = ab.args.first() {
+                    return Some(t);
                 }
             }
         }
