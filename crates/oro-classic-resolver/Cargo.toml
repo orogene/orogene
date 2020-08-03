@@ -10,6 +10,6 @@ edition = "2018"
 package-arg = { path = "../package-arg" }
 rogga = { path = "../rogga" }
 
-semver = "0.10.0"
+semver = { git = "https://github.com/mikrostew/semver", branch = "new-parser" }
 thiserror = "1.0.20"
 async-trait = "0.1.36"
