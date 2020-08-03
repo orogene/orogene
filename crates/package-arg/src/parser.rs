@@ -170,7 +170,7 @@ where
     Ok((input, VersionReq::Version(version)))
 }
 
-fn node_compatible_range(input: &str) ->  Result<semver::VersionReq, semver::ReqParseError> {
+fn node_compatible_range(input: &str) -> Result<semver::VersionReq, semver::ReqParseError> {
     semver::VersionReq::parse_compat(input, semver::Compat::Node)
 }
 
