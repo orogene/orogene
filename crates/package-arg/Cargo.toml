@@ -8,7 +8,7 @@ edition = "2018"
 oro-error-code = { path = "../oro-error-code" }
 
 url = "2.1.0"
-semver = "0.10.0"
+semver = { git = "https://github.com/mikrostew/semver", branch = "new-parser" }
 nom = "5.0.1"
 thiserror = "1.0.9"
 percent-encoding = "2.1.0"

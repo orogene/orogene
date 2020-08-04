@@ -20,7 +20,7 @@ futures = "0.3.5"
 ssri = "5.0.0"
 thiserror = "1.0.20"
 async-trait = "0.1.36"
-semver = { version = "0.10.0", features = ["serde"] }
+semver = { git = "https://github.com/mikrostew/semver", branch = "new-parser", features = ["serde"] }
 http-types = "2.3.0"
 chrono = { version = "0.4.13", features = ["serde"] }
 serde_json = "1.0.56"

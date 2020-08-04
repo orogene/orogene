@@ -170,11 +170,15 @@ where
     Ok((input, VersionReq::Version(version)))
 }
 
+fn node_compatible_range(input: &str) -> Result<semver::VersionReq, semver::ReqParseError> {
+    semver::VersionReq::parse_compat(input, semver::Compat::Node)
+}
+
 fn semver_range<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
 where
     E: ParseError<&'a str>,
 {
-    let (input, range) = map_res(take_till1(|_| false), semver::VersionReq::parse)(input)?;
+    let (input, range) = map_res(take_till1(|_| false), node_compatible_range)(input)?;
     Ok((input, VersionReq::Range(range)))
 }
 
