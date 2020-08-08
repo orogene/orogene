@@ -42,7 +42,5 @@ jobs:
           override: true
       - name: Clippy
         run: cargo clippy --all -- -D warnings
-      - name: Check
-        run: cargo check
       - name: Run tests
         run: cargo test --all --verbose
