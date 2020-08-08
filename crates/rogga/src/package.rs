@@ -38,10 +38,10 @@ impl PackageRequest {
 
     pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package> {
         let resolution = resolver.resolve(&self).await?;
-        self.resolve_to(resolution).await
+        self.resolve_to(resolution)
     }
 
-    pub async fn resolve_to(self, resolved: PackageResolution) -> Result<Package> {
+    pub fn resolve_to(self, resolved: PackageResolution) -> Result<Package> {
         Ok(Package {
             from: self.spec,
             name: self.name,
