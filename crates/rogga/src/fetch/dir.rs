@@ -51,14 +51,22 @@ impl PackageFetcher for DirFetcher {
         if let Some(ref name) = self.name {
             Ok(name.clone())
         } else if let PackageArg::Dir { ref path } = spec {
-            self.name = Some(self.packument_from_spec(spec).await?.name.unwrap_or_else(|| {
-                if let Some(name) = path.file_name() {
-                    name.to_string_lossy().into()
-                } else {
-                    "".into()
-                }
-            }));
-            self.name.as_ref().cloned().ok_or_else(|| Error::MiscError("This is impossible".into()))
+            self.name = Some(
+                self.packument_from_spec(spec)
+                    .await?
+                    .name
+                    .unwrap_or_else(|| {
+                        if let Some(name) = path.file_name() {
+                            name.to_string_lossy().into()
+                        } else {
+                            "".into()
+                        }
+                    }),
+            );
+            self.name
+                .as_ref()
+                .cloned()
+                .ok_or_else(|| Error::MiscError("This is impossible".into()))
         } else {
             unreachable!()
         }

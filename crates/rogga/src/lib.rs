@@ -51,7 +51,7 @@ impl RoggaOpts {
             .registry
             .unwrap_or_else(|| "https://registry.npmjs.org".into());
         Rogga {
-            cache: self.cache,
+            // cache: self.cache,
             dir: self.dir.unwrap_or_else(|| PathBuf::from("")),
             client: Arc::new(Mutex::new(OroClient::new(reg))),
         }
@@ -61,7 +61,7 @@ impl RoggaOpts {
 /// Toplevel client for making package requests.
 pub struct Rogga {
     client: Arc<Mutex<OroClient>>,
-    cache: Option<PathBuf>,
+    // cache: Option<PathBuf>,
     dir: PathBuf,
 }
 

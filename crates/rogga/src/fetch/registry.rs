@@ -51,7 +51,9 @@ impl RegistryFetcher {
 impl PackageFetcher for RegistryFetcher {
     async fn name(&mut self, spec: &PackageArg) -> Result<String> {
         match spec {
-            PackageArg::Npm { ref name, .. } | PackageArg::Alias { ref name, .. } => Ok(name.clone()),
+            PackageArg::Npm { ref name, .. } | PackageArg::Alias { ref name, .. } => {
+                Ok(name.clone())
+            }
             _ => unreachable!(),
         }
     }
@@ -77,7 +79,7 @@ impl PackageFetcher for RegistryFetcher {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
         let pkg = match pkg.spec() {
-            PackageArg::Alias { ref package , .. } => package,
+            PackageArg::Alias { ref package, .. } => package,
             pkg @ PackageArg::Npm { .. } => pkg,
             _ => unreachable!(),
         };
