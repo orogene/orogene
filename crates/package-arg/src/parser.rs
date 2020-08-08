@@ -8,7 +8,7 @@ use nom::bytes::complete::{tag_no_case as tag, take_till1};
 use nom::character::complete::{anychar, char, one_of};
 use nom::combinator::{all_consuming, cut, map, map_res, opt, recognize, rest};
 use nom::error::{context, convert_error, ParseError, VerboseError};
-use nom::multi::many1;
+use nom::multi::{many0, many1};
 use nom::sequence::{delimited, preceded, tuple};
 use nom::{Err, IResult};
 
@@ -212,13 +212,13 @@ where
     })(input)
 }
 
-/// relative-path := [ '.' ] '.' path-sep .*
+/// relative-path := [ '.' ] '.' [path-sep] .*
 fn relative_path<'a, E>(input: &'a str) -> IResult<&'a str, PathBuf, E>
 where
     E: ParseError<&'a str>,
 {
     map(
-        recognize(tuple((tag("."), opt(tag(".")), many1(path_sep), rest))),
+        recognize(tuple((tag("."), opt(tag(".")), many0(path_sep), rest))),
         PathBuf::from,
     )(input)
 }
