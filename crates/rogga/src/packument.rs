@@ -10,12 +10,12 @@ use std::collections::HashMap;
 pub struct Packument {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub versions: HashMap<semver::Version, Manifest>,
+    pub versions: HashMap<oro_semver::Version, Manifest>,
     pub author: Option<Human>,
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(default, rename = "dist-tags")]
-    pub tags: HashMap<String, semver::Version>,
+    pub tags: HashMap<String, oro_semver::Version>,
     #[serde(default)]
     pub maintainers: Vec<Human>,
     #[serde(default)]
@@ -29,7 +29,7 @@ pub struct Packument {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     pub name: String,
-    pub version: semver::Version,
+    pub version: oro_semver::Version,
     pub description: Option<String>,
     pub license: Option<String>,
     pub licence: Option<String>,

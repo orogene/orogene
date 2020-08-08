@@ -22,25 +22,16 @@ cmd-view = { path = "./commands/cmd-view" }
 cmd-shell = { path = "./commands/cmd-shell" }
 
 # Workspace Deps
-oro-client = { path = "./crates/oro-client" }
 oro-command = { path = "./crates/oro-command" }
 oro-error-code = { path = "./crates/oro-error-code" }
 oro-config = { path = "./crates/oro-config" }
-package-arg = { path = "./crates/package-arg" }
-rogga = { path = "./crates/rogga" }
-cacache = { path = "./crates/cacache", version = "8.0.0" }
-semver = { path = "./crates/oro-semver" }
 
 # Regular deps
 anyhow = "1.0.31"
-async-compression = { version = "0.3.5", features = ["gzip", "futures-io"] }
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }
 async-trait = "0.1.36"
-bincode = "1.3.1"
 clap = { git = "https://github.com/zkat/clap" }
 fern = "0.6.0"
-futures = "0.3.5"
-http-types = "2.3.0"
 log = "0.4.11"
 smol = "0.1.18"
 ssri = "5.0.0"

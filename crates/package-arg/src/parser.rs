@@ -166,12 +166,12 @@ fn semver_version<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
 where
     E: ParseError<&'a str>,
 {
-    let (input, version) = map_res(take_till1(|_| false), semver::Version::parse)(input)?;
+    let (input, version) = map_res(take_till1(|_| false), oro_semver::Version::parse)(input)?;
     Ok((input, VersionReq::Version(version)))
 }
 
-fn node_compatible_range(input: &str) -> Result<semver::VersionReq, semver::ReqParseError> {
-    semver::VersionReq::parse_compat(input, semver::Compat::Node)
+fn node_compatible_range(input: &str) -> Result<oro_semver::VersionReq, oro_semver::ReqParseError> {
+    oro_semver::VersionReq::parse_compat(input, oro_semver::Compat::Node)
 }
 
 fn semver_range<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>

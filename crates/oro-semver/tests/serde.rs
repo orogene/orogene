@@ -3,10 +3,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-extern crate semver;
+extern crate oro_semver;
 extern crate serde_json;
 
-use semver::{Identifier, Version, VersionReq};
+use oro_semver::{Identifier, Version, VersionReq};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct Identified {

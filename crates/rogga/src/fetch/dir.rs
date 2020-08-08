@@ -92,7 +92,7 @@ impl PackageFetcher for DirFetcher {
 #[derive(Serialize, Deserialize)]
 struct PkgJson {
     name: Option<String>,
-    version: Option<semver::Version>,
+    version: Option<oro_semver::Version>,
     description: Option<String>,
 }
 
@@ -112,7 +112,7 @@ impl PkgJson {
             }
         }).ok_or_else(|| Error::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
         let version =
-            version.unwrap_or_else(|| semver::Version::parse("0.0.0").expect("Oops, typo"));
+            version.unwrap_or_else(|| oro_semver::Version::parse("0.0.0").expect("Oops, typo"));
         let mut packument = Packument {
             name: Some(name.clone()),
             description: description.clone(),

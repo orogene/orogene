@@ -583,9 +583,9 @@ dependencies = [
  "log",
  "oro-command",
  "oro-error-code",
+ "oro-semver",
  "oro-tree",
  "rogga",
- "semver 0.9.0",
  "serde_json",
  "ssri",
  "url",
@@ -1711,9 +1711,9 @@ name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "oro-semver",
  "package-arg",
  "rogga",
- "semver 0.9.0",
  "thiserror",
 ]
 
@@ -1777,11 +1777,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oro-semver"
+version = "0.9.0"
+dependencies = [
+ "diesel",
+ "semver-parser 0.10.0",
+ "serde 1.0.114",
+ "serde_derive",
+ "serde_json",
+]
+
+[[package]]
 name = "oro-tree"
 version = "0.1.0"
 dependencies = [
  "memmap",
- "semver 0.9.0",
+ "oro-semver",
  "serde 1.0.114",
  "serde_json",
  "ssri",
@@ -1794,11 +1805,8 @@ name = "orogene"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-compression",
  "async-std",
  "async-trait",
- "bincode",
- "cacache",
  "clap 3.0.0-beta.1",
  "cmd-ping",
  "cmd-restore",
@@ -1806,16 +1814,10 @@ dependencies = [
  "cmd-view",
  "embed-resource",
  "fern",
- "futures",
- "http-types",
  "log",
- "oro-client",
  "oro-command",
  "oro-config",
  "oro-error-code",
- "package-arg",
- "rogga",
- "semver 0.9.0",
  "smol 0.1.18",
  "ssri",
 ]
@@ -1832,8 +1834,8 @@ version = "0.1.0"
 dependencies = [
  "nom 5.1.2",
  "oro-error-code",
+ "oro-semver",
  "percent-encoding",
- "semver 0.9.0",
  "thiserror",
  "url",
 ]
@@ -2151,8 +2153,8 @@ dependencies = [
  "mkdirp",
  "oro-client",
  "oro-error-code",
+ "oro-semver",
  "package-arg",
- "semver 0.9.0",
  "serde 1.0.114",
  "serde_json",
  "ssri",
@@ -2190,7 +2192,7 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
- "semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "semver",
 ]
 
 [[package]]
@@ -2251,17 +2253,6 @@ checksum = "17bf11d99252f512695eb468de5516e5cf75455521e69dfe343f3b74e4748405"
 dependencies = [
  "core-foundation-sys",
  "libc",
-]
-
-[[package]]
-name = "semver"
-version = "0.9.0"
-dependencies = [
- "diesel",
- "semver-parser 0.10.0",
- "serde 1.0.114",
- "serde_derive",
- "serde_json",
 ]
 
 [[package]]

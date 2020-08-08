@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use package_arg::{PackageArg, VersionReq};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
-use semver::{Version as SemVerVersion, VersionReq as SemVerRange};
+use oro_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use thiserror::Error;
 
 pub struct ClassicResolver {

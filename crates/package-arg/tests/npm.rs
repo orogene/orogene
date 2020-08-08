@@ -8,7 +8,7 @@ fn ppa(input: &str) -> Result<PackageArg> {
 
 fn version_req(input: &str) -> Option<VersionReq> {
     Some(VersionReq::Range(
-        semver::VersionReq::parse_compat(input, semver::Compat::Node).unwrap(),
+        oro_semver::VersionReq::parse_compat(input, oro_semver::Compat::Node).unwrap(),
     ))
 }
 
@@ -101,7 +101,7 @@ fn npm_pkg_with_req() -> Result<()> {
             scope: None,
             name: "hello-world".into(),
             requested: Some(VersionReq::Version(
-                semver::Version::parse("1.2.3").unwrap()
+                oro_semver::Version::parse("1.2.3").unwrap()
             ))
         }
     );
@@ -131,7 +131,7 @@ fn npm_pkg_scoped_with_req() -> Result<()> {
             scope: Some("hello".into()),
             name: "world".into(),
             requested: Some(VersionReq::Version(
-                semver::Version::parse("1.2.3").unwrap()
+                oro_semver::Version::parse("1.2.3").unwrap()
             ))
         }
     );
@@ -147,7 +147,7 @@ fn npm_pkg_prefixed_with_req() -> Result<()> {
             scope: Some("hello".into()),
             name: "world".into(),
             requested: Some(VersionReq::Version(
-                semver::Version::parse("1.2.3").unwrap()
+                oro_semver::Version::parse("1.2.3").unwrap()
             ))
         }
     );

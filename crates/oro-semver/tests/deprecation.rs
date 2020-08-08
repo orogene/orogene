@@ -1,9 +1,9 @@
-extern crate semver;
+extern crate oro_semver;
 
 #[test]
 fn test_regressions() {
-    use semver::ReqParseError;
-    use semver::VersionReq;
+    use oro_semver::ReqParseError;
+    use oro_semver::VersionReq;
 
     let versions = vec![
         (".*", VersionReq::any()),

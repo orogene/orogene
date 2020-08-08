@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 package-arg = { path = "../package-arg" }
 rogga = { path = "../rogga" }
-semver = { path = "../oro-semver" }
+oro-semver = { path = "../oro-semver" }
 
 thiserror = "1.0.20"
 async-trait = "0.1.36"

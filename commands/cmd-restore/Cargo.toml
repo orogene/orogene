@@ -11,7 +11,7 @@ rogga = { path = "../../crates/rogga" }
 oro-command = { path = "../../crates/oro-command" }
 oro-error-code = { path = "../../crates/oro-error-code" }
 oro-tree = { path = "../../crates/oro-tree" }
-semver = { path = "../../crates/oro-semver", branch = "new-parser" }
+oro-semver = { path = "../../crates/oro-semver" }
 
 anyhow = "1.0.25"
 clap = { git = "https://github.com/zkat/clap" }

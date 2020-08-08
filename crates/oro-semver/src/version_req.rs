@@ -176,28 +176,25 @@ pub enum ReqParseError {
 
 impl fmt::Display for ReqParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.description().fmt(f)
+        let desc = match *self {
+            InvalidVersionRequirement => "the given version requirement is invalid",
+            OpAlreadySet => {
+                "you have already provided an operation, such as =, ~, or ^; only use one"
+            }
+            InvalidSigil => "the sigil you have written is not correct",
+            VersionComponentsMustBeNumeric => "version components must be numeric",
+            InvalidIdentifier => "invalid identifier",
+            MajorVersionRequired => "at least a major version number is required",
+            UnimplementedVersionRequirement => {
+                "the given version requirement is not implemented, yet"
+            }
+            DeprecatedVersionRequirement(_) => "This requirement is deprecated",
+        };
+        desc.fmt(f)
     }
 }
 
-impl Error for ReqParseError {
-    fn description(&self) -> &str {
-        match self {
-            &InvalidVersionRequirement => "the given version requirement is invalid",
-            &OpAlreadySet => {
-                "you have already provided an operation, such as =, ~, or ^; only use one"
-            }
-            &InvalidSigil => "the sigil you have written is not correct",
-            &VersionComponentsMustBeNumeric => "version components must be numeric",
-            &InvalidIdentifier => "invalid identifier",
-            &MajorVersionRequired => "at least a major version number is required",
-            &UnimplementedVersionRequirement => {
-                "the given version requirement is not implemented, yet"
-            }
-            &DeprecatedVersionRequirement(_) => "This requirement is deprecated",
-        }
-    }
-}
+impl Error for ReqParseError {}
 
 impl From<String> for ReqParseError {
     fn from(other: String) -> ReqParseError {
@@ -216,7 +213,7 @@ impl VersionReq {
     /// # Examples
     ///
     /// ```
-    /// use semver::VersionReq;
+    /// use oro_semver::VersionReq;
     ///
     /// let anything = VersionReq::any();
     /// ```
@@ -237,7 +234,7 @@ impl VersionReq {
     /// # Examples
     ///
     /// ```
-    /// use semver::VersionReq;
+    /// use oro_semver::VersionReq;
     ///
     /// let version = VersionReq::parse("=1.2.3");
     /// let version = VersionReq::parse(">1.2.3");
@@ -252,7 +249,7 @@ impl VersionReq {
     /// This example demonstrates error handling, and will panic.
     ///
     /// ```should-panic
-    /// use semver::VersionReq;
+    /// use oro_semver::VersionReq;
     ///
     /// let version = match VersionReq::parse("not a version") {
     ///     Ok(version) => version,
@@ -283,10 +280,10 @@ impl VersionReq {
             return Ok(From::from(v));
         }
 
-        return match VersionReq::parse_deprecated(input) {
+        match VersionReq::parse_deprecated(input) {
             Some(v) => Err(ReqParseError::DeprecatedVersionRequirement(v)),
             None => Err(From::from(range_set.err().unwrap())),
-        };
+        }
     }
 
     // TODO: better docs for this
@@ -309,21 +306,21 @@ impl VersionReq {
             return Ok(From::from(v));
         }
 
-        return match VersionReq::parse_deprecated(input) {
+        match VersionReq::parse_deprecated(input) {
             Some(v) => Err(ReqParseError::DeprecatedVersionRequirement(v)),
             None => Err(From::from(range_set.err().unwrap())),
-        };
+        }
     }
 
     fn parse_deprecated(version: &str) -> Option<VersionReq> {
-        return match version {
+        match version {
             ".*" => Some(VersionReq::any()),
             "0.1.0." => Some(VersionReq::parse("0.1.0").unwrap()),
             "0.3.1.3" => Some(VersionReq::parse("0.3.13").unwrap()),
             "0.2*" => Some(VersionReq::parse("0.2.*").unwrap()),
             "*.0" => Some(VersionReq::any()),
             _ => None,
-        };
+        }
     }
 
     /// `exact()` is a factory method which creates a `VersionReq` with one exact constraint.
@@ -331,8 +328,8 @@ impl VersionReq {
     /// # Examples
     ///
     /// ```
-    /// use semver::VersionReq;
-    /// use semver::Version;
+    /// use oro_semver::VersionReq;
+    /// use oro_semver::Version;
     ///
     /// let version = Version { major: 1, minor: 1, patch: 1, pre: vec![], build: vec![] };
     /// let exact = VersionReq::exact(&version);
@@ -353,8 +350,8 @@ impl VersionReq {
     /// # Examples
     ///
     /// ```
-    /// use semver::VersionReq;
-    /// use semver::Version;
+    /// use oro_semver::VersionReq;
+    /// use oro_semver::Version;
     ///
     /// let version = Version { major: 1, minor: 1, patch: 1, pre: vec![], build: vec![] };
     /// let exact = VersionReq::exact(&version);
@@ -458,13 +455,13 @@ impl Predicate {
 impl fmt::Display for VersionReq {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         if self.ranges.is_empty() {
-            try!(write!(fmt, "*"));
+            write!(fmt, "*")?;
         } else {
             for (i, ref pred) in self.ranges.iter().enumerate() {
                 if i == 0 {
-                    try!(write!(fmt, "{}", pred));
+                    write!(fmt, "{}", pred)?;
                 } else {
-                    try!(write!(fmt, " || {}", pred));
+                    write!(fmt, " || {}", pred)?;
                 }
             }
         }
@@ -477,14 +474,12 @@ impl fmt::Display for Range {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         for (i, ref pred) in self.predicates.iter().enumerate() {
             if i == 0 {
-                try!(write!(fmt, "{}", pred));
+                write!(fmt, "{}", pred)?;
+            } else if self.compat == Compat::Node {
+                // Node does not expect commas between predicates
+                write!(fmt, " {}", pred)?;
             } else {
-                if self.compat == Compat::Node {
-                    // Node does not expect commas between predicates
-                    try!(write!(fmt, " {}", pred));
-                } else {
-                    try!(write!(fmt, ", {}", pred));
-                }
+                write!(fmt, ", {}", pred)?;
             }
         }
         Ok(())
@@ -493,19 +488,19 @@ impl fmt::Display for Range {
 
 impl fmt::Display for Predicate {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(
+        write!(
             fmt,
             "{} {}.{}.{}",
             self.op, self.major, self.minor, self.patch
-        ));
+        )?;
 
         if !self.pre.is_empty() {
-            try!(write!(fmt, "-"));
+            write!(fmt, "-")?;
             for (i, x) in self.pre.iter().enumerate() {
                 if i != 0 {
-                    try!(write!(fmt, "."))
+                    write!(fmt, ".")?;
                 }
-                try!(write!(fmt, "{}", x));
+                write!(fmt, "{}", x)?;
             }
         }
 
@@ -516,11 +511,11 @@ impl fmt::Display for Predicate {
 impl fmt::Display for Op {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Ex => try!(write!(fmt, "=")),
-            Gt => try!(write!(fmt, ">")),
-            GtEq => try!(write!(fmt, ">=")),
-            Lt => try!(write!(fmt, "<")),
-            LtEq => try!(write!(fmt, "<=")),
+            Ex => write!(fmt, "=")?,
+            Gt => write!(fmt, ">")?,
+            GtEq => write!(fmt, ">=")?,
+            Lt => write!(fmt, "<")?,
+            LtEq => write!(fmt, "<=")?,
         }
         Ok(())
     }
@@ -591,7 +586,7 @@ mod test {
     fn test_parsing_exact() {
         let r = req("=1.0.0");
 
-        assert!(r.to_string() == "= 1.0.0".to_string());
+        assert!(r.to_string() == "= 1.0.0");
         assert_eq!(r.to_string(), "= 1.0.0".to_string());
 
         assert_match(&r, &["1.0.0"]);

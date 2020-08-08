@@ -45,7 +45,7 @@
 //! [`parse`]: struct.Version.html#method.parse
 //!
 //! ```{rust}
-//! use semver::Version;
+//! use oro_semver::Version;
 //!
 //! assert!(Version::parse("1.2.3") == Ok(Version {
 //!    major: 1,
@@ -60,7 +60,7 @@
 //! to compare them:
 //!
 //! ```{rust}
-//! use semver::Version;
+//! use oro_semver::Version;
 //!
 //! assert!(Version::parse("1.2.3-alpha") != Version::parse("1.2.3-beta"));
 //! assert!(Version::parse("1.2.3-alpha2") >  Version::parse("1.2.0"));
@@ -72,7 +72,7 @@
 //! Please note that in order to do this, you must use a mutable Version:
 //!
 //! ```{rust}
-//! use semver::Version;
+//! use oro_semver::Version;
 //!
 //! # fn try_increment_patch() -> Result<(), Box<::std::error::Error>> {
 //! let mut bugfix_release = Version::parse("1.0.0")?;
@@ -90,7 +90,7 @@
 //! (in accordance with section 7 of the spec)
 //!
 //! ```{rust}
-//! use semver::Version;
+//! use oro_semver::Version;
 //!
 //! # fn try_increment_minor() -> Result<(), Box<::std::error::Error>> {
 //! let mut feature_release = Version::parse("1.4.6")?;
@@ -108,7 +108,7 @@
 //! numbers reset to zero (in accordance with section 8 of the spec)
 //!
 //! ```{rust}
-//! use semver::Version;
+//! use oro_semver::Version;
 //!
 //! # fn try_increment_major() -> Result<(), Box<::std::error::Error>> {
 //! let mut chrome_release = Version::parse("41.5.5377")?;
@@ -132,8 +132,8 @@
 //!
 //! ```{rust}
 //! # #![allow(unstable)]
-//! use semver::Version;
-//! use semver::VersionReq;
+//! use oro_semver::Version;
+//! use oro_semver::VersionReq;
 //!
 //! # fn try_compare() -> Result<(), Box<::std::error::Error>> {
 //! let r = VersionReq::parse(">= 1.0.0")?;
