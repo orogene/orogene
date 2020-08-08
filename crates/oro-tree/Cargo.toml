@@ -5,10 +5,11 @@ name = "oro-tree"
 version = "0.1.0"
 
 [dependencies]
+semver = { path = "../oro-semver", features = ["serde"] }
+
 memmap = "0.7.0"
 serde_json = "1.0.56"
 ssri = "5.0.0"
 thiserror = "1.0.20"
-semver = { version = "0.10.0", features = ["serde"] }
 serde = { version = "1.0.103", features = ["derive"] }
 url = { version = "2.1.1", features = ["serde"] }

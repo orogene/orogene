@@ -585,7 +585,7 @@ dependencies = [
  "oro-error-code",
  "oro-tree",
  "rogga",
- "semver 0.9.0 (git+https://github.com/mikrostew/semver?branch=new-parser)",
+ "semver 0.9.0",
  "serde_json",
  "ssri",
  "url",
@@ -899,6 +899,28 @@ name = "derive_more"
 version = "0.99.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "298998b1cf6b5b2c8a7b023dfd45821825ce3ba8a8af55c921a0e734e4653f76"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "diesel"
+version = "1.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e2de9deab977a153492a1468d1b1c0662c1cf39e5ea87d0c060ecd59ef18d8c"
+dependencies = [
+ "byteorder",
+ "diesel_derives",
+ "libsqlite3-sys",
+]
+
+[[package]]
+name = "diesel_derives"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45f5098f628d02a7a0f68ddba586fb61e80edec3bdc1be3b921f4ceec60858d3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1431,6 +1453,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9f8082297d534141b30c8d39e9b1773713ab50fdbe4ff30f750d063b3bfd701"
 
 [[package]]
+name = "libsqlite3-sys"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e704a02bcaecd4a08b93a23f6be59d0bd79cd161e0963e9499165a0a35df7bd"
+dependencies = [
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "linked-hash-map"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1681,7 +1713,7 @@ dependencies = [
  "async-trait",
  "package-arg",
  "rogga",
- "semver 0.9.0 (git+https://github.com/mikrostew/semver?branch=new-parser)",
+ "semver 0.9.0",
  "thiserror",
 ]
 
@@ -1749,7 +1781,7 @@ name = "oro-tree"
 version = "0.1.0"
 dependencies = [
  "memmap",
- "semver 0.10.0",
+ "semver 0.9.0",
  "serde 1.0.114",
  "serde_json",
  "ssri",
@@ -1783,7 +1815,7 @@ dependencies = [
  "oro-error-code",
  "package-arg",
  "rogga",
- "semver 0.9.0 (git+https://github.com/mikrostew/semver?branch=new-parser)",
+ "semver 0.9.0",
  "smol 0.1.18",
  "ssri",
 ]
@@ -1801,7 +1833,7 @@ dependencies = [
  "nom 5.1.2",
  "oro-error-code",
  "percent-encoding",
- "semver 0.9.0 (git+https://github.com/mikrostew/semver?branch=new-parser)",
+ "semver 0.9.0",
  "thiserror",
  "url",
 ]
@@ -2120,7 +2152,7 @@ dependencies = [
  "oro-client",
  "oro-error-code",
  "package-arg",
- "semver 0.9.0 (git+https://github.com/mikrostew/semver?branch=new-parser)",
+ "semver 0.9.0",
  "serde 1.0.114",
  "serde_json",
  "ssri",
@@ -2224,10 +2256,12 @@ dependencies = [
 [[package]]
 name = "semver"
 version = "0.9.0"
-source = "git+https://github.com/mikrostew/semver?branch=new-parser#7583eb352dc181ccd09978fd2b16461c1b1669c1"
 dependencies = [
+ "diesel",
  "semver-parser 0.10.0",
  "serde 1.0.114",
+ "serde_derive",
+ "serde_json",
 ]
 
 [[package]]
@@ -2237,16 +2271,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 dependencies = [
  "semver-parser 0.7.0",
-]
-
-[[package]]
-name = "semver"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "394cec28fa623e00903caf7ba4fa6fb9a0e260280bb8cdbbba029611108a0190"
-dependencies = [
- "semver-parser 0.7.0",
- "serde 1.0.114",
 ]
 
 [[package]]

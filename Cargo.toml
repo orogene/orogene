@@ -29,6 +29,7 @@ oro-config = { path = "./crates/oro-config" }
 package-arg = { path = "./crates/package-arg" }
 rogga = { path = "./crates/rogga" }
 cacache = { path = "./crates/cacache", version = "8.0.0" }
+semver = { path = "./crates/oro-semver" }
 
 # Regular deps
 anyhow = "1.0.31"
@@ -41,7 +42,6 @@ fern = "0.6.0"
 futures = "0.3.5"
 http-types = "2.3.0"
 log = "0.4.11"
-semver = { git = "https://github.com/mikrostew/semver", branch = "new-parser" }
 smol = "0.1.18"
 ssri = "5.0.0"
 
