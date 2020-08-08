@@ -65,7 +65,7 @@ fn require_alabaster(dir_override: Option<PathBuf>) -> Result<PathBuf> {
     fs::create_dir_all(&dir).with_context(|| Code::OR1010(dir.clone()))?;
     let data = include_bytes!("../../../alabaster/dist/alabaster.js").to_vec();
     let hash = Integrity::from(&data).to_hex().1;
-    let script = dir.join(format!("oro-{}", hash.to_string()));
+    let script = dir.join(format!("oro-{}", hash));
     if !script.exists() {
         fs::write(&script, &data).with_context(|| Code::OR1009(script.clone()))?;
     }
