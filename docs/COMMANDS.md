@@ -6,7 +6,7 @@ The commands are meant to feel familiar to users of `npm`, `yarn`, the entropic 
 There are three parts to commands:
 
  * The data structure with `clap` annotations that is used for command line arguments.
- * The implementation of `OroCommand` that contains the actual exectuion of the commands.
+ * The implementation of `OroCommand` that contains the actual execution of the commands.
  * The implementation of `OroCommandLayerConfig` that is used to pass configuration details to the command.
 
 The last point can be skipped if you use `#[derive(OroCommand)]` on the struct.
