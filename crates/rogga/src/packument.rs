@@ -4,15 +4,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+/// A serializable representation of a Packument -- the toplevel metadata
+/// object containing information about package versions, dist-tags, etc.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Packument {
-    pub author: Option<Human>,
     pub name: Option<String>,
     pub description: Option<String>,
     pub versions: HashMap<semver::Version, Manifest>,
+    pub author: Option<Human>,
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
-    #[serde(rename = "dist-tags")]
+    #[serde(default, rename = "dist-tags")]
     pub tags: HashMap<String, semver::Version>,
     #[serde(default)]
     pub maintainers: Vec<Human>,
@@ -23,6 +25,7 @@ pub struct Packument {
     pub rest: HashMap<String, Value>,
 }
 
+/// A manifest for an individual package version.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     pub name: String,
@@ -53,6 +56,7 @@ pub struct Manifest {
     pub rest: HashMap<String, Value>,
 }
 
+/// Representation for the `bin` field in package manifests.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Bin {
@@ -60,12 +64,14 @@ pub enum Bin {
     Hash(HashMap<String, String>),
 }
 
+/// Represents a human!
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Human {
     pub name: String,
     pub email: Option<String>,
 }
 
+/// Distribution information for a particular package version.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Dist {
     pub shasum: String,

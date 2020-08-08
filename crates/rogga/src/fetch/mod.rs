@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use futures::io::AsyncRead;
+use package_arg::PackageArg;
 
 use crate::error::Result;
 use crate::package::{Package, PackageRequest};
@@ -13,6 +14,7 @@ mod registry;
 
 #[async_trait]
 pub trait PackageFetcher: Send + Sync {
+    async fn name(&mut self, spec: &PackageArg) -> Result<String>;
     async fn manifest(&mut self, pkg: &Package) -> Result<Manifest>;
     async fn packument(&mut self, pkg: &PackageRequest) -> Result<Packument>;
     async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>>;

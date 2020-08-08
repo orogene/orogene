@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use package_arg::{PackageArg, VersionReq};
-use rogga::{PackageRequest, PackageResolution, Resolver, ResolverError};
+use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 use semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use thiserror::Error;
 
@@ -34,7 +34,7 @@ impl ClassicResolver {
 }
 
 #[async_trait]
-impl Resolver for ClassicResolver {
+impl PackageResolver for ClassicResolver {
     async fn resolve(&self, wanted: &PackageRequest) -> Result<PackageResolution, ResolverError> {
         use PackageArg::*;
         let spec = match wanted.spec() {

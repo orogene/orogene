@@ -21,6 +21,18 @@ fn relative_path_current_dir() -> Result<()> {
 }
 
 #[test]
+fn relative_path_current_dir_no_slash() -> Result<()> {
+    let res = ppa(".")?;
+    assert_eq!(
+        res,
+        PackageArg::Dir {
+            path: PathBuf::from(".")
+        }
+    );
+    Ok(())
+}
+
+#[test]
 fn relative_path_unix() -> Result<()> {
     let res = ppa("./foo/bar/baz")?;
     assert_eq!(

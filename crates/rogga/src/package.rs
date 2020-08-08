@@ -13,11 +13,9 @@ use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::packument::{Manifest, Packument};
 
-// Should this be an enum that mostly copies PackageArg? Should this replace
-// PackageArg itself? Should this just expose PackageArg through a .get()
-// method that returns a reference?
+/// A package request from which more information can be derived. PackageRequest objects can be resolved into a `Package` by using a `PackageResolver`
 pub struct PackageRequest {
-    pub(crate) name: RwLock<Option<String>>,
+    pub(crate) name: String,
     pub(crate) spec: PackageArg,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
@@ -27,26 +25,9 @@ impl PackageRequest {
         &self.spec
     }
 
-    pub async fn name(&self) -> Result<String> {
-        let read_name = self.name.read().await;
-        if let Some(name) = read_name.clone() {
-            Ok(name)
-        } else {
-            use PackageArg::*;
-            std::mem::drop(read_name);
-            let mut name = self.name.write().await;
-            *name = Some(match self.spec {
-                Dir { ref path } => self.packument().await?.name.unwrap_or_else(|| {
-                    if let Some(name) = path.file_name() {
-                        name.to_string_lossy().into()
-                    } else {
-                        "".into()
-                    }
-                }),
-                Alias { ref name, .. } | Npm { ref name, .. } => name.clone(),
-            });
-            Ok(name.clone().unwrap())
-        }
+    // TODO: do this before instantiating the PackageRequest
+    pub fn name(&self) -> &String {
+        &self.name
     }
 
     /// Returns the packument with general metadata about the package and its
@@ -55,16 +36,15 @@ impl PackageRequest {
         self.fetcher.write().await.packument(&self).await
     }
 
-    pub async fn resolve_with<T: Resolver>(self, resolver: T) -> Result<Package> {
+    pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package> {
         let resolution = resolver.resolve(&self).await?;
         self.resolve_to(resolution).await
     }
 
     pub async fn resolve_to(self, resolved: PackageResolution) -> Result<Package> {
-        let name = self.name().await?;
         Ok(Package {
             from: self.spec,
-            name,
+            name: self.name,
             resolved,
             fetcher: self.fetcher,
         })
@@ -80,7 +60,7 @@ pub enum ResolverError {
 }
 
 #[async_trait]
-pub trait Resolver {
+pub trait PackageResolver {
     async fn resolve(
         &self,
         wanted: &PackageRequest,

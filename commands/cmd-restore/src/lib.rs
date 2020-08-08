@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
 use oro_tree::{self, Package, PkgLock};
-use rogga::{PackageArg, PackageRequest, PackageResolution, Resolver, ResolverError, Rogga};
+use rogga::{PackageArg, PackageRequest, PackageResolution, PackageResolver, ResolverError, Rogga};
 use url::Url;
 
 #[derive(Debug, Clap, OroCommand)]
@@ -33,7 +33,7 @@ pub struct PkgLockResolver<'a> {
 }
 
 #[async_trait]
-impl<'a> Resolver for PkgLockResolver<'a> {
+impl<'a> PackageResolver for PkgLockResolver<'a> {
     async fn resolve(
         &self,
         wanted: &PackageRequest,
@@ -78,8 +78,8 @@ impl RestoreCmd {
                     futs.push(self.extract(rogga, name, dep));
                 }
             }
-            futs.push(Box::pin(async {
-                let resolved = req.resolve_with(resolver).await?;
+            futs.push(Box::pin(async move {
+                let resolved = req.resolve_with(&resolver).await?;
                 let tarball = resolved.tarball().await?;
                 rogga::cache::from_tarball(&self.cache, tarball).await?;
                 // rogga::cache::tarball_itself(&self.cache, tarball).await?;
@@ -108,7 +108,7 @@ impl RestoreCmd {
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
         let pkglock: PkgLock = oro_tree::read("./package-lock.json")?;
-        let rogga = Rogga::new(&self.registry);
+        let rogga = Rogga::new(&self.registry, std::env::current_dir()?);
         let mut futs = Vec::new();
         for (name, dep) in pkglock.dependencies.iter() {
             futs.push(self.extract(&rogga, name, dep));

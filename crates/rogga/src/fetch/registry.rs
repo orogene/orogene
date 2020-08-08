@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Method;
 use oro_client::{self, OroClient};
+use package_arg::PackageArg;
 
 use super::PackageFetcher;
 
@@ -48,6 +49,13 @@ impl RegistryFetcher {
 
 #[async_trait]
 impl PackageFetcher for RegistryFetcher {
+    async fn name(&mut self, spec: &PackageArg) -> Result<String> {
+        match spec {
+            PackageArg::Npm { ref name, .. } | PackageArg::Alias { ref name, .. } => Ok(name.clone()),
+            _ => unreachable!(),
+        }
+    }
+
     async fn manifest(&mut self, pkg: &Package) -> Result<Manifest> {
         let wanted = match pkg.resolved {
             PackageResolution::Npm { ref version, .. } => version,
@@ -66,8 +74,18 @@ impl PackageFetcher for RegistryFetcher {
     }
 
     async fn packument(&mut self, pkg: &PackageRequest) -> Result<Packument> {
-        // TODO: get rid of this clone, maybe?
-        Ok(self.packument_from_name(pkg.name().await?).await?.clone())
+        // When fetching the packument itself, we need the _package_ name, not
+        // its alias! Hence these shenanigans.
+        let pkg = match pkg.spec() {
+            PackageArg::Alias { ref package , .. } => package,
+            pkg @ PackageArg::Npm { .. } => pkg,
+            _ => unreachable!(),
+        };
+        if let PackageArg::Npm { ref name, .. } = pkg {
+            Ok(self.packument_from_name(name).await?.clone())
+        } else {
+            unreachable!()
+        }
     }
 
     async fn tarball(&mut self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {

@@ -18,29 +18,72 @@ use fetch::{DirFetcher, PackageFetcher, RegistryFetcher};
 pub use package::*;
 pub use packument::*;
 
+/// Build a new Rogga instance with specified options.
+#[derive(Default)]
+pub struct RoggaOpts {
+    cache: Option<PathBuf>,
+    dir: Option<PathBuf>,
+    registry: Option<String>,
+}
+
+impl RoggaOpts {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
+        self.cache = Some(PathBuf::from(cache.as_ref()));
+        self
+    }
+
+    pub fn dir(mut self, dir: impl AsRef<Path>) -> Self {
+        self.cache = Some(PathBuf::from(dir.as_ref()));
+        self
+    }
+
+    pub fn registry(mut self, registry: impl AsRef<str>) -> Self {
+        self.registry = Some(String::from(registry.as_ref()));
+        self
+    }
+
+    pub fn build(self) -> Rogga {
+        let reg = self
+            .registry
+            .unwrap_or_else(|| "https://registry.npmjs.org".into());
+        Rogga {
+            cache: self.cache,
+            dir: self.dir.unwrap_or_else(|| PathBuf::from("")),
+            client: Arc::new(Mutex::new(OroClient::new(reg))),
+        }
+    }
+}
+
+/// Toplevel client for making package requests.
 pub struct Rogga {
     client: Arc<Mutex<OroClient>>,
     cache: Option<PathBuf>,
+    dir: PathBuf,
 }
 
 impl Rogga {
-    pub fn new<T: AsRef<str>>(registry: T) -> Self {
-        Self {
-            client: Arc::new(Mutex::new(OroClient::new(registry.as_ref()))),
-            cache: None,
-        }
-    }
-
-    pub fn set_cache<T: AsRef<Path>>(&mut self, cache: Option<T>) {
-        self.cache = cache.map(|s| s.as_ref().into());
+    /// Creates a new Rogga instance.
+    pub fn new(registry: impl AsRef<str>, dir: impl AsRef<Path>) -> Self {
+        RoggaOpts::new()
+            .dir(dir.as_ref())
+            .registry(registry.as_ref())
+            .build()
     }
 
     /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3`.
-    pub fn arg_request<T: AsRef<str>>(&self, arg: T) -> Result<PackageRequest> {
+    pub async fn arg_request<T: AsRef<str>>(&self, arg: T) -> Result<PackageRequest> {
         let spec = PackageArg::from_string(arg.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
+        let name = {
+            let mut locked = fetcher.write().await;
+            locked.name(&spec).await?
+        };
         Ok(PackageRequest {
-            name: RwLock::new(None),
+            name,
             spec,
             fetcher,
         })
@@ -56,16 +99,18 @@ impl Rogga {
         let spec = PackageArg::resolve(name.as_ref(), spec.as_ref())?;
         let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {
-            name: RwLock::new(Some(name.as_ref().into())),
+            name: name.as_ref().into(),
             spec,
             fetcher,
         })
     }
 
+    /// Picks a fetcher from the fetchers available in src/fetch, according to
+    /// the requested PackageArg.
     fn pick_fetcher(&self, arg: &PackageArg) -> RwLock<Box<dyn PackageFetcher>> {
         use PackageArg::*;
         match *arg {
-            Dir { .. } => RwLock::new(Box::new(DirFetcher::new())),
+            Dir { .. } => RwLock::new(Box::new(DirFetcher::new(&self.dir))),
             Alias { ref package, .. } => self.pick_fetcher(package),
             Npm { .. } => RwLock::new(Box::new(RegistryFetcher::new(self.client.clone()))),
         }
