@@ -166,8 +166,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::Identifier::*;
+    use super::*;
 
     #[test]
     fn trivial_version_number() {
@@ -211,10 +211,7 @@ mod tests {
                 major: 1,
                 minor: 2,
                 patch: 34,
-                pre_release: vec![
-                    AlphaNumeric("abc".into()),
-                    Numeric(123)
-                ],
+                pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
                 build: Vec::new(),
             }
         );
@@ -230,10 +227,7 @@ mod tests {
                 major: 1,
                 minor: 2,
                 patch: 34,
-                pre_release: vec![
-                    AlphaNumeric("abc".into()),
-                    Numeric(123)
-                ],
+                pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
                 build: vec![Numeric(1),]
             }
         );
