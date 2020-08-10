@@ -82,8 +82,8 @@ where
                     map(tuple((pre_release, build)), |(b, pr)| {
                         Extras::ReleaseAndBuild(b, pr)
                     }),
-                    map(pre_release, |pr| Extras::Release(pr)),
-                    map(build, |b| Extras::Build(b)),
+                    map(pre_release, Extras::Release),
+                    map(build, Extras::Build),
                 ))),
             )),
             |((major, minor, patch), extras)| {
