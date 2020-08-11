@@ -86,7 +86,24 @@ where
 {
     context(
         "predicate alternatives",
-        alt((hypenated_with_only_major, full_version_range)),
+        alt((
+            hypenated_with_only_major,
+            full_version_range,
+            single_greater_than_equals,
+        )),
+    )(input)
+}
+
+fn single_greater_than_equals<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "single greater than",
+        map(
+            version_with_major_minor_patch(Operation::GreaterThanEquals),
+            |pred| vec![pred],
+        ),
     )(input)
 }
 
@@ -150,7 +167,7 @@ where
     E: ParseError<&'a str>,
 {
     context(
-        "full_version_range",
+        "full version range",
         map(
             tuple((
                 version_with_major_minor_patch(Operation::GreaterThanEquals),
@@ -217,11 +234,11 @@ where
 
 impl ToString for VersionReq {
     fn to_string(&self) -> String {
-        format!(
-            "{} {}",
-            self.predicates[0].to_string(),
-            self.predicates[1].to_string(),
-        )
+        self.predicates
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 
@@ -250,6 +267,7 @@ mod tests {
         parse_a_range =>        ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
         only_major_versions =>  ["1 - 2",         ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0",     ">=1.0.0 <2.1.0"],
+        single_greater_than_equals =>  [">=1.0.0",       ">=1.0.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -257,7 +275,6 @@ mod tests {
     ["", "*"],
     ["*", "*"],
     ["*", "*"],
-    [">=1.0.0", ">=1.0.0"],
     [">1.0.0", ">1.0.0"],
     ["<=2.0.0", "<=2.0.0"],
     ["1", ">=1.0.0 <2.0.0-0"],
