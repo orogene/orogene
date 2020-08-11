@@ -17,7 +17,7 @@ pub enum SemverError {
     ParseError { input: String, msg: String },
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Identifier {
     /// An identifier that's solely numbers.
     Numeric(u64),
