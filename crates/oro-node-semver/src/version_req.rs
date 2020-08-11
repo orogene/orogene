@@ -220,6 +220,8 @@ where
             // TODO: Add more as needed
             map(tag(">="), |_| GreaterThanEquals),
             map(tag(">"), |_| GreaterThan),
+            map(tag("<="), |_| LessThanEquals),
+            map(tag("<"), |_| LessThan),
         )),
     )(input)
 }
@@ -267,8 +269,10 @@ mod tests {
         parse_a_range =>        ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
         only_major_versions =>  ["1 - 2",         ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0",     ">=1.0.0 <2.1.0"],
-        single_greater_than_equals =>  [">=1.0.0",       ">=1.0.0"],
-        single_greater_than => [">1.0.0", ">1.0.0"],
+        single_sided_lower_equals_bound =>  [">=1.0.0",       ">=1.0.0"],
+        single_sided_lower_bound => [">1.0.0", ">1.0.0"],
+        single_sided_uppwer_equals_bound => ["<=2.0.0", "<=2.0.0"],
+        single_sided_uppwer_bound => ["<2.0.0", "<2.0.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -276,12 +280,7 @@ mod tests {
     ["", "*"],
     ["*", "*"],
     ["*", "*"],
-    ["<=2.0.0", "<=2.0.0"],
     ["1", ">=1.0.0 <2.0.0-0"],
-    ["<=2.0.0", "<=2.0.0"],
-    ["<=2.0.0", "<=2.0.0"],
-    ["<2.0.0", "<2.0.0"],
-    ["<2.0.0", "<2.0.0"],
     [">= 1.0.0", ">=1.0.0"],
     [">=  1.0.0", ">=1.0.0"],
     [">=   1.0.0", ">=1.0.0"],
