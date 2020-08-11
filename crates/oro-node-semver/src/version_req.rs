@@ -96,27 +96,24 @@ where
 {
     context(
         "full_version_range",
-        map(
-            tuple((number, spaced_hypen, number)),
-            |(left, _, right)| {
-                vec![
-                    Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        major: left,
-                        minor: None,
-                        patch: None,
-                        pre_release: Vec::new(),
-                    },
-                    Predicate {
-                        operation: Operation::LessThan,
-                        major: right + 1,
-                        minor: None,
-                        patch: None,
-                        pre_release: Vec::new(),
-                    },
-                ]
-            },
-        ),
+        map(tuple((number, spaced_hypen, number)), |(left, _, right)| {
+            vec![
+                Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    major: left,
+                    minor: None,
+                    patch: None,
+                    pre_release: Vec::new(),
+                },
+                Predicate {
+                    operation: Operation::LessThan,
+                    major: right + 1,
+                    minor: None,
+                    patch: None,
+                    pre_release: Vec::new(),
+                },
+            ]
+        }),
     )(input)
 }
 
@@ -138,8 +135,8 @@ where
 }
 
 fn spaced_hypen<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
-   where
-       E: ParseError<&'a str>,
+where
+    E: ParseError<&'a str>,
 {
     map(tuple((space0, tag("-"), space0)), |_| ())(input)
 }
@@ -204,22 +201,24 @@ impl ToString for VersionReq {
 mod tests {
     use super::*;
 
-    #[test]
-    fn parse_a_range() {
-        let [input, expected] = ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"];
+    macro_rules! range_parse_tests {
+        ($($name:ident => $vals:expr),+) => {
+            $(
+                #[test]
+                fn $name() {
+                    let [input, expected] = $vals;
 
-        let parsed = parse(input).expect("unable to parse");
+                    let parsed = parse(input).expect("unable to parse");
 
-        assert_eq!(expected, parsed.to_string());
+                    assert_eq!(expected, parsed.to_string());
+                }
+            )+
+        }
+
     }
 
-    #[test]
-    fn only_major_versions() {
-        // actually wants <3.0.0-0 but not 1.0.0-0?
-        let [input, expected] = ["1 - 2", ">=1.0.0 <3.0.0"];
-
-        let parsed = parse(input).expect("unable to parse");
-
-        assert_eq!(expected, parsed.to_string());
-    }
+    range_parse_tests![
+        parse_a_range =>        ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
+        only_major_versions =>  ["1 - 2",         ">=1.0.0 <3.0.0"]
+    ];
 }
