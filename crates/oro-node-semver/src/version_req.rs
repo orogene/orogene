@@ -89,12 +89,12 @@ where
         alt((
             hypenated_with_only_major,
             full_version_range,
-            single_greater_than_equals,
+            single_sided_lower_range,
         )),
     )(input)
 }
 
-fn single_greater_than_equals<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
+fn single_sided_lower_range<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
 where
     E: ParseError<&'a str>,
 {
@@ -268,6 +268,7 @@ mod tests {
         only_major_versions =>  ["1 - 2",         ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0",     ">=1.0.0 <2.1.0"],
         single_greater_than_equals =>  [">=1.0.0",       ">=1.0.0"],
+        single_greater_than => [">1.0.0", ">1.0.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -275,7 +276,6 @@ mod tests {
     ["", "*"],
     ["*", "*"],
     ["*", "*"],
-    [">1.0.0", ">1.0.0"],
     ["<=2.0.0", "<=2.0.0"],
     ["1", ">=1.0.0 <2.0.0-0"],
     ["<=2.0.0", "<=2.0.0"],
