@@ -9,6 +9,8 @@ use nom::{Err, IResult};
 
 use thiserror::Error;
 
+mod version_req;
+
 #[derive(Debug, Error)]
 pub enum SemverError {
     #[error("{input}: {msg}")]
