@@ -8,6 +8,23 @@ use nom::{Err, IResult};
 
 use crate::{Identifier, SemverError};
 
+#[derive(Debug, Eq, PartialEq)]
+enum Range {
+    Open(Predicate),
+    Closed { upper: Predicate, lower: Predicate },
+}
+
+impl ToString for Range {
+    fn to_string(&self) -> String {
+        match self {
+            Range::Open(p) => p.to_string(),
+            Range::Closed { lower, upper } => {
+                format!("{} {}", lower.to_string(), upper.to_string())
+            }
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Operation {
     Exact,
@@ -39,7 +56,7 @@ enum WildCardVersion {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct Predicate {
+pub struct Predicate {
     operation: Operation,
     major: usize,
     minor: Option<usize>,
@@ -61,7 +78,7 @@ impl ToString for Predicate {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct VersionReq {
-    predicates: Vec<Predicate>,
+    predicates: Range,
 }
 
 pub fn parse<S: AsRef<str>>(input: S) -> Result<VersionReq, SemverError> {
@@ -80,7 +97,7 @@ pub fn parse<S: AsRef<str>>(input: S) -> Result<VersionReq, SemverError> {
     }
 }
 
-fn predicates<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
+fn predicates<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
@@ -94,7 +111,7 @@ where
     )(input)
 }
 
-fn single_sided_lower_range<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
+fn single_sided_lower_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
@@ -102,17 +119,18 @@ where
         "single greater than",
         map(
             version_with_major_minor_patch(Operation::GreaterThanEquals),
-            |pred| vec![pred],
+            Range::Open,
         ),
     )(input)
 }
 
-fn hypenated_with_only_major<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
+// TODO: Rename this something liked 'closed range'
+fn hypenated_with_only_major<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
     context(
-        "full_version_range",
+        "hypenated with major and minor",
         map(
             tuple((
                 number,
@@ -121,35 +139,34 @@ where
                 number,
                 maybe_dot_number,
             )),
-            |(lm, maybe_l_minor, _, right, maybe_r_minor)| {
-                vec![
-                    Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        major: lm,
-                        minor: maybe_l_minor,
-                        patch: None,
-                        pre_release: Vec::new(),
-                    },
-                    {
-                        if let Some(minor) = maybe_r_minor {
-                            Predicate {
-                                operation: Operation::LessThan,
-                                major: right,
-                                minor: Some(minor + 1),
-                                patch: None,
-                                pre_release: Vec::new(),
-                            }
-                        } else {
-                            Predicate {
-                                operation: Operation::LessThan,
-                                major: right + 1,
-                                minor: None,
-                                patch: None,
-                                pre_release: Vec::new(),
-                            }
+            |(lm, maybe_l_minor, _, right, maybe_r_minor)| Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    major: lm,
+                    minor: maybe_l_minor,
+                    patch: None,
+                    pre_release: Vec::new(),
+                },
+
+                upper: {
+                    if let Some(minor) = maybe_r_minor {
+                        Predicate {
+                            operation: Operation::LessThan,
+                            major: right,
+                            minor: Some(minor + 1),
+                            patch: None,
+                            pre_release: Vec::new(),
                         }
-                    },
-                ]
+                    } else {
+                        Predicate {
+                            operation: Operation::LessThan,
+                            major: right + 1,
+                            minor: None,
+                            patch: None,
+                            pre_release: Vec::new(),
+                        }
+                    }
+                },
             },
         ),
     )(input)
@@ -162,7 +179,7 @@ where
     opt(map(tuple((tag("."), number)), |(_, num)| num))(input)
 }
 
-fn full_version_range<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Predicate>, E>
+fn full_version_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
@@ -174,7 +191,7 @@ where
                 spaced_hypen,
                 version_with_major_minor_patch(Operation::LessThanEquals),
             )),
-            |(a, _, b)| vec![a, b],
+            |(lower, _, upper)| Range::Closed { lower, upper },
         ),
     )(input)
 }
@@ -236,11 +253,7 @@ where
 
 impl ToString for VersionReq {
     fn to_string(&self) -> String {
-        self.predicates
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(" ")
+        self.predicates.to_string()
     }
 }
 
@@ -265,11 +278,11 @@ mod tests {
 
     }
 
-    range_parse_tests![         // input          // parsed and then `to_string`ed
+    range_parse_tests![       //[ input         , parsed and then `to_string`ed]
         parse_a_range =>        ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
-        only_major_versions =>  ["1 - 2",         ">=1.0.0 <3.0.0"],
-        only_major_and_minor => ["1.0 - 2.0",     ">=1.0.0 <2.1.0"],
-        single_sided_lower_equals_bound =>  [">=1.0.0",       ">=1.0.0"],
+        only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
+        only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
+        single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
         single_sided_uppwer_equals_bound => ["<=2.0.0", "<=2.0.0"],
         single_sided_uppwer_bound => ["<2.0.0", "<2.0.0"],
