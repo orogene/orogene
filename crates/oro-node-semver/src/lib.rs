@@ -34,6 +34,18 @@ pub struct Version {
     pre_release: Vec<Identifier>,
 }
 
+impl std::convert::From<(usize, usize, usize)> for Version {
+    fn from((major, minor, patch): (usize, usize, usize)) -> Self {
+        Version {
+            major,
+            minor,
+            patch,
+            build: Vec::new(),
+            pre_release: Vec::new(),
+        }
+    }
+}
+
 pub fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
     let input = &input.as_ref()[..];
 

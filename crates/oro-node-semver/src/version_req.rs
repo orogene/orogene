@@ -6,7 +6,7 @@ use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::sequence::tuple;
 use nom::{Err, IResult};
 
-use crate::{Identifier, SemverError};
+use crate::{Identifier, SemverError, Version};
 
 #[derive(Debug, Eq, PartialEq)]
 enum Range {
@@ -75,6 +75,19 @@ impl ToString for Predicate {
         )
     }
 }
+
+/*
+ * Methods I'll likely want to have:
+ *  * self.satisfies(some_version): true if some_version is within what self allows, false otherwise
+ *  * self.intersect(other_version_req): returns a verion_req that would be accepted by both `self`
+ *  and `other_version_req` or None if its impossible
+ * ==> these methods could maybe live in `Range`?
+ *
+ * Unification:
+ *   We currently only have a single Range, but with ` <2 || >42`  we will get multiple ranges.
+ *   Unification means that we make sure that all ranges are disjoint, by checking for their
+ *   intersection and then splitting them at the right place
+ */
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct VersionReq {
@@ -237,6 +250,7 @@ where
             // TODO: Add more as needed
             map(tag(">="), |_| GreaterThanEquals),
             map(tag(">"), |_| GreaterThan),
+            map(tag("="), |_| Exact),
             map(tag("<="), |_| LessThanEquals),
             map(tag("<"), |_| LessThan),
         )),
@@ -254,6 +268,105 @@ where
 impl ToString for VersionReq {
     fn to_string(&self) -> String {
         self.predicates.to_string()
+    }
+}
+
+impl Predicate {
+    fn satisfies(&self, version: &Version) -> bool {
+        match self.operation {
+            Operation::GreaterThanEquals => self.exact(version) || self.gt(version),
+            Operation::GreaterThan => self.gt(version),
+            Operation::Exact => self.exact(version),
+            _ => false,
+        }
+    }
+
+    fn exact(&self, version: &Version) -> bool {
+        let predicate = self;
+        predicate.major == version.major
+            && predicate.minor.unwrap_or(0) == version.minor
+            && predicate.patch.unwrap_or(0) == version.patch
+    }
+
+    fn gt(&self, version: &Version) -> bool {
+        let predicate = self;
+        if predicate.major < version.major {
+            return true;
+        }
+        if predicate.major > version.major {
+            return false;
+        }
+        if predicate.minor.unwrap_or(0) > version.minor {
+            return false;
+        }
+        if predicate.patch.unwrap_or(0) >= version.patch {
+            return false;
+        }
+        true
+    }
+}
+
+impl VersionReq {
+    fn satisfies(&self, version: &Version) -> bool {
+        match &self.predicates {
+            Range::Open(predicate) => predicate.satisfies(version),
+            _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod satisfies_ranges_tests {
+    use super::*;
+
+    macro_rules! refute {
+        ($e:expr) => {
+            assert!(!$e)
+        };
+        ($e:expr, $msg:expr) => {
+            assert!(!$e, $msg)
+        };
+    }
+
+    #[test]
+    fn greater_than_equals() {
+        let parsed = parse(">=1.2.3").expect("unable to parse");
+
+        refute!(parsed.satisfies(&(0, 2, 3).into()), "major too low");
+
+        refute!(parsed.satisfies(&(1, 1, 3).into()), "minor too low");
+
+        refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
+
+        assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
+
+        assert!(parsed.satisfies(&(2, 2, 3).into()), "above");
+    }
+
+    #[test]
+    fn greater_than() {
+        let parsed = dbg!(parse(">1.2.3")).expect("unable to parse");
+
+        refute!(parsed.satisfies(&(0, 2, 3).into()), "major too low");
+
+        refute!(parsed.satisfies(&(1, 1, 3).into()), "minor too low");
+
+        refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
+
+        refute!(parsed.satisfies(&(1, 2, 3).into()), "exact");
+
+        assert!(parsed.satisfies(&(1, 2, 4).into()), "above");
+    }
+
+    #[test]
+    fn exact() {
+        let parsed = dbg!(parse("=1.2.3")).expect("unable to parse");
+
+        refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
+
+        assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
+
+        refute!(parsed.satisfies(&(1, 2, 4).into()), "above");
     }
 }
 
