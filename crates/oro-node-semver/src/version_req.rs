@@ -59,8 +59,8 @@ enum WildCardVersion {
 pub struct Predicate {
     operation: Operation,
     major: usize,
-    minor: Option<usize>,
-    patch: Option<usize>,
+    minor: usize,
+    patch: usize,
     pre_release: Vec<Identifier>,
 }
 
@@ -70,8 +70,8 @@ impl ToString for Predicate {
             "{}{}.{}.{}",
             self.operation.to_string(),
             self.major,
-            self.minor.unwrap_or_else(|| 0),
-            self.patch.unwrap_or_else(|| 0),
+            self.minor,
+            self.patch,
         )
     }
 }
@@ -156,8 +156,8 @@ where
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     major: lm,
-                    minor: maybe_l_minor,
-                    patch: None,
+                    minor: maybe_l_minor.unwrap_or(0),
+                    patch: 0,
                     pre_release: Vec::new(),
                 },
 
@@ -166,16 +166,16 @@ where
                         Predicate {
                             operation: Operation::LessThan,
                             major: right,
-                            minor: Some(minor + 1),
-                            patch: None,
+                            minor: minor + 1,
+                            patch: 0,
                             pre_release: Vec::new(),
                         }
                     } else {
                         Predicate {
                             operation: Operation::LessThan,
                             major: right + 1,
-                            minor: None,
-                            patch: None,
+                            minor: 0,
+                            patch: 0,
                             pre_release: Vec::new(),
                         }
                     }
@@ -230,8 +230,8 @@ where
                 |(maybe_op, major, _, minor, _, patch)| Predicate {
                     operation: maybe_op.unwrap_or_else(|| default_op),
                     major,
-                    minor: Some(minor),
-                    patch: Some(patch),
+                    minor,
+                    patch,
                     pre_release: Vec::new(),
                 },
             ),
@@ -284,8 +284,8 @@ impl Predicate {
     fn exact(&self, version: &Version) -> bool {
         let predicate = self;
         predicate.major == version.major
-            && predicate.minor.unwrap_or(0) == version.minor
-            && predicate.patch.unwrap_or(0) == version.patch
+            && predicate.minor == version.minor
+            && predicate.patch == version.patch
     }
 
     fn gt(&self, version: &Version) -> bool {
@@ -296,10 +296,10 @@ impl Predicate {
         if predicate.major > version.major {
             return false;
         }
-        if predicate.minor.unwrap_or(0) > version.minor {
+        if predicate.minor > version.minor {
             return false;
         }
-        if predicate.patch.unwrap_or(0) >= version.patch {
+        if predicate.patch >= version.patch {
             return false;
         }
         true
