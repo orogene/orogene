@@ -6,7 +6,7 @@ use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::sequence::tuple;
 use nom::{Err, IResult};
 
-use crate::{Identifier, SemverError, Version};
+use crate::{SemverError, Version};
 
 #[derive(Debug, Eq, PartialEq)]
 enum Range {
@@ -58,21 +58,12 @@ enum WildCardVersion {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Predicate {
     operation: Operation,
-    major: usize,
-    minor: usize,
-    patch: usize,
-    pre_release: Vec<Identifier>,
+    version: Version,
 }
 
 impl ToString for Predicate {
     fn to_string(&self) -> String {
-        format!(
-            "{}{}.{}.{}",
-            self.operation.to_string(),
-            self.major,
-            self.minor,
-            self.patch,
-        )
+        format!("{}{}", self.operation.to_string(), self.version.to_string(),)
     }
 }
 
@@ -155,28 +146,19 @@ where
             |(lm, maybe_l_minor, _, right, maybe_r_minor)| Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
-                    major: lm,
-                    minor: maybe_l_minor.unwrap_or(0),
-                    patch: 0,
-                    pre_release: Vec::new(),
+                    version: (lm, maybe_l_minor.unwrap_or(0), 0).into(),
                 },
 
                 upper: {
                     if let Some(minor) = maybe_r_minor {
                         Predicate {
                             operation: Operation::LessThan,
-                            major: right,
-                            minor: minor + 1,
-                            patch: 0,
-                            pre_release: Vec::new(),
+                            version: (right, minor + 1, 0).into(),
                         }
                     } else {
                         Predicate {
                             operation: Operation::LessThan,
-                            major: right + 1,
-                            minor: 0,
-                            patch: 0,
-                            pre_release: Vec::new(),
+                            version: (right + 1, 0, 0).into(),
                         }
                     }
                 },
@@ -229,10 +211,7 @@ where
                 tuple((opt(operation), number, tag("."), number, tag("."), number)),
                 |(maybe_op, major, _, minor, _, patch)| Predicate {
                     operation: maybe_op.unwrap_or_else(|| default_op),
-                    major,
-                    minor,
-                    patch,
-                    pre_release: Vec::new(),
+                    version: (major, minor, patch).into(),
                 },
             ),
         )(input)
@@ -282,14 +261,14 @@ impl Predicate {
     }
 
     fn exact(&self, version: &Version) -> bool {
-        let predicate = self;
+        let predicate = &self.version;
         predicate.major == version.major
             && predicate.minor == version.minor
             && predicate.patch == version.patch
     }
 
     fn gt(&self, version: &Version) -> bool {
-        let predicate = self;
+        let predicate = &self.version;
         if predicate.major < version.major {
             return true;
         }

@@ -25,13 +25,19 @@ pub enum Identifier {
     AlphaNumeric(String),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Version {
     major: usize,
     minor: usize,
     patch: usize,
     build: Vec<Identifier>,
     pre_release: Vec<Identifier>,
+}
+
+impl ToString for Version {
+    fn to_string(&self) -> String {
+        format!("{}.{}.{}", self.major, self.minor, self.patch)
+    }
 }
 
 impl std::convert::From<(usize, usize, usize)> for Version {
