@@ -111,6 +111,7 @@ where
             hypenated_with_only_major,
             full_version_range,
             single_sided_lower_range,
+            only_major_and_minor,
             only_major,
         )),
     )(input)
@@ -183,6 +184,27 @@ where
                 operation: Operation::LessThan,
                 version: (major + 1, 0, 0).into(),
             },
+        }),
+    )(input)
+}
+
+fn only_major_and_minor<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "only a major and a m minor version",
+        map(tuple((number, tag("."), number)), |(major, _, minor)| {
+            Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major, minor + 1, 0).into(),
+                },
+            }
         }),
     )(input)
 }
@@ -331,7 +353,7 @@ impl VersionReq {
     fn satisfies(&self, version: &Version) -> bool {
         match &self.predicates {
             Range::Open(predicate) => predicate.satisfies(version),
-            _ => false,
+            Range::Closed { upper, lower } => upper.satisfies(version) && lower.satisfies(version),
         }
     }
 }
@@ -401,6 +423,17 @@ mod satisfies_ranges_tests {
         assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
         refute!(parsed.satisfies(&(1, 2, 4).into()), "above");
     }
+
+    #[test]
+    fn only_major() {
+        let parsed = parse("1").expect("unable to parse");
+
+        refute!(parsed.satisfies(&(0, 2, 3).into()), "major below");
+        assert!(parsed.satisfies(&(1, 0, 0).into()), "exact bottom of range");
+        assert!(parsed.satisfies(&(1, 2, 2).into()), "middle");
+        refute!(parsed.satisfies(&(2, 0, 0).into()), "exact top of range");
+        refute!(parsed.satisfies(&(2, 7, 3).into()), "above");
+    }
 }
 
 /// https://github.com/npm/node-semver/blob/master/test/fixtures/range-parse.js
@@ -429,10 +462,13 @@ mod tests {
         only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
         single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
+        single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
-        single_sided_uppwer_equals_bound => ["<=2.0.0", "<=2.0.0"],
-        single_sided_uppwer_bound => ["<2.0.0", "<2.0.0"],
+        single_sided_upper_equals_bound => ["<=2.0.0", "<=2.0.0"],
+        single_sided_upper_bound => ["<2.0.0", "<2.0.0"],
         single_major => ["1", ">=1.0.0 <2.0.0"],
+        single_major_2 => ["2", ">=2.0.0 <3.0.0"],
+        major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -450,25 +486,20 @@ mod tests {
     ["<=  2.0.0", "<=2.0.0"],
     ["<    2.0.0", "<2.0.0"],
     ["<\t2.0.0", "<2.0.0"],
-    [">=0.1.97", ">=0.1.97"],
-    [">=0.1.97", ">=0.1.97"],
-    ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
-    [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
-    [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
-    [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
     ["||", "*"],
+
+    // Nice for pairing/
     ["2.x.x", ">=2.0.0 <3.0.0-0"],
     ["1.2.x", ">=1.2.0 <1.3.0-0"],
-    ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
-    ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
-    ["x", "*"],
+
     ["2.*.*", ">=2.0.0 <3.0.0-0"],
     ["1.2.*", ">=1.2.0 <1.3.0-0"],
+
+    ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
+    [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
+    ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
     ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
-    ["*", "*"],
-    ["2", ">=2.0.0 <3.0.0-0"],
-    ["2.3", ">=2.3.0 <2.4.0-0"],
-    ["~2.4", ">=2.4.0 <2.5.0-0"],
+
     ["~2.4", ">=2.4.0 <2.5.0-0"],
     ["~>3.2.1", ">=3.2.1 <3.3.0-0"],
     ["~1", ">=1.0.0 <2.0.0-0"],
@@ -476,16 +507,21 @@ mod tests {
     ["~> 1", ">=1.0.0 <2.0.0-0"],
     ["~1.0", ">=1.0.0 <1.1.0-0"],
     ["~ 1.0", ">=1.0.0 <1.1.0-0"],
+
     ["^0", "<1.0.0-0"],
     ["^ 1", ">=1.0.0 <2.0.0-0"],
     ["^0.1", ">=0.1.0 <0.2.0-0"],
     ["^1.0", ">=1.0.0 <2.0.0-0"],
     ["^1.2", ">=1.2.0 <2.0.0-0"],
     ["^0.0.1", ">=0.0.1 <0.0.2-0"],
+
+    // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
     ["^0.1.2", ">=0.1.2 <0.2.0-0"],
     ["^1.2.3", ">=1.2.3 <2.0.0-0"],
     ["^1.2.3-beta.4", ">=1.2.3-beta.4 <2.0.0-0"],
+    ["x", "*"],
+    ["*", "*"],
     ["<1", "<1.0.0-0"],
     ["< 1", "<1.0.0-0"],
     [">=1", ">=1.0.0"],
