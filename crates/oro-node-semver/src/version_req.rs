@@ -111,6 +111,7 @@ where
             hypenated_with_only_major,
             full_version_range,
             single_sided_lower_range,
+            only_major,
         )),
     )(input)
 }
@@ -164,6 +165,25 @@ where
                 },
             },
         ),
+    )(input)
+}
+
+fn only_major<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "only a major version",
+        map(number, |major| Range::Closed {
+            lower: Predicate {
+                operation: Operation::GreaterThanEquals,
+                version: (major, 0, 0).into(),
+            },
+            upper: Predicate {
+                operation: Operation::LessThan,
+                version: (major + 1, 0, 0).into(),
+            },
+        }),
     )(input)
 }
 
@@ -412,6 +432,7 @@ mod tests {
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
         single_sided_uppwer_equals_bound => ["<=2.0.0", "<=2.0.0"],
         single_sided_uppwer_bound => ["<2.0.0", "<2.0.0"],
+        single_major => ["1", ">=1.0.0 <2.0.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -419,7 +440,6 @@ mod tests {
     ["", "*"],
     ["*", "*"],
     ["*", "*"],
-    ["1", ">=1.0.0 <2.0.0-0"],
     [">= 1.0.0", ">=1.0.0"],
     [">=  1.0.0", ">=1.0.0"],
     [">=   1.0.0", ">=1.0.0"],
