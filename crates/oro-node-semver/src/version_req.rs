@@ -32,7 +32,7 @@ enum Operation {
     GreaterThanEquals,
     LessThan,
     LessThanEquals,
-    Compatible,
+    Compatible, // Might turn this into a "normal" predicate
     WildCard(WildCardVersion),
 }
 
@@ -256,6 +256,8 @@ impl Predicate {
             Operation::GreaterThanEquals => self.exact(version) || self.gt(version),
             Operation::GreaterThan => self.gt(version),
             Operation::Exact => self.exact(version),
+            Operation::LessThan => self.lt(version),
+            Operation::LessThanEquals => self.exact(version) || self.lt(version),
             _ => false,
         }
     }
@@ -279,6 +281,26 @@ impl Predicate {
             return false;
         }
         if predicate.patch >= version.patch {
+            return false;
+        }
+        true
+    }
+
+    fn lt(&self, version: &Version) -> bool {
+        let predicate = &self.version;
+        if predicate.major > version.major {
+            return true;
+        }
+        if predicate.major < version.major {
+            return false;
+        }
+        if predicate.minor < version.minor {
+            return false;
+        }
+        if predicate.minor > version.minor {
+            return true;
+        }
+        if predicate.patch <= version.patch {
             return false;
         }
         true
@@ -312,39 +334,51 @@ mod satisfies_ranges_tests {
         let parsed = parse(">=1.2.3").expect("unable to parse");
 
         refute!(parsed.satisfies(&(0, 2, 3).into()), "major too low");
-
         refute!(parsed.satisfies(&(1, 1, 3).into()), "minor too low");
-
         refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
-
         assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
-
         assert!(parsed.satisfies(&(2, 2, 3).into()), "above");
     }
 
     #[test]
     fn greater_than() {
-        let parsed = dbg!(parse(">1.2.3")).expect("unable to parse");
+        let parsed = parse(">1.2.3").expect("unable to parse");
 
         refute!(parsed.satisfies(&(0, 2, 3).into()), "major too low");
-
         refute!(parsed.satisfies(&(1, 1, 3).into()), "minor too low");
-
         refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
-
         refute!(parsed.satisfies(&(1, 2, 3).into()), "exact");
-
         assert!(parsed.satisfies(&(1, 2, 4).into()), "above");
     }
 
     #[test]
     fn exact() {
-        let parsed = dbg!(parse("=1.2.3")).expect("unable to parse");
+        let parsed = parse("=1.2.3").expect("unable to parse");
 
         refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
-
         assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
+        refute!(parsed.satisfies(&(1, 2, 4).into()), "above");
+    }
 
+    #[test]
+    fn less_than() {
+        let parsed = parse("<1.2.3").expect("unable to parse");
+
+        assert!(parsed.satisfies(&(0, 2, 3).into()), "major below");
+        assert!(parsed.satisfies(&(1, 1, 3).into()), "minor below");
+        assert!(parsed.satisfies(&(1, 2, 2).into()), "patch below");
+        refute!(parsed.satisfies(&(1, 2, 3).into()), "exact");
+        refute!(parsed.satisfies(&(1, 2, 4).into()), "above");
+    }
+
+    #[test]
+    fn less_than_equals() {
+        let parsed = parse("<=1.2.3").expect("unable to parse");
+
+        assert!(parsed.satisfies(&(0, 2, 3).into()), "major below");
+        assert!(parsed.satisfies(&(1, 1, 3).into()), "minor below");
+        assert!(parsed.satisfies(&(1, 2, 2).into()), "patch below");
+        assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
         refute!(parsed.satisfies(&(1, 2, 4).into()), "above");
     }
 }
