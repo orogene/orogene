@@ -108,11 +108,49 @@ where
     context(
         "predicate alternatives",
         alt((
+            minor_x_patch_x,
             hypenated_with_only_major,
             full_version_range,
             only_major_and_minor,
             open_range_with_full_version,
         )),
+    )(input)
+}
+
+fn minor_x_patch_x<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "minor X patch X",
+        map(
+            tuple((
+                number,
+                tag("."),
+                alt((map(tag("x"), |_| None), map(number, |n| Some(n)))),
+                tag("."),
+                tag("x"),
+            )),
+            |(major, _, maybe_minor, _, _)| Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
+                },
+                upper: {
+                    if let Some(minor) = maybe_minor {
+                        Predicate {
+                            operation: Operation::LessThan,
+                            version: (major, minor + 1, 0).into(),
+                        }
+                    } else {
+                        Predicate {
+                            operation: Operation::LessThan,
+                            version: (major + 1, 0, 0).into(),
+                        }
+                    }
+                },
+            },
+        ),
     )(input)
 }
 
@@ -462,6 +500,8 @@ mod tests {
         single_major => ["1", ">=1.0.0 <2.0.0"],
         single_major_2 => ["2", ">=2.0.0 <3.0.0"],
         major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
+        minor_x_patch_x => ["2.x.x", ">=2.0.0 <3.0.0"],
+        patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -482,9 +522,6 @@ mod tests {
     ["||", "*"],
 
     // Nice for pairing/
-    ["2.x.x", ">=2.0.0 <3.0.0-0"],
-    ["1.2.x", ">=1.2.0 <1.3.0-0"],
-
     ["2.*.*", ">=2.0.0 <3.0.0-0"],
     ["1.2.*", ">=1.2.0 <1.3.0-0"],
 
