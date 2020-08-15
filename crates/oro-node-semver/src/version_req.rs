@@ -44,7 +44,7 @@ impl std::string::ToString for Operation {
             GreaterThanEquals => ">=".into(),
             LessThan => "<".into(),
             LessThanEquals => "<=".into(),
-            _ => "***".into(),
+            _ => panic!("operation not supported yet}"),
         }
     }
 }
@@ -112,7 +112,6 @@ where
             full_version_range,
             single_sided_lower_range,
             only_major_and_minor,
-            only_major,
         )),
     )(input)
 }
@@ -130,6 +129,20 @@ where
     )(input)
 }
 
+/// takes two parses, and reads the input separated by a hypen
+fn hypenated<'a, F, T, E>(left: F, right: F) -> impl Fn(&'a str) -> IResult<&'a str, (T, T), E>
+where
+    F: Fn(&'a str) -> IResult<&'a str, T, E>,
+    E: ParseError<&'a str>,
+{
+    move |input: &'a str| {
+        context(
+            "hypenated",
+            map(tuple((&left, spaced_hypen, &right)), |(l, _, r)| (l, r)),
+        )(input)
+    }
+}
+
 // TODO: Rename this something liked 'closed range'
 fn hypenated_with_only_major<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
@@ -138,19 +151,15 @@ where
     context(
         "hypenated with major and minor",
         map(
-            tuple((
-                number,
-                maybe_dot_number,
-                spaced_hypen,
-                number,
-                maybe_dot_number,
-            )),
-            |(lm, maybe_l_minor, _, right, maybe_r_minor)| Range::Closed {
+            hypenated(
+                tuple((number, maybe_dot_number)),
+                tuple((number, maybe_dot_number)),
+            ),
+            |((lm, maybe_l_minor), (right, maybe_r_minor))| Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (lm, maybe_l_minor.unwrap_or(0), 0).into(),
                 },
-
                 upper: {
                     if let Some(minor) = maybe_r_minor {
                         Predicate {
@@ -169,40 +178,30 @@ where
     )(input)
 }
 
-fn only_major<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
-    context(
-        "only a major version",
-        map(number, |major| Range::Closed {
-            lower: Predicate {
-                operation: Operation::GreaterThanEquals,
-                version: (major, 0, 0).into(),
-            },
-            upper: Predicate {
-                operation: Operation::LessThan,
-                version: (major + 1, 0, 0).into(),
-            },
-        }),
-    )(input)
-}
-
 fn only_major_and_minor<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
     context(
-        "only a major and a m minor version",
-        map(tuple((number, tag("."), number)), |(major, _, minor)| {
+        "major and minor",
+        map(tuple((number, maybe_dot_number)), |(major, maybe_minor)| {
             Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
-                    version: (major, minor, 0).into(),
+                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
                 },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major, minor + 1, 0).into(),
+                upper: {
+                    if let Some(minor) = maybe_minor {
+                        Predicate {
+                            operation: Operation::LessThan,
+                            version: (major, minor + 1, 0).into(),
+                        }
+                    } else {
+                        Predicate {
+                            operation: Operation::LessThan,
+                            version: (major + 1, 0, 0).into(),
+                        }
+                    }
                 },
             }
         }),
@@ -223,12 +222,11 @@ where
     context(
         "full version range",
         map(
-            tuple((
+            hypenated(
                 version_with_major_minor_patch(Operation::GreaterThanEquals),
-                spaced_hypen,
                 version_with_major_minor_patch(Operation::LessThanEquals),
-            )),
-            |(lower, _, upper)| Range::Closed { lower, upper },
+            ),
+            |(lower, upper)| Range::Closed { lower, upper },
         ),
     )(input)
 }
