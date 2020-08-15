@@ -198,7 +198,11 @@ where
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor, patch + 1).into(),
+                        version: match (major, minor, patch) {
+                            (0, 0, n) => Version::from((0, 0, n + 1)),
+                            (0, n, _) => Version::from((0, n + 1, 0)),
+                            (n, _, _) => Version::from((n + 1, 0, 0)),
+                        },
                     },
                 },
             ),
@@ -609,10 +613,12 @@ mod tests {
         caret_one => ["^1.0", ">=1.0.0 <2.0.0"],
         caret_minor => ["^1.2", ">=1.2.0 <2.0.0"],
         caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2"],
+        caret_with_patch =>   ["^0.1.2", ">=0.1.2 <0.2.0"],
+        caret_with_patch_2 => ["^1.2.3", ">=1.2.3 <2.0.0"],
         tilde_one => ["~1", ">=1.0.0 <2.0.0"],
         tilde_minor => ["~1.0", ">=1.0.0 <1.1.0"],
         tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0"],
-        tidle_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
+        tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -638,8 +644,6 @@ mod tests {
 
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
-    ["^0.1.2", ">=0.1.2 <0.2.0-0"],
-    ["^1.2.3", ">=1.2.3 <2.0.0-0"],
     ["^1.2.3-beta.4", ">=1.2.3-beta.4 <2.0.0-0"],
     ["<1", "<1.0.0-0"],
     ["< 1", "<1.0.0-0"],
