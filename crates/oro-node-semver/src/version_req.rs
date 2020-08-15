@@ -110,20 +110,21 @@ where
         alt((
             hypenated_with_only_major,
             full_version_range,
-            single_sided_lower_range,
             only_major_and_minor,
+            open_range_with_full_version,
         )),
     )(input)
 }
 
-fn single_sided_lower_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+// open-sided range with a full version: n.n.n -> (v)
+fn open_range_with_full_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
     context(
         "single greater than",
         map(
-            version_with_major_minor_patch(Operation::GreaterThanEquals),
+            version_predicate_with(Operation::GreaterThanEquals),
             Range::Open,
         ),
     )(input)
@@ -143,7 +144,7 @@ where
     }
 }
 
-// TODO: Rename this something liked 'closed range'
+// hypenated range: n(.n) - n(.n) -> (v, v)
 fn hypenated_with_only_major<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -178,6 +179,7 @@ where
     )(input)
 }
 
+// only a major and maybe minor number to closed range: n(.n) => (v, v)
 fn only_major_and_minor<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -215,6 +217,7 @@ where
     opt(map(tuple((tag("."), number)), |(_, num)| num))(input)
 }
 
+// hypenated range of two full versions: n.n.n - n.n.n -> (v, v)
 fn full_version_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -223,8 +226,8 @@ where
         "full version range",
         map(
             hypenated(
-                version_with_major_minor_patch(Operation::GreaterThanEquals),
-                version_with_major_minor_patch(Operation::LessThanEquals),
+                version_predicate_with(Operation::GreaterThanEquals),
+                version_predicate_with(Operation::LessThanEquals),
             ),
             |(lower, upper)| Range::Closed { lower, upper },
         ),
@@ -238,7 +241,7 @@ where
     map(tuple((space0, tag("-"), space0)), |_| ())(input)
 }
 
-fn version_with_major_minor_patch<'a, E>(
+fn version_predicate_with<'a, E>(
     default_op: Operation,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Predicate, E>
 where
@@ -246,16 +249,28 @@ where
 {
     return move |input| {
         context(
-            "single predicate",
+            "full version",
             map(
-                tuple((opt(operation), number, tag("."), number, tag("."), number)),
-                |(maybe_op, major, _, minor, _, patch)| Predicate {
+                tuple((opt(operation), full_version)),
+                |(maybe_op, version)| Predicate {
                     operation: maybe_op.unwrap_or_else(|| default_op),
-                    version: (major, minor, patch).into(),
+                    version,
                 },
             ),
         )(input)
     };
+}
+
+// n.n.n -> v
+// outright duplicated
+fn full_version<'a, E>(input: &'a str) -> IResult<&'a str, Version, E>
+where
+    E: ParseError<&'a str>,
+{
+    map(
+        tuple((number, tag("."), number, tag("."), number)),
+        |(major, _, minor, _, patch)| (major, minor, patch).into(),
+    )(input)
 }
 
 fn operation<'a, E>(input: &'a str) -> IResult<&'a str, Operation, E>
@@ -296,8 +311,8 @@ impl Predicate {
             Operation::GreaterThanEquals => self.exact(version) || self.gt(version),
             Operation::GreaterThan => self.gt(version),
             Operation::Exact => self.exact(version),
-            Operation::LessThan => self.lt(version),
-            Operation::LessThanEquals => self.exact(version) || self.lt(version),
+            Operation::LessThan => !self.gt(version) && !self.exact(version),
+            Operation::LessThanEquals => !self.gt(version),
             _ => false,
         }
     }
@@ -321,26 +336,6 @@ impl Predicate {
             return false;
         }
         if predicate.patch >= version.patch {
-            return false;
-        }
-        true
-    }
-
-    fn lt(&self, version: &Version) -> bool {
-        let predicate = &self.version;
-        if predicate.major > version.major {
-            return true;
-        }
-        if predicate.major < version.major {
-            return false;
-        }
-        if predicate.minor < version.minor {
-            return false;
-        }
-        if predicate.minor > version.minor {
-            return true;
-        }
-        if predicate.patch <= version.patch {
             return false;
         }
         true
