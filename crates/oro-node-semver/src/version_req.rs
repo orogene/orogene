@@ -32,19 +32,17 @@ enum Operation {
     GreaterThanEquals,
     LessThan,
     LessThanEquals,
-    Compatible, // Might turn this into a "normal" predicate
-    WildCard(WildCardVersion),
 }
 
 impl std::string::ToString for Operation {
     fn to_string(&self) -> String {
         use Operation::*;
         match self {
+            Exact => "".into(),
             GreaterThan => ">".into(),
             GreaterThanEquals => ">=".into(),
             LessThan => "<".into(),
             LessThanEquals => "<=".into(),
-            _ => panic!("operation not supported yet}"),
         }
     }
 }
@@ -111,8 +109,10 @@ where
             minor_x_patch_x,
             hypenated_with_only_major,
             full_version_range,
+            exact_version,
             only_major_and_minor,
             caret,
+            tilde,
             open_range_with_full_version,
         )),
     )(input)
@@ -235,6 +235,53 @@ where
     )(input)
 }
 
+fn tilde<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "tilde",
+        alt((
+            map(
+                tuple((tag("~>"), number, tag("."), number, tag("."), number)),
+                |(_, major, _, minor, _, patch)| Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, patch).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major, minor + 1, 0).into(),
+                    },
+                },
+            ),
+            map(
+                tuple((tag("~"), number, tag("."), number)),
+                |(_, major, _, minor)| Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, 0).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major, minor + 1, 0).into(),
+                    },
+                },
+            ),
+            map(tuple((tag("~"), number)), |(_, major)| Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, 0, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major + 1, 0, 0).into(),
+                },
+            }),
+        )),
+    )(input)
+}
+
 /// takes two parses, and reads the input separated by a hypen
 fn hypenated<'a, F, T, E>(left: F, right: F) -> impl Fn(&'a str) -> IResult<&'a str, (T, T), E>
 where
@@ -306,6 +353,22 @@ where
             ),
             |(lower, upper)| Range::Closed { lower, upper },
         ),
+    )(input)
+}
+
+// hypenated range of two full versions: n.n.n - n.n.n -> (v, v)
+fn exact_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "exact version",
+        map(full_version, |version| {
+            Range::Open(Predicate {
+                operation: Operation::Exact,
+                version,
+            })
+        }),
     )(input)
 }
 
@@ -388,7 +451,6 @@ impl Predicate {
             Operation::Exact => self.exact(version),
             Operation::LessThan => !self.gt(version) && !self.exact(version),
             Operation::LessThanEquals => !self.gt(version),
-            _ => false,
         }
     }
 
@@ -526,7 +588,8 @@ mod tests {
     }
 
     range_parse_tests![       //[ input         , parsed and then `to_string`ed]
-        parse_a_range =>        ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
+        exact => ["1.0.0", "1.0.0"],
+        major_minor_patch_range => ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
         only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
         single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
@@ -546,6 +609,10 @@ mod tests {
         caret_one => ["^1.0", ">=1.0.0 <2.0.0"],
         caret_minor => ["^1.2", ">=1.2.0 <2.0.0"],
         caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2"],
+        tilde_one => ["~1", ">=1.0.0 <2.0.0"],
+        tilde_minor => ["~1.0", ">=1.0.0 <1.1.0"],
+        tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0"],
+        tidle_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -560,21 +627,14 @@ mod tests {
     ["<    2.0.0", "<2.0.0"],
     ["<\t2.0.0", "<2.0.0"],
     ["^ 1", ">=1.0.0 <2.0.0-0"],
+    ["~> 1", ">=1.0.0 <2.0.0-0"],
+    ["~ 1.0", ">=1.0.0 <1.1.0-0"],
 
     // Nice for pairing/
     ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
     [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
     ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
     ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
-
-    ["~1", ">=1.0.0 <2.0.0-0"],
-    ["~1.0", ">=1.0.0 <1.1.0-0"],
-    ["~2.4", ">=2.4.0 <2.5.0-0"],
-    ["~>3.2.1", ">=3.2.1 <3.3.0-0"],
-    ["~>1", ">=1.0.0 <2.0.0-0"],
-    ["~> 1", ">=1.0.0 <2.0.0-0"],
-    ["~ 1.0", ">=1.0.0 <1.1.0-0"],
-
 
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
