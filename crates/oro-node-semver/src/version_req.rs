@@ -114,6 +114,7 @@ where
             caret,
             tilde,
             open_range_with_full_version,
+            op_followed_by_version,
         )),
     )(input)
 }
@@ -123,6 +124,24 @@ where
     E: ParseError<&'a str>,
 {
     map(alt((tag("x"), tag("*"))), |_| ())(input)
+}
+
+fn op_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "operation followed by version",
+        map(
+            tuple((operation, number, maybe_dot_number)),
+            |(op, major, maybe_minor)| {
+                Range::Open(Predicate {
+                    operation: op,
+                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
+                })
+            },
+        ),
+    )(input)
 }
 
 fn minor_x_patch_x<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
@@ -596,6 +615,7 @@ mod tests {
         major_minor_patch_range => ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
         only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
+        single_sided_only_major => ["1", ">=1.0.0 <2.0.0"],
         single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
         single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
@@ -619,6 +639,8 @@ mod tests {
         tilde_minor => ["~1.0", ">=1.0.0 <1.1.0"],
         tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0"],
         tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
+        grater_than_equals_one => [">=1", ">=1.0.0"],
+        less_than_one_dot_two => ["<1.2", "<1.2.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -645,13 +667,6 @@ mod tests {
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
     ["^1.2.3-beta.4", ">=1.2.3-beta.4 <2.0.0-0"],
-    ["<1", "<1.0.0-0"],
-    ["< 1", "<1.0.0-0"],
-    [">=1", ">=1.0.0"],
-    [">= 1", ">=1.0.0"],
-    ["<1.2", "<1.2.0-0"],
-    ["< 1.2", "<1.2.0-0"],
-    ["1", ">=1.0.0 <2.0.0-0"],
     [">01.02.03", ">1.2.3", true],
     [">01.02.03", null],
     ["~1.2.3beta", ">=1.2.3-beta <1.3.0-0", { loose: true }],
