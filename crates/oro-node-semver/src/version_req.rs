@@ -117,6 +117,13 @@ where
     )(input)
 }
 
+fn x_or_asterisk<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
+where
+    E: ParseError<&'a str>,
+{
+    map(alt((tag("x"), tag("*"))), |_| ())(input)
+}
+
 fn minor_x_patch_x<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -127,9 +134,9 @@ where
             tuple((
                 number,
                 tag("."),
-                alt((map(tag("x"), |_| None), map(number, |n| Some(n)))),
+                alt((map(x_or_asterisk, |_| None), map(number, |n| Some(n)))),
                 tag("."),
-                tag("x"),
+                x_or_asterisk,
             )),
             |(major, _, maybe_minor, _, _)| Range::Closed {
                 lower: Predicate {
@@ -502,6 +509,8 @@ mod tests {
         major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
         minor_x_patch_x => ["2.x.x", ">=2.0.0 <3.0.0"],
         patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
+        minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0"],
+        patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -522,9 +531,6 @@ mod tests {
     ["||", "*"],
 
     // Nice for pairing/
-    ["2.*.*", ">=2.0.0 <3.0.0-0"],
-    ["1.2.*", ">=1.2.0 <1.3.0-0"],
-
     ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
     [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
     ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
