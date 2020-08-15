@@ -139,26 +139,32 @@ where
                 x_or_asterisk,
             )),
             |(major, _, maybe_minor, _, _)| Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
-                },
-                upper: {
-                    if let Some(minor) = maybe_minor {
-                        Predicate {
-                            operation: Operation::LessThan,
-                            version: (major, minor + 1, 0).into(),
-                        }
-                    } else {
-                        Predicate {
-                            operation: Operation::LessThan,
-                            version: (major + 1, 0, 0).into(),
-                        }
-                    }
-                },
+                upper: upper_bound(major, maybe_minor),
+                lower: lower_bound(major, maybe_minor),
             },
         ),
     )(input)
+}
+
+fn lower_bound(major: usize, maybe_minor: Option<usize>) -> Predicate {
+    Predicate {
+        operation: Operation::GreaterThanEquals,
+        version: (major, maybe_minor.unwrap_or(0), 0).into(),
+    }
+}
+
+fn upper_bound(major: usize, maybe_minor: Option<usize>) -> Predicate {
+    if let Some(minor) = maybe_minor {
+        Predicate {
+            operation: Operation::LessThan,
+            version: (major, minor + 1, 0).into(),
+        }
+    } else {
+        Predicate {
+            operation: Operation::LessThan,
+            version: (major + 1, 0, 0).into(),
+        }
+    }
 }
 
 // open-sided range with a full version: n.n.n -> (v)
@@ -201,24 +207,9 @@ where
                 tuple((number, maybe_dot_number)),
                 tuple((number, maybe_dot_number)),
             ),
-            |((lm, maybe_l_minor), (right, maybe_r_minor))| Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (lm, maybe_l_minor.unwrap_or(0), 0).into(),
-                },
-                upper: {
-                    if let Some(minor) = maybe_r_minor {
-                        Predicate {
-                            operation: Operation::LessThan,
-                            version: (right, minor + 1, 0).into(),
-                        }
-                    } else {
-                        Predicate {
-                            operation: Operation::LessThan,
-                            version: (right + 1, 0, 0).into(),
-                        }
-                    }
-                },
+            |((left, maybe_l_minor), (right, maybe_r_minor))| Range::Closed {
+                lower: lower_bound(left, maybe_l_minor),
+                upper: upper_bound(right, maybe_r_minor),
             },
         ),
     )(input)
@@ -233,23 +224,8 @@ where
         "major and minor",
         map(tuple((number, maybe_dot_number)), |(major, maybe_minor)| {
             Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
-                },
-                upper: {
-                    if let Some(minor) = maybe_minor {
-                        Predicate {
-                            operation: Operation::LessThan,
-                            version: (major, minor + 1, 0).into(),
-                        }
-                    } else {
-                        Predicate {
-                            operation: Operation::LessThan,
-                            version: (major + 1, 0, 0).into(),
-                        }
-                    }
-                },
+                lower: lower_bound(major, maybe_minor),
+                upper: upper_bound(major, maybe_minor),
             }
         }),
     )(input)
