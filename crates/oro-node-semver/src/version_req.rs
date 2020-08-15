@@ -385,7 +385,7 @@ fn version_predicate_with<'a, E>(
 where
     E: ParseError<&'a str>,
 {
-    return move |input| {
+    move |input| {
         context(
             "full version",
             map(
@@ -396,7 +396,7 @@ where
                 },
             ),
         )(input)
-    };
+    }
 }
 
 // n.n.n -> v
