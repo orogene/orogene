@@ -112,6 +112,7 @@ where
             hypenated_with_only_major,
             full_version_range,
             only_major_and_minor,
+            caret,
             open_range_with_full_version,
         )),
     )(input)
@@ -178,6 +179,59 @@ where
             version_predicate_with(Operation::GreaterThanEquals),
             Range::Open,
         ),
+    )(input)
+}
+
+fn caret<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "caret",
+        alt((
+            map(
+                tuple((tag("^"), number, tag("."), number, tag("."), number)),
+                |(_, major, _, minor, _, patch)| Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, patch).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major, minor, patch + 1).into(),
+                    },
+                },
+            ),
+            map(tuple((tag("^0."), number)), |(_, minor)| Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (0, minor, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (0, minor + 1, 0).into(),
+                },
+            }),
+            map(
+                tuple((tag("^"), number, tag("."), number)),
+                |(_, major, _, minor)| Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, 0).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major + 1, 0, 0).into(),
+                    },
+                },
+            ),
+            map(tag("^0"), |_| {
+                Range::Open(Predicate {
+                    operation: Operation::LessThan,
+                    version: (1, 0, 0).into(),
+                })
+            }),
+        )),
     )(input)
 }
 
@@ -487,6 +541,11 @@ mod tests {
         patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
         minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0"],
         patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0"],
+        caret_zero => ["^0", "<1.0.0"],
+        caret_zero_minor => ["^0.1", ">=0.1.0 <0.2.0"],
+        caret_one => ["^1.0", ">=1.0.0 <2.0.0"],
+        caret_minor => ["^1.2", ">=1.2.0 <2.0.0"],
+        caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -500,6 +559,7 @@ mod tests {
     ["<=  2.0.0", "<=2.0.0"],
     ["<    2.0.0", "<2.0.0"],
     ["<\t2.0.0", "<2.0.0"],
+    ["^ 1", ">=1.0.0 <2.0.0-0"],
 
     // Nice for pairing/
     ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
@@ -507,20 +567,14 @@ mod tests {
     ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
     ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
 
+    ["~1", ">=1.0.0 <2.0.0-0"],
+    ["~1.0", ">=1.0.0 <1.1.0-0"],
     ["~2.4", ">=2.4.0 <2.5.0-0"],
     ["~>3.2.1", ">=3.2.1 <3.3.0-0"],
-    ["~1", ">=1.0.0 <2.0.0-0"],
     ["~>1", ">=1.0.0 <2.0.0-0"],
     ["~> 1", ">=1.0.0 <2.0.0-0"],
-    ["~1.0", ">=1.0.0 <1.1.0-0"],
     ["~ 1.0", ">=1.0.0 <1.1.0-0"],
 
-    ["^0", "<1.0.0-0"],
-    ["^ 1", ">=1.0.0 <2.0.0-0"],
-    ["^0.1", ">=0.1.0 <0.2.0-0"],
-    ["^1.0", ">=1.0.0 <2.0.0-0"],
-    ["^1.2", ">=1.2.0 <2.0.0-0"],
-    ["^0.0.1", ">=0.0.1 <0.0.2-0"],
 
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
