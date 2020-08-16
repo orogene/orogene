@@ -294,7 +294,6 @@ mod tests {
     #[test]
     fn version_string_limited_to_256_characters() {
         let prebuild = (0..257)
-            .into_iter()
             .map(|_| "X")
             .collect::<Vec<_>>()
             .join("");
