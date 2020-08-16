@@ -4,13 +4,13 @@ use std::str::FromStr;
 use derive_builder::Builder;
 use error::Result;
 use oro_semver::{Version, VersionReq};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 pub use error::Error;
 
 mod error;
 
-#[derive(Builder, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Builder, Clone, Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OroManifest {
     #[builder(setter(into, strip_option), default)]
@@ -88,6 +88,10 @@ pub struct OroManifest {
 
     #[serde(default)]
     #[builder(default)]
+    pub engines: HashMap<String, VersionReq>,
+
+    #[serde(default)]
+    #[builder(default)]
     pub os: Vec<String>,
 
     #[serde(default)]
@@ -132,7 +136,7 @@ pub struct OroManifest {
     pub _rest: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum Bugs {
     Str(String),
@@ -143,7 +147,7 @@ pub enum Bugs {
 }
 
 /// Represents a human!
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum PersonField {
     Str(String),
@@ -182,27 +186,27 @@ impl FromStr for Person {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct Directories {
     pub bin: Option<String>,
     pub man: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum Bin {
     Str(String),
     Hash(HashMap<String, String>),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum Man {
     Str(String),
     Vec(Vec<String>),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum Exports {
     Str(String),
@@ -210,7 +214,7 @@ pub enum Exports {
     Obj(HashMap<String, Exports>),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum Imports {
     Str(String),
@@ -218,7 +222,7 @@ pub enum Imports {
     Obj(HashMap<String, Imports>),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(untagged)]
 pub enum Repository {
     Str(String),
@@ -237,7 +241,7 @@ mod parser {
     use nom::character::complete::char;
     use nom::combinator::{all_consuming, map, opt};
     use nom::error::{context, convert_error, ParseError, VerboseError};
-    use nom::sequence::{delimited, tuple};
+    use nom::sequence::{delimited, preceded, tuple};
     use nom::{Err, IResult};
 
     pub fn parse_person<I: AsRef<str>>(input: I) -> Result<Person> {
@@ -265,10 +269,12 @@ mod parser {
                 tuple((
                     opt(take_till1(|c| c == '<')),
                     opt(delimited(char('<'), take_till1(|c| c == '>'), char('>'))),
-                    take_till(|c| c == '('),
-                    opt(delimited(char('('), take_till1(|c| c == ')'), char(')'))),
+                    opt(preceded(
+                        take_till(|c| c == '('),
+                        delimited(char('('), take_till1(|c| c == ')'), char(')')),
+                    )),
                 )),
-                |(name, email, _, url): (Option<&str>, Option<&str>, _, Option<&str>)| Person {
+                |(name, email, url): (Option<&str>, Option<&str>, Option<&str>)| Person {
                     name: name.map(|n| n.trim().into()),
                     email: email.map(|e| e.trim().into()),
                     url: url.map(|u| u.trim().into()),
@@ -319,6 +325,157 @@ mod tests {
         let string = "{}";
         let parsed = serde_json::from_str::<OroManifest>(&string)?;
         assert_eq!(parsed, OroManifestBuilder::default().build().unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn string_props() -> Result<()> {
+        let string = r#"
+{
+    "name": "hello",
+    "description": "description",
+    "homepage": "https://foo.dev",
+    "license": "Parity-7.0",
+    "main": "index.js",
+    "keywords": ["foo", "bar"],
+    "files": ["*.js"],
+    "os": ["windows", "darwin"],
+    "cpu": ["x64"],
+    "bundleDependencies": [
+        "mydep"
+    ],
+    "workspaces": [
+        "packages/*"
+    ]
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        assert_eq!(
+            parsed,
+            OroManifestBuilder::default()
+                .name("hello")
+                .description("description")
+                .homepage("https://foo.dev")
+                .license("Parity-7.0")
+                .main("index.js")
+                .keywords(vec!["foo".into(), "bar".into()])
+                .files(vec!["*.js".into()])
+                .os(vec!["windows".into(), "darwin".into()])
+                .cpu(vec!["x64".into()])
+                .bundled_dependencies(vec!["mydep".into()])
+                .workspaces(vec!["packages/*".into()])
+                .build()
+                .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn licence_alias() -> Result<()> {
+        let string = r#"
+{
+    "licence": "Parity-7.0"
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        assert_eq!(
+            parsed,
+            OroManifestBuilder::default()
+                .license("Parity-7.0")
+                .build()
+                .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parse_version() -> Result<()> {
+        let string = r#"
+{
+    "version": "1.2.3"
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        assert_eq!(
+            parsed,
+            OroManifestBuilder::default()
+                .version("1.2.3".parse()?)
+                .build()
+                .unwrap()
+        );
+
+        let string = r#"
+{
+    "version": "invalid"
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string);
+        assert!(parsed.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn bool_props() -> Result<()> {
+        let string = r#"
+{
+    "private": true,
+    "browser": true
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        assert_eq!(
+            parsed,
+            OroManifestBuilder::default()
+                .private(true)
+                .browser(true)
+                .build()
+                .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn people_fields() -> Result<()> {
+        let string = r#"
+{
+    "author": "Kat Marchan <kzm@zkat.tech>",
+    "contributors": ["Eddy the Cat"]
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        assert_eq!(
+            parsed,
+            OroManifestBuilder::default()
+                .author(PersonField::Str("Kat Marchan <kzm@zkat.tech>".into()))
+                .contributors(vec![PersonField::Str("Eddy the Cat".into())])
+                .build()
+                .unwrap()
+        );
+
+        let person =
+            PersonField::Str("Kat Marchan <kzm@zkat.tech> (https://github.com/zkat)".into());
+        assert_eq!(
+            person.parse()?,
+            Person {
+                name: Some("Kat Marchan".into()),
+                email: Some("kzm@zkat.tech".into()),
+                url: Some("https://github.com/zkat".into())
+            }
+        );
+
+        let person = PersonField::Obj {
+            name: Some("Kat Marchan".into()),
+            email: Some("kzm@zkat.tech".into()),
+            url: Some("https://github.com/zkat".into()),
+        };
+        assert_eq!(
+            person.parse()?,
+            Person {
+                name: Some("Kat Marchan".into()),
+                email: Some("kzm@zkat.tech".into()),
+                url: Some("https://github.com/zkat".into())
+            }
+        );
         Ok(())
     }
 }
