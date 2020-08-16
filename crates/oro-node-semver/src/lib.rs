@@ -13,7 +13,10 @@ use std::fmt;
 
 pub mod version_req;
 
-#[derive(Debug, Error)]
+// from JavaScript: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
+const MAX_SAFE_INTEGER: u64 = 9007199254740991;
+
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum SemverError {
     #[error("{input}: {msg}")]
     ParseError { input: String, msg: String },
@@ -183,7 +186,24 @@ pub(crate) fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
 where
     E: ParseError<&'a str>,
 {
-    map_res(recognize(digit1), str::parse)(input)
+    context(
+        "number component",
+        map_res(recognize(digit1), |raw| {
+            let value = str::parse(raw).map_err(|e| SemverError::ParseError {
+                input: input.into(),
+                msg: format!("{}", e),
+            })?;
+
+            if value > MAX_SAFE_INTEGER {
+                return Err(SemverError::ParseError {
+                    input: input.into(),
+                    msg: format!("'{}' is larger than Number.MAX_SAFE_INTEGER", value),
+                });
+            }
+
+            Ok(value)
+        }),
+    )(input)
 }
 
 #[cfg(test)]
@@ -253,5 +273,14 @@ mod tests {
                 build: vec![Numeric(1),]
             }
         );
+    }
+
+    #[test]
+    fn individual_version_component_has_an_upper_bound() {
+        let out_of_range = MAX_SAFE_INTEGER + 1;
+        let input = format!("1.2.{}", out_of_range);
+        let v = parse(input.clone());
+
+        assert!(v.is_err());
     }
 }
