@@ -6,6 +6,8 @@ use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::sequence::tuple;
 use nom::{Err, IResult};
 
+use std::fmt;
+
 use crate::{SemverError, Version};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -14,12 +16,12 @@ enum Range {
     Closed { upper: Predicate, lower: Predicate },
 }
 
-impl ToString for Range {
-    fn to_string(&self) -> String {
+impl fmt::Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Range::Open(p) => p.to_string(),
+            Range::Open(p) => write!(f, "{}", p),
             Range::Closed { lower, upper } => {
-                format!("{} {}", lower.to_string(), upper.to_string())
+                write!(f,"{} {}", lower, upper)
             }
         }
     }
@@ -34,15 +36,15 @@ enum Operation {
     LessThanEquals,
 }
 
-impl std::string::ToString for Operation {
-    fn to_string(&self) -> String {
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Operation::*;
         match self {
-            Exact => "".into(),
-            GreaterThan => ">".into(),
-            GreaterThanEquals => ">=".into(),
-            LessThan => "<".into(),
-            LessThanEquals => "<=".into(),
+            Exact => write!(f, ""),
+            GreaterThan => write!(f, ">"),
+            GreaterThanEquals => write!(f, ">="),
+            LessThan => write!(f, "<"),
+            LessThanEquals => write!(f, "<="),
         }
     }
 }
@@ -59,9 +61,9 @@ pub struct Predicate {
     version: Version,
 }
 
-impl ToString for Predicate {
-    fn to_string(&self) -> String {
-        format!("{}{}", self.operation.to_string(), self.version.to_string(),)
+impl fmt::Display for Predicate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.operation, self.version,)
     }
 }
 
@@ -419,9 +421,9 @@ where
     map_res(recognize(digit1), str::parse)(input)
 }
 
-impl ToString for VersionReq {
-    fn to_string(&self) -> String {
-        self.predicates.to_string()
+impl fmt::Display for VersionReq {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.predicates,)
     }
 }
 

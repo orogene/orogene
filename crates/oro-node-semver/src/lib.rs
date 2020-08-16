@@ -9,6 +9,8 @@ use nom::{Err, IResult};
 
 use thiserror::Error;
 
+use std::fmt;
+
 mod version_req;
 
 #[derive(Debug, Error)]
@@ -34,9 +36,9 @@ pub struct Version {
     pre_release: Vec<Identifier>,
 }
 
-impl ToString for Version {
-    fn to_string(&self) -> String {
-        format!("{}.{}.{}", self.major, self.minor, self.patch)
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f,"{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 
