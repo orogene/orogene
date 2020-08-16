@@ -15,6 +15,7 @@ pub mod version_req;
 
 // from JavaScript: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
 const MAX_SAFE_INTEGER: u64 = 9007199254740991;
+const MAX_LENGTH: usize = 256;
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum SemverError {
@@ -59,6 +60,13 @@ impl std::convert::From<(u64, u64, u64)> for Version {
 
 pub fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
     let input = &input.as_ref()[..];
+
+    if input.len() > MAX_LENGTH {
+        return Err(SemverError::ParseError {
+            input: input.into(),
+            msg: format!("version is longer than {} characters", MAX_LENGTH),
+        });
+    }
 
     match all_consuming(version::<VerboseError<&str>>)(input) {
         Ok((_, arg)) => Ok(arg),
@@ -278,9 +286,28 @@ mod tests {
     #[test]
     fn individual_version_component_has_an_upper_bound() {
         let out_of_range = MAX_SAFE_INTEGER + 1;
-        let input = format!("1.2.{}", out_of_range);
-        let v = parse(input.clone());
+        let v = parse(format!("1.2.{}", out_of_range));
 
         assert!(v.is_err());
+    }
+
+    #[test]
+    fn version_string_limited_to_256_characters() {
+        let prebuild = (0..257)
+            .into_iter()
+            .map(|_| "X")
+            .collect::<Vec<_>>()
+            .join("");
+        let version_string = format!("1.1.1-{}", prebuild);
+        let v = parse(version_string.clone());
+
+        assert!(
+            v.is_err(),
+            "version string should have been detected as too long"
+        );
+
+        let ok_version = version_string[0..255].to_string();
+        let v = parse(ok_version);
+        assert!(v.is_ok());
     }
 }
