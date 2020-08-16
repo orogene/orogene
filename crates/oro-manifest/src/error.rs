@@ -47,4 +47,3 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub type InternalResult<T> = std::result::Result<T, InternalError>;
-
