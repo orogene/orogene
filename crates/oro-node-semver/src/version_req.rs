@@ -162,7 +162,7 @@ where
             tuple((
                 number,
                 tag("."),
-                alt((map(x_or_asterisk, |_| None), map(number, |n| Some(n)))),
+                alt((map(x_or_asterisk, |_| None), map(number, Some))),
                 tag("."),
                 x_or_asterisk,
             )),
