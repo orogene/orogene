@@ -305,7 +305,6 @@ where
     )(input)
 }
 
-/// takes two parses, and reads the input separated by a hypen
 fn hyphenated<'a, F, G, S, T, E>(
     left: F,
     right: G,
@@ -323,7 +322,6 @@ where
     }
 }
 
-// hyphenated range: n(.n)(.n) - n(.n)(.n) -> (v, v)
 fn hyphenated_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -360,7 +358,6 @@ where
     )(input)
 }
 
-// only a major and maybe minor number to closed range: n(.n) => (v, v)
 fn no_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -405,7 +402,6 @@ where
     context(
         "operation",
         alt((
-            // TODO: Add more as needed
             map(tag(">="), |_| GreaterThanEquals),
             map(tag(">"), |_| GreaterThan),
             map(tag("="), |_| Exact),
