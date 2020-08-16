@@ -260,10 +260,16 @@ where
 {
     context(
         "tilde",
-        alt((
-            map(
-                tuple((tag("~>"), number, tag("."), number, tag("."), number)),
-                |(_, major, _, minor, _, patch)| Range::Closed {
+        map(
+            tuple((
+                tag("~"),
+                opt(tag(">")),
+                number,
+                maybe_dot_number,
+                maybe_dot_number,
+            )),
+            |parsed| match parsed {
+                (_, Some(_gt), major, Some(minor), Some(patch)) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, patch).into(),
@@ -273,10 +279,7 @@ where
                         version: (major, minor + 1, 0).into(),
                     },
                 },
-            ),
-            map(
-                tuple((tag("~"), number, tag("."), number)),
-                |(_, major, _, minor)| Range::Closed {
+                (_, None, major, Some(minor), None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, 0).into(),
@@ -286,18 +289,19 @@ where
                         version: (major, minor + 1, 0).into(),
                     },
                 },
-            ),
-            map(tuple((tag("~"), number)), |(_, major)| Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, 0, 0).into(),
+                (_, None, major, None, None) => Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, 0, 0).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major + 1, 0, 0).into(),
+                    },
                 },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major + 1, 0, 0).into(),
-                },
-            }),
-        )),
+                _ => unreachable!("Should not have gotten here"),
+            },
+        ),
     )(input)
 }
 
