@@ -174,14 +174,14 @@ where
     )(input)
 }
 
-fn lower_bound(major: usize, maybe_minor: Option<usize>) -> Predicate {
+fn lower_bound(major: u64, maybe_minor: Option<u64>) -> Predicate {
     Predicate {
         operation: Operation::GreaterThanEquals,
         version: (major, maybe_minor.unwrap_or(0), 0).into(),
     }
 }
 
-fn upper_bound(major: usize, maybe_minor: Option<usize>) -> Predicate {
+fn upper_bound(major: u64, maybe_minor: Option<u64>) -> Predicate {
     if let Some(minor) = maybe_minor {
         Predicate {
             operation: Operation::LessThan,
@@ -374,7 +374,7 @@ where
     )(input)
 }
 
-fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<usize>, E>
+fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<u64>, E>
 where
     E: ParseError<&'a str>,
 {
@@ -406,7 +406,7 @@ where
 }
 
 // outright duplicated
-fn number<'a, E>(input: &'a str) -> IResult<&'a str, usize, E>
+fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
 where
     E: ParseError<&'a str>,
 {

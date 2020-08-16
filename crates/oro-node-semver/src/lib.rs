@@ -29,9 +29,9 @@ pub enum Identifier {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Version {
-    major: usize,
-    minor: usize,
-    patch: usize,
+    major: u64,
+    minor: u64,
+    patch: u64,
     build: Vec<Identifier>,
     pre_release: Vec<Identifier>,
 }
@@ -42,8 +42,8 @@ impl fmt::Display for Version {
     }
 }
 
-impl std::convert::From<(usize, usize, usize)> for Version {
-    fn from((major, minor, patch): (usize, usize, usize)) -> Self {
+impl std::convert::From<(u64, u64, u64)> for Version {
+    fn from((major, minor, patch): (u64, u64, u64)) -> Self {
         Version {
             major,
             minor,
@@ -127,7 +127,7 @@ where
 }
 
 /// <version core> ::= <major> "." <minor> "." <patch>
-fn version_core<'a, E>(input: &'a str) -> IResult<&'a str, (usize, usize, usize), E>
+fn version_core<'a, E>(input: &'a str) -> IResult<&'a str, (u64, u64, u64), E>
 where
     E: ParseError<&'a str>,
 {
@@ -179,7 +179,7 @@ where
     )(input)
 }
 
-fn number<'a, E>(input: &'a str) -> IResult<&'a str, usize, E>
+fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
 where
     E: ParseError<&'a str>,
 {
