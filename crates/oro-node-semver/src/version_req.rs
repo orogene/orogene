@@ -111,7 +111,7 @@ where
             x_and_asterisk_verion,
             hyphenated_range,
             no_operation_followed_by_version,
-            any_operation_folled_by_version,
+            any_operation_followed_by_version,
             caret,
             tilde,
         )),
@@ -125,7 +125,7 @@ where
     map(alt((tag("x"), tag("*"))), |_| ())(input)
 }
 
-fn any_operation_folled_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+fn any_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
