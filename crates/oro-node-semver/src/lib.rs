@@ -14,7 +14,7 @@ use std::fmt;
 pub mod version_req;
 
 // from JavaScript: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
-const MAX_SAFE_INTEGER: u64 = 9007199254740991;
+const MAX_SAFE_INTEGER: u64 = 900_719_925_474_099;
 const MAX_LENGTH: usize = 256;
 
 #[derive(Debug, Error, Eq, PartialEq)]
