@@ -20,9 +20,7 @@ impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Range::Open(p) => write!(f, "{}", p),
-            Range::Closed { lower, upper } => {
-                write!(f,"{} {}", lower, upper)
-            }
+            Range::Closed { lower, upper } => write!(f, "{} {}", lower, upper),
         }
     }
 }
@@ -209,10 +207,34 @@ where
 {
     context(
         "caret",
-        alt((
-            map(
-                tuple((tag("^"), number, tag("."), number, tag("."), number)),
-                |(_, major, _, minor, _, patch)| Range::Closed {
+        map(
+            tuple((tag("^"), number, maybe_dot_number, maybe_dot_number)),
+            |parsed| match parsed {
+                (_, 0, None, None) => Range::Open(Predicate {
+                    operation: Operation::LessThan,
+                    version: (1, 0, 0).into(),
+                }),
+                (_, 0, Some(minor), None) => Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (0, minor, 0).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (0, minor + 1, 0).into(),
+                    },
+                },
+                (_, major, Some(minor), None) => Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, 0).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major + 1, 0, 0).into(),
+                    },
+                },
+                (_, major, Some(minor), Some(patch)) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, patch).into(),
@@ -226,37 +248,9 @@ where
                         },
                     },
                 },
-            ),
-            map(tuple((tag("^0."), number)), |(_, minor)| Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (0, minor, 0).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (0, minor + 1, 0).into(),
-                },
-            }),
-            map(
-                tuple((tag("^"), number, tag("."), number)),
-                |(_, major, _, minor)| Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (major + 1, 0, 0).into(),
-                    },
-                },
-            ),
-            map(tag("^0"), |_| {
-                Range::Open(Predicate {
-                    operation: Operation::LessThan,
-                    version: (1, 0, 0).into(),
-                })
-            }),
-        )),
+                _ => unreachable!("Should not have reached here"),
+            },
+        ),
     )(input)
 }
 
