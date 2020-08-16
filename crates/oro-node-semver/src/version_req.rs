@@ -112,7 +112,6 @@ where
             only_major_and_minor,
             caret,
             tilde,
-            open_range_with_full_version,
             op_followed_by_version,
         )),
     )(input)
@@ -132,22 +131,27 @@ where
     context(
         "operation followed by version",
         map(
-            tuple((operation, number, maybe_dot_number)),
-            |(op, major, maybe_minor)| match op {
-                Operation::GreaterThanEquals => Range::Open(Predicate {
-                    operation: op,
-                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
-                }),
-                Operation::GreaterThan => Range::Open(Predicate {
+            tuple((operation, number, maybe_dot_number, maybe_dot_number)),
+            |parsed| match parsed {
+                (Operation::GreaterThanEquals, major, minor, None) => Range::Open(Predicate {
                     operation: Operation::GreaterThanEquals,
-                    version: match maybe_minor {
-                        None => (major + 1, 0, 0).into(),
-                        Some(m) => (major, m + 1, 0).into(),
-                    },
+                    version: (major, minor.unwrap_or(0), 0).into(),
                 }),
-                Operation::LessThan => Range::Open(Predicate {
+                (Operation::GreaterThan, major, Some(minor), None) => Range::Open(Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor + 1, 0).into(),
+                }),
+                (Operation::GreaterThan, major, None, None) => Range::Open(Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major + 1, 0, 0).into(),
+                }),
+                (Operation::LessThan, major, minor, None) => Range::Open(Predicate {
                     operation: Operation::LessThan,
-                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
+                    version: (major, minor.unwrap_or(0), 0).into(),
+                }),
+                (operation, major, Some(minor), Some(patch)) => Range::Open(Predicate {
+                    operation,
+                    version: (major, minor, patch).into(),
                 }),
                 _ => panic!("Unexpected"),
             },
@@ -196,20 +200,6 @@ fn upper_bound(major: usize, maybe_minor: Option<usize>) -> Predicate {
             version: (major + 1, 0, 0).into(),
         }
     }
-}
-
-// open-sided range with a full version: n.n.n -> (v)
-fn open_range_with_full_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
-    context(
-        "single greater than",
-        map(
-            version_predicate_with(Operation::GreaterThanEquals),
-            Range::Open,
-        ),
-    )(input)
 }
 
 fn caret<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
@@ -414,26 +404,6 @@ where
     E: ParseError<&'a str>,
 {
     map(tuple((space0, tag("-"), space0)), |_| ())(input)
-}
-
-fn version_predicate_with<'a, E>(
-    default_op: Operation,
-) -> impl Fn(&'a str) -> IResult<&'a str, Predicate, E>
-where
-    E: ParseError<&'a str>,
-{
-    move |input| {
-        context(
-            "full version",
-            map(
-                tuple((opt(operation), full_version)),
-                |(maybe_op, version)| Predicate {
-                    operation: maybe_op.unwrap_or_else(|| default_op),
-                    version,
-                },
-            ),
-        )(input)
-    }
 }
 
 // n.n.n -> v
