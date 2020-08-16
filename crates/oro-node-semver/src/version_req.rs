@@ -106,13 +106,12 @@ where
     context(
         "predicate alternatives",
         alt((
-            minor_x_patch_x,
+            x_and_asterisk_verion,
             hyphenated_range,
-            exact_version,
-            only_major_and_minor,
+            no_operation_followed_by_version,
+            any_operation_folled_by_version,
             caret,
             tilde,
-            op_followed_by_version,
         )),
     )(input)
 }
@@ -124,7 +123,7 @@ where
     map(alt((tag("x"), tag("*"))), |_| ())(input)
 }
 
-fn op_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+fn any_operation_folled_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
@@ -159,7 +158,7 @@ where
     )(input)
 }
 
-fn minor_x_patch_x<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+fn x_and_asterisk_verion<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
@@ -362,18 +361,25 @@ where
 }
 
 // only a major and maybe minor number to closed range: n(.n) => (v, v)
-fn only_major_and_minor<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+fn no_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
     context(
         "major and minor",
-        map(tuple((number, maybe_dot_number)), |(major, maybe_minor)| {
-            Range::Closed {
-                lower: lower_bound(major, maybe_minor),
-                upper: upper_bound(major, maybe_minor),
-            }
-        }),
+        map(
+            tuple((number, maybe_dot_number, maybe_dot_number)),
+            |parsed| match parsed {
+                (major, Some(minor), Some(patch)) => Range::Open(Predicate {
+                    operation: Operation::Exact,
+                    version: (major, minor, patch).into(),
+                }),
+                (major, maybe_minor, _) => Range::Closed {
+                    lower: lower_bound(major, maybe_minor),
+                    upper: upper_bound(major, maybe_minor),
+                },
+            },
+        ),
     )(input)
 }
 
@@ -384,38 +390,11 @@ where
     opt(map(tuple((tag("."), number)), |(_, num)| num))(input)
 }
 
-fn exact_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
-    context(
-        "exact version",
-        map(full_version, |version| {
-            Range::Open(Predicate {
-                operation: Operation::Exact,
-                version,
-            })
-        }),
-    )(input)
-}
-
 fn spaced_hypen<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
 where
     E: ParseError<&'a str>,
 {
     map(tuple((space0, tag("-"), space0)), |_| ())(input)
-}
-
-// n.n.n -> v
-// outright duplicated
-fn full_version<'a, E>(input: &'a str) -> IResult<&'a str, Version, E>
-where
-    E: ParseError<&'a str>,
-{
-    map(
-        tuple((number, tag("."), number, tag("."), number)),
-        |(major, _, minor, _, patch)| (major, minor, patch).into(),
-    )(input)
 }
 
 fn operation<'a, E>(input: &'a str) -> IResult<&'a str, Operation, E>
@@ -599,6 +578,9 @@ mod tests {
         major_minor_patch_range => ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
         only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
         only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
+        mixed_major_minor => ["1.2 - 3.4.5", ">=1.2.0 <=3.4.5"],
+        mixed_major_minor_2 => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0"],
+        minor_minor_range => ["1.2 - 3.4", ">=1.2.0 <3.5.0"],
         single_sided_only_major => ["1", ">=1.0.0 <2.0.0"],
         single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
         single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
@@ -608,7 +590,7 @@ mod tests {
         single_major => ["1", ">=1.0.0 <2.0.0"],
         single_major_2 => ["2", ">=2.0.0 <3.0.0"],
         major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
-        minor_x_patch_x => ["2.x.x", ">=2.0.0 <3.0.0"],
+        x_and_asterisk_verion => ["2.x.x", ">=2.0.0 <3.0.0"],
         patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
         minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0"],
         patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0"],
@@ -624,15 +606,11 @@ mod tests {
         tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0"],
         tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
         grater_than_equals_one => [">=1", ">=1.0.0"],
+        greater_than_one => [">1", ">=2.0.0"],
         less_than_one_dot_two => ["<1.2", "<1.2.0"],
-        a => ["1.2 - 3.4.5", ">=1.2.0 <=3.4.5"],
-        b => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0"],
-        c => ["1.2 - 3.4", ">=1.2.0 <3.5.0"],
-        d => [">1", ">=2.0.0"],
-        e => [">1.2", ">=1.3.0"],
+        greater_than_one_dot_two => [">1.2", ">=1.3.0"],
     ];
     /*
-    ["1.0.0", "1.0.0", { loose: false }],
     [">= 1.0.0", ">=1.0.0"],
     [">=  1.0.0", ">=1.0.0"],
     [">=   1.0.0", ">=1.0.0"],
