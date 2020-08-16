@@ -1,14 +1,14 @@
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{digit1, space0};
-use nom::combinator::{all_consuming, map, map_res, opt, recognize};
+use nom::character::complete::space0;
+use nom::combinator::{all_consuming, map, opt};
 use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::sequence::tuple;
 use nom::{Err, IResult};
 
 use std::fmt;
 
-use crate::{SemverError, Version};
+use crate::{number, SemverError, Version};
 
 #[derive(Debug, Eq, PartialEq)]
 enum Range {
@@ -403,14 +403,6 @@ where
             map(tag("<"), |_| LessThan),
         )),
     )(input)
-}
-
-// outright duplicated
-fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
-where
-    E: ParseError<&'a str>,
-{
-    map_res(recognize(digit1), str::parse)(input)
 }
 
 impl fmt::Display for VersionReq {

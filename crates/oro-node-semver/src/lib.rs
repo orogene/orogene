@@ -179,7 +179,7 @@ where
     )(input)
 }
 
-fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
+pub(crate) fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
 where
     E: ParseError<&'a str>,
 {
