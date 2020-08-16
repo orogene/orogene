@@ -107,8 +107,7 @@ where
         "predicate alternatives",
         alt((
             minor_x_patch_x,
-            hypenated_with_only_major,
-            full_version_range,
+            hyphenated_range,
             exact_version,
             only_major_and_minor,
             caret,
@@ -134,11 +133,23 @@ where
         "operation followed by version",
         map(
             tuple((operation, number, maybe_dot_number)),
-            |(op, major, maybe_minor)| {
-                Range::Open(Predicate {
+            |(op, major, maybe_minor)| match op {
+                Operation::GreaterThanEquals => Range::Open(Predicate {
                     operation: op,
                     version: (major, maybe_minor.unwrap_or(0), 0).into(),
-                })
+                }),
+                Operation::GreaterThan => Range::Open(Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: match maybe_minor {
+                        None => (major + 1, 0, 0).into(),
+                        Some(m) => (major, m + 1, 0).into(),
+                    },
+                }),
+                Operation::LessThan => Range::Open(Predicate {
+                    operation: Operation::LessThan,
+                    version: (major, maybe_minor.unwrap_or(0), 0).into(),
+                }),
+                _ => panic!("Unexpected"),
             },
         ),
     )(input)
@@ -306,34 +317,55 @@ where
 }
 
 /// takes two parses, and reads the input separated by a hypen
-fn hypenated<'a, F, T, E>(left: F, right: F) -> impl Fn(&'a str) -> IResult<&'a str, (T, T), E>
+fn hyphenated<'a, F, G, S, T, E>(
+    left: F,
+    right: G,
+) -> impl Fn(&'a str) -> IResult<&'a str, (S, T), E>
 where
-    F: Fn(&'a str) -> IResult<&'a str, T, E>,
+    F: Fn(&'a str) -> IResult<&'a str, S, E>,
+    G: Fn(&'a str) -> IResult<&'a str, T, E>,
     E: ParseError<&'a str>,
 {
     move |input: &'a str| {
         context(
-            "hypenated",
+            "hyphenated",
             map(tuple((&left, spaced_hypen, &right)), |(l, _, r)| (l, r)),
         )(input)
     }
 }
 
-// hypenated range: n(.n) - n(.n) -> (v, v)
-fn hypenated_with_only_major<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+// hyphenated range: n(.n)(.n) - n(.n)(.n) -> (v, v)
+fn hyphenated_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
     context(
-        "hypenated with major and minor",
+        "hyphenated with major and minor",
         map(
-            hypenated(
-                tuple((number, maybe_dot_number)),
-                tuple((number, maybe_dot_number)),
+            hyphenated(
+                tuple((number, maybe_dot_number, maybe_dot_number)),
+                tuple((number, maybe_dot_number, maybe_dot_number)),
             ),
-            |((left, maybe_l_minor), (right, maybe_r_minor))| Range::Closed {
-                lower: lower_bound(left, maybe_l_minor),
-                upper: upper_bound(right, maybe_r_minor),
+            |((left, maybe_l_minor, maybe_l_patch), upper)| Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (left, maybe_l_minor.unwrap_or(0), maybe_l_patch.unwrap_or(0)).into(),
+                },
+                upper: match upper {
+                    (major, None, None) => Predicate {
+                        operation: Operation::LessThan,
+                        version: (major + 1, 0, 0).into(),
+                    },
+                    (major, Some(minor), None) => Predicate {
+                        operation: Operation::LessThan,
+                        version: (major, minor + 1, 0).into(),
+                    },
+                    (major, Some(minor), Some(patch)) => Predicate {
+                        operation: Operation::LessThanEquals,
+                        version: (major, minor, patch).into(),
+                    },
+                    _ => unreachable!("No way to a have a patch wtihout a minor"),
+                },
             },
         ),
     )(input)
@@ -362,24 +394,6 @@ where
     opt(map(tuple((tag("."), number)), |(_, num)| num))(input)
 }
 
-// hypenated range of two full versions: n.n.n - n.n.n -> (v, v)
-fn full_version_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
-    context(
-        "full version range",
-        map(
-            hypenated(
-                version_predicate_with(Operation::GreaterThanEquals),
-                version_predicate_with(Operation::LessThanEquals),
-            ),
-            |(lower, upper)| Range::Closed { lower, upper },
-        ),
-    )(input)
-}
-
-// hypenated range of two full versions: n.n.n - n.n.n -> (v, v)
 fn exact_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -641,6 +655,11 @@ mod tests {
         tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
         grater_than_equals_one => [">=1", ">=1.0.0"],
         less_than_one_dot_two => ["<1.2", "<1.2.0"],
+        a => ["1.2 - 3.4.5", ">=1.2.0 <=3.4.5"],
+        b => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0"],
+        c => ["1.2 - 3.4", ">=1.2.0 <3.5.0"],
+        d => [">1", ">=2.0.0"],
+        e => [">1.2", ">=1.3.0"],
     ];
     /*
     ["1.0.0", "1.0.0", { loose: false }],
@@ -672,11 +691,6 @@ mod tests {
     ["~1.2.3beta", ">=1.2.3-beta <1.3.0-0", { loose: true }],
     ["~1.2.3beta", null],
     ["^ 1.2 ^ 1", ">=1.2.0 <2.0.0-0 >=1.0.0"],
-    ["1.2 - 3.4.5", ">=1.2.0 <=3.4.5"],
-    ["1.2.3 - 3.4", ">=1.2.3 <3.5.0-0"],
-    ["1.2 - 3.4", ">=1.2.0 <3.5.0-0"],
-    [">1", ">=2.0.0"],
-    [">1.2", ">=1.3.0"],
     [">X", "<0.0.0-0"],
     ["<X", "<0.0.0-0"],
     ["<x <* || >* 2.x", "<0.0.0-0"],
