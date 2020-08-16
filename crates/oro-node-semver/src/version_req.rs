@@ -47,12 +47,6 @@ impl fmt::Display for Operation {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum WildCardVersion {
-    Minor,
-    Patch,
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Predicate {
     operation: Operation,
@@ -462,7 +456,7 @@ impl Predicate {
 }
 
 impl VersionReq {
-    fn satisfies(&self, version: &Version) -> bool {
+    pub fn satisfies(&self, version: &Version) -> bool {
         match &self.predicates {
             Range::Open(predicate) => predicate.satisfies(version),
             Range::Closed { upper, lower } => upper.satisfies(version) && lower.satisfies(version),

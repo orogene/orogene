@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use std::fmt;
 
-mod version_req;
+pub mod version_req;
 
 #[derive(Debug, Error)]
 pub enum SemverError {
