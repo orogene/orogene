@@ -3,6 +3,7 @@ use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::{all_consuming, map, opt};
 use nom::error::{context, convert_error, ParseError, VerboseError};
+use nom::multi::separated_nonempty_list;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
 
@@ -14,6 +15,15 @@ use crate::{number, SemverError, Version};
 enum Range {
     Open(Predicate),
     Closed { upper: Predicate, lower: Predicate },
+}
+
+impl Range {
+    fn satisfies(&self, version: &Version) -> bool {
+        match self {
+            Range::Open(predicate) => predicate.satisfies(version),
+            Range::Closed { upper, lower } => upper.satisfies(version) && lower.satisfies(version),
+        }
+    }
 }
 
 impl fmt::Display for Range {
@@ -74,13 +84,13 @@ impl fmt::Display for Predicate {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct VersionReq {
-    predicates: Range,
+    predicates: Vec<Range>,
 }
 
 pub fn parse<S: AsRef<str>>(input: S) -> Result<VersionReq, SemverError> {
     let input = &input.as_ref()[..];
 
-    match all_consuming(predicates::<VerboseError<&str>>)(input) {
+    match all_consuming(many_predicates::<VerboseError<&str>>)(input) {
         Ok((_, predicates)) => Ok(VersionReq { predicates }),
         Err(err) => Err(SemverError::ParseError {
             input: input.into(),
@@ -93,6 +103,16 @@ pub fn parse<S: AsRef<str>>(input: S) -> Result<VersionReq, SemverError> {
     }
 }
 
+fn many_predicates<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Range>, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "many predicats",
+        separated_nonempty_list(tag(" || "), predicates),
+    )(input)
+}
+
 fn predicates<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
@@ -100,8 +120,8 @@ where
     context(
         "predicate alternatives",
         alt((
-            x_and_asterisk_verion,
             hyphenated_range,
+            x_and_asterisk_version,
             no_operation_followed_by_version,
             any_operation_followed_by_version,
             caret,
@@ -152,7 +172,7 @@ where
     )(input)
 }
 
-fn x_and_asterisk_verion<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+fn x_and_asterisk_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
@@ -163,11 +183,16 @@ where
                 number,
                 preceded(
                     tag("."),
-                    alt((map(x_or_asterisk, |_| None), map(number, Some))),
+                    alt((
+                        map(tuple((x_or_asterisk, tag("."), x_or_asterisk)), |_| None), // 2.x.x
+                        map(tuple((number, tag("."), x_or_asterisk)), |(minor, _, _)| {
+                            Some(minor)
+                        }), // 1.2.x
+                        map(x_or_asterisk, |_| None),                                   // 2.x
+                    )),
                 ),
-                preceded(tag("."), x_or_asterisk),
             )),
-            |(major, maybe_minor, _)| Range::Closed {
+            |(major, maybe_minor)| Range::Closed {
                 upper: upper_bound(major, maybe_minor),
                 lower: lower_bound(major, maybe_minor),
             },
@@ -411,7 +436,13 @@ where
 
 impl fmt::Display for VersionReq {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.predicates,)
+        for (i, range) in self.predicates.iter().enumerate() {
+            if i > 0 {
+                write!(f, "||")?;
+            }
+            write!(f, "{}", range)?;
+        }
+        Ok(())
     }
 }
 
@@ -453,10 +484,9 @@ impl Predicate {
 
 impl VersionReq {
     pub fn satisfies(&self, version: &Version) -> bool {
-        match &self.predicates {
-            Range::Open(predicate) => predicate.satisfies(version),
-            Range::Closed { upper, lower } => upper.satisfies(version) && lower.satisfies(version),
-        }
+        self.predicates
+            .iter()
+            .any(|predicate| predicate.satisfies(version))
     }
 }
 
@@ -576,7 +606,8 @@ mod tests {
         single_major => ["1", ">=1.0.0 <2.0.0"],
         single_major_2 => ["2", ">=2.0.0 <3.0.0"],
         major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
-        x_and_asterisk_verion => ["2.x.x", ">=2.0.0 <3.0.0"],
+        major_dot_x => ["2.x", ">=2.0.0 <3.0.0"],
+        x_and_asterisk_version => ["2.x.x", ">=2.0.0 <3.0.0"],
         patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
         minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0"],
         patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0"],
@@ -595,6 +626,10 @@ mod tests {
         greater_than_one => [">1", ">=2.0.0"],
         less_than_one_dot_two => ["<1.2", "<1.2.0"],
         greater_than_one_dot_two => [">1.2", ">=1.3.0"],
+        either_one_version_or_the_other => ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
+        either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
+        either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
+        either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
     ];
     /*
     [">= 1.0.0", ">=1.0.0"],
@@ -610,12 +645,6 @@ mod tests {
     ["^ 1", ">=1.0.0 <2.0.0-0"],
     ["~> 1", ">=1.0.0 <2.0.0-0"],
     ["~ 1.0", ">=1.0.0 <1.1.0-0"],
-
-    // Nice for pairing/
-    ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
-    [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
-    ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
-    ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
 
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
