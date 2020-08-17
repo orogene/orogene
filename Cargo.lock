@@ -1811,6 +1811,7 @@ dependencies = [
  "oro-semver",
  "serde 1.0.115",
  "serde_json",
+ "tempfile",
  "thiserror",
 ]
 
@@ -2386,6 +2387,7 @@ version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "164eacbdb13512ec2745fb09d51fd5b22b0d65ed294a1dcf7285a360c80a675c"
 dependencies = [
+ "indexmap",
  "itoa",
  "ryu",
  "serde 1.0.115",

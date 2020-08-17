@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -33,6 +35,9 @@ impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::resul
 pub enum Error {
     #[error("Failed to parse person string `{input}`: {msg}")]
     ParsePersonError { input: String, msg: String },
+
+    #[error("Invalid package file {0}. Package files should be JSON objects")]
+    InvalidPackageFile(PathBuf),
 
     /// Returned if an internal (e.g. io) operation has failed.
     #[error(transparent)]

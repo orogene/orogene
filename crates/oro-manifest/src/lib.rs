@@ -1,16 +1,19 @@
 use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use derive_builder::Builder;
-use error::Result;
+use error::{Internal, Result};
 use oro_semver::{Version, VersionReq};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub use error::Error;
 
 mod error;
 
-#[derive(Builder, Clone, Debug, PartialEq, Deserialize)]
+#[derive(Builder, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OroManifest {
     #[builder(setter(into, strip_option), default)]
@@ -31,7 +34,7 @@ pub struct OroManifest {
 
     #[serde(default)]
     #[builder(setter(strip_option), default)]
-    pub browser: bool,
+    pub browser: Option<bool>,
 
     #[serde(default)]
     #[builder(setter(strip_option), default)]
@@ -64,7 +67,7 @@ pub struct OroManifest {
 
     #[serde(default)]
     #[builder(default)]
-    pub directories: Directories,
+    pub directories: Option<Directories>,
 
     #[serde(rename = "type")]
     #[builder(setter(into, strip_option), default)]
@@ -84,7 +87,7 @@ pub struct OroManifest {
     pub scripts: HashMap<String, String>,
 
     #[builder(setter(strip_option), default)]
-    pub config: Option<serde_json::Value>,
+    pub config: Option<Value>,
 
     #[serde(default)]
     #[builder(default)]
@@ -99,8 +102,8 @@ pub struct OroManifest {
     pub cpu: Vec<String>,
 
     #[serde(default)]
-    #[builder(default)]
-    pub private: bool,
+    #[builder(setter(strip_option), default)]
+    pub private: Option<bool>,
 
     #[serde(default)]
     #[builder(default)]
@@ -133,10 +136,39 @@ pub struct OroManifest {
 
     #[serde(flatten, default)]
     #[builder(default)]
-    pub _rest: HashMap<String, serde_json::Value>,
+    pub _rest: HashMap<String, Value>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+impl OroManifest {
+    pub fn from_file<F: AsRef<Path>>(file: F) -> Result<OroManifest> {
+        let data = fs::read(file.as_ref()).to_internal()?;
+        Ok(serde_json::from_slice::<OroManifest>(&data[..]).to_internal()?)
+    }
+
+    pub fn update_file<F: AsRef<Path>>(&self, file: F) -> Result<()> {
+        let file = file.as_ref();
+        let manifest = serde_json::to_value(&self).to_internal()?;
+        let data = fs::read(file).to_internal()?;
+        let mut pkg_json = serde_json::from_slice::<Value>(&data[..]).to_internal()?;
+        match (manifest, &mut pkg_json) {
+            (Value::Object(ref mani_map), Value::Object(ref mut pkg_map)) => {
+                for (key, val) in mani_map.iter() {
+                    match val {
+                        Value::Null => continue,
+                        Value::Object(map) if map.is_empty() => continue,
+                        Value::Array(vec) if vec.is_empty() => continue,
+                        _ => pkg_map.insert(key.clone(), val.clone()),
+                    };
+                }
+            }
+            _ => return Err(Error::InvalidPackageFile(PathBuf::from(file))),
+        };
+        fs::write(file, serde_json::to_vec_pretty(&pkg_json).to_internal()?).to_internal()?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Bugs {
     Str(String),
@@ -147,7 +179,7 @@ pub enum Bugs {
 }
 
 /// Represents a human!
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum PersonField {
     Str(String),
@@ -171,7 +203,7 @@ impl PersonField {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Person {
     pub name: Option<String>,
     pub email: Option<String>,
@@ -186,27 +218,27 @@ impl FromStr for Person {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Directories {
     pub bin: Option<String>,
     pub man: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Bin {
     Str(String),
     Hash(HashMap<String, String>),
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Man {
     Str(String),
     Vec(Vec<String>),
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Exports {
     Str(String),
@@ -214,7 +246,7 @@ pub enum Exports {
     Obj(HashMap<String, Exports>),
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Imports {
     Str(String),
@@ -222,7 +254,7 @@ pub enum Imports {
     Obj(HashMap<String, Imports>),
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Repository {
     Str(String),
@@ -288,7 +320,10 @@ mod parser {
 mod tests {
     use super::*;
 
+    use std::fs;
+
     use anyhow::Result;
+    use tempfile::tempdir;
 
     #[test]
     fn basic_from_json() -> Result<()> {
@@ -475,6 +510,78 @@ mod tests {
                 email: Some("kzm@zkat.tech".into()),
                 url: Some("https://github.com/zkat".into())
             }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn from_file() -> Result<()> {
+        let dir = tempdir()?;
+        let file = dir.path().join("package.json");
+        fs::write(
+            &file,
+            r#"
+{
+    "name": "my-package",
+    "version": "1.2.3"
+}
+        "#,
+        )?;
+        assert_eq!(
+            OroManifest::from_file(&file)?,
+            OroManifestBuilder::default()
+                .name("my-package")
+                .version("1.2.3".parse()?)
+                .build()
+                .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn update_file() -> Result<()> {
+        let dir = tempdir()?;
+        let file = dir.path().join("package.json");
+        fs::write(
+            &file,
+            r#"
+{
+    "version": "1.2.3",
+    "private": true,
+    "dependencies": { "foo": "^1.2.3" },
+    "browser": true,
+    "name": "my-package"
+}
+        "#,
+        )?;
+        let mut deps = HashMap::new();
+        deps.insert(String::from("bar"), "> 3.2.1".parse()?);
+        let mani = OroManifestBuilder::default()
+            .name("new-name")
+            .private(false)
+            .version("3.2.1".parse()?)
+            .dependencies(deps)
+            .main("./index.ts")
+            .build()
+            .unwrap();
+        mani.update_file(&file)?;
+        // This checks that:
+        // * Existing keys are updated
+        // * Existing key order is preserved
+        // * `None` keys in the toplevel object aren't written out/replaced
+        // * New keys are appended to the end of the object
+        assert_eq!(
+            fs::read_to_string(&file)?,
+            r#"{
+  "version": "3.2.1",
+  "private": false,
+  "dependencies": {
+    "bar": "> 3.2.1"
+  },
+  "browser": true,
+  "name": "new-name",
+  "main": "./index.ts"
+}"#
         );
         Ok(())
     }
