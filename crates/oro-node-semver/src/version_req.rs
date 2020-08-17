@@ -3,7 +3,7 @@ use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::{all_consuming, map, opt};
 use nom::error::{context, convert_error, ParseError, VerboseError};
-use nom::sequence::tuple;
+use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
 
 use std::fmt;
@@ -161,12 +161,13 @@ where
         map(
             tuple((
                 number,
-                tag("."),
-                alt((map(x_or_asterisk, |_| None), map(number, Some))),
-                tag("."),
-                x_or_asterisk,
+                preceded(
+                    tag("."),
+                    alt((map(x_or_asterisk, |_| None), map(number, Some))),
+                ),
+                preceded(tag("."), x_or_asterisk),
             )),
-            |(major, _, maybe_minor, _, _)| Range::Closed {
+            |(major, maybe_minor, _)| Range::Closed {
                 upper: upper_bound(major, maybe_minor),
                 lower: lower_bound(major, maybe_minor),
             },
@@ -202,13 +203,17 @@ where
     context(
         "caret",
         map(
-            tuple((tag("^"), number, maybe_dot_number, maybe_dot_number)),
+            tuple((
+                preceded(tag("^"), number),
+                maybe_dot_number,
+                maybe_dot_number,
+            )),
             |parsed| match parsed {
-                (_, 0, None, None) => Range::Open(Predicate {
+                (0, None, None) => Range::Open(Predicate {
                     operation: Operation::LessThan,
                     version: (1, 0, 0).into(),
                 }),
-                (_, 0, Some(minor), None) => Range::Closed {
+                (0, Some(minor), None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (0, minor, 0).into(),
@@ -218,7 +223,7 @@ where
                         version: (0, minor + 1, 0).into(),
                     },
                 },
-                (_, major, Some(minor), None) => Range::Closed {
+                (major, Some(minor), None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, 0).into(),
@@ -228,7 +233,7 @@ where
                         version: (major + 1, 0, 0).into(),
                     },
                 },
-                (_, major, Some(minor), Some(patch)) => Range::Closed {
+                (major, Some(minor), Some(patch)) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, patch).into(),
@@ -256,14 +261,13 @@ where
         "tilde",
         map(
             tuple((
-                tag("~"),
-                opt(tag(">")),
+                preceded(tag("~"), opt(tag(">"))),
                 number,
                 maybe_dot_number,
                 maybe_dot_number,
             )),
             |parsed| match parsed {
-                (_, Some(_gt), major, Some(minor), Some(patch)) => Range::Closed {
+                (Some(_gt), major, Some(minor), Some(patch)) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, patch).into(),
@@ -273,7 +277,7 @@ where
                         version: (major, minor + 1, 0).into(),
                     },
                 },
-                (_, None, major, Some(minor), None) => Range::Closed {
+                (None, major, Some(minor), None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, 0).into(),
@@ -283,7 +287,7 @@ where
                         version: (major, minor + 1, 0).into(),
                     },
                 },
-                (_, None, major, None, None) => Range::Closed {
+                (None, major, None, None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, 0, 0).into(),
@@ -378,7 +382,7 @@ fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<u64>, E>
 where
     E: ParseError<&'a str>,
 {
-    opt(map(tuple((tag("."), number)), |(_, num)| num))(input)
+    opt(preceded(tag("."), number))(input)
 }
 
 fn spaced_hypen<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
