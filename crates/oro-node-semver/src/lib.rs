@@ -293,10 +293,7 @@ mod tests {
 
     #[test]
     fn version_string_limited_to_256_characters() {
-        let prebuild = (0..257)
-            .map(|_| "X")
-            .collect::<Vec<_>>()
-            .join("");
+        let prebuild = (0..257).map(|_| "X").collect::<Vec<_>>().join("");
         let version_string = format!("1.1.1-{}", prebuild);
         let v = parse(version_string.clone());
 
