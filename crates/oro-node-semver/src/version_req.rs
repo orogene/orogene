@@ -126,7 +126,23 @@ where
             any_operation_followed_by_version,
             caret,
             tilde,
+            wildcard,
         )),
+    )(input)
+}
+
+fn wildcard<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "wildcard",
+        map(x_or_asterisk, |_| {
+            Range::Open(Predicate {
+                operation: Operation::GreaterThanEquals,
+                version: (0, 0, 0).into(),
+            })
+        }),
     )(input)
 }
 
@@ -630,6 +646,8 @@ mod tests {
         either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
         either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
         either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
+        any_version_asterisk => ["*", ">=0.0.0"],
+        any_version_x => ["x", ">=0.0.0"],
     ];
     /*
     [">= 1.0.0", ">=1.0.0"],
