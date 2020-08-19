@@ -188,7 +188,7 @@ where
             }),
             (Operation::LessThan, (major, minor, None)) => Range::Open(Predicate {
                 operation: Operation::LessThan,
-                version: (major, minor.unwrap_or(0), 0).into(),
+                version: (major, minor.unwrap_or(0), 0, 0).into(),
             }),
             (operation, (major, Some(minor), Some(patch))) => Range::Open(Predicate {
                 operation,
@@ -238,12 +238,12 @@ fn upper_bound(major: u64, maybe_minor: Option<u64>) -> Predicate {
     if let Some(minor) = maybe_minor {
         Predicate {
             operation: Operation::LessThan,
-            version: (major, minor + 1, 0).into(),
+            version: (major, minor + 1, 0, 0).into(),
         }
     } else {
         Predicate {
             operation: Operation::LessThan,
-            version: (major + 1, 0, 0).into(),
+            version: (major + 1, 0, 0, 0).into(),
         }
     }
 }
@@ -257,7 +257,7 @@ where
         map(preceded(tag("^"), partial_version), |parsed| match parsed {
             (0, None, None) => Range::Open(Predicate {
                 operation: Operation::LessThan,
-                version: (1, 0, 0).into(),
+                version: (1, 0, 0, 0).into(),
             }),
             (0, Some(minor), None) => Range::Closed {
                 lower: Predicate {
@@ -266,7 +266,7 @@ where
                 },
                 upper: Predicate {
                     operation: Operation::LessThan,
-                    version: (0, minor + 1, 0).into(),
+                    version: (0, minor + 1, 0, 0).into(),
                 },
             },
             (major, Some(minor), None) => Range::Closed {
@@ -276,7 +276,7 @@ where
                 },
                 upper: Predicate {
                     operation: Operation::LessThan,
-                    version: (major + 1, 0, 0).into(),
+                    version: (major + 1, 0, 0, 0).into(),
                 },
             },
             (major, Some(minor), Some(patch)) => Range::Closed {
@@ -287,9 +287,9 @@ where
                 upper: Predicate {
                     operation: Operation::LessThan,
                     version: match (major, minor, patch) {
-                        (0, 0, n) => Version::from((0, 0, n + 1)),
-                        (0, n, _) => Version::from((0, n + 1, 0)),
-                        (n, _, _) => Version::from((n + 1, 0, 0)),
+                        (0, 0, n) => Version::from((0, 0, n + 1, 0)),
+                        (0, n, _) => Version::from((0, n + 1, 0, 0)),
+                        (n, _, _) => Version::from((n + 1, 0, 0, 0)),
                     },
                 },
             },
@@ -314,7 +314,7 @@ where
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0).into(),
+                        version: (major, minor + 1, 0, 0).into(),
                     },
                 },
                 (None, (major, Some(minor), None)) => Range::Closed {
@@ -324,7 +324,7 @@ where
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0).into(),
+                        version: (major, minor + 1, 0, 0).into(),
                     },
                 },
                 (None, (major, None, None)) => Range::Closed {
@@ -334,7 +334,7 @@ where
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major + 1, 0, 0).into(),
+                        version: (major + 1, 0, 0, 0).into(),
                     },
                 },
                 _ => unreachable!("Should not have gotten here"),
@@ -376,11 +376,11 @@ where
                 upper: match upper {
                     (major, None, None) => Predicate {
                         operation: Operation::LessThan,
-                        version: (major + 1, 0, 0).into(),
+                        version: (major + 1, 0, 0, 0).into(),
                     },
                     (major, Some(minor), None) => Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0).into(),
+                        version: (major, minor + 1, 0, 0).into(),
                     },
                     (major, Some(minor), Some(patch)) => Predicate {
                         operation: Operation::LessThanEquals,
@@ -595,44 +595,42 @@ mod tests {
         //       [input,   parsed and then `to_string`ed]
         exact => ["1.0.0", "1.0.0"],
         major_minor_patch_range => ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
-        only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
-        only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
+        only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0-0"],
+        only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0-0"],
         mixed_major_minor => ["1.2 - 3.4.5", ">=1.2.0 <=3.4.5"],
-        mixed_major_minor_2 => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0"],
-        minor_minor_range => ["1.2 - 3.4", ">=1.2.0 <3.5.0"],
-        single_sided_only_major => ["1", ">=1.0.0 <2.0.0"],
+        mixed_major_minor_2 => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0-0"],
+        minor_minor_range => ["1.2 - 3.4", ">=1.2.0 <3.5.0-0"],
+        single_sided_only_major => ["1", ">=1.0.0 <2.0.0-0"],
         single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
         single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
         single_sided_upper_equals_bound => ["<=2.0.0", "<=2.0.0"],
         single_sided_upper_bound => ["<2.0.0", "<2.0.0"],
-        single_major => ["1", ">=1.0.0 <2.0.0"],
-        single_major_2 => ["2", ">=2.0.0 <3.0.0"],
-        major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
-        major_dot_x => ["2.x", ">=2.0.0 <3.0.0"],
-        x_and_asterisk_version => ["2.x.x", ">=2.0.0 <3.0.0"],
-        patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
-        minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0"],
-        patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0"],
-        caret_zero => ["^0", "<1.0.0"],
-        caret_zero_minor => ["^0.1", ">=0.1.0 <0.2.0"],
-        caret_one => ["^1.0", ">=1.0.0 <2.0.0"],
-        caret_minor => ["^1.2", ">=1.2.0 <2.0.0"],
-        caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2"],
-        caret_with_patch =>   ["^0.1.2", ">=0.1.2 <0.2.0"],
-        caret_with_patch_2 => ["^1.2.3", ">=1.2.3 <2.0.0"],
-        tilde_one => ["~1", ">=1.0.0 <2.0.0"],
-        tilde_minor => ["~1.0", ">=1.0.0 <1.1.0"],
-        tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0"],
-        tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
+        major_and_minor => ["2.3", ">=2.3.0 <2.4.0-0"],
+        major_dot_x => ["2.x", ">=2.0.0 <3.0.0-0"],
+        x_and_asterisk_version => ["2.x.x", ">=2.0.0 <3.0.0-0"],
+        patch_x => ["1.2.x", ">=1.2.0 <1.3.0-0"],
+        minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0-0"],
+        patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0-0"],
+        caret_zero => ["^0", "<1.0.0-0"],
+        caret_zero_minor => ["^0.1", ">=0.1.0 <0.2.0-0"],
+        caret_one => ["^1.0", ">=1.0.0 <2.0.0-0"],
+        caret_minor => ["^1.2", ">=1.2.0 <2.0.0-0"],
+        caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2-0"],
+        caret_with_patch =>   ["^0.1.2", ">=0.1.2 <0.2.0-0"],
+        caret_with_patch_2 => ["^1.2.3", ">=1.2.3 <2.0.0-0"],
+        tilde_one => ["~1", ">=1.0.0 <2.0.0-0"],
+        tilde_minor => ["~1.0", ">=1.0.0 <1.1.0-0"],
+        tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0-0"],
+        tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0-0"],
         grater_than_equals_one => [">=1", ">=1.0.0"],
         greater_than_one => [">1", ">=2.0.0"],
-        less_than_one_dot_two => ["<1.2", "<1.2.0"],
+        less_than_one_dot_two => ["<1.2", "<1.2.0-0"],
         greater_than_one_dot_two => [">1.2", ">=1.3.0"],
         either_one_version_or_the_other => ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
         either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
-        either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
-        either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
+        either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
+        either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
         any_version_asterisk => ["*", ">=0.0.0"],
         any_version_x => ["x", ">=0.0.0"],
     ];
