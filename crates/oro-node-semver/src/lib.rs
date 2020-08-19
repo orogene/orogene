@@ -99,6 +99,15 @@ impl fmt::Display for Version {
             write!(f, "{}", ident)?;
         }
 
+        for (i, ident) in self.build.iter().enumerate() {
+            if i == 0 {
+                write!(f, "+")?;
+            } else {
+                write!(f, ".")?;
+            }
+            write!(f, "{}", ident)?;
+        }
+
         Ok(())
     }
 }
@@ -385,18 +394,39 @@ mod tests {
 
     #[test]
     fn read_version_from_string() {
-        let v: Versioned = serde_json::from_str(r#"{"version":"1.2.3"}"#).unwrap();
+        let v: Versioned = serde_json::from_str(r#"{"version":"1.2.34-abc.213+2"}"#).unwrap();
 
-        assert_eq!(v.version, (1, 2, 3).into());
+        assert_eq!(
+            v.version,
+            Version {
+                major: 1,
+                minor: 2,
+                patch: 34,
+                pre_release: vec![
+                    Identifier::AlphaNumeric("abc".into()),
+                    Identifier::Numeric(213)
+                ],
+                build: vec![Identifier::Numeric(2)],
+            }
+        );
     }
 
     #[test]
     fn serialize_a_version_to_string() {
         let output = serde_json::to_string(&Versioned {
-            version: (1, 2, 3).into(),
+            version: Version {
+                major: 1,
+                minor: 2,
+                patch: 34,
+                pre_release: vec![
+                    Identifier::AlphaNumeric("abc".into()),
+                    Identifier::Numeric(213),
+                ],
+                build: vec![Identifier::Numeric(2)],
+            },
         })
         .unwrap();
-        let expected: String = r#"{"version":"1.2.3"}"#.into();
+        let expected: String = r#"{"version":"1.2.34-abc.213+2"}"#.into();
 
         assert_eq!(output, expected);
     }
