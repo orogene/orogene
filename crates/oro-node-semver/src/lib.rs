@@ -31,6 +31,15 @@ pub enum Identifier {
     AlphaNumeric(String),
 }
 
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Identifier::Numeric(n) => write!(f, "{}", n),
+            Identifier::AlphaNumeric(s) => write!(f, "{}", s),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Version {
     major: u64,
@@ -42,7 +51,18 @@ pub struct Version {
 
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
+
+        for (i, ident) in self.pre_release.iter().enumerate() {
+            if i == 0 {
+                write!(f, "-")?;
+            } else {
+                write!(f, ".")?;
+            }
+            write!(f, "{}", ident)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -54,6 +74,18 @@ impl std::convert::From<(u64, u64, u64)> for Version {
             patch,
             build: Vec::new(),
             pre_release: Vec::new(),
+        }
+    }
+}
+
+impl std::convert::From<(u64, u64, u64, u64)> for Version {
+    fn from((major, minor, patch, pre_release): (u64, u64, u64, u64)) -> Self {
+        Version {
+            major,
+            minor,
+            patch,
+            build: Vec::new(),
+            pre_release: vec![Identifier::Numeric(pre_release)],
         }
     }
 }

@@ -153,38 +153,49 @@ where
     map(alt((tag("x"), tag("*"))), |_| ())(input)
 }
 
+fn partial_version<'a, E>(input: &'a str) -> IResult<&'a str, (u64, Option<u64>, Option<u64>), E>
+where
+    E: ParseError<&'a str>,
+{
+    tuple((number, maybe_dot_number, maybe_dot_number))(input)
+}
+
+fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<u64>, E>
+where
+    E: ParseError<&'a str>,
+{
+    opt(preceded(tag("."), number))(input)
+}
+
 fn any_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
 where
     E: ParseError<&'a str>,
 {
     context(
         "operation followed by version",
-        map(
-            tuple((operation, number, maybe_dot_number, maybe_dot_number)),
-            |parsed| match parsed {
-                (Operation::GreaterThanEquals, major, minor, None) => Range::Open(Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor.unwrap_or(0), 0).into(),
-                }),
-                (Operation::GreaterThan, major, Some(minor), None) => Range::Open(Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor + 1, 0).into(),
-                }),
-                (Operation::GreaterThan, major, None, None) => Range::Open(Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major + 1, 0, 0).into(),
-                }),
-                (Operation::LessThan, major, minor, None) => Range::Open(Predicate {
-                    operation: Operation::LessThan,
-                    version: (major, minor.unwrap_or(0), 0).into(),
-                }),
-                (operation, major, Some(minor), Some(patch)) => Range::Open(Predicate {
-                    operation,
-                    version: (major, minor, patch).into(),
-                }),
-                _ => panic!("Unexpected"),
-            },
-        ),
+        map(tuple((operation, partial_version)), |parsed| match parsed {
+            (Operation::GreaterThanEquals, (major, minor, None)) => Range::Open(Predicate {
+                operation: Operation::GreaterThanEquals,
+                version: (major, minor.unwrap_or(0), 0).into(),
+            }),
+            (Operation::GreaterThan, (major, Some(minor), None)) => Range::Open(Predicate {
+                operation: Operation::GreaterThanEquals,
+                version: (major, minor + 1, 0).into(),
+            }),
+            (Operation::GreaterThan, (major, None, None)) => Range::Open(Predicate {
+                operation: Operation::GreaterThanEquals,
+                version: (major + 1, 0, 0).into(),
+            }),
+            (Operation::LessThan, (major, minor, None)) => Range::Open(Predicate {
+                operation: Operation::LessThan,
+                version: (major, minor.unwrap_or(0), 0, 0).into(),
+            }),
+            (operation, (major, Some(minor), Some(patch))) => Range::Open(Predicate {
+                operation,
+                version: (major, minor, patch).into(),
+            }),
+            _ => unreachable!(),
+        }),
     )(input)
 }
 
@@ -227,12 +238,12 @@ fn upper_bound(major: u64, maybe_minor: Option<u64>) -> Predicate {
     if let Some(minor) = maybe_minor {
         Predicate {
             operation: Operation::LessThan,
-            version: (major, minor + 1, 0).into(),
+            version: (major, minor + 1, 0, 0).into(),
         }
     } else {
         Predicate {
             operation: Operation::LessThan,
-            version: (major + 1, 0, 0).into(),
+            version: (major + 1, 0, 0, 0).into(),
         }
     }
 }
@@ -243,54 +254,47 @@ where
 {
     context(
         "caret",
-        map(
-            tuple((
-                preceded(tag("^"), number),
-                maybe_dot_number,
-                maybe_dot_number,
-            )),
-            |parsed| match parsed {
-                (0, None, None) => Range::Open(Predicate {
+        map(preceded(tag("^"), partial_version), |parsed| match parsed {
+            (0, None, None) => Range::Open(Predicate {
+                operation: Operation::LessThan,
+                version: (1, 0, 0, 0).into(),
+            }),
+            (0, Some(minor), None) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (0, minor, 0).into(),
+                },
+                upper: Predicate {
                     operation: Operation::LessThan,
-                    version: (1, 0, 0).into(),
-                }),
-                (0, Some(minor), None) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (0, minor, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (0, minor + 1, 0).into(),
-                    },
+                    version: (0, minor + 1, 0, 0).into(),
                 },
-                (major, Some(minor), None) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (major + 1, 0, 0).into(),
-                    },
-                },
-                (major, Some(minor), Some(patch)) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor, patch).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: match (major, minor, patch) {
-                            (0, 0, n) => Version::from((0, 0, n + 1)),
-                            (0, n, _) => Version::from((0, n + 1, 0)),
-                            (n, _, _) => Version::from((n + 1, 0, 0)),
-                        },
-                    },
-                },
-                _ => unreachable!("Should not have reached here"),
             },
-        ),
+            (major, Some(minor), None) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major + 1, 0, 0, 0).into(),
+                },
+            },
+            (major, Some(minor), Some(patch)) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor, patch).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: match (major, minor, patch) {
+                        (0, 0, n) => Version::from((0, 0, n + 1, 0)),
+                        (0, n, _) => Version::from((0, n + 1, 0, 0)),
+                        (n, _, _) => Version::from((n + 1, 0, 0, 0)),
+                    },
+                },
+            },
+            _ => unreachable!(),
+        }),
     )(input)
 }
 
@@ -301,41 +305,36 @@ where
     context(
         "tilde",
         map(
-            tuple((
-                preceded(tag("~"), opt(tag(">"))),
-                number,
-                maybe_dot_number,
-                maybe_dot_number,
-            )),
+            tuple((preceded(tag("~"), opt(tag(">"))), partial_version)),
             |parsed| match parsed {
-                (Some(_gt), major, Some(minor), Some(patch)) => Range::Closed {
+                (Some(_gt), (major, Some(minor), Some(patch))) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, patch).into(),
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0).into(),
+                        version: (major, minor + 1, 0, 0).into(),
                     },
                 },
-                (None, major, Some(minor), None) => Range::Closed {
+                (None, (major, Some(minor), None)) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, 0).into(),
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0).into(),
+                        version: (major, minor + 1, 0, 0).into(),
                     },
                 },
-                (None, major, None, None) => Range::Closed {
+                (None, (major, None, None)) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, 0, 0).into(),
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major + 1, 0, 0).into(),
+                        version: (major + 1, 0, 0, 0).into(),
                     },
                 },
                 _ => unreachable!("Should not have gotten here"),
@@ -368,10 +367,7 @@ where
     context(
         "hyphenated with major and minor",
         map(
-            hyphenated(
-                tuple((number, maybe_dot_number, maybe_dot_number)),
-                tuple((number, maybe_dot_number, maybe_dot_number)),
-            ),
+            hyphenated(partial_version, partial_version),
             |((left, maybe_l_minor, maybe_l_patch), upper)| Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
@@ -380,11 +376,11 @@ where
                 upper: match upper {
                     (major, None, None) => Predicate {
                         operation: Operation::LessThan,
-                        version: (major + 1, 0, 0).into(),
+                        version: (major + 1, 0, 0, 0).into(),
                     },
                     (major, Some(minor), None) => Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0).into(),
+                        version: (major, minor + 1, 0, 0).into(),
                     },
                     (major, Some(minor), Some(patch)) => Predicate {
                         operation: Operation::LessThanEquals,
@@ -403,27 +399,17 @@ where
 {
     context(
         "major and minor",
-        map(
-            tuple((number, maybe_dot_number, maybe_dot_number)),
-            |parsed| match parsed {
-                (major, Some(minor), Some(patch)) => Range::Open(Predicate {
-                    operation: Operation::Exact,
-                    version: (major, minor, patch).into(),
-                }),
-                (major, maybe_minor, _) => Range::Closed {
-                    lower: lower_bound(major, maybe_minor),
-                    upper: upper_bound(major, maybe_minor),
-                },
+        map(partial_version, |parsed| match parsed {
+            (major, Some(minor), Some(patch)) => Range::Open(Predicate {
+                operation: Operation::Exact,
+                version: (major, minor, patch).into(),
+            }),
+            (major, maybe_minor, _) => Range::Closed {
+                lower: lower_bound(major, maybe_minor),
+                upper: upper_bound(major, maybe_minor),
             },
-        ),
+        }),
     )(input)
-}
-
-fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<u64>, E>
-where
-    E: ParseError<&'a str>,
-{
-    opt(preceded(tag("."), number))(input)
 }
 
 fn spaced_hypen<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
@@ -605,47 +591,46 @@ mod tests {
 
     }
 
-    range_parse_tests![       //[ input         , parsed and then `to_string`ed]
+    range_parse_tests![
+        //       [input,   parsed and then `to_string`ed]
         exact => ["1.0.0", "1.0.0"],
         major_minor_patch_range => ["1.0.0 - 2.0.0", ">=1.0.0 <=2.0.0"],
-        only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0"],
-        only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0"],
+        only_major_versions =>  ["1 - 2", ">=1.0.0 <3.0.0-0"],
+        only_major_and_minor => ["1.0 - 2.0", ">=1.0.0 <2.1.0-0"],
         mixed_major_minor => ["1.2 - 3.4.5", ">=1.2.0 <=3.4.5"],
-        mixed_major_minor_2 => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0"],
-        minor_minor_range => ["1.2 - 3.4", ">=1.2.0 <3.5.0"],
-        single_sided_only_major => ["1", ">=1.0.0 <2.0.0"],
+        mixed_major_minor_2 => ["1.2.3 - 3.4", ">=1.2.3 <3.5.0-0"],
+        minor_minor_range => ["1.2 - 3.4", ">=1.2.0 <3.5.0-0"],
+        single_sided_only_major => ["1", ">=1.0.0 <2.0.0-0"],
         single_sided_lower_equals_bound =>  [">=1.0.0", ">=1.0.0"],
         single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
         single_sided_upper_equals_bound => ["<=2.0.0", "<=2.0.0"],
         single_sided_upper_bound => ["<2.0.0", "<2.0.0"],
-        single_major => ["1", ">=1.0.0 <2.0.0"],
-        single_major_2 => ["2", ">=2.0.0 <3.0.0"],
-        major_and_minor => ["2.3", ">=2.3.0 <2.4.0"],
-        major_dot_x => ["2.x", ">=2.0.0 <3.0.0"],
-        x_and_asterisk_version => ["2.x.x", ">=2.0.0 <3.0.0"],
-        patch_x => ["1.2.x", ">=1.2.0 <1.3.0"],
-        minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0"],
-        patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0"],
-        caret_zero => ["^0", "<1.0.0"],
-        caret_zero_minor => ["^0.1", ">=0.1.0 <0.2.0"],
-        caret_one => ["^1.0", ">=1.0.0 <2.0.0"],
-        caret_minor => ["^1.2", ">=1.2.0 <2.0.0"],
-        caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2"],
-        caret_with_patch =>   ["^0.1.2", ">=0.1.2 <0.2.0"],
-        caret_with_patch_2 => ["^1.2.3", ">=1.2.3 <2.0.0"],
-        tilde_one => ["~1", ">=1.0.0 <2.0.0"],
-        tilde_minor => ["~1.0", ">=1.0.0 <1.1.0"],
-        tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0"],
-        tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0"],
+        major_and_minor => ["2.3", ">=2.3.0 <2.4.0-0"],
+        major_dot_x => ["2.x", ">=2.0.0 <3.0.0-0"],
+        x_and_asterisk_version => ["2.x.x", ">=2.0.0 <3.0.0-0"],
+        patch_x => ["1.2.x", ">=1.2.0 <1.3.0-0"],
+        minor_asterisk_patch_asterisk => ["2.*.*", ">=2.0.0 <3.0.0-0"],
+        patch_asterisk => ["1.2.*", ">=1.2.0 <1.3.0-0"],
+        caret_zero => ["^0", "<1.0.0-0"],
+        caret_zero_minor => ["^0.1", ">=0.1.0 <0.2.0-0"],
+        caret_one => ["^1.0", ">=1.0.0 <2.0.0-0"],
+        caret_minor => ["^1.2", ">=1.2.0 <2.0.0-0"],
+        caret_patch => ["^0.0.1", ">=0.0.1 <0.0.2-0"],
+        caret_with_patch =>   ["^0.1.2", ">=0.1.2 <0.2.0-0"],
+        caret_with_patch_2 => ["^1.2.3", ">=1.2.3 <2.0.0-0"],
+        tilde_one => ["~1", ">=1.0.0 <2.0.0-0"],
+        tilde_minor => ["~1.0", ">=1.0.0 <1.1.0-0"],
+        tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0-0"],
+        tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0-0"],
         grater_than_equals_one => [">=1", ">=1.0.0"],
         greater_than_one => [">1", ">=2.0.0"],
-        less_than_one_dot_two => ["<1.2", "<1.2.0"],
+        less_than_one_dot_two => ["<1.2", "<1.2.0-0"],
         greater_than_one_dot_two => [">1.2", ">=1.3.0"],
         either_one_version_or_the_other => ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
         either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
-        either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
-        either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0||>=2.0.0 <3.0.0"],
+        either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
+        either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
         any_version_asterisk => ["*", ">=0.0.0"],
         any_version_x => ["x", ">=0.0.0"],
     ];
