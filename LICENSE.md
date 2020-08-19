@@ -1,7 +1,7 @@
 ## License
 
 Licensing decisions are controlled by [Cross-License Collaborative
-Members](#members), as defined in the [cross-licensing
+Members](MEMBERS.md), as defined in the [cross-licensing
 terms](CROSS_LICENSE.md).
 
 All contributions by Members are licensed under [the Parity
