@@ -9,6 +9,8 @@ use nom::{Err, IResult};
 
 use thiserror::Error;
 
+use serde::de::{self, Deserialize, Deserializer, Visitor};
+use serde::ser::{Serialize, Serializer};
 use std::fmt;
 
 pub mod version_req;
@@ -49,6 +51,41 @@ pub struct Version {
     pre_release: Vec<Identifier>,
 }
 
+impl Serialize for Version {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for Version {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct IntegrityVisitor;
+
+        impl<'de> Visitor<'de> for IntegrityVisitor {
+            type Value = Version;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a version string")
+            }
+
+            fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                parse(v).map_err(de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_str(IntegrityVisitor)
+    }
+}
+
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
@@ -56,6 +93,15 @@ impl fmt::Display for Version {
         for (i, ident) in self.pre_release.iter().enumerate() {
             if i == 0 {
                 write!(f, "-")?;
+            } else {
+                write!(f, ".")?;
+            }
+            write!(f, "{}", ident)?;
+        }
+
+        for (i, ident) in self.build.iter().enumerate() {
+            if i == 0 {
+                write!(f, "+")?;
             } else {
                 write!(f, ".")?;
             }
@@ -251,6 +297,8 @@ mod tests {
     use super::Identifier::*;
     use super::*;
 
+    use serde_derive::{Deserialize, Serialize};
+
     #[test]
     fn trivial_version_number() {
         let v = parse("1.2.34").unwrap();
@@ -337,5 +385,49 @@ mod tests {
         let ok_version = version_string[0..255].to_string();
         let v = parse(ok_version);
         assert!(v.is_ok());
+    }
+
+    #[derive(Serialize, Deserialize, Eq, PartialEq)]
+    struct Versioned {
+        version: Version,
+    }
+
+    #[test]
+    fn read_version_from_string() {
+        let v: Versioned = serde_json::from_str(r#"{"version":"1.2.34-abc.213+2"}"#).unwrap();
+
+        assert_eq!(
+            v.version,
+            Version {
+                major: 1,
+                minor: 2,
+                patch: 34,
+                pre_release: vec![
+                    Identifier::AlphaNumeric("abc".into()),
+                    Identifier::Numeric(213)
+                ],
+                build: vec![Identifier::Numeric(2)],
+            }
+        );
+    }
+
+    #[test]
+    fn serialize_a_version_to_string() {
+        let output = serde_json::to_string(&Versioned {
+            version: Version {
+                major: 1,
+                minor: 2,
+                patch: 34,
+                pre_release: vec![
+                    Identifier::AlphaNumeric("abc".into()),
+                    Identifier::Numeric(213),
+                ],
+                build: vec![Identifier::Numeric(2)],
+            },
+        })
+        .unwrap();
+        let expected: String = r#"{"version":"1.2.34-abc.213+2"}"#.into();
+
+        assert_eq!(output, expected);
     }
 }

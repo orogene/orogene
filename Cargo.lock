@@ -1820,6 +1820,9 @@ name = "oro-node-semver"
 version = "0.1.0"
 dependencies = [
  "nom 5.1.2",
+ "serde 1.0.115",
+ "serde_derive",
+ "serde_json",
  "thiserror",
 ]
 
