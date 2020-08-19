@@ -194,7 +194,7 @@ where
                 operation,
                 version: (major, minor, patch).into(),
             }),
-            _ => panic!("Unexpected"),
+            _ => unreachable!(),
         }),
     )(input)
 }
@@ -293,7 +293,7 @@ where
                     },
                 },
             },
-            _ => unreachable!("Should not have reached here"),
+            _ => unreachable!(),
         }),
     )(input)
 }
