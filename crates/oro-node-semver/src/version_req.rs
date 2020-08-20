@@ -87,19 +87,21 @@ pub struct VersionReq {
     predicates: Vec<Range>,
 }
 
-pub fn parse<S: AsRef<str>>(input: S) -> Result<VersionReq, SemverError> {
-    let input = &input.as_ref()[..];
+impl VersionReq {
+    pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
+        let input = &input.as_ref()[..];
 
-    match all_consuming(many_predicates::<VerboseError<&str>>)(input) {
-        Ok((_, predicates)) => Ok(VersionReq { predicates }),
-        Err(err) => Err(SemverError::ParseError {
-            input: input.into(),
-            msg: match err {
-                Err::Error(e) => convert_error(input, e),
-                Err::Failure(e) => convert_error(input, e),
-                Err::Incomplete(_) => "More data was needed".into(),
-            },
-        }),
+        match all_consuming(many_predicates::<VerboseError<&str>>)(input) {
+            Ok((_, predicates)) => Ok(VersionReq { predicates }),
+            Err(err) => Err(SemverError::ParseError {
+                input: input.into(),
+                msg: match err {
+                    Err::Error(e) => convert_error(input, e),
+                    Err::Failure(e) => convert_error(input, e),
+                    Err::Incomplete(_) => "More data was needed".into(),
+                },
+            }),
+        }
     }
 }
 
@@ -507,7 +509,7 @@ mod satisfies_ranges_tests {
 
     #[test]
     fn greater_than_equals() {
-        let parsed = parse(">=1.2.3").expect("unable to parse");
+        let parsed = VersionReq::parse(">=1.2.3").expect("unable to parse");
 
         refute!(parsed.satisfies(&(0, 2, 3).into()), "major too low");
         refute!(parsed.satisfies(&(1, 1, 3).into()), "minor too low");
@@ -518,7 +520,7 @@ mod satisfies_ranges_tests {
 
     #[test]
     fn greater_than() {
-        let parsed = parse(">1.2.3").expect("unable to parse");
+        let parsed = VersionReq::parse(">1.2.3").expect("unable to parse");
 
         refute!(parsed.satisfies(&(0, 2, 3).into()), "major too low");
         refute!(parsed.satisfies(&(1, 1, 3).into()), "minor too low");
@@ -529,7 +531,7 @@ mod satisfies_ranges_tests {
 
     #[test]
     fn exact() {
-        let parsed = parse("=1.2.3").expect("unable to parse");
+        let parsed = VersionReq::parse("=1.2.3").expect("unable to parse");
 
         refute!(parsed.satisfies(&(1, 2, 2).into()), "patch too low");
         assert!(parsed.satisfies(&(1, 2, 3).into()), "exact");
@@ -538,7 +540,7 @@ mod satisfies_ranges_tests {
 
     #[test]
     fn less_than() {
-        let parsed = parse("<1.2.3").expect("unable to parse");
+        let parsed = VersionReq::parse("<1.2.3").expect("unable to parse");
 
         assert!(parsed.satisfies(&(0, 2, 3).into()), "major below");
         assert!(parsed.satisfies(&(1, 1, 3).into()), "minor below");
@@ -549,7 +551,7 @@ mod satisfies_ranges_tests {
 
     #[test]
     fn less_than_equals() {
-        let parsed = parse("<=1.2.3").expect("unable to parse");
+        let parsed = VersionReq::parse("<=1.2.3").expect("unable to parse");
 
         assert!(parsed.satisfies(&(0, 2, 3).into()), "major below");
         assert!(parsed.satisfies(&(1, 1, 3).into()), "minor below");
@@ -560,7 +562,7 @@ mod satisfies_ranges_tests {
 
     #[test]
     fn only_major() {
-        let parsed = parse("1").expect("unable to parse");
+        let parsed = VersionReq::parse("1").expect("unable to parse");
 
         refute!(parsed.satisfies(&(0, 2, 3).into()), "major below");
         assert!(parsed.satisfies(&(1, 0, 0).into()), "exact bottom of range");
@@ -584,7 +586,7 @@ mod tests {
                 fn $name() {
                     let [input, expected] = $vals;
 
-                    let parsed = parse(input).expect("unable to parse");
+                    let parsed = VersionReq::parse(input).expect("unable to parse");
 
                     assert_eq!(expected, parsed.to_string());
                 }

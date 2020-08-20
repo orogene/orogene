@@ -52,6 +52,31 @@ pub struct Version {
     pre_release: Vec<Identifier>,
 }
 
+impl Version {
+    fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
+        let input = &input.as_ref()[..];
+
+        if input.len() > MAX_LENGTH {
+            return Err(SemverError::ParseError {
+                input: input.into(),
+                msg: format!("version is longer than {} characters", MAX_LENGTH),
+            });
+        }
+
+        match all_consuming(version::<VerboseError<&str>>)(input) {
+            Ok((_, arg)) => Ok(arg),
+            Err(err) => Err(SemverError::ParseError {
+                input: input.into(),
+                msg: match err {
+                    Err::Error(e) => convert_error(input, e),
+                    Err::Failure(e) => convert_error(input, e),
+                    Err::Incomplete(_) => "More data was needed".into(),
+                },
+            }),
+        }
+    }
+}
+
 impl Serialize for Version {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
@@ -79,7 +104,7 @@ impl<'de> Deserialize<'de> for Version {
             where
                 E: de::Error,
             {
-                parse(v).map_err(de::Error::custom)
+                Version::parse(v).map_err(de::Error::custom)
             }
         }
 
@@ -173,29 +198,6 @@ impl cmp::Ord for Version {
             // if both have pre_release strings, compare the strings and return the result
             (_, _) => self.pre_release.cmp(&other.pre_release),
         }
-    }
-}
-
-pub fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
-    let input = &input.as_ref()[..];
-
-    if input.len() > MAX_LENGTH {
-        return Err(SemverError::ParseError {
-            input: input.into(),
-            msg: format!("version is longer than {} characters", MAX_LENGTH),
-        });
-    }
-
-    match all_consuming(version::<VerboseError<&str>>)(input) {
-        Ok((_, arg)) => Ok(arg),
-        Err(err) => Err(SemverError::ParseError {
-            input: input.into(),
-            msg: match err {
-                Err::Error(e) => convert_error(input, e),
-                Err::Failure(e) => convert_error(input, e),
-                Err::Incomplete(_) => "More data was needed".into(),
-            },
-        }),
     }
 }
 
@@ -342,7 +344,7 @@ mod tests {
 
     #[test]
     fn trivial_version_number() {
-        let v = parse("1.2.34").unwrap();
+        let v = Version::parse("1.2.34").unwrap();
 
         assert_eq!(
             v,
@@ -358,7 +360,7 @@ mod tests {
 
     #[test]
     fn version_with_build() {
-        let v = parse("1.2.34+123.456").unwrap();
+        let v = Version::parse("1.2.34+123.456").unwrap();
 
         assert_eq!(
             v,
@@ -374,7 +376,7 @@ mod tests {
 
     #[test]
     fn version_with_pre_release() {
-        let v = parse("1.2.34-abc.123").unwrap();
+        let v = Version::parse("1.2.34-abc.123").unwrap();
 
         assert_eq!(
             v,
@@ -390,7 +392,7 @@ mod tests {
 
     #[test]
     fn version_with_pre_release_and_build() {
-        let v = parse("1.2.34-abc.123+1").unwrap();
+        let v = Version::parse("1.2.34-abc.123+1").unwrap();
 
         assert_eq!(
             v,
@@ -536,7 +538,7 @@ mod tests {
     #[test]
     fn individual_version_component_has_an_upper_bound() {
         let out_of_range = MAX_SAFE_INTEGER + 1;
-        let v = parse(format!("1.2.{}", out_of_range));
+        let v = Version::parse(format!("1.2.{}", out_of_range));
 
         assert!(v.is_err());
     }
@@ -545,7 +547,7 @@ mod tests {
     fn version_string_limited_to_256_characters() {
         let prebuild = (0..257).map(|_| "X").collect::<Vec<_>>().join("");
         let version_string = format!("1.1.1-{}", prebuild);
-        let v = parse(version_string.clone());
+        let v = Version::parse(version_string.clone());
 
         assert!(
             v.is_err(),
@@ -553,7 +555,7 @@ mod tests {
         );
 
         let ok_version = version_string[0..255].to_string();
-        let v = parse(ok_version);
+        let v = Version::parse(ok_version);
         assert!(v.is_ok());
     }
 
