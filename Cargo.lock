@@ -1869,7 +1869,6 @@ dependencies = [
  "oro-config",
  "oro-error-code",
  "smol 0.1.18",
- "ssri",
 ]
 
 [[package]]
@@ -2521,15 +2520,14 @@ dependencies = [
 
 [[package]]
 name = "ssri"
-version = "5.0.0"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e875e58f12c33f832d09cff94b079aee84a48d8188d7a7132b3434358afb70c9"
+checksum = "f4f8005e5f8b04b5bb0dbf97d3ef4869395d70039ce61479d5ea401ba53dd597"
 dependencies = [
  "base64 0.10.1",
  "digest",
  "hex 0.3.2",
  "serde 1.0.115",
- "serde_derive",
  "sha-1",
  "sha2",
  "thiserror",
