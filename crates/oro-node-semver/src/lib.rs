@@ -14,6 +14,8 @@ use serde::ser::{Serialize, Serializer};
 use std::cmp::{self, Ordering};
 use std::fmt;
 
+pub use version_req::VersionReq;
+
 pub mod version_req;
 
 // from JavaScript: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
@@ -147,6 +149,13 @@ impl std::convert::From<(u64, u64, u64)> for Version {
             build: Vec::new(),
             pre_release: Vec::new(),
         }
+    }
+}
+
+impl std::str::FromStr for Version {
+    type Err = SemverError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Version::parse(s)
     }
 }
 

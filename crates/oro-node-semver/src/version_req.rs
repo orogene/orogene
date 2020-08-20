@@ -9,9 +9,12 @@ use nom::{Err, IResult};
 
 use std::fmt;
 
+use serde::de::{self, Deserialize, Deserializer, Visitor};
+use serde::ser::{Serialize, Serializer};
+
 use crate::{number, SemverError, Version};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum Range {
     Open(Predicate),
     Closed { upper: Predicate, lower: Predicate },
@@ -82,7 +85,7 @@ impl fmt::Display for Predicate {
  *   intersection and then splitting them at the right place
  */
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VersionReq {
     predicates: Vec<Range>,
 }
@@ -102,6 +105,50 @@ impl VersionReq {
                 },
             }),
         }
+    }
+}
+
+impl std::str::FromStr for VersionReq {
+    type Err = SemverError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        VersionReq::parse(s)
+    }
+}
+
+impl Serialize for VersionReq {
+    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Serialize VersionReq as a string.
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for VersionReq {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct VersionReqVisitor;
+
+        /// Deserialize `VersionReq` from a string.
+        impl<'de> Visitor<'de> for VersionReqVisitor {
+            type Value = VersionReq;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a SemVer version requirement as a string")
+            }
+
+            fn visit_str<E>(self, v: &str) -> ::std::result::Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                VersionReq::parse(v).map_err(de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_str(VersionReqVisitor)
     }
 }
 
@@ -175,29 +222,32 @@ where
 {
     context(
         "operation followed by version",
-        map(tuple((operation, partial_version)), |parsed| match parsed {
-            (Operation::GreaterThanEquals, (major, minor, None)) => Range::Open(Predicate {
-                operation: Operation::GreaterThanEquals,
-                version: (major, minor.unwrap_or(0), 0).into(),
-            }),
-            (Operation::GreaterThan, (major, Some(minor), None)) => Range::Open(Predicate {
-                operation: Operation::GreaterThanEquals,
-                version: (major, minor + 1, 0).into(),
-            }),
-            (Operation::GreaterThan, (major, None, None)) => Range::Open(Predicate {
-                operation: Operation::GreaterThanEquals,
-                version: (major + 1, 0, 0).into(),
-            }),
-            (Operation::LessThan, (major, minor, None)) => Range::Open(Predicate {
-                operation: Operation::LessThan,
-                version: (major, minor.unwrap_or(0), 0, 0).into(),
-            }),
-            (operation, (major, Some(minor), Some(patch))) => Range::Open(Predicate {
-                operation,
-                version: (major, minor, patch).into(),
-            }),
-            _ => unreachable!(),
-        }),
+        map(
+            tuple((operation, space0, partial_version)),
+            |parsed| match parsed {
+                (Operation::GreaterThanEquals, _, (major, minor, None)) => Range::Open(Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor.unwrap_or(0), 0).into(),
+                }),
+                (Operation::GreaterThan, _, (major, Some(minor), None)) => Range::Open(Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor + 1, 0).into(),
+                }),
+                (Operation::GreaterThan, _, (major, None, None)) => Range::Open(Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major + 1, 0, 0).into(),
+                }),
+                (Operation::LessThan, _, (major, minor, None)) => Range::Open(Predicate {
+                    operation: Operation::LessThan,
+                    version: (major, minor.unwrap_or(0), 0, 0).into(),
+                }),
+                (operation, _, (major, Some(minor), Some(patch))) => Range::Open(Predicate {
+                    operation,
+                    version: (major, minor, patch).into(),
+                }),
+                _ => unreachable!(),
+            },
+        ),
     )(input)
 }
 
@@ -256,80 +306,24 @@ where
 {
     context(
         "caret",
-        map(preceded(tag("^"), partial_version), |parsed| match parsed {
-            (0, None, None) => Range::Open(Predicate {
-                operation: Operation::LessThan,
-                version: (1, 0, 0, 0).into(),
-            }),
-            (0, Some(minor), None) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (0, minor, 0).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (0, minor + 1, 0, 0).into(),
-                },
-            },
-            (major, Some(minor), None) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor, 0).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major + 1, 0, 0, 0).into(),
-                },
-            },
-            (major, Some(minor), Some(patch)) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor, patch).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: match (major, minor, patch) {
-                        (0, 0, n) => Version::from((0, 0, n + 1, 0)),
-                        (0, n, _) => Version::from((0, n + 1, 0, 0)),
-                        (n, _, _) => Version::from((n + 1, 0, 0, 0)),
-                    },
-                },
-            },
-            _ => unreachable!(),
-        }),
-    )(input)
-}
-
-fn tilde<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
-    context(
-        "tilde",
         map(
-            tuple((preceded(tag("~"), opt(tag(">"))), partial_version)),
+            preceded(tuple((tag("^"), space0)), partial_version),
             |parsed| match parsed {
-                (Some(_gt), (major, Some(minor), Some(patch))) => Range::Closed {
+                (0, None, None) => Range::Open(Predicate {
+                    operation: Operation::LessThan,
+                    version: (1, 0, 0, 0).into(),
+                }),
+                (0, Some(minor), None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
-                        version: (major, minor, patch).into(),
+                        version: (0, minor, 0).into(),
                     },
                     upper: Predicate {
                         operation: Operation::LessThan,
-                        version: (major, minor + 1, 0, 0).into(),
+                        version: (0, minor + 1, 0, 0).into(),
                     },
                 },
-                (None, (major, Some(minor), None)) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (major, minor + 1, 0, 0).into(),
-                    },
-                },
-                (None, (major, None, None)) => Range::Closed {
+                (major, None, None) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, 0, 0).into(),
@@ -339,9 +333,98 @@ where
                         version: (major + 1, 0, 0, 0).into(),
                     },
                 },
-                _ => unreachable!("Should not have gotten here"),
+                (major, Some(minor), None) => Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, 0).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: (major + 1, 0, 0, 0).into(),
+                    },
+                },
+                (major, Some(minor), Some(patch)) => Range::Closed {
+                    lower: Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor, patch).into(),
+                    },
+                    upper: Predicate {
+                        operation: Operation::LessThan,
+                        version: match (major, minor, patch) {
+                            (0, 0, n) => Version::from((0, 0, n + 1, 0)),
+                            (0, n, _) => Version::from((0, n + 1, 0, 0)),
+                            (n, _, _) => Version::from((n + 1, 0, 0, 0)),
+                        },
+                    },
+                },
+                v => {
+                    dbg!(&v);
+                    unreachable!()
+                }
             },
         ),
+    )(input)
+}
+
+fn tilde_gt<'a, E>(input: &'a str) -> IResult<&'a str, Option<&'a str>, E>
+where
+    E: ParseError<&'a str>,
+{
+    map(
+        tuple((tag("~"), space0, opt(tag(">")), space0)),
+        |(_, _, gt, _)| gt,
+    )(input)
+}
+
+fn tilde<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
+where
+    E: ParseError<&'a str>,
+{
+    context(
+        "tilde",
+        map(tuple((tilde_gt, partial_version)), |parsed| match parsed {
+            (Some(_gt), (major, None, None)) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, 0, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major + 1, 0, 0, 0).into(),
+                },
+            },
+            (Some(_gt), (major, Some(minor), Some(patch))) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor, patch).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major, minor + 1, 0, 0).into(),
+                },
+            },
+            (None, (major, Some(minor), None)) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major, minor + 1, 0, 0).into(),
+                },
+            },
+            (None, (major, None, None)) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, 0, 0).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major + 1, 0, 0, 0).into(),
+                },
+            },
+            _ => unreachable!("Should not have gotten here"),
+        }),
     )(input)
 }
 
@@ -576,6 +659,7 @@ mod satisfies_ranges_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_derive::{Deserialize, Serialize};
 
     use pretty_assertions::assert_eq;
 
@@ -637,21 +721,21 @@ mod tests {
         either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
         any_version_asterisk => ["*", ">=0.0.0"],
         any_version_x => ["x", ">=0.0.0"],
+        whitespace_1 => [">= 1.0.0", ">=1.0.0"],
+        whitespace_2 => [">=  1.0.0", ">=1.0.0"],
+        whitespace_3 => [">=   1.0.0", ">=1.0.0"],
+        whitespace_4 => ["> 1.0.0", ">1.0.0"],
+        whitespace_5 => [">  1.0.0", ">1.0.0"],
+        whitespace_6 => ["<=   2.0.0", "<=2.0.0"],
+        whitespace_7 => ["<= 2.0.0", "<=2.0.0"],
+        whitespace_8 => ["<=  2.0.0", "<=2.0.0"],
+        whitespace_9 => ["<    2.0.0", "<2.0.0"],
+        whitespace_10 => ["<\t2.0.0", "<2.0.0"],
+        whitespace_11 => ["^ 1", ">=1.0.0 <2.0.0-0"],
+        whitespace_12 => ["~> 1", ">=1.0.0 <2.0.0-0"],
+        whitespace_13 => ["~ 1.0", ">=1.0.0 <1.1.0-0"],
     ];
     /*
-    [">= 1.0.0", ">=1.0.0"],
-    [">=  1.0.0", ">=1.0.0"],
-    [">=   1.0.0", ">=1.0.0"],
-    ["> 1.0.0", ">1.0.0"],
-    [">  1.0.0", ">1.0.0"],
-    ["<=   2.0.0", "<=2.0.0"],
-    ["<= 2.0.0", "<=2.0.0"],
-    ["<=  2.0.0", "<=2.0.0"],
-    ["<    2.0.0", "<2.0.0"],
-    ["<\t2.0.0", "<2.0.0"],
-    ["^ 1", ">=1.0.0 <2.0.0-0"],
-    ["~> 1", ">=1.0.0 <2.0.0-0"],
-    ["~ 1.0", ">=1.0.0 <1.1.0-0"],
 
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
@@ -665,4 +749,32 @@ mod tests {
     ["<X", "<0.0.0-0"],
     ["<x <* || >* 2.x", "<0.0.0-0"],
     */
+
+    #[derive(Serialize, Deserialize, Eq, PartialEq)]
+    struct WithVersionReq {
+        req: VersionReq,
+    }
+
+    #[test]
+    fn read_version_req_from_string() {
+        let v: WithVersionReq = serde_json::from_str(r#"{"req":"^1.2.3"}"#).unwrap();
+
+        assert_eq!(v.req, "^1.2.3".parse().unwrap(),);
+    }
+
+    #[test]
+    fn serialize_a_versionreq_to_string() {
+        let output = serde_json::to_string(&WithVersionReq {
+            req: VersionReq {
+                predicates: vec![Range::Open(Predicate {
+                    operation: Operation::LessThan,
+                    version: "1.2.3".parse().unwrap(),
+                })],
+            },
+        })
+        .unwrap();
+        let expected: String = r#"{"req":"<1.2.3"}"#.into();
+
+        assert_eq!(output, expected);
+    }
 }
