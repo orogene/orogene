@@ -12,6 +12,7 @@ use thiserror::Error;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 use std::fmt;
+use std::cmp::{self, Ordering};
 
 pub mod version_req;
 
@@ -25,7 +26,7 @@ pub enum SemverError {
     ParseError { input: String, msg: String },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Identifier {
     /// An identifier that's solely numbers.
     Numeric(u64),
@@ -132,6 +133,45 @@ impl std::convert::From<(u64, u64, u64, u64)> for Version {
             patch,
             build: Vec::new(),
             pre_release: vec![Identifier::Numeric(pre_release)],
+        }
+    }
+}
+
+impl cmp::PartialOrd for Version {
+    fn partial_cmp(&self, other: &Version) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl cmp::Ord for Version {
+    fn cmp(&self, other: &Version) -> cmp::Ordering {
+        match self.major.cmp(&other.major) {
+            Ordering::Equal => {}
+            //if difference in major version, just return result
+            order_result => return order_result,
+        }
+
+        match self.minor.cmp(&other.minor) {
+            Ordering::Equal => {}
+            //if difference in minor version, just return result
+            order_result => return order_result
+        }
+
+        match self.patch.cmp(&other.patch) {
+            Ordering::Equal => {}
+            //if difference in patch version, just return result
+            order_result => return order_result,
+        }
+
+        match (self.pre_release.len(), other.pre_release.len()) {
+            //if no pre_release string, they're equal
+            (0, 0) => Ordering::Equal,
+            //if other has a pre-release string, but this doesn't, this one is greater
+            (0,_) => Ordering::Greater,
+            //if this one has a pre-release string, but other doesn't this one is less than
+            (_, 0) => Ordering::Less,
+            // if both have pre_release strings, compare the strings and return the result
+            (_, _) => self.pre_release.cmp(&other.pre_release)
         }
     }
 }
@@ -362,6 +402,136 @@ mod tests {
                 build: vec![Numeric(1),]
             }
         );
+    }
+
+    #[test]
+    fn comparison_with_different_major_version() {
+        let lesser_version = Version {
+            major: 1,
+            minor: 2,
+            patch: 34,
+            pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
+            build: vec![]
+        };
+        let greater_version = Version {
+            major: 2,
+            minor: 2,
+            patch: 34,
+            pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
+            build: vec![]
+        };
+        assert_eq!(lesser_version.cmp(&greater_version), Ordering::Less);
+        assert_eq!(greater_version.cmp(&lesser_version), Ordering::Greater);
+
+    }
+    #[test]
+    fn comparison_with_different_minor_version() {
+        let lesser_version = Version {
+            major: 1,
+            minor: 2,
+            patch: 34,
+            pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
+            build: vec![]
+        };
+        let greater_version = Version {
+            major: 1,
+            minor: 3,
+            patch: 34,
+            pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
+            build: vec![]
+        };
+        assert_eq!(lesser_version.cmp(&greater_version), Ordering::Less);
+        assert_eq!(greater_version.cmp(&lesser_version), Ordering::Greater);
+    }
+
+    #[test]
+    fn comparison_with_different_patch_version() {
+        let lesser_version = Version {
+            major: 1,
+            minor: 2,
+            patch: 34,
+            pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
+            build: vec![]
+        };
+        let greater_version = Version {
+            major: 1,
+            minor: 2,
+            patch: 56,
+            pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
+            build: vec![]
+        };
+        assert_eq!(lesser_version.cmp(&greater_version), Ordering::Less);
+        assert_eq!(greater_version.cmp(&lesser_version), Ordering::Greater);
+    }
+
+    #[test]
+    //confirms the comparison matches the pre-release comparison example in the SemVer spec.
+    //ie checks that 1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0.
+    //for simplicity just checks them in order. Assumes that the transitive property holds. So if a < b & b < c then a < c. 
+    fn comparison_with_different_pre_release_version() {
+        let v1_alpha = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("alpha".into())],
+            build: vec![]
+        };
+        let v1_alpha1 = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("alpha".into()), Numeric(1)],
+            build: vec![]
+        };
+        assert_eq!(v1_alpha.cmp(&v1_alpha1), Ordering::Less);
+        let v1_alpha_beta = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("alpha".into()), AlphaNumeric("beta".into())],
+            build: vec![]
+        };
+        assert_eq!(v1_alpha1.cmp(&v1_alpha_beta), Ordering::Less);
+        let v1_beta = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("beta".into())],
+            build: vec![]
+        };
+        assert_eq!(v1_alpha_beta.cmp(&v1_beta), Ordering::Less);
+        let v1_beta2 = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("beta".into()), Numeric(2)],
+            build: vec![]
+        };
+        assert_eq!(v1_beta.cmp(&v1_beta2), Ordering::Less);
+        let v1_beta11 = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("beta".into()), Numeric(11)],
+            build: vec![]
+        };
+        assert_eq!(v1_beta2.cmp(&v1_beta11), Ordering::Less);
+        let v1_rc1 = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![AlphaNumeric("rc".into()), Numeric(1)],
+            build: vec![]
+        };
+        assert_eq!(v1_beta11.cmp(&v1_rc1), Ordering::Less);
+        let v1 = Version {
+            major: 1,
+            minor: 0,
+            patch: 0,
+            pre_release: vec![],
+            build: vec![]
+        };
+        assert_eq!(v1_rc1.cmp(&v1), Ordering::Less);
     }
 
     #[test]
