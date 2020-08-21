@@ -12,7 +12,7 @@ use std::fmt;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
-use crate::{number, SemverError, Version};
+use crate::{extras, number, Identifier, SemverError, Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Range {
@@ -202,11 +202,26 @@ where
     map(alt((tag("x"), tag("*"))), |_| ())(input)
 }
 
-fn partial_version<'a, E>(input: &'a str) -> IResult<&'a str, (u64, Option<u64>, Option<u64>), E>
+fn partial_version<'a, E>(
+    input: &'a str,
+) -> IResult<
+    &'a str,
+    (
+        u64,
+        Option<u64>,
+        Option<u64>,
+        Vec<Identifier>,
+        Vec<Identifier>,
+    ),
+    E,
+>
 where
     E: ParseError<&'a str>,
 {
-    tuple((number, maybe_dot_number, maybe_dot_number))(input)
+    map(
+        tuple((number, maybe_dot_number, maybe_dot_number, extras)),
+        |(major, minor, patch, (pre_release, build))| (major, minor, patch, pre_release, build),
+    )(input)
 }
 
 fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<u64>, E>
@@ -225,23 +240,27 @@ where
         map(
             tuple((operation, space0, partial_version)),
             |parsed| match parsed {
-                (Operation::GreaterThanEquals, _, (major, minor, None)) => Range::Open(Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor.unwrap_or(0), 0).into(),
-                }),
-                (Operation::GreaterThan, _, (major, Some(minor), None)) => Range::Open(Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor + 1, 0).into(),
-                }),
-                (Operation::GreaterThan, _, (major, None, None)) => Range::Open(Predicate {
+                (Operation::GreaterThanEquals, _, (major, minor, None, _, _)) => {
+                    Range::Open(Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor.unwrap_or(0), 0).into(),
+                    })
+                }
+                (Operation::GreaterThan, _, (major, Some(minor), None, _, _)) => {
+                    Range::Open(Predicate {
+                        operation: Operation::GreaterThanEquals,
+                        version: (major, minor + 1, 0).into(),
+                    })
+                }
+                (Operation::GreaterThan, _, (major, None, None, _, _)) => Range::Open(Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major + 1, 0, 0).into(),
                 }),
-                (Operation::LessThan, _, (major, minor, None)) => Range::Open(Predicate {
+                (Operation::LessThan, _, (major, minor, None, _, _)) => Range::Open(Predicate {
                     operation: Operation::LessThan,
                     version: (major, minor.unwrap_or(0), 0, 0).into(),
                 }),
-                (operation, _, (major, Some(minor), Some(patch))) => Range::Open(Predicate {
+                (operation, _, (major, Some(minor), Some(patch), _, _)) => Range::Open(Predicate {
                     operation,
                     version: (major, minor, patch).into(),
                 }),
@@ -309,11 +328,11 @@ where
         map(
             preceded(tuple((tag("^"), space0)), partial_version),
             |parsed| match parsed {
-                (0, None, None) => Range::Open(Predicate {
+                (0, None, None, _, _) => Range::Open(Predicate {
                     operation: Operation::LessThan,
                     version: (1, 0, 0, 0).into(),
                 }),
-                (0, Some(minor), None) => Range::Closed {
+                (0, Some(minor), None, _, _) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (0, minor, 0).into(),
@@ -323,7 +342,7 @@ where
                         version: (0, minor + 1, 0, 0).into(),
                     },
                 },
-                (major, None, None) => Range::Closed {
+                (major, None, None, _, _) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, 0, 0).into(),
@@ -333,7 +352,7 @@ where
                         version: (major + 1, 0, 0, 0).into(),
                     },
                 },
-                (major, Some(minor), None) => Range::Closed {
+                (major, Some(minor), None, _, _) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, 0).into(),
@@ -343,7 +362,7 @@ where
                         version: (major + 1, 0, 0, 0).into(),
                     },
                 },
-                (major, Some(minor), Some(patch)) => Range::Closed {
+                (major, Some(minor), Some(patch), _, _) => Range::Closed {
                     lower: Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor, patch).into(),
@@ -357,10 +376,7 @@ where
                         },
                     },
                 },
-                v => {
-                    dbg!(&v);
-                    unreachable!()
-                }
+                v => unreachable!(),
             },
         ),
     )(input)
@@ -383,7 +399,7 @@ where
     context(
         "tilde",
         map(tuple((tilde_gt, partial_version)), |parsed| match parsed {
-            (Some(_gt), (major, None, None)) => Range::Closed {
+            (Some(_gt), (major, None, None, _, _)) => Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major, 0, 0).into(),
@@ -393,7 +409,7 @@ where
                     version: (major + 1, 0, 0, 0).into(),
                 },
             },
-            (Some(_gt), (major, Some(minor), Some(patch))) => Range::Closed {
+            (Some(_gt), (major, Some(minor), Some(patch), _, _)) => Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major, minor, patch).into(),
@@ -403,7 +419,7 @@ where
                     version: (major, minor + 1, 0, 0).into(),
                 },
             },
-            (None, (major, Some(minor), Some(patch))) => Range::Closed {
+            (None, (major, Some(minor), Some(patch), _, _)) => Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major, minor, patch).into(),
@@ -413,7 +429,7 @@ where
                     version: (major, minor + 1, 0, 0).into(),
                 },
             },
-            (None, (major, Some(minor), None)) => Range::Closed {
+            (None, (major, Some(minor), None, _, _)) => Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major, minor, 0).into(),
@@ -423,7 +439,7 @@ where
                     version: (major, minor + 1, 0, 0).into(),
                 },
             },
-            (None, (major, None, None)) => Range::Closed {
+            (None, (major, None, None, _, _)) => Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major, 0, 0).into(),
@@ -463,21 +479,21 @@ where
         "hyphenated with major and minor",
         map(
             hyphenated(partial_version, partial_version),
-            |((left, maybe_l_minor, maybe_l_patch), upper)| Range::Closed {
+            |((left, maybe_l_minor, maybe_l_patch, _, _), upper)| Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (left, maybe_l_minor.unwrap_or(0), maybe_l_patch.unwrap_or(0)).into(),
                 },
                 upper: match upper {
-                    (major, None, None) => Predicate {
+                    (major, None, None, _, _) => Predicate {
                         operation: Operation::LessThan,
                         version: (major + 1, 0, 0, 0).into(),
                     },
-                    (major, Some(minor), None) => Predicate {
+                    (major, Some(minor), None, _, _) => Predicate {
                         operation: Operation::LessThan,
                         version: (major, minor + 1, 0, 0).into(),
                     },
-                    (major, Some(minor), Some(patch)) => Predicate {
+                    (major, Some(minor), Some(patch), _, _) => Predicate {
                         operation: Operation::LessThanEquals,
                         version: (major, minor, patch).into(),
                     },
@@ -495,11 +511,11 @@ where
     context(
         "major and minor",
         map(partial_version, |parsed| match parsed {
-            (major, Some(minor), Some(patch)) => Range::Open(Predicate {
+            (major, Some(minor), Some(patch), _, _) => Range::Open(Predicate {
                 operation: Operation::Exact,
                 version: (major, minor, patch).into(),
             }),
-            (major, maybe_minor, _) => Range::Closed {
+            (major, maybe_minor, _, _, _) => Range::Closed {
                 lower: lower_bound(major, maybe_minor),
                 upper: upper_bound(major, maybe_minor),
             },
