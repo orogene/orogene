@@ -459,9 +459,11 @@ pub fn exists_sync<P: AsRef<Path>>(cache: P, sri: &Integrity) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use async_std::fs as afs;
     use async_std::prelude::*;
-    use std::fs;
+    use pretty_assertions::assert_eq;
 
     #[async_attributes::test]
     async fn test_open() {

@@ -12,3 +12,4 @@ directories = "2.0.2"
 [dev-dependencies]
 tempfile = "3.1.0"
 anyhow = "1.0.24"
+pretty_assertions = "0.6.1"

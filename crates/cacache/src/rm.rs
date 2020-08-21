@@ -187,6 +187,7 @@ pub fn clear_sync<P: AsRef<Path>>(cache: P) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use async_std::task;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_remove() {

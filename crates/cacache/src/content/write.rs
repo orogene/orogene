@@ -188,7 +188,10 @@ impl Write for Writer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use std::io::Read;
+
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn basic_write() {

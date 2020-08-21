@@ -342,6 +342,7 @@ async fn bucket_entries_async(bucket: &Path) -> InternalResult<Vec<SerializableM
 mod tests {
     use super::*;
     use async_std::task;
+    use pretty_assertions::assert_eq;
 
     const MOCK_ENTRY: &str = "\n251d18a2b33264ea8655695fd23c88bd874cdea2c3dc9d8f9b7596717ad30fec\t{\"key\":\"hello\",\"integrity\":\"sha1-deadbeef\",\"time\":1234567,\"size\":0,\"metadata\":null}";
 

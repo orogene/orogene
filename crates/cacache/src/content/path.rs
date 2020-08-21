@@ -23,8 +23,11 @@ pub fn content_path(cache: &Path, sri: &Integrity) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ssri::Integrity;
+
     use std::path::Path;
+
+    use pretty_assertions::assert_eq;
+    use ssri::Integrity;
 
     #[test]
     fn basic_test() {

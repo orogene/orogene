@@ -38,6 +38,7 @@ snap = "1.0.1"
 [dev-dependencies]
 async-attributes = "1.1.1"
 criterion = "0.3.0"
+pretty_assertions = "0.6.1"
 
 [[bench]]
 name = "benchmarks"

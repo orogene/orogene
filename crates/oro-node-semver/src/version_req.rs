@@ -575,6 +575,8 @@ mod satisfies_ranges_tests {
 mod tests {
     use super::*;
 
+    use pretty_assertions::assert_eq;
+
     macro_rules! range_parse_tests {
         ($($name:ident => $vals:expr),+ ,$(,)?) => {
             $(

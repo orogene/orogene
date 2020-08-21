@@ -450,6 +450,8 @@ impl SyncWriter {
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     #[async_attributes::test]
     async fn round_trip() {
         let tmp = tempfile::tempdir().unwrap();

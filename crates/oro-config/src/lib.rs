@@ -65,6 +65,7 @@ mod tests {
     use std::fs;
 
     use anyhow::Result;
+    use pretty_assertions::assert_eq;
     use tempfile::tempdir;
 
     #[test]

@@ -297,6 +297,7 @@ mod tests {
     use super::Identifier::*;
     use super::*;
 
+    use pretty_assertions::assert_eq;
     use serde_derive::{Deserialize, Serialize};
 
     #[test]
