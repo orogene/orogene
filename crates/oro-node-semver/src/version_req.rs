@@ -403,6 +403,16 @@ where
                     version: (major, minor + 1, 0, 0).into(),
                 },
             },
+            (None, (major, Some(minor), Some(patch))) => Range::Closed {
+                lower: Predicate {
+                    operation: Operation::GreaterThanEquals,
+                    version: (major, minor, patch).into(),
+                },
+                upper: Predicate {
+                    operation: Operation::LessThan,
+                    version: (major, minor + 1, 0, 0).into(),
+                },
+            },
             (None, (major, Some(minor), None)) => Range::Closed {
                 lower: Predicate {
                     operation: Operation::GreaterThanEquals,
@@ -711,6 +721,7 @@ mod tests {
         tilde_minor => ["~1.0", ">=1.0.0 <1.1.0-0"],
         tilde_minor_2 => ["~2.4", ">=2.4.0 <2.5.0-0"],
         tilde_with_greater_than_patch => ["~>3.2.1", ">=3.2.1 <3.3.0-0"],
+        tilde_major_minor_zero => ["~1.1.0", ">=1.1.0 <1.2.0-0"],
         grater_than_equals_one => [">=1", ">=1.0.0"],
         greater_than_one => [">1", ">=2.0.0"],
         less_than_one_dot_two => ["<1.2", "<1.2.0-0"],

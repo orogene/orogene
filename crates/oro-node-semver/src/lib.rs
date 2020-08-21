@@ -213,7 +213,7 @@ impl cmp::Ord for Version {
 enum Extras {
     Build(Vec<Identifier>),
     Release(Vec<Identifier>),
-    ReleaseAndBuild(Vec<Identifier>, Vec<Identifier>),
+    ReleaseAndBuild((Vec<Identifier>, Vec<Identifier>)),
 }
 
 impl Extras {
@@ -222,7 +222,7 @@ impl Extras {
         match self {
             Release(ident) => (ident, Vec::new()),
             Build(ident) => (Vec::new(), ident),
-            ReleaseAndBuild(a, b) => (a, b),
+            ReleaseAndBuild(ident) => ident,
         }
     }
 }
@@ -238,31 +238,32 @@ where
     context(
         "version",
         map(
-            tuple((
-                version_core,
-                opt(alt((
-                    map(tuple((pre_release, build)), |(b, pr)| {
-                        Extras::ReleaseAndBuild(b, pr)
-                    }),
-                    map(pre_release, Extras::Release),
-                    map(build, Extras::Build),
-                ))),
-            )),
-            |((major, minor, patch), extras)| {
-                let (pre_release, build) = if let Some(e) = extras {
-                    e.values()
-                } else {
-                    (Vec::new(), Vec::new())
-                };
-                Version {
-                    major,
-                    minor,
-                    patch,
-                    pre_release,
-                    build,
-                }
+            tuple((version_core, extras)),
+            |((major, minor, patch), (pre_release, build))| Version {
+                major,
+                minor,
+                patch,
+                pre_release,
+                build,
             },
         ),
+    )(input)
+}
+
+fn extras<'a, E>(input: &'a str) -> IResult<&'a str, (Vec<Identifier>, Vec<Identifier>), E>
+where
+    E: ParseError<&'a str>,
+{
+    map(
+        opt(alt((
+            map(tuple((pre_release, build)), Extras::ReleaseAndBuild),
+            map(pre_release, Extras::Release),
+            map(build, Extras::Build),
+        ))),
+        |extras| match extras {
+            Some(extras) => extras.values(),
+            _ => Default::default(),
+        },
     )(input)
 }
 
