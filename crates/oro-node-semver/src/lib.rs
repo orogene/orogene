@@ -1,6 +1,8 @@
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{alphanumeric1, digit1};
+use nom::bytes::complete::take_while;
+use nom::character::complete::digit1;
+use nom::character::is_alphanumeric;
 use nom::combinator::{all_consuming, map, map_res, opt, recognize};
 use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::multi::separated_list;
@@ -14,6 +16,8 @@ use serde::ser::{Serialize, Serializer};
 use std::cmp::{self, Ordering};
 use std::fmt;
 
+pub use version_req::VersionReq;
+
 pub mod version_req;
 
 // from JavaScript: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER
@@ -26,7 +30,7 @@ pub enum SemverError {
     ParseError { input: String, msg: String },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Identifier {
     /// An identifier that's solely numbers.
     Numeric(u64),
@@ -43,13 +47,38 @@ impl fmt::Display for Identifier {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Version {
     major: u64,
     minor: u64,
     patch: u64,
     build: Vec<Identifier>,
     pre_release: Vec<Identifier>,
+}
+
+impl Version {
+    pub fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
+        let input = &input.as_ref()[..];
+
+        if input.len() > MAX_LENGTH {
+            return Err(SemverError::ParseError {
+                input: input.into(),
+                msg: format!("version is longer than {} characters", MAX_LENGTH),
+            });
+        }
+
+        match all_consuming(version::<VerboseError<&str>>)(input) {
+            Ok((_, arg)) => Ok(arg),
+            Err(err) => Err(SemverError::ParseError {
+                input: input.into(),
+                msg: match err {
+                    Err::Error(e) => convert_error(input, e),
+                    Err::Failure(e) => convert_error(input, e),
+                    Err::Incomplete(_) => "More data was needed".into(),
+                },
+            }),
+        }
+    }
 }
 
 impl Serialize for Version {
@@ -79,7 +108,7 @@ impl<'de> Deserialize<'de> for Version {
             where
                 E: de::Error,
             {
-                parse(v).map_err(de::Error::custom)
+                Version::parse(v).map_err(de::Error::custom)
             }
         }
 
@@ -122,6 +151,13 @@ impl std::convert::From<(u64, u64, u64)> for Version {
             build: Vec::new(),
             pre_release: Vec::new(),
         }
+    }
+}
+
+impl std::str::FromStr for Version {
+    type Err = SemverError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Version::parse(s)
     }
 }
 
@@ -176,33 +212,10 @@ impl cmp::Ord for Version {
     }
 }
 
-pub fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
-    let input = &input.as_ref()[..];
-
-    if input.len() > MAX_LENGTH {
-        return Err(SemverError::ParseError {
-            input: input.into(),
-            msg: format!("version is longer than {} characters", MAX_LENGTH),
-        });
-    }
-
-    match all_consuming(version::<VerboseError<&str>>)(input) {
-        Ok((_, arg)) => Ok(arg),
-        Err(err) => Err(SemverError::ParseError {
-            input: input.into(),
-            msg: match err {
-                Err::Error(e) => convert_error(input, e),
-                Err::Failure(e) => convert_error(input, e),
-                Err::Incomplete(_) => "More data was needed".into(),
-            },
-        }),
-    }
-}
-
 enum Extras {
     Build(Vec<Identifier>),
     Release(Vec<Identifier>),
-    ReleaseAndBuild(Vec<Identifier>, Vec<Identifier>),
+    ReleaseAndBuild((Vec<Identifier>, Vec<Identifier>)),
 }
 
 impl Extras {
@@ -211,7 +224,7 @@ impl Extras {
         match self {
             Release(ident) => (ident, Vec::new()),
             Build(ident) => (Vec::new(), ident),
-            ReleaseAndBuild(a, b) => (a, b),
+            ReleaseAndBuild(ident) => ident,
         }
     }
 }
@@ -227,31 +240,32 @@ where
     context(
         "version",
         map(
-            tuple((
-                version_core,
-                opt(alt((
-                    map(tuple((pre_release, build)), |(b, pr)| {
-                        Extras::ReleaseAndBuild(b, pr)
-                    }),
-                    map(pre_release, Extras::Release),
-                    map(build, Extras::Build),
-                ))),
-            )),
-            |((major, minor, patch), extras)| {
-                let (pre_release, build) = if let Some(e) = extras {
-                    e.values()
-                } else {
-                    (Vec::new(), Vec::new())
-                };
-                Version {
-                    major,
-                    minor,
-                    patch,
-                    pre_release,
-                    build,
-                }
+            tuple((version_core, extras)),
+            |((major, minor, patch), (pre_release, build))| Version {
+                major,
+                minor,
+                patch,
+                pre_release,
+                build,
             },
         ),
+    )(input)
+}
+
+fn extras<'a, E>(input: &'a str) -> IResult<&'a str, (Vec<Identifier>, Vec<Identifier>), E>
+where
+    E: ParseError<&'a str>,
+{
+    map(
+        opt(alt((
+            map(tuple((pre_release, build)), Extras::ReleaseAndBuild),
+            map(pre_release, Extras::Release),
+            map(build, Extras::Build),
+        ))),
+        |extras| match extras {
+            Some(extras) => extras.values(),
+            _ => Default::default(),
+        },
     )(input)
 }
 
@@ -294,17 +308,26 @@ fn identifier<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
 where
     E: ParseError<&'a str>,
 {
-    context(
-        "identifier",
-        alt((
-            map(digit1, |res: &str| {
-                let val: u64 = str::parse(res).unwrap();
-                Identifier::Numeric(val)
-            }),
-            map(alphanumeric1, |res: &str| {
-                Identifier::AlphaNumeric(res.to_string())
-            }),
-        )),
+    context("identifier", alt((numeric, alphannumeric_ident)))(input)
+}
+
+fn numeric<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
+where
+    E: ParseError<&'a str>,
+{
+    map(digit1, |res: &str| {
+        let val: u64 = str::parse(res).unwrap();
+        Identifier::Numeric(val)
+    })(input)
+}
+
+fn alphannumeric_ident<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
+where
+    E: ParseError<&'a str>,
+{
+    map(
+        take_while(|x: char| is_alphanumeric(x as u8) || x == '-'),
+        |s: &str| Identifier::AlphaNumeric(s.to_string()),
     )(input)
 }
 
@@ -342,7 +365,7 @@ mod tests {
 
     #[test]
     fn trivial_version_number() {
-        let v = parse("1.2.34").unwrap();
+        let v = Version::parse("1.2.34").unwrap();
 
         assert_eq!(
             v,
@@ -358,7 +381,7 @@ mod tests {
 
     #[test]
     fn version_with_build() {
-        let v = parse("1.2.34+123.456").unwrap();
+        let v = Version::parse("1.2.34+123.456").unwrap();
 
         assert_eq!(
             v,
@@ -374,7 +397,7 @@ mod tests {
 
     #[test]
     fn version_with_pre_release() {
-        let v = parse("1.2.34-abc.123").unwrap();
+        let v = Version::parse("1.2.34-abc.123").unwrap();
 
         assert_eq!(
             v,
@@ -390,7 +413,7 @@ mod tests {
 
     #[test]
     fn version_with_pre_release_and_build() {
-        let v = parse("1.2.34-abc.123+1").unwrap();
+        let v = Version::parse("1.2.34-abc.123+1").unwrap();
 
         assert_eq!(
             v,
@@ -536,7 +559,7 @@ mod tests {
     #[test]
     fn individual_version_component_has_an_upper_bound() {
         let out_of_range = MAX_SAFE_INTEGER + 1;
-        let v = parse(format!("1.2.{}", out_of_range));
+        let v = Version::parse(format!("1.2.{}", out_of_range));
 
         assert!(v.is_err());
     }
@@ -545,7 +568,7 @@ mod tests {
     fn version_string_limited_to_256_characters() {
         let prebuild = (0..257).map(|_| "X").collect::<Vec<_>>().join("");
         let version_string = format!("1.1.1-{}", prebuild);
-        let v = parse(version_string.clone());
+        let v = Version::parse(version_string.clone());
 
         assert!(
             v.is_err(),
@@ -553,7 +576,7 @@ mod tests {
         );
 
         let ok_version = version_string[0..255].to_string();
-        let v = parse(ok_version);
+        let v = Version::parse(ok_version);
         assert!(v.is_ok());
     }
 

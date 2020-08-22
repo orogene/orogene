@@ -4,18 +4,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+use oro_node_semver::Version;
+
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Packument {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub versions: HashMap<oro_semver::Version, Manifest>,
+    pub versions: HashMap<Version, Manifest>,
     pub author: Option<Human>,
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(default, rename = "dist-tags")]
-    pub tags: HashMap<String, oro_semver::Version>,
+    pub tags: HashMap<String, Version>,
     #[serde(default)]
     pub maintainers: Vec<Human>,
     #[serde(default)]
@@ -29,7 +31,7 @@ pub struct Packument {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Manifest {
     pub name: String,
-    pub version: oro_semver::Version,
+    pub version: Version,
     pub description: Option<String>,
     pub license: Option<String>,
     pub licence: Option<String>,

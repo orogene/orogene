@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use oro_error_code::OroErrCode;
-use oro_semver::{Version, VersionReq as Range};
+use oro_node_semver::{Version, VersionReq as Range};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

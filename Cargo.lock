@@ -593,7 +593,6 @@ dependencies = [
  "log",
  "oro-command",
  "oro-error-code",
- "oro-semver",
  "oro-tree",
  "rogga",
  "serde_json",
@@ -1762,7 +1761,7 @@ name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "oro-semver",
+ "oro-node-semver",
  "package-arg",
  "rogga",
  "thiserror",
@@ -1835,7 +1834,7 @@ dependencies = [
  "anyhow",
  "derive_builder",
  "nom 5.1.2",
- "oro-semver",
+ "oro-node-semver",
  "pretty_assertions",
  "serde 1.0.115",
  "serde_json",
@@ -1871,7 +1870,7 @@ name = "oro-tree"
 version = "0.1.0"
 dependencies = [
  "memmap",
- "oro-semver",
+ "oro-node-semver",
  "serde 1.0.115",
  "serde_json",
  "ssri",
@@ -1921,7 +1920,7 @@ version = "0.1.0"
 dependencies = [
  "nom 5.1.2",
  "oro-error-code",
- "oro-semver",
+ "oro-node-semver",
  "percent-encoding",
  "thiserror",
  "url",
@@ -2252,7 +2251,7 @@ dependencies = [
  "mkdirp",
  "oro-client",
  "oro-error-code",
- "oro-semver",
+ "oro-node-semver",
  "package-arg",
  "serde 1.0.115",
  "serde_json",

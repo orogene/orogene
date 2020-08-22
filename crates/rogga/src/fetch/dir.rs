@@ -13,6 +13,8 @@ use crate::error::{Error, Internal, Result};
 use crate::package::{Package, PackageRequest};
 use crate::packument::{Dist, Manifest, Packument};
 
+use oro_node_semver::Version;
+
 pub struct DirFetcher {
     name: Option<String>,
     dir: PathBuf,
@@ -92,7 +94,7 @@ impl PackageFetcher for DirFetcher {
 #[derive(Serialize, Deserialize)]
 struct PkgJson {
     name: Option<String>,
-    version: Option<oro_semver::Version>,
+    version: Option<Version>,
     description: Option<String>,
 }
 
@@ -111,8 +113,7 @@ impl PkgJson {
                 None
             }
         }).ok_or_else(|| Error::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
-        let version =
-            version.unwrap_or_else(|| oro_semver::Version::parse("0.0.0").expect("Oops, typo"));
+        let version = version.unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         let mut packument = Packument {
             name: Some(name.clone()),
             description: description.clone(),

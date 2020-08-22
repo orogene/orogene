@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use derive_builder::Builder;
 use error::{Internal, Result};
-use oro_semver::{Version, VersionReq};
+use oro_node_semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -577,7 +577,7 @@ mod tests {
   "version": "3.2.1",
   "private": false,
   "dependencies": {
-    "bar": "> 3.2.1"
+    "bar": ">3.2.1"
   },
   "browser": true,
   "name": "new-name",

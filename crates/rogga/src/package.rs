@@ -4,7 +4,7 @@ use async_std::sync::RwLock;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Url;
-use oro_semver::Version;
+use oro_node_semver::Version;
 use package_arg::PackageArg;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
