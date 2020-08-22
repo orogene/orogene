@@ -9,7 +9,7 @@ use super::PackageFetcher;
 
 use crate::error::{Error, Internal, Result};
 use crate::package::{Package, PackageRequest, PackageResolution};
-use crate::packument::{Manifest, Packument};
+use crate::packument::{Packument, VersionMetadata};
 
 pub struct RegistryFetcher {
     client: Arc<Mutex<OroClient>>,
@@ -58,7 +58,7 @@ impl PackageFetcher for RegistryFetcher {
         }
     }
 
-    async fn manifest(&mut self, pkg: &Package) -> Result<Manifest> {
+    async fn manifest(&mut self, pkg: &Package) -> Result<VersionMetadata> {
         let wanted = match pkg.resolved {
             PackageResolution::Npm { ref version, .. } => version,
             _ => panic!("How did a non-Npm resolution get here?"),
@@ -69,7 +69,7 @@ impl PackageFetcher for RegistryFetcher {
             .send(opts)
             .await
             .with_context(|| "Failed to get manifest.".into())?
-            .body_json::<Manifest>()
+            .body_json::<VersionMetadata>()
             .await
             .map_err(|e| Error::MiscError(e.to_string()))?;
         Ok(info)

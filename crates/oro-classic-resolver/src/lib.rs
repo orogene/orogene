@@ -128,7 +128,11 @@ impl PackageResolver for ClassicResolver {
         target
             .and_then(|v| packument.versions.get(&v))
             .map(|v| PackageResolution::Npm {
-                version: v.version.clone(),
+                version: v
+                    .manifest
+                    .version
+                    .clone()
+                    .unwrap_or_else(|| "0.0.0".parse().unwrap()),
                 tarball: v.dist.tarball.clone(),
             })
             .ok_or_else(|| ResolverError::NoVersion)

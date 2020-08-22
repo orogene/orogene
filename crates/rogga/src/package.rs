@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
-use crate::packument::{Manifest, Packument};
+use crate::packument::{Packument, VersionMetadata};
 
 /// A package request from which more information can be derived. PackageRequest objects can be resolved into a `Package` by using a `PackageResolver`
 pub struct PackageRequest {
@@ -83,7 +83,7 @@ pub struct Package {
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 impl Package {
-    pub async fn manifest(&self) -> Result<Manifest> {
+    pub async fn manifest(&self) -> Result<VersionMetadata> {
         self.fetcher.write().await.manifest(&self).await
     }
 

@@ -5,7 +5,8 @@ use colored::*;
 use humansize::{file_size_opts, FileSize};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
-use rogga::{Bin, Human, Manifest, Rogga};
+use oro_manifest::{Bin, OroManifest, PersonField};
+use rogga::{Human, Rogga, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
@@ -41,19 +42,23 @@ impl OroCommand for ViewCmd {
             // the packument and the manifest?
             println!("{}", serde_json::to_string_pretty(&manifest)?);
         } else {
-            let Manifest {
-                ref name,
-                ref description,
-                ref version,
-                ref license,
-                ref licence,
-                ref dependencies,
-                ref homepage,
-                ref keywords,
-                ref bin,
+            let VersionMetadata {
+                manifest:
+                    OroManifest {
+                        ref name,
+                        ref description,
+                        ref version,
+                        ref license,
+                        ref dependencies,
+                        ref homepage,
+                        ref keywords,
+                        ref bin,
+                        ..
+                    },
                 ref npm_user,
                 ref dist,
                 ref deprecated,
+                ref maintainers,
                 ..
             } = manifest;
 
@@ -62,11 +67,19 @@ impl OroCommand for ViewCmd {
             // name@version | license | deps: 123 | releases: 123
             println!(
                 "{}@{} | {} | deps: {} | releases: {}",
-                name.bright_green().underline(),
-                version.to_string().bright_green().underline(),
+                name.clone()
+                    .unwrap_or_else(|| String::from(""))
+                    .bright_green()
+                    .underline(),
+                version
+                    .clone()
+                    .unwrap_or_else(|| "0.0.0".parse().unwrap())
+                    .to_string()
+                    .bright_green()
+                    .underline(),
                 license
                     .clone()
-                    .unwrap_or_else(|| licence.clone().unwrap_or_else(|| "Proprietary".to_string()))
+                    .unwrap_or_else(|| "Proprietary".to_string())
                     .green(),
                 dependencies.len().to_string().cyan(),
                 packument.versions.len().to_string().yellow(),
@@ -104,8 +117,8 @@ impl OroCommand for ViewCmd {
             // TODO: directories.bin? (oof)
             if let Some(bin) = bin {
                 let bins = match bin {
-                    Bin::Str(_) => vec![name],
-                    Bin::Hash(bins) => bins.keys().collect::<Vec<&String>>(),
+                    Bin::Str(_) => vec![name.clone().unwrap_or_else(|| String::from(""))],
+                    Bin::Hash(bins) => bins.keys().cloned().collect::<Vec<String>>(),
                 };
                 println!(
                     "bins: {}\n",
@@ -161,20 +174,42 @@ impl OroCommand for ViewCmd {
 
             // maintainers:
             // - Alex <something@email.com>
-            if !packument.maintainers.is_empty() {
+            if !maintainers.is_empty() {
                 println!("maintainers:");
-                for Human { name, email } in packument.maintainers.iter() {
-                    print!("- {}", name.yellow());
-                    if let Some(email) = email {
-                        print!(" <{}>", email.cyan());
+                for person in maintainers.iter() {
+                    match person {
+                        PersonField::Str(string) => {
+                            println!("- {}", string.yellow());
+                        }
+                        PersonField::Obj {
+                            ref name,
+                            ref email,
+                            ref url,
+                        } => {
+                            print!("-");
+                            if let Some(name) = name {
+                                print!(" {}", name);
+                            }
+                            if let Some(email) = email {
+                                print!(" <{}>", email.cyan());
+                            }
+                            if let Some(url) = url {
+                                print!(" ({})", url.cyan());
+                            }
+                            println!();
+                        }
                     }
-                    println!();
                 }
                 println!();
             }
 
             // published N days ago by Foo
-            if let Some(time) = packument.time.get(&version.to_string()) {
+            if let Some(time) = packument.time.get(
+                &version
+                    .clone()
+                    .unwrap_or_else(|| "0.0.0".parse().unwrap())
+                    .to_string(),
+            ) {
                 if let Some(Human { name, email }) = npm_user {
                     let human = chrono_humanize::HumanTime::from(
                         chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())?,

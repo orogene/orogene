@@ -12,6 +12,7 @@ oro-error-code = { path = "../oro-error-code" }
 package-arg = { path = "../package-arg" }
 cacache = { path = "../cacache", version = "8.0.0" }
 oro-node-semver = { path = "../oro-node-semver" }
+oro-manifest = { path = "../oro-manifest" }
 
 async-tar = "0.2.0"
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }

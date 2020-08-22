@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use derive_builder::Builder;
 use error::{Internal, Result};
-use oro_node_semver::{Version, VersionReq};
+use oro_node_semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -13,7 +13,7 @@ pub use error::Error;
 
 mod error;
 
-#[derive(Builder, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Builder, Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OroManifest {
     #[builder(setter(into, strip_option), default)]
@@ -91,7 +91,8 @@ pub struct OroManifest {
 
     #[serde(default)]
     #[builder(default)]
-    pub engines: HashMap<String, VersionReq>,
+    // TODO: VersionReq needs to support more syntaxes before we can make this a VersionReq value
+    pub engines: HashMap<String, String>,
 
     #[serde(default)]
     #[builder(default)]
@@ -112,19 +113,19 @@ pub struct OroManifest {
     // Deps
     #[serde(default)]
     #[builder(default)]
-    pub dependencies: HashMap<String, VersionReq>,
+    pub dependencies: HashMap<String, String>,
 
     #[serde(default)]
     #[builder(default)]
-    pub dev_dependencies: HashMap<String, VersionReq>,
+    pub dev_dependencies: HashMap<String, String>,
 
     #[serde(default)]
     #[builder(default)]
-    pub optional_dependencies: HashMap<String, VersionReq>,
+    pub optional_dependencies: HashMap<String, String>,
 
     #[serde(default)]
     #[builder(default)]
-    pub peer_dependencies: HashMap<String, VersionReq>,
+    pub peer_dependencies: HashMap<String, String>,
 
     #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies")]
     #[builder(default)]
@@ -340,7 +341,7 @@ mod tests {
 }
         "#;
         let mut deps = HashMap::new();
-        deps.insert(String::from("foo"), VersionReq::parse("^3.2.1")?);
+        deps.insert(String::from("foo"), String::from("^3.2.1"));
         let parsed = serde_json::from_str::<OroManifest>(&string)?;
         assert_eq!(
             parsed,
@@ -577,7 +578,7 @@ mod tests {
   "version": "3.2.1",
   "private": false,
   "dependencies": {
-    "bar": ">3.2.1"
+    "bar": "> 3.2.1"
   },
   "browser": true,
   "name": "new-name",

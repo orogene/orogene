@@ -4,58 +4,36 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+use oro_manifest::{OroManifest, PersonField};
 use oro_node_semver::Version;
 
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Packument {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub versions: HashMap<Version, Manifest>,
-    pub author: Option<Human>,
+    pub versions: HashMap<Version, VersionMetadata>,
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(default, rename = "dist-tags")]
     pub tags: HashMap<String, Version>,
-    #[serde(default)]
-    pub maintainers: Vec<Human>,
-    #[serde(default)]
-    pub users: HashMap<String, bool>,
-
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
 }
 
 /// A manifest for an individual package version.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Manifest {
-    pub name: String,
-    pub version: Version,
-    pub description: Option<String>,
-    pub license: Option<String>,
-    pub licence: Option<String>,
-    pub homepage: Option<Url>,
-    pub bin: Option<Bin>,
+pub struct VersionMetadata {
+    #[serde(default)]
+    pub maintainers: Vec<PersonField>,
     #[serde(rename = "_npmUser")]
     pub npm_user: Option<Human>,
-    #[serde(default)]
-    pub dependencies: HashMap<String, String>,
-    #[serde(default, rename = "devDependencies")]
-    pub dev_dependencies: HashMap<String, String>,
-    #[serde(default, rename = "optionalDependencies")]
-    pub optional_dependencies: HashMap<String, String>,
-    #[serde(default, rename = "peerDependencies")]
-    pub peer_dependencies: HashMap<String, String>,
     pub dist: Dist,
     #[serde(rename = "_hasShrinkwrap")]
     pub has_shrinkwrap: Option<bool>,
-    #[serde(default)]
-    pub keywords: Vec<String>,
     pub deprecated: Option<String>,
 
     #[serde(flatten)]
-    pub rest: HashMap<String, Value>,
+    pub manifest: OroManifest,
 }
 
 /// Representation for the `bin` field in package manifests.

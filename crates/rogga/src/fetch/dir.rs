@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Url;
+use oro_manifest::OroManifestBuilder;
 use package_arg::PackageArg;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +12,7 @@ use super::PackageFetcher;
 
 use crate::error::{Error, Internal, Result};
 use crate::package::{Package, PackageRequest};
-use crate::packument::{Dist, Manifest, Packument};
+use crate::packument::{Dist, Packument, VersionMetadata};
 
 use oro_node_semver::Version;
 
@@ -56,6 +57,13 @@ impl PackageFetcher for DirFetcher {
             self.name = Some(
                 self.packument_from_spec(spec)
                     .await?
+                    .versions
+                    .iter()
+                    .next()
+                    .unwrap()
+                    .1
+                    .manifest
+                    .clone()
                     .name
                     .unwrap_or_else(|| {
                         if let Some(name) = path.file_name() {
@@ -74,7 +82,7 @@ impl PackageFetcher for DirFetcher {
         }
     }
 
-    async fn manifest(&mut self, _pkg: &Package) -> Result<Manifest> {
+    async fn manifest(&mut self, _pkg: &Package) -> Result<VersionMetadata> {
         unimplemented!()
     }
 
@@ -100,12 +108,7 @@ struct PkgJson {
 
 impl PkgJson {
     pub fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument> {
-        let PkgJson {
-            name,
-            version,
-            description,
-            ..
-        } = self;
+        let PkgJson { name, version, .. } = self;
         let name = name.or_else(|| {
             if let Some(name) = path.as_ref().file_name() {
                 Some(name.to_string_lossy().into())
@@ -115,31 +118,17 @@ impl PkgJson {
         }).ok_or_else(|| Error::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
         let version = version.unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         let mut packument = Packument {
-            name: Some(name.clone()),
-            description: description.clone(),
             versions: HashMap::new(),
-            author: None,
             time: HashMap::new(),
             tags: HashMap::new(),
-            maintainers: Vec::new(),
-            users: HashMap::new(),
             rest: HashMap::new(),
         };
-        let manifest = Manifest {
-            name,
-            version: version.clone(),
-            description,
-            // TODO: fill these in from PkgJson, too.
-            bin: None,
-            license: None,
-            licence: None,
-            homepage: None,
-            dependencies: HashMap::new(),
-            dev_dependencies: HashMap::new(),
-            optional_dependencies: HashMap::new(),
-            peer_dependencies: HashMap::new(),
-            keywords: Vec::new(),
-            // Other fields
+        let manifest = OroManifestBuilder::default()
+            .name(name)
+            .version(version.clone())
+            .build()
+            .unwrap();
+        let version_meta = VersionMetadata {
             dist: Dist {
                 shasum: "".into(),
                 tarball: Url::parse(&format!("file:{}", path.as_ref().display())).to_internal()?,
@@ -152,11 +141,12 @@ impl PkgJson {
             },
             npm_user: None,
             has_shrinkwrap: None,
+            maintainers: Vec::new(),
             deprecated: None,
-            rest: HashMap::new(),
+            manifest,
         };
         packument.tags.insert("latest".into(), version.clone());
-        packument.versions.insert(version, manifest);
+        packument.versions.insert(version, version_meta);
         Ok(packument)
     }
 }
