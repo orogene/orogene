@@ -260,10 +260,18 @@ where
                     operation: Operation::LessThan,
                     version: (major, minor.unwrap_or(0), 0, 0).into(),
                 }),
-                (operation, _, (major, Some(minor), Some(patch), _, _)) => Range::Open(Predicate {
-                    operation,
-                    version: (major, minor, patch).into(),
-                }),
+                (operation, _, (major, Some(minor), Some(patch), pre_release, build)) => {
+                    Range::Open(Predicate {
+                        operation,
+                        version: Version {
+                            major,
+                            minor,
+                            patch,
+                            pre_release,
+                            build,
+                        },
+                    })
+                }
                 _ => unreachable!(),
             },
         ),
@@ -376,7 +384,7 @@ where
                         },
                     },
                 },
-                v => unreachable!(),
+                _ => unreachable!(),
             },
         ),
     )(input)
@@ -742,6 +750,7 @@ mod tests {
         greater_than_one => [">1", ">=2.0.0"],
         less_than_one_dot_two => ["<1.2", "<1.2.0-0"],
         greater_than_one_dot_two => [">1.2", ">=1.3.0"],
+        greater_than_with_prerelease => [">1.1.0-beta-10", ">1.1.0-beta-10"],
         either_one_version_or_the_other => ["0.1.20 || 1.2.4", "0.1.20||1.2.4"],
         either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
         either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],

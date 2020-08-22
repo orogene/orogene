@@ -1,6 +1,8 @@
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{alphanumeric1, digit1};
+use nom::bytes::complete::take_while;
+use nom::character::complete::digit1;
+use nom::character::is_alphanumeric;
 use nom::combinator::{all_consuming, map, map_res, opt, recognize};
 use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::multi::separated_list;
@@ -306,17 +308,26 @@ fn identifier<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
 where
     E: ParseError<&'a str>,
 {
-    context(
-        "identifier",
-        alt((
-            map(digit1, |res: &str| {
-                let val: u64 = str::parse(res).unwrap();
-                Identifier::Numeric(val)
-            }),
-            map(alphanumeric1, |res: &str| {
-                Identifier::AlphaNumeric(res.to_string())
-            }),
-        )),
+    context("identifier", alt((numeric, alphannumeric_ident)))(input)
+}
+
+fn numeric<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
+where
+    E: ParseError<&'a str>,
+{
+    map(digit1, |res: &str| {
+        let val: u64 = str::parse(res).unwrap();
+        Identifier::Numeric(val)
+    })(input)
+}
+
+fn alphannumeric_ident<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
+where
+    E: ParseError<&'a str>,
+{
+    map(
+        take_while(|x: char| is_alphanumeric(x as u8) || x == '-'),
+        |s: &str| Identifier::AlphaNumeric(s.to_string()),
     )(input)
 }
 
