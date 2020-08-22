@@ -113,8 +113,7 @@ impl PkgJson {
                 None
             }
         }).ok_or_else(|| Error::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
-        let version =
-            version.unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
+        let version = version.unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         let mut packument = Packument {
             name: Some(name.clone()),
             description: description.clone(),

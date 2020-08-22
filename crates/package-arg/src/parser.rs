@@ -13,7 +13,6 @@ use nom::multi::{many0, many1};
 use nom::sequence::{delimited, preceded, tuple};
 use nom::{Err, IResult};
 
-
 use crate::types::{PackageArg, PackageArgError, VersionReq};
 
 const JS_ENCODED: &AsciiSet = {

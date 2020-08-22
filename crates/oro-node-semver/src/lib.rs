@@ -47,7 +47,7 @@ impl fmt::Display for Identifier {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash,PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Version {
     major: u64,
     minor: u64,

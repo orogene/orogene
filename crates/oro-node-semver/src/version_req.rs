@@ -211,19 +211,15 @@ where
     map(alt((tag("x"), tag("*"))), |_| ())(input)
 }
 
-fn partial_version<'a, E>(
-    input: &'a str,
-) -> IResult<
-    &'a str,
-    (
-        u64,
-        Option<u64>,
-        Option<u64>,
-        Vec<Identifier>,
-        Vec<Identifier>,
-    ),
-    E,
->
+type PartialVersion = (
+    u64,
+    Option<u64>,
+    Option<u64>,
+    Vec<Identifier>,
+    Vec<Identifier>,
+);
+
+fn partial_version<'a, E>(input: &'a str) -> IResult<&'a str, PartialVersion, E>
 where
     E: ParseError<&'a str>,
 {
