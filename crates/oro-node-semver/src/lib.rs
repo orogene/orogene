@@ -30,7 +30,7 @@ pub enum SemverError {
     ParseError { input: String, msg: String },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Identifier {
     /// An identifier that's solely numbers.
     Numeric(u64),
@@ -47,7 +47,7 @@ impl fmt::Display for Identifier {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash,PartialEq)]
 pub struct Version {
     major: u64,
     minor: u64,
@@ -57,7 +57,7 @@ pub struct Version {
 }
 
 impl Version {
-    fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
+    pub fn parse<S: AsRef<str>>(input: S) -> Result<Version, SemverError> {
         let input = &input.as_ref()[..];
 
         if input.len() > MAX_LENGTH {

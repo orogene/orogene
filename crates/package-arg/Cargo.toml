@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 oro-error-code = { path = "../oro-error-code" }
-oro-semver = { path = "../oro-semver" }
+oro-node-semver = { path = "../oro-node-semver" }
 
 url = "2.1.0"
 nom = "5.0.1"

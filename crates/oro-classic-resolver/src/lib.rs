@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use oro_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
+use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use package_arg::{PackageArg, VersionReq};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 use thiserror::Error;
@@ -96,7 +96,7 @@ impl PackageResolver for ClassicResolver {
                 PackageArg::Npm {
                     requested: Some(VersionReq::Range(range)),
                     ..
-                } => range.matches(tag_version.as_ref().unwrap()),
+                } => range.satisfies(tag_version.as_ref().unwrap()),
                 _ => false,
             }
         {
@@ -139,5 +139,5 @@ fn max_satisfying<'a>(
     versions: impl Iterator<Item = &'a SemVerVersion>,
     range: &SemVerRange,
 ) -> Option<&'a SemVerVersion> {
-    versions.filter(|v| range.matches(*v)).max()
+    versions.filter(|v| range.satisfies(*v)).max()
 }

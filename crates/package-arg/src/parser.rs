@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use oro_error_code::OroErrCode as ErrCode;
+use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 
 use nom::branch::alt;
@@ -11,6 +12,7 @@ use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::multi::{many0, many1};
 use nom::sequence::{delimited, preceded, tuple};
 use nom::{Err, IResult};
+
 
 use crate::types::{PackageArg, PackageArgError, VersionReq};
 
@@ -166,19 +168,15 @@ fn semver_version<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
 where
     E: ParseError<&'a str>,
 {
-    let (input, version) = map_res(take_till1(|_| false), oro_semver::Version::parse)(input)?;
+    let (input, version) = map_res(take_till1(|_| false), SemVerVersion::parse)(input)?;
     Ok((input, VersionReq::Version(version)))
-}
-
-fn node_compatible_range(input: &str) -> Result<oro_semver::VersionReq, oro_semver::ReqParseError> {
-    oro_semver::VersionReq::parse_compat(input, oro_semver::Compat::Node)
 }
 
 fn semver_range<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
 where
     E: ParseError<&'a str>,
 {
-    let (input, range) = map_res(take_till1(|_| false), node_compatible_range)(input)?;
+    let (input, range) = map_res(take_till1(|_| false), SemVerVersionReq::parse)(input)?;
     Ok((input, VersionReq::Range(range)))
 }
 

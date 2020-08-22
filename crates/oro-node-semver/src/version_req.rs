@@ -91,6 +91,15 @@ pub struct VersionReq {
 }
 
 impl VersionReq {
+    pub fn any() -> Self {
+        VersionReq {
+            predicates: vec![Range::Open(Predicate {
+                operation: Operation::GreaterThanEquals,
+                version: "0.0.0-0".parse().unwrap(),
+            })],
+        }
+    }
+
     pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
         let input = &input.as_ref()[..];
 
