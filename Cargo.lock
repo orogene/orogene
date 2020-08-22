@@ -1835,7 +1835,7 @@ dependencies = [
  "anyhow",
  "derive_builder",
  "nom 5.1.2",
- "oro-semver",
+ "oro-node-semver",
  "pretty_assertions",
  "serde 1.0.115",
  "serde_json",
