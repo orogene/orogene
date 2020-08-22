@@ -243,29 +243,29 @@ where
     context(
         "operation followed by version",
         map(
-            tuple((operation, space0, partial_version)),
+            tuple((operation, preceded(space0, partial_version))),
             |parsed| match parsed {
-                (Operation::GreaterThanEquals, _, (major, minor, None, _, _)) => {
+                (Operation::GreaterThanEquals, (major, minor, None, _, _)) => {
                     Range::Open(Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor.unwrap_or(0), 0).into(),
                     })
                 }
-                (Operation::GreaterThan, _, (major, Some(minor), None, _, _)) => {
+                (Operation::GreaterThan, (major, Some(minor), None, _, _)) => {
                     Range::Open(Predicate {
                         operation: Operation::GreaterThanEquals,
                         version: (major, minor + 1, 0).into(),
                     })
                 }
-                (Operation::GreaterThan, _, (major, None, None, _, _)) => Range::Open(Predicate {
+                (Operation::GreaterThan, (major, None, None, _, _)) => Range::Open(Predicate {
                     operation: Operation::GreaterThanEquals,
                     version: (major + 1, 0, 0).into(),
                 }),
-                (Operation::LessThan, _, (major, minor, None, _, _)) => Range::Open(Predicate {
+                (Operation::LessThan, (major, minor, None, _, _)) => Range::Open(Predicate {
                     operation: Operation::LessThan,
                     version: (major, minor.unwrap_or(0), 0, 0).into(),
                 }),
-                (operation, _, (major, Some(minor), Some(patch), pre_release, build)) => {
+                (operation, (major, Some(minor), Some(patch), pre_release, build)) => {
                     Range::Open(Predicate {
                         operation,
                         version: Version {
