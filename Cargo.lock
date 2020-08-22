@@ -1871,7 +1871,7 @@ name = "oro-tree"
 version = "0.1.0"
 dependencies = [
  "memmap",
- "oro-semver",
+ "oro-node-semver",
  "serde 1.0.115",
  "serde_json",
  "ssri",

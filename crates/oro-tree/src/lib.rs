@@ -1,5 +1,5 @@
 use memmap::MmapOptions;
-use oro_semver::Version;
+use oro_node_semver::Version;
 use serde::{
     de::{Deserializer, Error as SerdeError},
     Deserialize,
