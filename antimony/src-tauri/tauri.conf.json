@@ -2,7 +2,7 @@
   "ctx": {},
   "tauri": {
     "embeddedServer": {
-      "active": true
+      "active": false
     },
     "bundle": {
       "active": true,
@@ -33,7 +33,7 @@
       "exceptionDomain": ""
     },
     "allowlist": {
-      "all": true
+      "event": true
     },
     "window": {
       "title": "Tauri App",
