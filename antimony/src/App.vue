@@ -2,14 +2,19 @@
   <div id="app">
     <img alt="Vue logo" src="./assets/logo.png">
     <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
-    <button @click="sayHello()">Hello</button>
+    <button @click="sayHelloBlocking()">Hello Blocking</button>
+    <button @click="sayHelloAsync()">Hello Async</button>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
-import { invoke } from 'tauri/api/tauri'
+import { invoke, promisified } from 'tauri/api/tauri'
+
+interface AsyncEchoResponse {
+  msg: string
+}
 
 export default defineComponent({
   name: 'App',
@@ -17,12 +22,19 @@ export default defineComponent({
     HelloWorld
   },
   methods: {
-    sayHello () {
-      console.log('hello!')
+    sayHelloBlocking () {
       invoke({
-        cmd: 'myCustomCommand',
-        argument: 'hello from js!'
+        cmd: 'blockingEcho',
+        msg: 'blocking hello from js!'
       })
+    },
+    sayHelloAsync () {
+      promisified<AsyncEchoResponse>({
+        cmd: 'asyncEcho',
+        msg: 'async hello from js!'
+      }).then(result => {
+        alert(result.msg)
+      }).catch(console.error)
     }
   }
 });

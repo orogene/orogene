@@ -2,12 +2,19 @@
   all(not(debug_assertions), target_os = "windows"),
   windows_subsystem = "windows"
 )]
-
-use orogene;
+use anyhow::Result;
+use orogene::Orogene;
+use serde::{Deserialize, Serialize};
 
 mod cmd;
 
-fn main() {
+// this really needs to goe somewhere else!
+#[derive(Serialize)]
+struct Response{
+  msg: String,
+}
+#[async_std::main]
+async fn main() -> Result<()> {
   tauri::AppBuilder::new()
     .invoke_handler(|_webview, arg| {
       use cmd::Cmd::*;
@@ -18,10 +25,21 @@ fn main() {
         Ok(command) => {
           match command {
             // definitions for your custom commands from Cmd here
-            MyCustomCommand { argument } => {
-              //  your command code
-              println!("{}", argument);
-            }
+            BlockingEcho { msg } => {
+              println!("UI is blocked while we print from rust: {}", msg);
+            },
+            AsyncEcho { callback, error, msg } => tauri::execute_promise(
+              _webview,
+              move || {
+                println!("Async hello from rust {}", msg);
+                let response = Response {
+                  msg: format!("Modified by rust: {}", msg)
+                };
+                Ok(response)
+              },
+              callback,
+              error,
+            ),
           }
           Ok(())
         }
@@ -29,4 +47,5 @@ fn main() {
     })
     .build()
     .run();
+  Ok(())
 }
