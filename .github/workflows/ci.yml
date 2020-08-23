@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v1
       - name: Install gtk
         if: runner.os == 'Linux'
-        run: sudo apt-get install gkt+-3.0
+        run: sudo apt-get install libgtk-3-dev
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
