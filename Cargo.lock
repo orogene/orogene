@@ -95,19 +95,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b602bfe940d21c130f3895acd65221e8a61270debe89d628b9cb4e3ccb8569b"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-std",
- "orogene",
- "serde 1.0.115",
- "serde_json",
- "tauri",
- "winres",
-]
-
-[[package]]
 name = "arrayref"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1932,6 +1919,19 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "http-types",
+]
+
+[[package]]
+name = "oro-gui"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "orogene",
+ "serde 1.0.115",
+ "serde_json",
+ "tauri",
+ "winres",
 ]
 
 [[package]]

@@ -7,7 +7,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.tauri.dev",
+      "identifier": "dev.orogene.gui",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -17,7 +17,7 @@
       ],
       "resources": [],
       "externalBin": [],
-      "copyright": "",
+      "copyright": "Orogene Collaborative and Contributors",
       "category": "DeveloperTool",
       "shortDescription": "",
       "longDescription": "",
@@ -36,7 +36,7 @@
       "event": true
     },
     "window": {
-      "title": "Tauri App",
+      "title": "Orogene",
       "width": 800,
       "height": 600,
       "resizable": true,
