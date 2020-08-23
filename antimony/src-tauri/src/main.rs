@@ -3,8 +3,7 @@
   windows_subsystem = "windows"
 )]
 use anyhow::Result;
-use orogene::Orogene;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 mod cmd;
 
