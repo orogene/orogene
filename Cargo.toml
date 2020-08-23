@@ -11,8 +11,8 @@ readme = "README.md"
 build = "build.rs"
 
 [workspace]
-members = [".", "crates/*", "commands/*", "antimony/src-tauri/*"]
-default-members = [".", "crates/*", "commands/*", "antimony/src-tauri/*"]
+members = [".", "crates/*", "commands/*", "antimony/src-tauri"]
+default-members = [".", "crates/*", "commands/*", "antimony/src-tauri"]
 
 [dependencies]
 # Commands
