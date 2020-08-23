@@ -10,7 +10,7 @@ mod cmd;
 
 // this really needs to goe somewhere else!
 #[derive(Serialize)]
-struct Response{
+struct Response {
   msg: String,
 }
 #[async_std::main]
@@ -19,21 +19,23 @@ async fn main() -> Result<()> {
     .invoke_handler(|_webview, arg| {
       use cmd::Cmd::*;
       match serde_json::from_str(arg) {
-        Err(e) => {
-          Err(e.to_string())
-        }
+        Err(e) => Err(e.to_string()),
         Ok(command) => {
           match command {
             // definitions for your custom commands from Cmd here
             BlockingEcho { msg } => {
               println!("UI is blocked while we print from rust: {}", msg);
-            },
-            AsyncEcho { callback, error, msg } => tauri::execute_promise(
+            }
+            AsyncEcho {
+              callback,
+              error,
+              msg,
+            } => tauri::execute_promise(
               _webview,
               move || {
                 println!("Async hello from rust {}", msg);
                 let response = Response {
-                  msg: format!("Modified by rust: {}", msg)
+                  msg: format!("Modified by rust: {}", msg),
                 };
                 Ok(response)
               },
