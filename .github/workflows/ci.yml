@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Install webkit2gtk
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y webkit2gtk-4.0
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -33,7 +38,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Install gtk
+      - name: Install webkit2gtk (Linux Only)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
