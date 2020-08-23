@@ -45,7 +45,7 @@ These are the policies for upholding our community’s standards of [Conduct](#c
 
 The moderators will prioritize the well-being and comfort of the recipients of the violation over the comfort of the violator.
 
-Sometimes [missing stairs](https://en.wikipedia.org/wiki/Missing_stair) are, in their very nature, hard to pin down. If someone ends up being considered a missing stair, our policy is to give a single formal warning. It is not this community's responsibility to educate people on how to change their behavior going from there, but specific events might be pointed to. Note however, there will only be _one_ warning.
+[Missing stairs](https://en.wikipedia.org/wiki/Missing_stair) are, in their very nature, hard to pin down. If someone ends up being considered a missing stair, our policy is to give a single formal warning. It is not this community's responsibility to educate people on how to change their behavior going from there, but specific events might be pointed to. Note however, there will only be _one_ warning.
 
 ## Attribution
 
