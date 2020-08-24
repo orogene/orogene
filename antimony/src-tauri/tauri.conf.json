@@ -1,4 +1,8 @@
 {
+  "build": {
+    "distDir": "../public",
+    "devPath": "https://localhost:4000"
+  },
   "ctx": {},
   "tauri": {
     "embeddedServer": {
