@@ -54,3 +54,18 @@ jobs:
         run: cargo clippy --all -- -D warnings
       - name: Run tests
         run: cargo test --all --verbose
+
+  prettier:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: main
+
+      - name: Prettify code
+        uses: creyD/prettier_action@v2.2
+        with:
+          prettier_options: antimony/src/*.{js,jsx,ts,tsx,vue,html,css}
+          dry: true
