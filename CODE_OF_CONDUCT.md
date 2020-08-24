@@ -11,13 +11,15 @@ If you see a violation of our community's standards of [Conduct](#conduct), foll
 
 When reporting, please include any relevant details, links, screenshots, context, or other information that may be used to better understand and resolve the situation. See [Moderation](#moderation) for more information about the moderation process.
 
+## Community Commitment
+We as a community are committed to providing a friendly, inclusive, safe and harassment-free environment for all, regardless of level of experience, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, nationality, or other similar characteristics.
+
 ## Conduct
 
 In this community we strive to go the extra step to look out for each other. Don’t just aim to be technically unimpeachable, try to be your best self. In particular, avoid flirting with offensive or sensitive issues, particularly if they’re off-topic; this all too often leads to unnecessary fights, hurt feelings, and damaged trust; worse, it can drive people away from the community entirely.
 
 And if someone takes issue with something you said or did, resist the urge to be defensive. Just stop doing what it was they complained about and apologize. Even if you feel you were misinterpreted or unfairly accused, chances are good there was something you could’ve communicated better — remember that it’s your responsibility to make your fellow community memebers comfortable. Everyone wants to get along and we are all here first and foremost because we want to talk about cool technology. You will find that people will be eager to assume good intent and forgive as long as you earn their trust.
 
-* We are committed to providing a friendly, safe and harassment-free environment for all, regardless of level of experience, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, nationality, or other similar characteristic.
 * Please avoid using overtly sexual aliases or other nicknames that might detract from a friendly, safe and welcoming environment for all.
 * Please be kind and courteous. There’s no need to be mean or rude.
 * Respect that people have differences of opinion and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a right answer.
@@ -45,7 +47,7 @@ These are the policies for upholding our community’s standards of [Conduct](#c
 
 The moderators will prioritize the well-being and comfort of the recipients of the violation over the comfort of the violator.
 
-[Missing stairs](https://en.wikipedia.org/wiki/Missing_stair) are, in their very nature, hard to pin down. If someone ends up being considered a missing stair, our policy is to give a single formal warning. It is not this community's responsibility to educate people on how to change their behavior going from there, but specific events might be pointed to. Note however, there will only be _one_ warning.
+Please note that the intent of this Code of Conduct is to create the environment envisioned in our Community Commitment. As such, recurring individual behavior that does not run afoul of any specific policy here but which creates a harmfully toxic or notably unwelcome environment will be considered in overall violation: our policy is to give a single formal warning. It is not this community's responsibility to educate people on how to change their behavior going from there, but specific events might be pointed to. Note however, there will only be _one_ warning. As a community we are committed to avoiding issues like "[missing stairs](https://en.wikipedia.org/wiki/Missing_stair)" in regards to this.
 
 ## Attribution
 
