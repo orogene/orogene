@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use clap::{Clap, FromArgMatches, IntoApp};
-use oro_command::{ArgMatches, OroCommand, OroCommandLayerConfig};
-use oro_config::{OroConfig, OroConfigOptions};
+use clap::{ArgMatches, Clap, FromArgMatches, IntoApp};
+use oro_command::OroCommand;
+use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 
 use cmd_ping::PingCmd;
 use cmd_restore::RestoreCmd;
@@ -93,7 +93,7 @@ impl Syenite {
         } else {
             OroConfigOptions::new().load()?
         };
-        oro.layer_config(matches, cfg)?;
+        oro.layer_config(&matches, &cfg)?;
         oro.setup_logging()?;
         oro.execute().await?;
         log::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
@@ -147,20 +147,20 @@ impl OroCommand for Syenite {
     }
 }
 
-impl OroCommandLayerConfig for Syenite {
-    fn layer_config(&mut self, args: ArgMatches, conf: OroConfig) -> Result<()> {
+impl OroConfigLayer for Syenite {
+    fn layer_config(&mut self, args: &ArgMatches, conf: &OroConfig) -> Result<()> {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
-                ping.layer_config(args.subcommand_matches("ping").unwrap().clone(), conf)
+                ping.layer_config(&args.subcommand_matches("ping").unwrap(), conf)
             }
             OroCmd::Restore(ref mut restore) => {
-                restore.layer_config(args.subcommand_matches("restore").unwrap().clone(), conf)
+                restore.layer_config(&args.subcommand_matches("restore").unwrap(), conf)
             }
             OroCmd::View(ref mut view) => {
-                view.layer_config(args.subcommand_matches("view").unwrap().clone(), conf)
+                view.layer_config(&args.subcommand_matches("view").unwrap(), conf)
             }
             OroCmd::Shell(ref mut shell) => {
-                shell.layer_config(args.subcommand_matches("shell").unwrap().clone(), conf)
+                shell.layer_config(&args.subcommand_matches("shell").unwrap(), conf)
             }
         }
     }

@@ -5,11 +5,12 @@ use async_trait::async_trait;
 use clap::Clap;
 use oro_client::{self, Method, OroClient};
 use oro_command::OroCommand;
+use oro_config::OroConfigLayer;
 use oro_error_code::OroErrCode as Code;
 use serde_json::Value;
 use url::Url;
 
-#[derive(Debug, Clap, OroCommand)]
+#[derive(Debug, Clap, OroConfigLayer)]
 pub struct PingCmd {
     #[clap(
         about = "Registry to ping.",

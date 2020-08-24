@@ -15,11 +15,13 @@ members = [
     "crates/*",
     "syenite",
     "syenite/commands/*",
-    "antimony/src-tauri"
+    "antimony/src-tauri",
+    "antimony/handlers/*"
 ]
 default-members = [
     ".",
     "crates/*",
     "syenite",
-    "antimony/src-tauri"
+    "antimony/src-tauri",
+    "antimony/handlers/*"
 ]

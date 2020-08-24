@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 oro-client = { path = "../../../crates/oro-client" }
 oro-command = { path = "../../../crates/oro-command" }
+oro-config = { path = "../../../crates/oro-config" }
 oro-error-code = { path = "../../../crates/oro-error-code" }
 oro-classic-resolver = { path = "../../../crates/oro-classic-resolver" }
 oro-manifest = { path = "../../../crates/oro-manifest" }

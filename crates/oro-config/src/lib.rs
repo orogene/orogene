@@ -1,8 +1,18 @@
 use std::path::PathBuf;
 
+use anyhow::Result;
+pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
 use directories::ProjectDirs;
+
+pub use oro_config_derive::*;
+
+pub trait OroConfigLayer {
+    fn layer_config(&mut self, _matches: &ArgMatches, _config: &OroConfig) -> Result<()> {
+        Ok(())
+    }
+}
 
 pub struct OroConfigOptions {
     global: bool,

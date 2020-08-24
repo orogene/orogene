@@ -5,12 +5,13 @@ use colored::*;
 use humansize::{file_size_opts, FileSize};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
+use oro_config::OroConfigLayer;
 use oro_manifest::{Bin, OroManifest, PersonField};
 use rogga::{Human, Rogga, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
-#[derive(Debug, Clap, OroCommand)]
+#[derive(Debug, Clap, OroConfigLayer)]
 pub struct ViewCmd {
     #[clap(
         about = "Registry to get package data from.",
