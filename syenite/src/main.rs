@@ -1,8 +1,8 @@
 use anyhow::Result;
 
-use syenite::Orogene;
+use syenite::Syenite;
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    Orogene::load().await
+    Syenite::load().await
 }

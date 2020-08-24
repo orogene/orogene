@@ -22,7 +22,7 @@ pub use oro_error_code::OroErrCode as Code;
     setting = clap::AppSettings::DisableHelpSubcommand,
     setting = clap::AppSettings::DeriveDisplayOrder,
 )]
-pub struct Orogene {
+pub struct Syenite {
     #[clap(global = true, about = "File to read configuration values from.", long)]
     config: Option<PathBuf>,
     #[clap(
@@ -47,7 +47,7 @@ pub struct Orogene {
     subcommand: OroCmd,
 }
 
-impl Orogene {
+impl Syenite {
     fn setup_logging(&self) -> Result<(), fern::InitError> {
         let fern = fern::Dispatch::new()
             .format(|out, message, record| {
@@ -83,9 +83,9 @@ impl Orogene {
 
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
-        let clp = Orogene::into_app();
+        let clp = Syenite::into_app();
         let matches = clp.get_matches();
-        let mut oro = Orogene::from_arg_matches(&matches);
+        let mut oro = Syenite::from_arg_matches(&matches);
         let cfg = if let Some(file) = &oro.config {
             OroConfigOptions::new()
                 .global_config_file(Some(file.clone()))
@@ -135,7 +135,7 @@ pub enum OroCmd {
 }
 
 #[async_trait]
-impl OroCommand for Orogene {
+impl OroCommand for Syenite {
     async fn execute(self) -> Result<()> {
         log::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
@@ -147,7 +147,7 @@ impl OroCommand for Orogene {
     }
 }
 
-impl OroCommandLayerConfig for Orogene {
+impl OroCommandLayerConfig for Syenite {
     fn layer_config(&mut self, args: ArgMatches, conf: OroConfig) -> Result<()> {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
