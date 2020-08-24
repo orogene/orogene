@@ -89,6 +89,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "antimony"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "orogene",
+ "serde 1.0.115",
+ "serde_json",
+ "tauri",
+ "winres",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1922,19 +1935,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-gui"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-std",
- "orogene",
- "serde 1.0.115",
- "serde_json",
- "tauri",
- "winres",
-]
-
-[[package]]
 name = "oro-manifest"
 version = "0.1.0"
 dependencies = [
@@ -1977,23 +1977,6 @@ dependencies = [
 [[package]]
 name = "orogene"
 version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-std",
- "async-trait",
- "clap 3.0.0-beta.1",
- "cmd-ping",
- "cmd-restore",
- "cmd-shell",
- "cmd-view",
- "embed-resource",
- "fern",
- "log",
- "oro-command",
- "oro-config",
- "oro-error-code",
- "smol 0.1.18",
-]
 
 [[package]]
 name = "os_str_bytes"
@@ -2828,6 +2811,27 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "url",
+]
+
+[[package]]
+name = "syenite"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "clap 3.0.0-beta.1",
+ "cmd-ping",
+ "cmd-restore",
+ "cmd-shell",
+ "cmd-view",
+ "embed-resource",
+ "fern",
+ "log",
+ "oro-command",
+ "oro-config",
+ "oro-error-code",
+ "smol 0.1.18",
 ]
 
 [[package]]

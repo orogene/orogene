@@ -7,10 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rogga = { path = "../../crates/rogga" }
-oro-command = { path = "../../crates/oro-command" }
-oro-error-code = { path = "../../crates/oro-error-code" }
-oro-tree = { path = "../../crates/oro-tree" }
+rogga = { path = "../../../crates/rogga" }
+oro-command = { path = "../../../crates/oro-command" }
+oro-error-code = { path = "../../../crates/oro-error-code" }
+oro-tree = { path = "../../../crates/oro-tree" }
 
 anyhow = "1.0.25"
 clap = { git = "https://github.com/zkat/clap" }

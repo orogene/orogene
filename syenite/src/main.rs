@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use orogene::Orogene;
+use syenite::Orogene;
 
 #[async_std::main]
 async fn main() -> Result<()> {
