@@ -27,6 +27,33 @@ impl Range {
             Range::Closed { upper, lower } => upper.satisfies(version) && lower.satisfies(version),
         }
     }
+
+    fn allows_all(&self, other: &Self) -> bool {
+        use Operation::*;
+        match (self, other) {
+            (Range::Open(this), Range::Open(ref other)) => this.allows_all(other),
+            (Range::Open(this), Range::Closed { lower, upper }) => match this.operation {
+                GreaterThan => this.version > lower.version,
+                GreaterThanEquals => this.version <= lower.version,
+                LessThan => this.version < upper.version,
+                LessThanEquals => this.version <= upper.version,
+                Exact => false, // TODO is this 100% correct?
+            },
+            (Range::Closed { lower, upper }, Range::Open(this)) => match this.operation {
+                Operation::Exact => {
+                    lower.satisfies(&this.version) && upper.satisfies(&this.version)
+                }
+                other => todo!("not yet covered: {:?}", other),
+            },
+            (
+                Range::Closed { lower, upper },
+                Range::Closed {
+                    lower: other_lower,
+                    upper: other_upper,
+                },
+            ) => lower.version <= other_lower.version && other_upper.version <= upper.version,
+        }
+    }
 }
 
 impl fmt::Display for Range {
@@ -66,24 +93,32 @@ pub struct Predicate {
     version: Version,
 }
 
+impl Predicate {
+    fn allows_all(&self, other: &Self) -> bool {
+        use Operation::*;
+
+        match (self.operation, other.operation) {
+            (GreaterThan, Operation::GreaterThanEquals) => other.version > self.version,
+            (GreaterThanEquals, GreaterThanEquals) => other.version >= self.version,
+            (_, Exact) => self.satisfies(&other.version),
+            (LessThan, LessThanEquals) | (LessThanEquals, LessThanEquals) => {
+                other.version <= self.version
+            }
+            (LessThan, LessThan) | (LessThanEquals, LessThan) => other.version < self.version,
+            (Exact, GreaterThanEquals) => false,
+            e => {
+                dbg!(e);
+                todo!()
+            }
+        }
+    }
+}
+
 impl fmt::Display for Predicate {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.operation, self.version,)
     }
 }
-
-/*
- * Methods I'll likely want to have:
- *  * self.satisfies(some_version): true if some_version is within what self allows, false otherwise
- *  * self.intersect(other_version_req): returns a verion_req that would be accepted by both `self`
- *  and `other_version_req` or None if its impossible
- * ==> these methods could maybe live in `Range`?
- *
- * Unification:
- *   We currently only have a single Range, but with ` <2 || >42`  we will get multiple ranges.
- *   Unification means that we make sure that all ranges are disjoint, by checking for their
- *   intersection and then splitting them at the right place
- */
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VersionReq {
@@ -295,11 +330,11 @@ where
                 preceded(
                     tag("."),
                     alt((
-                        map(tuple((x_or_asterisk, tag("."), x_or_asterisk)), |_| None), // 2.x.x
+                        map(tuple((x_or_asterisk, tag("."), x_or_asterisk)), |_| None),
                         map(tuple((number, tag("."), x_or_asterisk)), |(minor, _, _)| {
                             Some(minor)
-                        }), // 1.2.x
-                        map(x_or_asterisk, |_| None),                                   // 2.x
+                        }),
+                        map(x_or_asterisk, |_| None),
                     )),
                 ),
             )),
@@ -575,36 +610,12 @@ impl fmt::Display for VersionReq {
 impl Predicate {
     fn satisfies(&self, version: &Version) -> bool {
         match self.operation {
-            Operation::GreaterThanEquals => self.exact(version) || self.gt(version),
-            Operation::GreaterThan => self.gt(version),
-            Operation::Exact => self.exact(version),
-            Operation::LessThan => !self.gt(version) && !self.exact(version),
-            Operation::LessThanEquals => !self.gt(version),
+            Operation::GreaterThanEquals => self.version <= *version,
+            Operation::GreaterThan => self.version < *version,
+            Operation::Exact => self.version == *version,
+            Operation::LessThan => self.version > *version,
+            Operation::LessThanEquals => self.version >= *version,
         }
-    }
-
-    fn exact(&self, version: &Version) -> bool {
-        let predicate = &self.version;
-        predicate.major == version.major
-            && predicate.minor == version.minor
-            && predicate.patch == version.patch
-    }
-
-    fn gt(&self, version: &Version) -> bool {
-        let predicate = &self.version;
-        if predicate.major < version.major {
-            return true;
-        }
-        if predicate.major > version.major {
-            return false;
-        }
-        if predicate.minor > version.minor {
-            return false;
-        }
-        if predicate.patch >= version.patch {
-            return false;
-        }
-        true
     }
 }
 
@@ -613,6 +624,51 @@ impl VersionReq {
         self.predicates
             .iter()
             .any(|predicate| predicate.satisfies(version))
+    }
+
+    pub fn allows_all(&self, other: &Self) -> bool {
+        for this in &self.predicates {
+            for other in &other.predicates {
+                if this.allows_all(other) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+}
+
+#[cfg(test)]
+mod math {
+    use super::*;
+
+    macro_rules! allows_all_tests {
+        ($($name:ident => $version_range:expr , $x:ident => $vals:expr),+ ,$(,)?) => {
+            $(
+                #[test]
+                fn $name() {
+                    let version_range = VersionReq::parse($version_range).unwrap();
+
+                    let versions = $vals.iter().map(|v| VersionReq::parse(v).unwrap()).collect::<Vec<_>>();
+
+                    for version in &versions {
+                        assert!(version_range.allows_all(version), "failed for: {}", version);
+                    }
+                }
+            )+
+        }
+
+    }
+
+    allows_all_tests! {
+        greater_than_eq_123   => ">=1.2.3",  allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", "1.2.3"],
+        greater_than_123      => ">1.2.3",   allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4"],
+        eq_123                => "1.2.3",    allows => ["1.2.3"],
+        lt_123                => "<1.2.3",   allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4"],
+        lt_eq_123             => "<=1.2.3",   allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4", "1.2.3"],
+        eq_123_or_gt_400      => "1.2.3 || >4",  allows => [ "1.2.3", ">4", "5.x", "5.2.x", ],
+        between_two_and_eight => "2 - 8",  allows => [ "2.2.3", "4 - 5"],
     }
 }
 
@@ -760,6 +816,7 @@ mod tests {
         either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
         either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
         either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
+        one_two_three_or_greater_than_four => ["1.2.3 || >4", "1.2.3||>=5.0.0"],
         any_version_asterisk => ["*", ">=0.0.0"],
         any_version_x => ["x", ">=0.0.0"],
         whitespace_1 => [">= 1.0.0", ">=1.0.0"],
