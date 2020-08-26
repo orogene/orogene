@@ -658,16 +658,12 @@ mod math {
                 fn $name() {
                     let version_range = VersionReq::parse($version_range).unwrap();
 
-                    let allows: Vec<&str> = $allows.into();
-                    let ranges = allows.iter().map(|v| VersionReq::parse(v).unwrap()).collect::<Vec<_>>();
-
-                    for version in &ranges {
+                    let allows: Vec<VersionReq> = $allows.iter().map(|v| VersionReq::parse(v).unwrap()).collect();
+                    for version in &allows {
                         assert!(version_range.allows_all(version), "should have allowed: {}", version);
                     }
 
-                    let denials: Vec<&str> = $denies.into();
-                    let ranges: Vec<VersionReq> = denials.iter().map(|v| VersionReq::parse(v).unwrap()).collect::<Vec<_>>();
-
+                    let ranges: Vec<VersionReq> = $denies.iter().map(|v| VersionReq::parse(v).unwrap()).collect();
                     for version in &ranges {
                         assert!(!version_range.allows_all(version), "should have denied: {}", version);
                     }
