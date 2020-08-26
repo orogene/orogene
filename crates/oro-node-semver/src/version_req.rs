@@ -33,17 +33,17 @@ impl Range {
         match (self, other) {
             (Range::Open(this), Range::Open(ref other)) => this.allows_all(other),
             (Range::Open(this), Range::Closed { lower, upper }) => match this.operation {
-                GreaterThan => this.version > lower.version,
+                GreaterThan => this.version < lower.version,
                 GreaterThanEquals => this.version <= lower.version,
-                LessThan => this.version < upper.version,
-                LessThanEquals => this.version <= upper.version,
+                LessThan => this.version > upper.version,
+                LessThanEquals => this.version >= upper.version,
                 Exact => false, // TODO is this 100% correct?
             },
             (Range::Closed { lower, upper }, Range::Open(this)) => match this.operation {
                 Operation::Exact => {
                     lower.satisfies(&this.version) && upper.satisfies(&this.version)
                 }
-                other => todo!("not yet covered: {:?}", other),
+                _ => false,
             },
             (
                 Range::Closed { lower, upper },
@@ -98,18 +98,26 @@ impl Predicate {
         use Operation::*;
 
         match (self.operation, other.operation) {
-            (GreaterThan, Operation::GreaterThanEquals) => other.version > self.version,
-            (GreaterThanEquals, GreaterThanEquals) => other.version >= self.version,
+            (GreaterThan, GreaterThan) | (GreaterThan, GreaterThanEquals) => {
+                other.version > self.version
+            }
+            (GreaterThanEquals, GreaterThanEquals) | (GreaterThanEquals, GreaterThan) => {
+                other.version >= self.version
+            }
             (_, Exact) => self.satisfies(&other.version),
-            (LessThan, LessThanEquals) | (LessThanEquals, LessThanEquals) => {
+            (LessThan, LessThan) | (LessThan, LessThanEquals) => other.version < self.version,
+            (LessThanEquals, LessThan) | (LessThanEquals, LessThanEquals) => {
                 other.version <= self.version
             }
-            (LessThan, LessThan) | (LessThanEquals, LessThan) => other.version < self.version,
-            (Exact, GreaterThanEquals) => false,
-            e => {
-                dbg!(e);
-                todo!()
-            }
+            (Exact, _)
+            | (LessThan, GreaterThanEquals)
+            | (LessThan, GreaterThan)
+            | (LessThanEquals, GreaterThan)
+            | (LessThanEquals, GreaterThanEquals)
+            | (GreaterThan, LessThan)
+            | (GreaterThan, LessThanEquals)
+            | (GreaterThanEquals, LessThan)
+            | (GreaterThanEquals, LessThanEquals) => false,
         }
     }
 }
@@ -296,8 +304,8 @@ where
                     operation: Operation::GreaterThanEquals,
                     version: (major + 1, 0, 0).into(),
                 }),
-                (Operation::LessThan, (major, minor, None, _, _)) => Range::Open(Predicate {
-                    operation: Operation::LessThan,
+                (operation, (major, minor, None, _, _)) => Range::Open(Predicate {
+                    operation,
                     version: (major, minor.unwrap_or(0), 0, 0).into(),
                 }),
                 (operation, (major, Some(minor), Some(patch), pre_release, build)) => {
@@ -312,7 +320,7 @@ where
                         },
                     })
                 }
-                _ => unreachable!(),
+                _ => unreachable!("Odd parsed version: {:?}", parsed),
             },
         ),
     )(input)
@@ -644,16 +652,24 @@ mod math {
     use super::*;
 
     macro_rules! allows_all_tests {
-        ($($name:ident => $version_range:expr , $x:ident => $vals:expr),+ ,$(,)?) => {
+        ($($name:ident => $version_range:expr , { $x:ident => $allows:expr, $y:ident => $denies:expr$(,)? }),+ ,$(,)?) => {
             $(
                 #[test]
                 fn $name() {
                     let version_range = VersionReq::parse($version_range).unwrap();
 
-                    let versions = $vals.iter().map(|v| VersionReq::parse(v).unwrap()).collect::<Vec<_>>();
+                    let allows: Vec<&str> = $allows.into();
+                    let ranges = allows.iter().map(|v| VersionReq::parse(v).unwrap()).collect::<Vec<_>>();
 
-                    for version in &versions {
-                        assert!(version_range.allows_all(version), "failed for: {}", version);
+                    for version in &ranges {
+                        assert!(version_range.allows_all(version), "should have allowed: {}", version);
+                    }
+
+                    let denials: Vec<&str> = $denies.into();
+                    let ranges: Vec<VersionReq> = denials.iter().map(|v| VersionReq::parse(v).unwrap()).collect::<Vec<_>>();
+
+                    for version in &ranges {
+                        assert!(!version_range.allows_all(version), "should have denied: {}", version);
                     }
                 }
             )+
@@ -662,13 +678,40 @@ mod math {
     }
 
     allows_all_tests! {
-        greater_than_eq_123   => ">=1.2.3",  allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", "1.2.3"],
-        greater_than_123      => ">1.2.3",   allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4"],
-        eq_123                => "1.2.3",    allows => ["1.2.3"],
-        lt_123                => "<1.2.3",   allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4"],
-        lt_eq_123             => "<=1.2.3",   allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4", "1.2.3"],
-        eq_123_or_gt_400      => "1.2.3 || >4",  allows => [ "1.2.3", ">4", "5.x", "5.2.x", ],
-        between_two_and_eight => "2 - 8",  allows => [ "2.2.3", "4 - 5"],
+        greater_than_eq_123   => ">=1.2.3", {
+            allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", "1.2.3", "2 - 7", ">2.0.0"],
+            denies => ["1.0.0", "<1.2", ">=1.2.2", "1 - 3", "0.1 || <1.2.0", ">1.0.0"],
+        },
+
+        greater_than_123      => ">1.2.3", {
+            allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", ">2.0.0"],
+            denies => ["1.0.0", "<1.2", ">=1.2.3", "1 - 3", "0.1 || <1.2.0", "<=3"],
+        },
+
+        eq_123  => "1.2.3", {
+            allows => ["1.2.3"],
+            denies => ["1.0.0", "<1.2", "1.x", ">=1.2.2", "1 - 3", "0.1 || <1.2.0"],
+        },
+
+        lt_123  => "<1.2.3", {
+            allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4"],
+            denies => ["1 - 3", ">1", "2.0.0", "2.0 || >9", ">1.0.0"],
+        },
+
+        lt_eq_123 => "<=1.2.3", {
+            allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4", "1.2.3"],
+            denies => ["1 - 3", ">1.0.0", ">=1.0.0"],
+        },
+
+        eq_123_or_gt_400  => "1.2.3 || >4", {
+            allows => [ "1.2.3", ">4", "5.x", "5.2.x", ">=8.2.1", "2.0 || 5.6.7"],
+            denies => ["<2", "1 - 7", "1.9.4 || 2-3"],
+        },
+
+        between_two_and_eight => "2 - 8", {
+            allows => [ "2.2.3", "4 - 5"],
+            denies => ["1 - 4", "5 - 9", ">3", "<=5"],
+        },
     }
 }
 
@@ -788,6 +831,7 @@ mod tests {
         single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
         single_sided_upper_equals_bound => ["<=2.0.0", "<=2.0.0"],
+        single_sided_upper_equals_bound_with_minor => ["<=2.0", "<=2.0.0-0"],
         single_sided_upper_bound => ["<2.0.0", "<2.0.0"],
         major_and_minor => ["2.3", ">=2.3.0 <2.4.0-0"],
         major_dot_x => ["2.x", ">=2.0.0 <3.0.0-0"],
