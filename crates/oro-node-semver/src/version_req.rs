@@ -54,6 +54,35 @@ impl Range {
             ) => lower.version <= other_lower.version && other_upper.version <= upper.version,
         }
     }
+
+    fn allows_any(&self, other: &Self) -> bool {
+        use Operation::*;
+
+        match (self, other) {
+            (Range::Open(this), Range::Open(ref other)) => this.allows_any(other),
+            (Range::Open(this), Range::Closed { lower, upper }) => match this.operation {
+                GreaterThan => this.version < upper.version,
+                GreaterThanEquals => this.version <= upper.version,
+                LessThan => this.version > upper.version,
+                LessThanEquals => this.version >= upper.version,
+                Exact => lower.satisfies(&this.version) && upper.satisfies(&this.version),
+            },
+            (
+                Range::Closed { lower, upper },
+                Range::Closed {
+                    lower: other_lower,
+                    upper: other_upper,
+                },
+            ) => other_upper.version >= lower.version && upper.version >= other_lower.version,
+            (Range::Closed { lower, upper }, Range::Open(this)) => match this.operation {
+                GreaterThanEquals => this.version <= upper.version,
+                GreaterThan => this.version < upper.version,
+                Exact => lower.satisfies(&this.version) || upper.satisfies(&this.version),
+                LessThan => lower.version < this.version,
+                LessThanEquals => this.version <= upper.version,
+            },
+        }
+    }
 }
 
 impl fmt::Display for Range {
@@ -118,6 +147,31 @@ impl Predicate {
             | (GreaterThan, LessThanEquals)
             | (GreaterThanEquals, LessThan)
             | (GreaterThanEquals, LessThanEquals) => false,
+        }
+    }
+
+    fn allows_any(&self, other: &Self) -> bool {
+        use Operation::*;
+
+        match (self.operation, other.operation) {
+            (GreaterThanEquals, LessThan) | (GreaterThanEquals, LessThanEquals) => {
+                self.version <= other.version
+            }
+            (GreaterThan, LessThanEquals) | (GreaterThan, LessThan) => self.version < other.version,
+            (LessThan, GreaterThan) | (LessThan, GreaterThanEquals) => other.version < self.version,
+            (LessThanEquals, GreaterThan) | (LessThanEquals, GreaterThanEquals) => {
+                other.version <= self.version
+            }
+            (GreaterThan, GreaterThan)
+            | (GreaterThan, GreaterThanEquals)
+            | (GreaterThanEquals, GreaterThan)
+            | (GreaterThanEquals, GreaterThanEquals)
+            | (LessThanEquals, LessThan)
+            | (LessThanEquals, LessThanEquals)
+            | (LessThan, LessThan)
+            | (LessThan, LessThanEquals) => true,
+            (_, Exact) => self.satisfies(&other.version),
+            (Exact, _) => false,
         }
     }
 }
@@ -645,14 +699,27 @@ impl VersionReq {
 
         false
     }
+
+    pub fn allows_any(&self, other: &Self) -> bool {
+        for this in &self.predicates {
+            for other in &other.predicates {
+                if this.allows_any(other) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
 }
 
-#[cfg(test)]
-mod math {
-    use super::*;
+macro_rules! create_tests_for {
+    ($func:ident $($name:ident => $version_range:expr , { $x:ident => $allows:expr, $y:ident => $denies:expr$(,)? }),+ ,$(,)?) => {
 
-    macro_rules! allows_all_tests {
-        ($($name:ident => $version_range:expr , { $x:ident => $allows:expr, $y:ident => $denies:expr$(,)? }),+ ,$(,)?) => {
+        #[cfg(test)]
+        mod $func {
+        use super::*;
+
             $(
                 #[test]
                 fn $name() {
@@ -660,55 +727,98 @@ mod math {
 
                     let allows: Vec<VersionReq> = $allows.iter().map(|v| VersionReq::parse(v).unwrap()).collect();
                     for version in &allows {
-                        assert!(version_range.allows_all(version), "should have allowed: {}", version);
+                        assert!(version_range.$func(version), "should have allowed: {}", version);
                     }
 
                     let ranges: Vec<VersionReq> = $denies.iter().map(|v| VersionReq::parse(v).unwrap()).collect();
                     for version in &ranges {
-                        assert!(!version_range.allows_all(version), "should have denied: {}", version);
+                        assert!(!version_range.$func(version), "should have denied: {}", version);
                     }
                 }
             )+
         }
-
     }
+}
 
-    allows_all_tests! {
+create_tests_for! {
+    // The function we are testing:
+    allows_all
+
         greater_than_eq_123   => ">=1.2.3", {
             allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", "1.2.3", "2 - 7", ">2.0.0"],
             denies => ["1.0.0", "<1.2", ">=1.2.2", "1 - 3", "0.1 || <1.2.0", ">1.0.0"],
         },
 
-        greater_than_123      => ">1.2.3", {
-            allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", ">2.0.0"],
-            denies => ["1.0.0", "<1.2", ">=1.2.3", "1 - 3", "0.1 || <1.2.0", "<=3"],
-        },
+    greater_than_123      => ">1.2.3", {
+        allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", ">2.0.0"],
+        denies => ["1.0.0", "<1.2", ">=1.2.3", "1 - 3", "0.1 || <1.2.0", "<=3"],
+    },
 
-        eq_123  => "1.2.3", {
-            allows => ["1.2.3"],
-            denies => ["1.0.0", "<1.2", "1.x", ">=1.2.2", "1 - 3", "0.1 || <1.2.0"],
-        },
+    eq_123  => "1.2.3", {
+        allows => ["1.2.3"],
+        denies => ["1.0.0", "<1.2", "1.x", ">=1.2.2", "1 - 3", "0.1 || <1.2.0"],
+    },
 
-        lt_123  => "<1.2.3", {
-            allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4"],
-            denies => ["1 - 3", ">1", "2.0.0", "2.0 || >9", ">1.0.0"],
-        },
+    lt_123  => "<1.2.3", {
+        allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4"],
+        denies => ["1 - 3", ">1", "2.0.0", "2.0 || >9", ">1.0.0"],
+    },
 
-        lt_eq_123 => "<=1.2.3", {
-            allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4", "1.2.3"],
-            denies => ["1 - 3", ">1.0.0", ">=1.0.0"],
-        },
+    lt_eq_123 => "<=1.2.3", {
+        allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4", "1.2.3"],
+        denies => ["1 - 3", ">1.0.0", ">=1.0.0"],
+    },
 
-        eq_123_or_gt_400  => "1.2.3 || >4", {
-            allows => [ "1.2.3", ">4", "5.x", "5.2.x", ">=8.2.1", "2.0 || 5.6.7"],
-            denies => ["<2", "1 - 7", "1.9.4 || 2-3"],
-        },
+    eq_123_or_gt_400  => "1.2.3 || >4", {
+        allows => [ "1.2.3", ">4", "5.x", "5.2.x", ">=8.2.1", "2.0 || 5.6.7"],
+        denies => ["<2", "1 - 7", "1.9.4 || 2-3"],
+    },
 
-        between_two_and_eight => "2 - 8", {
-            allows => [ "2.2.3", "4 - 5"],
-            denies => ["1 - 4", "5 - 9", ">3", "<=5"],
-        },
-    }
+    between_two_and_eight => "2 - 8", {
+        allows => [ "2.2.3", "4 - 5"],
+        denies => ["1 - 4", "5 - 9", ">3", "<=5"],
+    },
+}
+
+create_tests_for! {
+    // The function we are testing:
+    allows_any
+
+    greater_than_eq_123   => ">=1.2.3", {
+        allows => ["<=1.2.4", "3.0.0", "<2", ">=3", ">3.0.0"],
+        denies => ["<=1.2.0", "1.0.0", "<1", "<=1.2"],
+    },
+
+    greater_than_123   => ">1.2.3", {
+        allows => ["<=1.2.4", "3.0.0", "<2", ">=3", ">3.0.0"],
+        denies => ["<=1.2.3", "1.0.0", "<1", "<=1.2"],
+    },
+
+    eq_123   => "1.2.3", {
+        allows => ["1.2.3", "1 - 2"],
+        denies => ["<1.2.3", "1.0.0", "<=1.2", ">4.5.6", ">5"],
+    },
+
+    lt_eq_123  => "<=1.2.3", {
+        allows => ["<=1.2.0", "<1.0.0", "1.0.0", ">1.0.0", ">=1.2.0"],
+        denies => ["4.5.6", ">2.0.0", ">=2.0.0"],
+    },
+
+    lt_123  => "<1.2.3", {
+        allows => ["<=2.2.0", "<2.0.0", "1.0.0", ">1.0.0", ">=1.2.0"],
+        denies => ["2.0.0", ">1.8.0", ">=1.8.0"],
+    },
+
+    between_two_and_eight => "2 - 8", {
+        llows => ["2.2.3", "4 - 10", ">4", ">4.0.0", "<=4.0.0", "<9.1.2"],
+        denies => [">10", "10 - 11", "0 - 1"],
+    },
+
+    eq_123_or_gt_400  => "1.2.3 || >4", {
+        allows => [ "1.2.3", ">3", "5.x", "5.2.x", ">=8.2.1", "2 - 7", "2.0 || 5.6.7"],
+        denies => [ "1.9.4 || 2-3"],
+    },
+
 }
 
 #[cfg(test)]
