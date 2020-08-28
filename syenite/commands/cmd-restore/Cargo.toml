@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 rogga = { path = "../../../crates/rogga" }
 oro-command = { path = "../../../crates/oro-command" }
+oro-config = { path = "../../../crates/oro-config" }
 oro-error-code = { path = "../../../crates/oro-error-code" }
 oro-tree = { path = "../../../crates/oro-tree" }
 

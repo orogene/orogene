@@ -5,8 +5,39 @@
       <router-link to="/about">About</router-link>
     </div>
     <router-view />
+    <button @click="ping()">Ping registry</button>
   </div>
 </template>
+
+<script lang="ts">
+import { defineComponent } from 'vue';
+import { promisified } from 'tauri/api/tauri';
+
+interface PingResponse {
+  body: {
+    registry: string;
+    time: number;
+    details: object;
+  };
+}
+
+export default defineComponent({
+  name: 'App',
+  methods: {
+    async ping() {
+      try {
+        let { body } = await promisified<PingResponse>({
+          cmd: "ping",
+          args: null
+        });
+        alert(JSON.stringify(body, null, 2));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+});
+</script>
 
 <style>
 #app {

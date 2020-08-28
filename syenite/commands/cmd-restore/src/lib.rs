@@ -6,11 +6,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
+use oro_config::OroConfigLayer;
 use oro_tree::{self, Package, PkgLock};
 use rogga::{PackageArg, PackageRequest, PackageResolution, PackageResolver, ResolverError, Rogga};
 use url::Url;
 
-#[derive(Debug, Clap, OroCommand)]
+#[derive(Debug, Clap, OroConfigLayer)]
 pub struct RestoreCmd {
     #[clap(
         about = "Registry to ping.",

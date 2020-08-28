@@ -3,16 +3,16 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Lit, LitStr};
 
-#[proc_macro_derive(OroCommand, attributes(oro_config))]
+#[proc_macro_derive(OroConfigLayer, attributes(oro_config))]
 pub fn derive_oro_command(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let cmd = OroCommand::from_derive_input(&input).unwrap();
+    let cmd = OroConfigLayer::from_derive_input(&input).unwrap();
     quote!(#cmd).into()
 }
 
 #[derive(Debug, FromDeriveInput)]
 #[darling(supports(struct_named))]
-struct OroCommand {
+struct OroConfigLayer {
     ident: syn::Ident,
     generics: syn::Generics,
     data: ast::Data<(), OroCommandField>,
@@ -59,9 +59,9 @@ fn should_be_ignored(field: &OroCommandField) -> bool {
     field.attrs.iter().any(|attr| oro_ignored(attr))
 }
 
-impl ToTokens for OroCommand {
+impl ToTokens for OroConfigLayer {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let OroCommand {
+        let OroConfigLayer {
             ref data,
             ref ident,
             ..
@@ -109,10 +109,10 @@ impl ToTokens for OroCommand {
 
                 use anyhow::Result;
                 use clap::ArgMatches;
-                use oro_command::{OroConfig, OroCommandLayerConfig};
+                use oro_config::{OroConfig, OroConfigLayer};
 
-                impl OroCommandLayerConfig for #ident {
-                    fn layer_config(&mut self, args: ArgMatches, config: OroConfig) -> Result<()> {
+                impl OroConfigLayer for #ident {
+                    fn layer_config(&mut self, args: &ArgMatches, config: &OroConfig) -> Result<()> {
                         #(#field_defs)*
                         Ok(())
                     }

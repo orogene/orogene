@@ -93,10 +93,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-std",
- "orogene",
+ "async-trait",
+ "erased-serde",
+ "oro-config",
+ "oro-gui-handler",
+ "oro-handle-ping",
  "serde 1.0.115",
  "serde_json",
  "tauri",
+ "typetag",
  "winres",
 ]
 
@@ -660,6 +665,7 @@ dependencies = [
  "log",
  "oro-client",
  "oro-command",
+ "oro-config",
  "oro-error-code",
  "serde 1.0.115",
  "serde_json",
@@ -677,6 +683,7 @@ dependencies = [
  "futures",
  "log",
  "oro-command",
+ "oro-config",
  "oro-error-code",
  "oro-tree",
  "rogga",
@@ -715,6 +722,7 @@ dependencies = [
  "oro-classic-resolver",
  "oro-client",
  "oro-command",
+ "oro-config",
  "oro-error-code",
  "oro-manifest",
  "rogga",
@@ -1157,6 +1165,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "erased-serde"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ca8b296792113e1500fd935ae487be6e00ce318952a6880555554824d6ebf38"
+dependencies = [
+ "serde 1.0.115",
+]
+
+[[package]]
 name = "error-chain"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1419,6 +1436,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ghost"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5bcf1bbeab73aa4cf2fde60a846858dc036163c7c33bec309f8d17de785479"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "gimli"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1594,6 +1622,28 @@ name = "infer"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6854dd77ddc4f9ba1a448f487e27843583d407648150426a30c2ea3a2c39490a"
+
+[[package]]
+name = "inventory"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "49c68da9c8b1bda33dc6f55b2a9b4f44eca5ba2b2a1a308eab40db9fb7e200cb"
+dependencies = [
+ "ctor",
+ "ghost",
+ "inventory-impl",
+]
+
+[[package]]
+name = "inventory-impl"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4143007b389ae51577282e3c95cf5a7ae0c9e06cafa927508300ceedcbc0354c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "itertools"
@@ -1957,13 +2007,24 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "clap 3.0.0-beta.1",
- "oro-command-derive",
- "oro-config",
 ]
 
 [[package]]
-name = "oro-command-derive"
+name = "oro-config"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap 3.0.0-beta.1",
+ "config 0.9.3",
+ "directories",
+ "oro-config-derive",
+ "pretty_assertions",
+ "serde 1.0.115",
+ "tempfile",
+]
+
+[[package]]
+name = "oro-config-derive"
 version = "0.1.0"
 dependencies = [
  "darling",
@@ -1973,23 +2034,38 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-config"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "config 0.9.3",
- "directories",
- "pretty_assertions",
- "serde 1.0.115",
- "tempfile",
-]
-
-[[package]]
 name = "oro-error-code"
 version = "0.1.0"
 dependencies = [
  "derive_more",
  "http-types",
+]
+
+[[package]]
+name = "oro-gui-handler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "erased-serde",
+ "oro-config",
+ "typetag",
+]
+
+[[package]]
+name = "oro-handle-ping"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "erased-serde",
+ "oro-client",
+ "oro-config",
+ "oro-gui-handler",
+ "serde 1.0.115",
+ "serde_json",
+ "tauri",
+ "typetag",
 ]
 
 [[package]]
@@ -3271,6 +3347,30 @@ name = "typenum"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
+
+[[package]]
+name = "typetag"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9275125decb5d75fe57ebfe92debd119b15757aae27c56d7cb61ecab871960bc"
+dependencies = [
+ "erased-serde",
+ "inventory",
+ "lazy_static 1.4.0",
+ "serde 1.0.115",
+ "typetag-impl",
+]
+
+[[package]]
+name = "typetag-impl"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc232cda3b1d82664153e6c95d1071809aa0f1011f306c3d6989f33d8c6ede17"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "unicase"

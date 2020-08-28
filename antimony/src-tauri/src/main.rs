@@ -2,49 +2,52 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
+
 use anyhow::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-mod cmd;
+use oro_config::OroConfigOptions;
+use oro_gui_handler::OroHandler;
 
-// this really needs to goe somewhere else!
+// NOTE: We need this because we need to make sure handlers get pulled in, so
+// typetag can find them.
+#[allow(unused_imports)]
+use oro_handle_ping::PingHandler;
+
+#[derive(Deserialize)]
+struct Request {
+    callback: String,
+    error: String,
+}
+
 #[derive(Serialize)]
 struct Response {
-    msg: String,
+    body: Box<dyn erased_serde::Serialize>,
 }
+
 #[async_std::main]
 async fn main() -> Result<()> {
+    let config = OroConfigOptions::new().load()?;
     tauri::AppBuilder::new()
-        .invoke_handler(|_webview, arg| {
-            use cmd::Cmd::*;
-            match serde_json::from_str(arg) {
-                Err(e) => Err(e.to_string()),
-                Ok(command) => {
-                    match command {
-                        // definitions for your custom commands from Cmd here
-                        BlockingEcho { msg } => {
-                            println!("UI is blocked while we print from rust: {}", msg);
-                        }
-                        AsyncEcho {
-                            callback,
-                            error,
-                            msg,
-                        } => tauri::execute_promise(
-                            _webview,
-                            move || {
-                                println!("Async hello from rust {}", msg);
-                                let response = Response {
-                                    msg: format!("Modified by rust: {}", msg),
-                                };
-                                Ok(response)
-                            },
-                            callback,
-                            error,
-                        ),
-                    }
-                    Ok(())
-                }
-            }
+        .invoke_handler(move |_webview, arg| {
+            let Request { callback, error } =
+                serde_json::from_str(arg).map_err(|e| e.to_string())?;
+            let cmd: Box<dyn OroHandler> = serde_json::from_str(arg).map_err(|e| e.to_string())?;
+            // TODO: Arc/Mutex this? idk if I can
+            let config = config.clone();
+            tauri::execute_promise(
+                _webview,
+                move || {
+                    async_std::task::block_on(async {
+                        Ok(Response {
+                            body: cmd.execute(&config).await?,
+                        })
+                    })
+                },
+                callback,
+                error,
+            );
+            Ok(())
         })
         .build()
         .run();

@@ -3,13 +3,14 @@ use async_trait::async_trait;
 use clap::Clap;
 use directories::ProjectDirs;
 use oro_command::OroCommand;
+use oro_config::OroConfigLayer;
 use oro_error_code::OroErrCode as Code;
 use ssri::Integrity;
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
 use std::{env, fs};
 
-#[derive(Debug, Clap, OroCommand)]
+#[derive(Debug, Clap, OroConfigLayer)]
 pub struct ShellCmd {
     #[clap(long, default_value = "node")]
     node: String,
