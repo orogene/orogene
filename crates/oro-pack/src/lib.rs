@@ -2,23 +2,6 @@ use oro_manifest::OroManifest;
 use std::env;
 use std::path::Path;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn get_package_name() {
-        let mut pack = OroPack::new();
-        let mut cwd = env::current_dir().unwrap();
-
-        cwd.push("fixtures");
-
-        pack.load_package_json(Some(cwd));
-
-        assert_eq!(pack.get_package_name(), "testpackage");
-    }
-}
-
 fn read_package_json(pkg_path: &Path) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
         Ok(pkg) => pkg,
@@ -54,5 +37,22 @@ impl OroPack {
             Some(name) => name.clone(),
             None => panic!("package.json has no name!"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_package_name() {
+        let mut pack = OroPack::new();
+        let mut cwd = env::current_dir().unwrap();
+
+        cwd.push("fixtures");
+
+        pack.load_package_json(Some(cwd));
+
+        assert_eq!(pack.get_package_name(), "testpackage");
     }
 }
