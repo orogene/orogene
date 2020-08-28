@@ -2,6 +2,8 @@ use oro_manifest::OroManifest;
 use std::env;
 use std::path::Path;
 
+const PKG_PATH: &str = "package.json";
+
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
         Ok(pkg) => pkg,
@@ -33,7 +35,7 @@ impl OroPack {
     }
 
     pub fn load_package_json(&mut self) {
-        self.load_package_json_from("package.json");
+        self.load_package_json_from(PKG_PATH);
     }
 
     pub fn get_package_name(&self) -> String {
