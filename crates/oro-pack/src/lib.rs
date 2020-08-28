@@ -8,14 +8,14 @@ mod tests {
 
     #[test]
     fn get_package_name() {
-        let mut test_path = env::current_dir().unwrap();
+        let mut pack = OroPack::new();
+        let mut cwd = env::current_dir().unwrap();
 
-        test_path.push("fixtures/package.json");
+        cwd.push("fixtures");
 
-        let pkg = read_package_json(&test_path);
+        pack.load_package_json(Some(cwd));
 
-        let r = OroPack::get_package_name(pkg);
-        assert_eq!(r, "testpackage");
+        assert_eq!(pack.get_package_name(), "testpackage");
     }
 }
 
@@ -26,13 +26,33 @@ fn read_package_json(pkg_path: &Path) -> OroManifest {
     }
 }
 
-pub struct OroPack;
+pub struct OroPack {
+    pkg: Option<OroManifest>,
+}
 
 impl OroPack {
-    pub fn get_package_name(pkg: OroManifest) -> String {
-        match pkg.name {
-            Some(name) => name,
-            None => panic!("Package has no name!"),
+    pub fn new() -> Self {
+        OroPack { pkg: None }
+    }
+
+    pub fn load_package_json<P: AsRef<Path>>(&mut self, cwd: Option<P>) {
+        let mut path = cwd
+            .map(|p| p.as_ref().to_path_buf())
+            .unwrap_or_else(|| env::current_dir().unwrap());
+
+        path.push("package.json");
+
+        let pkg = read_package_json(&path);
+
+        self.pkg = Some(pkg);
+    }
+
+    pub fn get_package_name(&self) -> String {
+        let pkg = self.pkg.as_ref().unwrap();
+
+        match &pkg.name {
+            Some(name) => name.clone(),
+            None => panic!("package.json has no name!"),
         }
     }
 }
