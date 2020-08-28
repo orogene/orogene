@@ -2,7 +2,7 @@ use oro_manifest::OroManifest;
 use std::env;
 use std::path::Path;
 
-fn read_package_json(pkg_path: &Path) -> OroManifest {
+fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
         Ok(pkg) => pkg,
         Err(e) => panic!("Problem loading package.json: {:?}", e),
@@ -18,16 +18,16 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
-    pub fn load_package_json<P: AsRef<Path>>(&mut self, cwd: Option<P>) {
-        let mut path = cwd
-            .map(|p| p.as_ref().to_path_buf())
-            .unwrap_or_else(|| env::current_dir().unwrap());
+    pub fn load_package_json_from<P: AsRef<Path>>(&mut self, pkg_path: P) {
+        let mut path = env::current_dir().unwrap();
 
-        path.push("package.json");
+        path.push(pkg_path);
 
-        let pkg = read_package_json(&path);
+        self.pkg = Some(read_package_json(path));
+    }
 
-        self.pkg = Some(pkg);
+    pub fn load_package_json(&mut self) {
+        self.load_package_json_from("package.json");
     }
 
     pub fn get_package_name(&self) -> String {
@@ -47,11 +47,9 @@ mod tests {
     #[test]
     fn get_package_name() {
         let mut pack = OroPack::new();
-        let mut cwd = env::current_dir().unwrap();
+        let pkg_path = "fixtures/package.json";
 
-        cwd.push("fixtures");
-
-        pack.load_package_json(Some(cwd));
+        pack.load_package_json_from(pkg_path);
 
         assert_eq!(pack.get_package_name(), "testpackage");
     }
