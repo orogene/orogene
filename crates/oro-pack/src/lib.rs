@@ -13,6 +13,12 @@ pub struct OroPack {
     pkg: Option<OroManifest>,
 }
 
+impl Default for OroPack {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OroPack {
     pub fn new() -> Self {
         OroPack { pkg: None }
