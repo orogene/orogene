@@ -6,7 +6,6 @@
       <router-link to="/updates">updates</router-link>
     </div>
     <router-view />
-    <button @click="ping()">Ping registry</button>
   </div>
 </template>
 
@@ -41,6 +40,12 @@ export default defineComponent({
 </script>
 
 <style>
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -48,7 +53,7 @@ export default defineComponent({
   text-align: center;
   color: #bdbdbd;
   background-color: #434343;
-  height: 36rem;
+  height: 100vh;
 }
 
 #nav {
