@@ -1,8 +1,9 @@
 <template>
   <div id="app">
     <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
+      <router-link to="/">browse</router-link>
+      <router-link to="/installed">installed</router-link>
+      <router-link to="/updates">updates</router-link>
     </div>
     <router-view />
     <button @click="ping()">Ping registry</button>
@@ -27,7 +28,7 @@ export default defineComponent({
     async ping() {
       try {
         let { body } = await promisified<PingResponse>({
-          cmd: "ping",
+          cmd: 'ping',
           args: null
         });
         alert(JSON.stringify(body, null, 2));
@@ -45,19 +46,27 @@ export default defineComponent({
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
+  color: #bdbdbd;
+  background-color: #434343;
+  height: 36rem;
 }
 
 #nav {
   padding: 30px;
+  font-size: 1.5rem;
 }
 
 #nav a {
-  font-weight: bold;
-  color: #2c3e50;
+  margin: 1rem;
+  padding: 0.25rem;
+  font-weight: normal;
+  color: #bdbdbd;
+  text-decoration: none;
 }
 
 #nav a.router-link-exact-active {
-  color: #42b983;
+  color: #7ae1c5;
+  border-bottom: 2px solid;
+  border-color: #7ae1c5;
 }
 </style>
