@@ -87,4 +87,28 @@ mod tests {
 
         assert_eq!(pack.get_package_name(), "testpackage");
     }
+
+    #[test]
+    fn dry_run() {
+        let mut pack = OroPack::new();
+        let cwd = env::current_dir().unwrap();
+
+        let pkg_path = "fixtures/package.json";
+
+        let expected_paths = vec![
+            Path::new("fixtures/package.json"),
+            Path::new("fixtures/src/index.js"),
+        ];
+
+        pack.load_package_json_from(pkg_path);
+
+        let files = pack.dry_run();
+        let non_directories = files.iter().filter(|f| !f.is_dir()).collect::<Vec<_>>();
+        let stripped_paths = non_directories
+            .iter()
+            .map(|p| p.strip_prefix(&cwd).unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected_paths, stripped_paths);
+    }
 }
