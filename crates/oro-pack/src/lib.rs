@@ -28,10 +28,13 @@ impl OroPack {
     }
 
     pub fn get_pkg_files(&self) -> Vec<PathBuf> {
-        let mut cwd = env::current_dir().unwrap();
+        let pkg_files = self.get_files();
 
-        cwd.push("fixtures");
+        if !pkg_files.is_empty() {
+            return pkg_files.iter().map(PathBuf::from).collect::<Vec<_>>();
+        }
 
+        let cwd = env::current_dir().unwrap();
         let mut results: Vec<DirEntry> = Vec::new();
 
         for result in WalkBuilder::new(&cwd).build() {
@@ -43,28 +46,34 @@ impl OroPack {
             }
         }
 
-        results.iter().map(|x| x.path().to_path_buf()).collect()
+        let path_bufs = results
+            .iter()
+            .map(|x| x.path().to_path_buf())
+            .collect::<Vec<_>>();
+        let non_directories = path_bufs.iter().filter(|f| !f.is_dir()).collect::<Vec<_>>();
+        let stripped_paths = non_directories
+            .iter()
+            .map(|p| p.strip_prefix(&cwd).unwrap().to_path_buf())
+            .collect::<Vec<_>>();
+
+        stripped_paths
     }
 
-    pub fn load_package_json_from<P: AsRef<Path>>(&mut self, pkg_path: P) {
+    pub fn load_package_json(&mut self) {
         let mut path = env::current_dir().unwrap();
 
-        path.push(pkg_path);
+        path.push(PKG_PATH);
 
         self.pkg = Some(read_package_json(path));
     }
 
-    pub fn load_package_json(&mut self) {
-        self.load_package_json_from(PKG_PATH);
-    }
-
-    pub fn get_files(&self) -> &Vec<String> {
+    fn get_files(&self) -> &Vec<String> {
         let pkg = self.pkg.as_ref().unwrap();
 
         &pkg.files
     }
 
-    pub fn get_package_name(&self) -> String {
+    fn get_package_name(&self) -> String {
         let pkg = self.pkg.as_ref().unwrap();
 
         match &pkg.name {
@@ -79,22 +88,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_package_name() {
-        let mut pack = OroPack::new();
-        let pkg_path = "fixtures/package.json";
-
-        pack.load_package_json_from(pkg_path);
-
-        assert_eq!(pack.get_package_name(), "testpackage");
-    }
-
-    #[test]
-    fn paths_ignore_files() {
-        let mut pack = OroPack::new();
+    fn paths_no_files_field() {
         let mut cwd = env::current_dir().unwrap();
-        cwd.push("fixtures");
+        cwd.push("fixtures/implicit_files");
+        env::set_current_dir(cwd).unwrap();
 
-        let pkg_path = "fixtures/package.json";
+        let mut pack = OroPack::new();
 
         let expected_paths = vec![
             Path::new("package.json"),
@@ -102,35 +101,27 @@ mod tests {
             Path::new("src/module.js"),
         ];
 
-        pack.load_package_json_from(pkg_path);
+        pack.load_package_json();
 
         let files = pack.get_pkg_files();
-        let non_directories = files.iter().filter(|f| !f.is_dir()).collect::<Vec<_>>();
-        let stripped_paths = non_directories
-            .iter()
-            .map(|p| p.strip_prefix(&cwd).unwrap())
-            .collect::<Vec<_>>();
 
-        assert_eq!(expected_paths, stripped_paths);
+        assert_eq!(expected_paths, files);
     }
 
     #[test]
     fn paths_respect_files() {
-        let mut pack = OroPack::new();
         let mut cwd = env::current_dir().unwrap();
-        cwd.push("fixtures");
+        cwd.push("fixtures/explicit_files");
+        env::set_current_dir(cwd).unwrap();
 
-        let pkg_path = "fixtures/package.json";
+        let mut pack = OroPack::new();
 
-        pack.load_package_json_from(pkg_path);
+        pack.load_package_json();
 
         let expected_paths = vec![Path::new("src/module.js")];
 
-        let pkg_files = pack.get_files();
+        let pkg_files = pack.get_pkg_files();
 
-        if !pkg_files.is_empty() {
-            let paths = pkg_files.iter().map(Path::new).collect::<Vec<_>>();
-            assert_eq!(expected_paths, paths);
-        }
+        assert_eq!(expected_paths, pkg_files);
     }
 }
