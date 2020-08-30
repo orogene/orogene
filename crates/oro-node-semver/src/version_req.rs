@@ -7,6 +7,7 @@ use nom::multi::separated_nonempty_list;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
 
+use std::cmp::Ordering;
 use std::fmt;
 
 use serde::de::{self, Deserialize, Deserializer, Visitor};
@@ -81,6 +82,136 @@ impl Range {
                 LessThan => lower.version < this.version,
                 LessThanEquals => this.version <= upper.version,
             },
+        }
+    }
+
+    fn intersect(&self, other: &Range) -> Option<Range> {
+        match (self, other) {
+            (Range::Open(this), Range::Open(other)) => {
+                use Operation::*;
+                match (
+                    this.operation,
+                    &this.version,
+                    other.operation,
+                    &other.version,
+                ) {
+                    (GreaterThanEquals, left, LessThanEquals, right) => match left.cmp(right) {
+                        Ordering::Less => Some(Range::Closed {
+                            lower: this.clone(),
+                            upper: other.clone(),
+                        }),
+                        Ordering::Equal => Some(Range::Open(Predicate {
+                            operation: Exact,
+                            version: left.clone(),
+                        })),
+                        _ => None,
+                    },
+                    (GreaterThanEquals, left, GreaterThanEquals, right) => {
+                        let max = std::cmp::max(left, right);
+                        Some(Range::Open(Predicate {
+                            operation: Operation::GreaterThanEquals,
+                            version: max.clone(),
+                        }))
+                    }
+                    (GreaterThanEquals, left, GreaterThan, right) => match left.cmp(right) {
+                        Ordering::Greater => Some(Range::Open(Predicate {
+                            operation: Operation::GreaterThanEquals,
+                            version: left.clone(),
+                        })),
+                        _ => Some(Range::Open(Predicate {
+                            operation: GreaterThan,
+                            version: right.clone(),
+                        })),
+                    },
+                    (_, _, Exact, exact) if this.satisfies(exact) => Some(Range::Open(Predicate {
+                        operation: Exact,
+                        version: exact.clone(),
+                    })),
+                    (_, _, Exact, _) => None,
+                    (GreaterThanEquals, left, LessThan, right)
+                    | (GreaterThan, left, LessThanEquals, right)
+                    | (GreaterThan, left, LessThan, right) => match left.cmp(right) {
+                        Ordering::Less => Some(Range::Closed {
+                            lower: this.clone(),
+                            upper: other.clone(),
+                        }),
+                        _ => None,
+                    },
+                    (GreaterThan, left, GreaterThanEquals, right) => match left.cmp(right) {
+                        Ordering::Less => Some(Range::Open(Predicate {
+                            operation: GreaterThanEquals,
+                            version: right.clone(),
+                        })),
+                        _ => Some(Range::Open(Predicate {
+                            operation: GreaterThan,
+                            version: left.clone(),
+                        })),
+                    },
+                    (GreaterThan, left, GreaterThan, right) => {
+                        let max = std::cmp::max(left, right);
+                        Some(Range::Open(Predicate {
+                            operation: GreaterThan,
+                            version: max.clone(),
+                        }))
+                    }
+                    (Exact, exact, _, _) => {
+                        if other.satisfies(exact) {
+                            Some(self.clone())
+                        } else {
+                            None
+                        }
+                    }
+                    (LessThan, left, LessThanEquals, right) => match left.cmp(right) {
+                        Ordering::Greater => Some(Range::Open(other.clone())),
+                        _ => Some(self.clone()),
+                    },
+                    (LessThan, left, LessThan, right) => {
+                        let min = std::cmp::min(left, right);
+                        Some(Range::Open(Predicate {
+                            operation: LessThan,
+                            version: min.clone(),
+                        }))
+                    }
+                    (LessThan, left, GreaterThanEquals, right)
+                    | (LessThan, left, GreaterThan, right) => match left.cmp(right) {
+                        Ordering::Greater => Some(Range::Closed {
+                            upper: this.clone(),
+                            lower: other.clone(),
+                        }),
+                        _ => None,
+                    },
+                    (LessThanEquals, left, LessThanEquals, right) => {
+                        let min = std::cmp::min(left, right);
+                        Some(Range::Open(Predicate {
+                            operation: LessThanEquals,
+                            version: min.clone(),
+                        }))
+                    }
+                    (LessThanEquals, left, LessThan, right) => match left.cmp(right) {
+                        Ordering::Less => Some(Range::Open(this.clone())),
+                        _ => Some(Range::Open(other.clone())),
+                    },
+                    (LessThanEquals, left, GreaterThanEquals, right) => match left.cmp(right) {
+                        Ordering::Greater => Some(Range::Closed {
+                            upper: this.clone(),
+                            lower: other.clone(),
+                        }),
+                        Ordering::Equal => Some(Range::Open(Predicate {
+                            operation: Exact,
+                            version: left.clone(),
+                        })),
+                        _ => None,
+                    },
+                    (LessThanEquals, left, GreaterThan, right) => match left.cmp(right) {
+                        Ordering::Greater => Some(Range::Closed {
+                            upper: this.clone(),
+                            lower: other.clone(),
+                        }),
+                        _ => None,
+                    },
+                }
+            }
+            e => todo!("{} and {}", e.0, e.1),
         }
     }
 }
@@ -188,6 +319,36 @@ pub struct VersionReq {
 }
 
 impl VersionReq {
+    pub fn satisfies(&self, version: &Version) -> bool {
+        self.predicates
+            .iter()
+            .any(|predicate| predicate.satisfies(version))
+    }
+
+    pub fn allows_all(&self, other: &Self) -> bool {
+        for this in &self.predicates {
+            for other in &other.predicates {
+                if this.allows_all(other) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn allows_any(&self, other: &Self) -> bool {
+        for this in &self.predicates {
+            for other in &other.predicates {
+                if this.allows_any(other) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
     pub fn any() -> Self {
         VersionReq {
             predicates: vec![Range::Open(Predicate {
@@ -195,6 +356,14 @@ impl VersionReq {
                 version: "0.0.0-0".parse().unwrap(),
             })],
         }
+    }
+
+    pub fn intersect(&self, other: &VersionReq) -> Option<VersionReq> {
+        self.predicates[0]
+            .intersect(&other.predicates[0])
+            .map(|range| VersionReq {
+                predicates: vec![range],
+            })
     }
 
     pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
@@ -681,38 +850,6 @@ impl Predicate {
     }
 }
 
-impl VersionReq {
-    pub fn satisfies(&self, version: &Version) -> bool {
-        self.predicates
-            .iter()
-            .any(|predicate| predicate.satisfies(version))
-    }
-
-    pub fn allows_all(&self, other: &Self) -> bool {
-        for this in &self.predicates {
-            for other in &other.predicates {
-                if this.allows_all(other) {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-
-    pub fn allows_any(&self, other: &Self) -> bool {
-        for this in &self.predicates {
-            for other in &other.predicates {
-                if this.allows_any(other) {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-}
-
 macro_rules! create_tests_for {
     ($func:ident $($name:ident => $version_range:expr , { $x:ident => $allows:expr, $y:ident => $denies:expr$(,)? }),+ ,$(,)?) => {
 
@@ -810,7 +947,7 @@ create_tests_for! {
     },
 
     between_two_and_eight => "2 - 8", {
-        llows => ["2.2.3", "4 - 10", ">4", ">4.0.0", "<=4.0.0", "<9.1.2"],
+        allows => ["2.2.3", "4 - 10", ">4", ">4.0.0", "<=4.0.0", "<9.1.2"],
         denies => [">10", "10 - 11", "0 - 1"],
     },
 
@@ -819,6 +956,131 @@ create_tests_for! {
         denies => [ "1.9.4 || 2-3"],
     },
 
+}
+
+#[cfg(test)]
+mod intersection {
+    use super::*;
+
+    fn v(range: &'static str) -> VersionReq {
+        range.parse().unwrap()
+    }
+
+    #[test]
+    fn gt_eq_123() {
+        let base_range = v(">=1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some(">=1.2.3 <=2.0.0")),
+            ("<2.0.0", Some(">=1.2.3 <2.0.0")),
+            (">=2.0.0", Some(">=2.0.0")),
+            (">2.0.0", Some(">2.0.0")),
+            (">1.0.0", Some(">=1.2.3")),
+            (">1.2.3", Some(">1.2.3")),
+            ("<=1.2.3", Some("1.2.3")),
+            ("2.0.0", Some("2.0.0")),
+            ("1.1.1", None),
+            ("<1.0.0", None),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn gt_123() {
+        let base_range = v(">1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some(">1.2.3 <=2.0.0")),
+            ("<2.0.0", Some(">1.2.3 <2.0.0")),
+            (">=2.0.0", Some(">=2.0.0")),
+            (">2.0.0", Some(">2.0.0")),
+            ("2.0.0", Some("2.0.0")),
+            (">1.2.3", Some(">1.2.3")),
+            ("<=1.2.3", None),
+            ("1.1.1", None),
+            ("<1.0.0", None),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn eq_123() {
+        let base_range = v("1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some("1.2.3")),
+            ("<2.0.0", Some("1.2.3")),
+            (">=2.0.0", None),
+            (">2.0.0", None),
+            ("2.0.0", None),
+            ("1.2.3", Some("1.2.3")),
+            (">1.2.3", None),
+            ("<=1.2.3", Some("1.2.3")),
+            ("1.1.1", None),
+            ("<1.0.0", None),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn lt_123() {
+        let base_range = v("<1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some("<1.2.3")),
+            ("<2.0.0", Some("<1.2.3")),
+            (">=2.0.0", None),
+            (">=1.0.0", Some(">=1.0.0 <1.2.3")),
+            (">2.0.0", None),
+            ("2.0.0", None),
+            ("1.2.3", None),
+            (">1.2.3", None),
+            ("<=1.2.3", Some("<1.2.3")),
+            ("1.1.1", Some("1.1.1")),
+            ("<1.0.0", Some("<1.0.0")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn lt_eq_123() {
+        let base_range = v("<=1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some("<=1.2.3")),
+            ("<2.0.0", Some("<=1.2.3")),
+            (">=2.0.0", None),
+            (">=1.0.0", Some(">=1.0.0 <=1.2.3")),
+            (">2.0.0", None),
+            ("2.0.0", None),
+            ("1.2.3", Some("1.2.3")),
+            (">1.2.3", None),
+            ("<=1.2.3", Some("<=1.2.3")),
+            ("1.1.1", Some("1.1.1")),
+            ("<1.0.0", Some("<1.0.0")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    fn assert_ranges_match(base: VersionReq, samples: Vec<(&'static str, Option<&'static str>)>) {
+        for (other, expected) in samples {
+            let other = v(other);
+            let resulting_range = base.intersect(&other).map(|v| v.to_string());
+            assert_eq!(
+                resulting_range.clone(),
+                expected.map(|e| e.to_string()),
+                "{} ∩ {} := {}",
+                base,
+                other,
+                resulting_range.unwrap_or("⊗".into())
+            );
+        }
+    }
 }
 
 #[cfg(test)]
