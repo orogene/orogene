@@ -1,4 +1,4 @@
-use ignore::{DirEntry, WalkBuilder};
+use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder};
 use oro_manifest::OroManifest;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -27,7 +27,7 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
-    pub fn dry_run(&self) -> Vec<PathBuf> {
+    pub fn get_pkg_files(&self) -> Vec<PathBuf> {
         let mut cwd = env::current_dir().unwrap();
 
         cwd.push("fixtures");
@@ -89,20 +89,22 @@ mod tests {
     }
 
     #[test]
-    fn dry_run() {
+    fn paths_ignore_files() {
         let mut pack = OroPack::new();
-        let cwd = env::current_dir().unwrap();
+        let mut cwd = env::current_dir().unwrap();
+        cwd.push("fixtures");
 
         let pkg_path = "fixtures/package.json";
 
         let expected_paths = vec![
-            Path::new("fixtures/package.json"),
-            Path::new("fixtures/src/index.js"),
+            Path::new("package.json"),
+            Path::new("src/index.js"),
+            Path::new("src/module.js"),
         ];
 
         pack.load_package_json_from(pkg_path);
 
-        let files = pack.dry_run();
+        let files = pack.get_pkg_files();
         let non_directories = files.iter().filter(|f| !f.is_dir()).collect::<Vec<_>>();
         let stripped_paths = non_directories
             .iter()
@@ -110,5 +112,25 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(expected_paths, stripped_paths);
+    }
+
+    #[test]
+    fn paths_respect_files() {
+        let mut pack = OroPack::new();
+        let mut cwd = env::current_dir().unwrap();
+        cwd.push("fixtures");
+
+        let pkg_path = "fixtures/package.json";
+
+        pack.load_package_json_from(pkg_path);
+
+        let expected_paths = vec![Path::new("src/module.js")];
+
+        let pkg_files = pack.get_files();
+
+        if !pkg_files.is_empty() {
+            let paths = pkg_files.iter().map(Path::new).collect::<Vec<_>>();
+            assert_eq!(expected_paths, paths);
+        }
     }
 }
