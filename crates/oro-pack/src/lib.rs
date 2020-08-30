@@ -1,4 +1,4 @@
-use ignore::{DirEntry, WalkBuilder};
+use ignore::{overrides::OverrideBuilder, WalkBuilder};
 use oro_manifest::OroManifest;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -29,34 +29,32 @@ impl OroPack {
 
     pub fn get_pkg_files(&self) -> Vec<PathBuf> {
         let pkg_files = self.get_files();
+        let cwd = env::current_dir().unwrap();
+
+        let mut overd = OverrideBuilder::new(&cwd);
 
         if !pkg_files.is_empty() {
-            return pkg_files.iter().map(PathBuf::from).collect::<Vec<_>>();
-        }
-
-        let cwd = env::current_dir().unwrap();
-        let mut results: Vec<DirEntry> = Vec::new();
-
-        for result in WalkBuilder::new(&cwd).build() {
-            match result {
-                Ok(entry) => {
-                    results.push(entry);
-                }
-                Err(err) => println!("ERROR: {}", err),
+            for f in pkg_files {
+                overd.add(f).unwrap();
             }
         }
 
-        let path_bufs = results
-            .iter()
-            .map(|x| x.path().to_path_buf())
-            .collect::<Vec<_>>();
-        let non_directories = path_bufs.iter().filter(|f| !f.is_dir()).collect::<Vec<_>>();
-        let stripped_paths = non_directories
-            .iter()
-            .map(|p| p.strip_prefix(&cwd).unwrap().to_path_buf())
-            .collect::<Vec<_>>();
+        let mut results = Vec::new();
 
-        stripped_paths
+        for result in WalkBuilder::new(&cwd)
+            .overrides(overd.build().unwrap())
+            .build()
+        {
+            if let Ok(entry) = result {
+                results.push(entry.path().to_owned());
+            }
+        }
+
+        results
+            .iter()
+            .filter(|f| !f.is_dir())
+            .map(|p| p.strip_prefix(&cwd).unwrap().to_path_buf())
+            .collect()
     }
 
     pub fn load_package_json(&mut self) {
