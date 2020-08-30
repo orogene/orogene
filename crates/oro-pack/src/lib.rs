@@ -1,4 +1,4 @@
-use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder};
+use ignore::{DirEntry, WalkBuilder};
 use oro_manifest::OroManifest;
 use std::env;
 use std::path::{Path, PathBuf};
