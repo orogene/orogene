@@ -1,6 +1,7 @@
+use ignore::{DirEntry, WalkBuilder};
 use oro_manifest::OroManifest;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const PKG_PATH: &str = "package.json";
 
@@ -26,6 +27,25 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
+    pub fn dry_run(&self) -> Vec<PathBuf> {
+        let mut cwd = env::current_dir().unwrap();
+
+        cwd.push("fixtures");
+
+        let mut results: Vec<DirEntry> = Vec::new();
+
+        for result in WalkBuilder::new(&cwd).build() {
+            match result {
+                Ok(entry) => {
+                    results.push(entry);
+                }
+                Err(err) => println!("ERROR: {}", err),
+            }
+        }
+
+        results.iter().map(|x| x.path().to_path_buf()).collect()
+    }
+
     pub fn load_package_json_from<P: AsRef<Path>>(&mut self, pkg_path: P) {
         let mut path = env::current_dir().unwrap();
 
@@ -36,6 +56,12 @@ impl OroPack {
 
     pub fn load_package_json(&mut self) {
         self.load_package_json_from(PKG_PATH);
+    }
+
+    pub fn get_files(&self) -> &Vec<String> {
+        let pkg = self.pkg.as_ref().unwrap();
+
+        &pkg.files
     }
 
     pub fn get_package_name(&self) -> String {
