@@ -58,7 +58,7 @@ impl OroPack {
 
     /// Ignore cruft and always include paths specicied in the files field of package.json.
     /// Use reverse gitignore syntax.
-    fn generate_overrides(&self, pkg_files: &Vec<String>) -> Override {
+    fn generate_overrides(&self, pkg_files: &[String]) -> Override {
         let mut builder = OverrideBuilder::new(env::current_dir().unwrap());
 
         for ig in ALWAYS_IGNORED.iter() {
@@ -86,7 +86,7 @@ impl OroPack {
         let cwd = env::current_dir().unwrap();
 
         for path in WalkBuilder::new(env::current_dir().unwrap())
-            .overrides(overrides.clone())
+            .overrides(overrides)
             .add_custom_ignore_filename(".gitignore")
             .build()
         {
