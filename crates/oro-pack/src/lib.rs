@@ -1,4 +1,7 @@
-use ignore::{overrides::OverrideBuilder, WalkBuilder};
+use ignore::{
+    overrides::{Override, OverrideBuilder},
+    WalkBuilder,
+};
 use oro_manifest::OroManifest;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -53,27 +56,33 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
-    pub fn project_paths(&self) -> Vec<PathBuf> {
-        let pkg_files = self.pkg_files();
-        let cwd = env::current_dir().unwrap();
-
-        let mut overd = OverrideBuilder::new(&cwd);
+    fn generate_overrides(&self, pkg_files: &Vec<String>) -> Override {
+        let mut builder = OverrideBuilder::new(env::current_dir().unwrap());
 
         if !pkg_files.is_empty() {
             for f in pkg_files {
-                overd.add(f).unwrap();
+                builder.add(f).unwrap();
             }
         }
 
         for ig in ALWAYS_IGNORED.iter() {
             let rev = format!("!{}", ig);
-            overd.add(&rev).unwrap();
+            builder.add(&rev).unwrap();
         }
+
+        builder.build().unwrap()
+    }
+
+    pub fn project_paths(&self) -> Vec<PathBuf> {
+        let pkg_files = self.pkg_files();
+        let overrides = self.generate_overrides(pkg_files);
 
         let mut paths = Vec::new();
 
-        for path in WalkBuilder::new(&cwd)
-            .overrides(overd.build().unwrap())
+        let cwd = env::current_dir().unwrap();
+
+        for path in WalkBuilder::new(env::current_dir().unwrap())
+            .overrides(overrides)
             .build()
         {
             if let Ok(entry) = path {
