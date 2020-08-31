@@ -4,6 +4,32 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 const PKG_PATH: &str = "package.json";
+const ALWAYS_IGNORED: [&str; 24] = [
+    ".gitignore",
+    ".npmignore",
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/CVS",
+    "**/.git/**",
+    "**/.svn/**",
+    "**/.hg/**",
+    "**/CVS/**",
+    "/.lock-wscript",
+    "/.wafpickle-*",
+    "/build/config.gypi",
+    "npm-debug.log",
+    "**/.npmrc",
+    ".*.swp",
+    ".DS_Store",
+    "**/.DS_Store/**",
+    "._*",
+    "**/._*/**",
+    "*.orig",
+    "/package-lock.json",
+    "/yarn.lock",
+    "/archived-packages/**",
+];
 
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
@@ -39,6 +65,11 @@ impl OroPack {
             }
         }
 
+        for ig in ALWAYS_IGNORED.iter() {
+            let rev = format!("!{}", ig);
+            overd.add(&rev).unwrap();
+        }
+
         let mut paths = Vec::new();
 
         for path in WalkBuilder::new(&cwd)
@@ -69,14 +100,5 @@ impl OroPack {
         let pkg = self.pkg.as_ref().unwrap();
 
         &pkg.files
-    }
-
-    fn pkg_name(&self) -> String {
-        let pkg = self.pkg.as_ref().unwrap();
-
-        match &pkg.name {
-            Some(name) => name.clone(),
-            None => panic!("package.json has no name!"),
-        }
     }
 }
