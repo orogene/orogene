@@ -56,6 +56,8 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
+    /// Ignore cruft and always include paths specicied in the files field of package.json.
+    /// Use reverse gitignore syntax.
     fn generate_overrides(&self, pkg_files: &Vec<String>) -> Override {
         let mut builder = OverrideBuilder::new(env::current_dir().unwrap());
 
@@ -73,9 +75,11 @@ impl OroPack {
         builder.build().unwrap()
     }
 
+    /// Get a list of all paths that will be included in a package.
     pub fn project_paths(&self) -> Vec<PathBuf> {
         let pkg_files = self.pkg_files();
         let overrides = self.generate_overrides(pkg_files);
+        let force_include_pkg_json = overrides.num_whitelists() > 0;
 
         let mut paths = Vec::new();
 
@@ -91,7 +95,7 @@ impl OroPack {
             }
         }
 
-        if overrides.num_whitelists() > 0 {
+        if force_include_pkg_json {
             paths.push(cwd.join(PathBuf::from("package.json")));
         }
 
@@ -102,6 +106,7 @@ impl OroPack {
             .collect()
     }
 
+    /// Load package.json.
     pub fn load(&mut self) {
         let mut path = env::current_dir().unwrap();
 
