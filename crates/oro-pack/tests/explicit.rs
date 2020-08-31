@@ -10,11 +10,11 @@ fn paths_respect_files() {
 
     let mut pack = OroPack::new();
 
-    pack.load_package_json();
+    pack.load();
 
     let expected_paths = vec![Path::new("src/module.js")];
 
-    let pkg_files = pack.get_pkg_files();
+    let pkg_files = pack.project_paths();
 
     assert_eq!(expected_paths, pkg_files);
 }

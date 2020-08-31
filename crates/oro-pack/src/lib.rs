@@ -27,8 +27,8 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
-    pub fn get_pkg_files(&self) -> Vec<PathBuf> {
-        let pkg_files = self.get_files();
+    pub fn project_paths(&self) -> Vec<PathBuf> {
+        let pkg_files = self.pkg_files();
         let cwd = env::current_dir().unwrap();
 
         let mut overd = OverrideBuilder::new(&cwd);
@@ -39,25 +39,25 @@ impl OroPack {
             }
         }
 
-        let mut results = Vec::new();
+        let mut paths = Vec::new();
 
-        for result in WalkBuilder::new(&cwd)
+        for path in WalkBuilder::new(&cwd)
             .overrides(overd.build().unwrap())
             .build()
         {
-            if let Ok(entry) = result {
-                results.push(entry.path().to_owned());
+            if let Ok(entry) = path {
+                paths.push(entry.path().to_owned());
             }
         }
 
-        results
+        paths
             .iter()
             .filter(|f| !f.is_dir())
             .map(|p| p.strip_prefix(&cwd).unwrap().to_path_buf())
             .collect()
     }
 
-    pub fn load_package_json(&mut self) {
+    pub fn load(&mut self) {
         let mut path = env::current_dir().unwrap();
 
         path.push(PKG_PATH);
@@ -65,13 +65,13 @@ impl OroPack {
         self.pkg = Some(read_package_json(path));
     }
 
-    fn get_files(&self) -> &Vec<String> {
+    fn pkg_files(&self) -> &Vec<String> {
         let pkg = self.pkg.as_ref().unwrap();
 
         &pkg.files
     }
 
-    fn get_package_name(&self) -> String {
+    fn pkg_name(&self) -> String {
         let pkg = self.pkg.as_ref().unwrap();
 
         match &pkg.name {

@@ -16,9 +16,9 @@ fn paths_no_files_field() {
         Path::new("src/module.js"),
     ];
 
-    pack.load_package_json();
+    pack.load();
 
-    let files = pack.get_pkg_files();
+    let files = pack.project_paths();
 
     assert_eq!(expected_paths, files);
 }
