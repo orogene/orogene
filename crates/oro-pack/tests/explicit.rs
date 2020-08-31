@@ -12,7 +12,7 @@ fn paths_respect_files() {
 
     pack.load();
 
-    let expected_paths = vec![Path::new("src/module.js")];
+    let expected_paths = vec![Path::new("src/module.js"), Path::new("package.json")];
 
     let pkg_files = pack.project_paths();
 

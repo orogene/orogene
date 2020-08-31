@@ -59,15 +59,15 @@ impl OroPack {
     fn generate_overrides(&self, pkg_files: &Vec<String>) -> Override {
         let mut builder = OverrideBuilder::new(env::current_dir().unwrap());
 
+        for ig in ALWAYS_IGNORED.iter() {
+            let rev = format!("!{}", ig);
+            builder.add(&rev).unwrap();
+        }
+
         if !pkg_files.is_empty() {
             for f in pkg_files {
                 builder.add(f).unwrap();
             }
-        }
-
-        for ig in ALWAYS_IGNORED.iter() {
-            let rev = format!("!{}", ig);
-            builder.add(&rev).unwrap();
         }
 
         builder.build().unwrap()
@@ -82,12 +82,17 @@ impl OroPack {
         let cwd = env::current_dir().unwrap();
 
         for path in WalkBuilder::new(env::current_dir().unwrap())
-            .overrides(overrides)
+            .overrides(overrides.clone())
+            .add_custom_ignore_filename(".gitignore")
             .build()
         {
             if let Ok(entry) = path {
                 paths.push(entry.path().to_owned());
             }
+        }
+
+        if overrides.num_whitelists() > 0 {
+            paths.push(cwd.join(PathBuf::from("package.json")));
         }
 
         paths
