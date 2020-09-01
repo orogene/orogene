@@ -2,7 +2,7 @@
 
 ## Development requirements
 
-Before atempting to run this project, you should have bith node and rust installed on your machine
+Before attempting to run this project, you should have both node and rust installed on your machine
 
 ```
 rust    ^1.45
