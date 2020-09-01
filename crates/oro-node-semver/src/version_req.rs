@@ -41,7 +41,7 @@ impl Range {
     fn exact(version: Version) -> Self {
         Range::new(
             Predicate::Including(version.clone()),
-            Predicate::Including(version.clone()),
+            Predicate::Including(version),
         )
     }
 
@@ -160,9 +160,7 @@ impl Range {
             }
             (Excluding(v1), Excluding(v2)) => Excluding(std::cmp::min(v1, v2).clone()),
             (Excluding(v1), Including(v2)) => {
-                if v1 < v2 {
-                    Excluding(v1.clone())
-                } else if v1 == v2 {
+                if v1 <= v2 {
                     Excluding(v1.clone())
                 } else {
                     Including(v2.clone())
