@@ -3,7 +3,7 @@ use ignore::{
     WalkBuilder,
 };
 use oro_manifest::OroManifest;
-use regex;
+use regex::RegexBuilder;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -115,10 +115,11 @@ impl OroPack {
             let entry = entry.unwrap();
             let path = entry.path();
 
-            println!("{:?}", path);
-
             if !path.is_dir() {
-                let reg = regex::Regex::new(RE).unwrap();
+                let reg = regex::RegexBuilder::new(RE)
+                    .case_insensitive(true)
+                    .build()
+                    .unwrap();
                 let file_name = path.file_name().unwrap();
 
                 if reg.is_match(file_name.to_str().unwrap()) {
