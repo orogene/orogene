@@ -3,10 +3,10 @@ use std::env;
 use std::path::Path;
 
 #[test]
-fn paths_no_files_field() {
-    let mut cwd = env::current_dir().unwrap();
+fn paths_no_files_field() -> std::io::Result<()> {
+    let mut cwd = env::current_dir()?;
     cwd.push("fixtures/implicit_files");
-    env::set_current_dir(cwd).unwrap();
+    env::set_current_dir(cwd)?;
 
     let mut pack = OroPack::new();
 
@@ -24,4 +24,6 @@ fn paths_no_files_field() {
     files.sort();
 
     assert_eq!(expected_paths, files);
+
+    Ok(())
 }

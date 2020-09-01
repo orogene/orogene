@@ -3,7 +3,9 @@ use ignore::{
     WalkBuilder,
 };
 use oro_manifest::OroManifest;
+use regex;
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 const PKG_PATH: &str = "package.json";
@@ -33,6 +35,19 @@ const ALWAYS_IGNORED: [&str; 24] = [
     "/yarn.lock",
     "/archived-packages/**",
 ];
+
+const ALWAYS_ALLOWED: [&str; 8] = [
+    "/readme.*",
+    "/copying.*",
+    "/license.*",
+    "/licence.*",
+    "/notice.*",
+    "/changes.*",
+    "/changelog.*",
+    "/history.*",
+];
+
+const RE: &str = "readme|copying|license|licence|notice|changes|changelog|history";
 
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
@@ -85,9 +100,10 @@ impl OroPack {
 
         let cwd = env::current_dir().unwrap();
 
-        for path in WalkBuilder::new(env::current_dir().unwrap())
+        for path in WalkBuilder::new(&cwd)
             .overrides(overrides)
             .add_custom_ignore_filename(".gitignore")
+            .git_ignore(false)
             .build()
         {
             if let Ok(entry) = path {
@@ -95,9 +111,29 @@ impl OroPack {
             }
         }
 
+        for entry in fs::read_dir(&cwd).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+
+            println!("{:?}", path);
+
+            if !path.is_dir() {
+                let reg = regex::Regex::new(RE).unwrap();
+                let file_name = path.file_name().unwrap();
+
+                if reg.is_match(file_name.to_str().unwrap()) {
+                    paths.push(path);
+                }
+            }
+        }
+
         if force_include_pkg_json {
             paths.push(cwd.join(PathBuf::from("package.json")));
         }
+
+        paths.sort();
+
+        paths.dedup();
 
         paths
             .iter()
