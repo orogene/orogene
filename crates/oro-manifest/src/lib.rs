@@ -57,7 +57,7 @@ pub struct OroManifest {
 
     #[serde(default)]
     #[builder(default)]
-    pub files: Vec<String>,
+    pub files: Option<Vec<String>>,
 
     #[builder(setter(into, strip_option), default)]
     pub main: Option<String>,
@@ -396,7 +396,7 @@ mod tests {
                 .license("Parity-7.0")
                 .main("index.js")
                 .keywords(vec!["foo".into(), "bar".into()])
-                .files(vec!["*.js".into()])
+                .files(Some(vec!["*.js".into()]))
                 .os(vec!["windows".into(), "darwin".into()])
                 .cpu(vec!["x64".into()])
                 .bundled_dependencies(vec!["mydep".into()])
