@@ -12,9 +12,9 @@ fn paths_respect_files() {
 
     pack.load();
 
-    let expected_paths = vec![Path::new("src/module.js"), Path::new("package.json")];
+    let mut expected_paths = vec![Path::new("src/module.js"), Path::new("package.json")];
 
-    let pkg_files = pack.project_paths();
+    let mut pkg_files = pack.project_paths();
 
-    assert_eq!(expected_paths, pkg_files);
+    assert_eq!(expected_paths.sort(), pkg_files.sort());
 }

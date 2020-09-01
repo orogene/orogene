@@ -10,7 +10,7 @@ fn paths_no_files_field() {
 
     let mut pack = OroPack::new();
 
-    let expected_paths = vec![
+    let mut expected_paths = vec![
         Path::new("package.json"),
         Path::new("src/index.js"),
         Path::new("src/module.js"),
@@ -18,7 +18,7 @@ fn paths_no_files_field() {
 
     pack.load();
 
-    let files = pack.project_paths();
+    let mut files = pack.project_paths();
 
-    assert_eq!(expected_paths, files);
+    assert_eq!(expected_paths.sort(), files.sort());
 }

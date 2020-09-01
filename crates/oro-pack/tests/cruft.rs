@@ -58,13 +58,13 @@ fn ignore_cruft() {
 
     let mut pack = OroPack::new();
 
-    let expected_paths = vec![Path::new("yarn.lock"), Path::new("package.json")];
+    let mut expected_paths = vec![Path::new("yarn.lock"), Path::new("package.json")];
 
     pack.load();
 
-    let files = pack.project_paths();
+    let mut files = pack.project_paths();
 
-    assert_eq!(expected_paths, files);
+    assert_eq!(expected_paths.sort(), files.sort());
 
     dir.close().unwrap();
 }
