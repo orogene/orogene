@@ -27,8 +27,6 @@ fn ignore_cruft() {
     )
     .unwrap();
 
-    println!("{}", dir.path().display());
-
     fs::create_dir(dir_path.join("build")).unwrap();
     fs::create_dir(dir_path.join("npmrc")).unwrap();
     fs::create_dir(dir_path.join("archived-packages")).unwrap();
