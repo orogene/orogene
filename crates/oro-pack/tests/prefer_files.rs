@@ -8,7 +8,9 @@ use tempfile::tempdir;
 
 #[test]
 fn prefer_files() -> std::io::Result<()> {
-    let dir = tempdir().unwrap();
+    let cwd = env::current_dir()?;
+
+    let dir = tempdir()?;
     let dir_path = dir.path();
     let pkg_path = dir_path.join("package.json");
 
@@ -38,7 +40,12 @@ fn prefer_files() -> std::io::Result<()> {
 
     let mut files = pack.project_paths();
 
-    assert_eq!(expected_paths.sort(), files.sort());
+    expected_paths.sort();
+    files.sort();
+
+    assert_eq!(expected_paths, files);
+
+    env::set_current_dir(cwd)?;
 
     drop(pkg_json);
     drop(_a);

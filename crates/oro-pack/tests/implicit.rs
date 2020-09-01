@@ -20,5 +20,8 @@ fn paths_no_files_field() {
 
     let mut files = pack.project_paths();
 
-    assert_eq!(expected_paths.sort(), files.sort());
+    expected_paths.sort();
+    files.sort();
+
+    assert_eq!(expected_paths, files);
 }

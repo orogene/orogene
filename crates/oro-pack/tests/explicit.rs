@@ -16,5 +16,8 @@ fn paths_respect_files() {
 
     let mut pkg_files = pack.project_paths();
 
-    assert_eq!(expected_paths.sort(), pkg_files.sort());
+    expected_paths.sort();
+    pkg_files.sort();
+
+    assert_eq!(expected_paths, pkg_files);
 }

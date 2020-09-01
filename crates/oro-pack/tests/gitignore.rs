@@ -8,6 +8,8 @@ use tempfile::tempdir;
 
 #[test]
 fn git_ignore() -> std::io::Result<()> {
+    let cwd = env::current_dir()?;
+
     let dir = tempdir()?;
     let dir_path = dir.path();
     let pkg_path = dir_path.join("package.json");
@@ -24,9 +26,11 @@ fn git_ignore() -> std::io::Result<()> {
     )?;
 
     let _a = File::create(dir_path.join("index.js"))?;
-    let _b = File::create(dir_path.join(".gitignore"))?;
+    let mut _b = File::create(dir_path.join(".gitignore"))?;
 
-    env::set_current_dir(&dir)?;
+    _b.write_all("index.js".as_bytes())?;
+
+    env::set_current_dir(dir.path())?;
 
     let mut pack = OroPack::new();
 
@@ -36,7 +40,12 @@ fn git_ignore() -> std::io::Result<()> {
 
     let mut files = pack.project_paths();
 
-    assert_eq!(expected_paths.sort(), files.sort());
+    expected_paths.sort();
+    files.sort();
+
+    assert_eq!(expected_paths, files);
+
+    env::set_current_dir(cwd)?;
 
     drop(pkg_json);
 

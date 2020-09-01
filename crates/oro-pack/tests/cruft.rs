@@ -70,9 +70,6 @@ fn ignore_cruft() -> std::io::Result<()> {
     expected_paths.sort();
     files.sort();
 
-    println!("Expected: {:?}", expected_paths);
-    println!("Got: {:?}", files);
-
     assert_eq!(expected_paths, files);
 
     env::set_current_dir(cwd)?;
