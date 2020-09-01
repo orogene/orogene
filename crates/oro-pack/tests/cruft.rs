@@ -15,8 +15,7 @@ fn ignore_cruft() {
         pkg_path,
         r#"
     { 
-        "name": "testpackage",
-        "files": []
+        "name": "testpackage"
     }
     "#,
     )

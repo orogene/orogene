@@ -15,8 +15,7 @@ fn git_ignore() {
         pkg_path,
         r#"
     { 
-        "name": "testpackage",
-        "files": []
+        "name": "testpackage"
     }
     "#,
     )
