@@ -1,12 +1,18 @@
+use directories::UserDirs;
 use oro_pack::OroPack;
 use std::env;
 use std::fs;
 use std::path::Path;
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 #[test]
 fn ignore_cruft() {
-    let dir = TempDir::new("test").unwrap();
+    if cfg!(windows) {
+        let user_dirs = UserDirs::new().unwrap();
+        env::set_var("TMP", user_dirs.home_dir());
+    }
+
+    let dir = tempdir().unwrap();
     let dir_path = dir.path();
     let pkg_path = dir_path.join("package.json");
 
@@ -15,13 +21,13 @@ fn ignore_cruft() {
         r#"
     { 
         "name": "testpackage",
-        "files": [
-            "yarn.lock"
-        ]
+        "files": []
     }
     "#,
     )
     .unwrap();
+
+    println!("{}", dir.path().display());
 
     fs::create_dir(dir_path.join("build")).unwrap();
     fs::create_dir(dir_path.join("npmrc")).unwrap();
@@ -39,6 +45,7 @@ fn ignore_cruft() {
     fs::write(dir_path.join(".wafpickle-7"), "").unwrap();
     fs::write(dir_path.join("build/config.gypi"), "").unwrap();
     fs::write(dir_path.join("npm-debug.log"), "").unwrap();
+    fs::write(dir_path.join(".npmrc"), "").unwrap();
     fs::write(dir_path.join("npmrc/.npmrc"), "").unwrap();
     fs::write(dir_path.join(".test.swp"), "").unwrap();
     fs::write(dir_path.join(".DS_Store"), "").unwrap();
@@ -58,7 +65,7 @@ fn ignore_cruft() {
 
     let mut pack = OroPack::new();
 
-    let mut expected_paths = vec![Path::new("yarn.lock"), Path::new("package.json")];
+    let mut expected_paths = vec![Path::new("package.json")];
 
     pack.load();
 

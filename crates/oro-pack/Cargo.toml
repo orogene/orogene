@@ -10,4 +10,5 @@ edition = "2018"
 oro-manifest = { path = "../oro-manifest" }
 ignore = "0.4"
 serde_json = "1.0"
-tempdir = "0.3"
+tempfile = "3"
+directories = "3.0.1"
