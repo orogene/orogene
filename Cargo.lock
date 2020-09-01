@@ -699,7 +699,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap 3.0.0-beta.1",
- "directories 2.0.2",
+ "directories",
  "log",
  "oro-command",
  "oro-config",
@@ -1091,15 +1091,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "551a778172a450d7fc12e629ca3b0428d00f6afa9a43da1b630d54604e97371c"
 dependencies = [
  "cfg-if",
- "dirs-sys",
-]
-
-[[package]]
-name = "directories"
-version = "3.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8fed639d60b58d0f53498ab13d26f621fd77569cc6edb031f4cc36a2ad9da0f"
-dependencies = [
  "dirs-sys",
 ]
 
@@ -2056,7 +2047,7 @@ dependencies = [
  "anyhow",
  "clap 3.0.0-beta.1",
  "config 0.9.3",
- "directories 2.0.2",
+ "directories",
  "oro-config-derive",
  "pretty_assertions",
  "serde 1.0.115",
@@ -2139,7 +2130,6 @@ dependencies = [
 name = "oro-pack"
 version = "0.1.0"
 dependencies = [
- "directories 3.0.1",
  "ignore",
  "oro-manifest",
  "serde_json",

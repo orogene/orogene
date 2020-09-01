@@ -1,4 +1,3 @@
-use directories::UserDirs;
 use oro_pack::OroPack;
 use std::env;
 use std::fs;
@@ -7,11 +6,6 @@ use tempfile::tempdir;
 
 #[test]
 fn git_ignore() {
-    if cfg!(windows) {
-        let user_dirs = UserDirs::new().unwrap();
-        env::set_var("TMP", user_dirs.home_dir());
-    }
-
     let dir = tempdir().unwrap();
     let dir_path = dir.path();
     let pkg_path = dir_path.join("package.json");
