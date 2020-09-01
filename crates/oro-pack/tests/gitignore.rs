@@ -1,3 +1,4 @@
+use fs::File;
 use oro_pack::OroPack;
 use std::env;
 use std::fs;
@@ -21,8 +22,8 @@ fn git_ignore() {
     )
     .unwrap();
 
-    fs::write(dir_path.join("index.js"), "").unwrap();
-    fs::write(dir_path.join(".gitignore"), "index.js").unwrap();
+    let _a = File::create(dir_path.join("index.js")).unwrap();
+    let _b = File::create(dir_path.join(".gitignore")).unwrap();
 
     env::set_current_dir(&dir).unwrap();
 
@@ -35,6 +36,9 @@ fn git_ignore() {
     let mut files = pack.project_paths();
 
     assert_eq!(expected_paths.sort(), files.sort());
+
+    drop(_a);
+    drop(_b);
 
     dir.close().unwrap();
 }

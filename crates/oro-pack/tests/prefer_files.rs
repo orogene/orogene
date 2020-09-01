@@ -1,4 +1,4 @@
-use directories::UserDirs;
+use fs::File;
 use oro_pack::OroPack;
 use std::env;
 use std::fs;
@@ -7,11 +7,6 @@ use tempfile::tempdir;
 
 #[test]
 fn ignore_cruft() {
-    if cfg!(windows) {
-        let user_dirs = UserDirs::new().unwrap();
-        env::set_var("TMP", user_dirs.home_dir());
-    }
-
     let dir = tempdir().unwrap();
     let dir_path = dir.path();
     let pkg_path = dir_path.join("package.json");
@@ -29,7 +24,7 @@ fn ignore_cruft() {
     )
     .unwrap();
 
-    fs::write(dir_path.join("yarn.lock"), "").unwrap();
+    let _a = File::create(dir_path.join("yarn.lock")).unwrap();
 
     env::set_current_dir(&dir).unwrap();
 
@@ -42,6 +37,8 @@ fn ignore_cruft() {
     let mut files = pack.project_paths();
 
     assert_eq!(expected_paths.sort(), files.sort());
+
+    drop(_a);
 
     dir.close().unwrap();
 }
