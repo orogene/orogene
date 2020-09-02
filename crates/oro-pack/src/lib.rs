@@ -3,7 +3,6 @@ use ignore::{
     WalkBuilder,
 };
 use oro_manifest::OroManifest;
-use regex::RegexBuilder;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -34,17 +33,6 @@ const ALWAYS_IGNORED: [&str; 24] = [
     "/package-lock.json",
     "/yarn.lock",
     "/archived-packages/**",
-];
-
-const ALWAYS_ALLOWED: [&str; 8] = [
-    "/readme.*",
-    "/copying.*",
-    "/license.*",
-    "/licence.*",
-    "/notice.*",
-    "/changes.*",
-    "/changelog.*",
-    "/history.*",
 ];
 
 const RE: &str = "readme|copying|license|licence|notice|changes|changelog|history";
