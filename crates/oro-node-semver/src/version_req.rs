@@ -237,16 +237,6 @@ impl fmt::Display for Operation {
 }
 
 impl VersionReq {
-    pub fn satisfies(&self, version: &Version) -> bool {
-        for range in &self.predicates {
-            if range.satisfies(version) {
-                return true;
-            }
-        }
-
-        false
-    }
-
     pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
         let input = &input.as_ref()[..];
 
@@ -261,6 +251,25 @@ impl VersionReq {
                 },
             }),
         }
+    }
+
+    pub fn any() -> Self {
+        Self {
+            predicates: vec![Range {
+                upper: Predicate::Unbounded,
+                lower: Predicate::Unbounded,
+            }],
+        }
+    }
+
+    pub fn satisfies(&self, version: &Version) -> bool {
+        for range in &self.predicates {
+            if range.satisfies(version) {
+                return true;
+            }
+        }
+
+        false
     }
 
     pub fn allows_all(&self, other: &VersionReq) -> bool {
@@ -287,6 +296,7 @@ impl VersionReq {
         false
     }
 
+    // TODO: This needs to loop better
     pub fn intersect(&self, other: &Self) -> Option<Self> {
         let lefty = &self.predicates[0];
         let righty = &other.predicates[0];
