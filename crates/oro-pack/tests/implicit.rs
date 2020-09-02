@@ -11,6 +11,7 @@ fn paths_no_files_field() -> std::io::Result<()> {
     let mut pack = OroPack::new();
 
     let mut expected_paths = vec![
+        Path::new("README.md"),
         Path::new("package.json"),
         Path::new("src/index.js"),
         Path::new("src/module.js"),

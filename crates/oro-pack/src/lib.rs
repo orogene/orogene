@@ -103,7 +103,6 @@ impl OroPack {
         for path in WalkBuilder::new(&cwd)
             .overrides(overrides)
             .add_custom_ignore_filename(".gitignore")
-            .git_ignore(false)
             .build()
         {
             if let Ok(entry) = path {

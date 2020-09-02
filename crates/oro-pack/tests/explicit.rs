@@ -12,7 +12,11 @@ fn paths_respect_files() -> std::io::Result<()> {
 
     pack.load();
 
-    let mut expected_paths = vec![Path::new("src/module.js"), Path::new("package.json")];
+    let mut expected_paths = vec![
+        Path::new("src/module.js"),
+        Path::new("package.json"),
+        Path::new("README.md"),
+    ];
 
     let mut pkg_files = pack.project_paths();
 

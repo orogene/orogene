@@ -25,16 +25,30 @@ fn git_ignore() -> std::io::Result<()> {
         .as_bytes(),
     )?;
 
-    let _a = File::create(dir_path.join("index.js"))?;
-    let mut _b = File::create(dir_path.join(".gitignore"))?;
+    let mut _gitignore = File::create(dir_path.join(".gitignore"))?;
 
-    _b.write_all("index.js".as_bytes())?;
+    _gitignore.write_all("sub/module.js\n*.ts\n!important/*.ts\n!yarn.lock".as_bytes())?;
+
+    fs::create_dir_all(dir_path.join("sub/sub")).unwrap();
+    fs::create_dir_all(dir_path.join("important")).unwrap();
+
+    let _a = File::create(dir_path.join("sub/module.js"))?;
+    let _b = File::create(dir_path.join("sub/sub/module.js"))?;
+    let _c = File::create(dir_path.join("module.js"))?;
+    let _d = File::create(dir_path.join("types.ts"))?;
+    let _e = File::create(dir_path.join("important/include.ts"))?;
+    let _f = File::create(dir_path.join("yarn.lock"))?;
 
     env::set_current_dir(dir.path())?;
 
     let mut pack = OroPack::new();
 
-    let mut expected_paths = vec![Path::new("package.json")];
+    let mut expected_paths = vec![
+        Path::new("package.json"),
+        Path::new("sub/sub/module.js"),
+        Path::new("important/include.ts"),
+        Path::new("module.js"),
+    ];
 
     pack.load();
 
@@ -48,9 +62,11 @@ fn git_ignore() -> std::io::Result<()> {
     env::set_current_dir(cwd)?;
 
     drop(pkg_json);
+    drop(_gitignore);
 
     drop(_a);
     drop(_b);
+    drop(_c);
 
     dir.close()?;
 
