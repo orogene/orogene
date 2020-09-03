@@ -7,7 +7,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn prefer_files() -> std::io::Result<()> {
+fn prefer_pkg_json_files() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;
@@ -21,7 +21,9 @@ fn prefer_files() -> std::io::Result<()> {
     { 
         "name": "testpackage",
         "files": [
-            "yarn.lock"
+            "yarn.lock",
+            ".npmrc",
+            ".gitignore"
         ]
     }
     "#
@@ -33,17 +35,13 @@ fn prefer_files() -> std::io::Result<()> {
     env::set_current_dir(&dir)?;
 
     let mut pack = OroPack::new();
-
     let mut expected_paths = vec![Path::new("package.json"), Path::new("yarn.lock")];
 
     pack.load();
 
-    let mut files = pack.project_paths();
-
     expected_paths.sort();
-    files.sort();
 
-    assert_eq!(expected_paths, files);
+    assert_eq!(expected_paths, pack.project_paths());
 
     env::set_current_dir(cwd)?;
 

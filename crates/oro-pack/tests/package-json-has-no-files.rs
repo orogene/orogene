@@ -3,13 +3,12 @@ use std::env;
 use std::path::Path;
 
 #[test]
-fn paths_no_files_field() -> std::io::Result<()> {
+fn pkg_json_has_no_files() -> std::io::Result<()> {
     let mut cwd = env::current_dir()?;
     cwd.push("fixtures/implicit_files");
     env::set_current_dir(cwd)?;
 
     let mut pack = OroPack::new();
-
     let mut expected_paths = vec![
         Path::new("README.md"),
         Path::new("package.json"),
@@ -19,12 +18,9 @@ fn paths_no_files_field() -> std::io::Result<()> {
 
     pack.load();
 
-    let mut files = pack.project_paths();
-
     expected_paths.sort();
-    files.sort();
 
-    assert_eq!(expected_paths, files);
+    assert_eq!(expected_paths, pack.project_paths());
 
     Ok(())
 }

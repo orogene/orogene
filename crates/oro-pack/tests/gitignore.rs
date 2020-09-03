@@ -42,7 +42,6 @@ fn git_ignore() -> std::io::Result<()> {
     env::set_current_dir(dir.path())?;
 
     let mut pack = OroPack::new();
-
     let mut expected_paths = vec![
         Path::new("package.json"),
         Path::new("sub/sub/module.js"),
@@ -52,12 +51,9 @@ fn git_ignore() -> std::io::Result<()> {
 
     pack.load();
 
-    let mut files = pack.project_paths();
-
     expected_paths.sort();
-    files.sort();
 
-    assert_eq!(expected_paths, files);
+    assert_eq!(expected_paths, pack.project_paths());
 
     env::set_current_dir(cwd)?;
 

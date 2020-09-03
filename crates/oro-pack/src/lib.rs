@@ -83,7 +83,6 @@ impl OroPack {
     pub fn project_paths(&self) -> Vec<PathBuf> {
         let pkg_files = self.pkg_files();
         let overrides = self.generate_overrides(pkg_files);
-        let force_include_pkg_json = overrides.num_whitelists() > 0;
 
         let mut paths = Vec::new();
 
@@ -117,8 +116,10 @@ impl OroPack {
             }
         }
 
-        if force_include_pkg_json {
-            paths.push(cwd.join(PathBuf::from("package.json")));
+        let pkg_json = PathBuf::from("package.json");
+
+        if !paths.contains(&pkg_json) {
+            paths.push(cwd.join(pkg_json));
         }
 
         paths.sort();
