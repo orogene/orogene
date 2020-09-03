@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const PKG_PATH: &str = "package.json";
-const ALWAYS_IGNORED: [&str; 24] = [
+const ALWAYS_IGNORED: [&str; 25] = [
     ".gitignore",
     ".npmignore",
     "**/.git",
@@ -34,6 +34,7 @@ const ALWAYS_IGNORED: [&str; 24] = [
     "/package-lock.json",
     "/yarn.lock",
     "/archived-packages/**",
+    "/node_modules/",
 ];
 
 const ALWAYS_INCLUDED: &str = "readme|copying|license|licence|notice|changes|changelog|history";
