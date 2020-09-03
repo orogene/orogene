@@ -3,6 +3,7 @@ use ignore::{
     WalkBuilder,
 };
 use oro_manifest::OroManifest;
+use regex::RegexBuilder;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -35,7 +36,7 @@ const ALWAYS_IGNORED: [&str; 24] = [
     "/archived-packages/**",
 ];
 
-const RE: &str = "readme|copying|license|licence|notice|changes|changelog|history";
+const ALWAYS_INCLUDED: &str = "readme|copying|license|licence|notice|changes|changelog|history";
 
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
@@ -98,18 +99,19 @@ impl OroPack {
             }
         }
 
+        // Always include files that are matched by the regex above
         for entry in fs::read_dir(&cwd).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
 
             if !path.is_dir() {
-                let reg = regex::RegexBuilder::new(RE)
+                let re = RegexBuilder::new(ALWAYS_INCLUDED)
                     .case_insensitive(true)
                     .build()
                     .unwrap();
                 let file_name = path.file_name().unwrap();
 
-                if reg.is_match(file_name.to_str().unwrap()) {
+                if re.is_match(file_name.to_str().unwrap()) {
                     paths.push(path);
                 }
             }
@@ -120,7 +122,6 @@ impl OroPack {
         }
 
         paths.sort();
-
         paths.dedup();
 
         paths
