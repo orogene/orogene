@@ -7,7 +7,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn git_ignore() -> std::io::Result<()> {
+fn git_ignore_with_files() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;

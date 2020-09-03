@@ -7,7 +7,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn always_included() -> std::io::Result<()> {
+fn cannot_ignore_pkg_json() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;

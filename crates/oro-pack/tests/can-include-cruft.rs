@@ -7,7 +7,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn prefer_pkg_json_files() -> std::io::Result<()> {
+fn can_include_cruft() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;

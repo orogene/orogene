@@ -7,7 +7,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn always_included() -> std::io::Result<()> {
+fn always_included_files() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;

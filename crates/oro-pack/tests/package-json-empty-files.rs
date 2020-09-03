@@ -6,7 +6,7 @@ use std::{fs, path::Path};
 use tempfile::tempdir;
 
 #[test]
-fn pkg_json_has_files() -> std::io::Result<()> {
+fn pkg_json_empty_files() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;

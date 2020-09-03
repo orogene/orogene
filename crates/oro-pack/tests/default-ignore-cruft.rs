@@ -7,7 +7,7 @@ use std::path::Path;
 use tempfile::tempdir;
 
 #[test]
-fn ignore_cruft() -> std::io::Result<()> {
+fn default_ignore_cruft() -> std::io::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;
