@@ -13,5 +13,6 @@ License](LICENSE-PARITY.md). Non-member contributions are licensed under
 
 ## Development
 
-For gui development, see [antimony/README.md`](/antimony/README.md)
+For gui development, see [antimony/README.md](/antimony/README.md).
+
 For development of the main project: TBD :)
