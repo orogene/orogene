@@ -24,6 +24,7 @@ impl Range {
     fn new(lower: Predicate, upper: Predicate) -> Self {
         Self { lower, upper }
     }
+
     fn at_least(p: Predicate) -> Self {
         Self {
             lower: p,
@@ -48,17 +49,19 @@ impl Range {
     fn satisfies(&self, version: &Version) -> bool {
         use Predicate::*;
 
-        match (&self.lower, &self.upper) {
-            (Including(lower), Unbounded) => lower <= version,
-            (Including(lower), Excluding(upper)) => lower <= version && version < upper,
-            (Including(lower), Including(upper)) => lower <= version && version <= upper,
-            (Excluding(lower), Unbounded) => lower < version,
-            (Excluding(lower), Excluding(upper)) => lower < version && version < upper,
-            (Excluding(lower), Including(upper)) => lower < version && version <= upper,
-            (Unbounded, Unbounded) => true,
-            (Unbounded, Excluding(upper)) => version < upper,
-            (Unbounded, Including(upper)) => version <= upper,
-        }
+        let lower_bound = match &self.lower {
+            Including(lower) => lower <= version,
+            Excluding(lower) => lower < version,
+            Unbounded => true,
+        };
+
+        let upper_bound = match &self.upper {
+            Including(lower) => version <= lower,
+            Excluding(lower) => version < lower,
+            Unbounded => true,
+        };
+
+        lower_bound && upper_bound
     }
 
     fn allows_all(&self, other: &Range) -> bool {
@@ -188,11 +191,11 @@ impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Predicate::*;
         match (&self.lower, &self.upper) {
-            (Predicate::Unbounded, Unbounded) => write!(f, "WAT"), // TODO
-            (Predicate::Unbounded, Including(v)) => write!(f, "<={}", v),
-            (Predicate::Unbounded, Excluding(v)) => write!(f, "<{}", v),
-            (Including(v), Predicate::Unbounded) => write!(f, ">={}", v),
-            (Excluding(v), Predicate::Unbounded) => write!(f, ">{}", v),
+            (Unbounded, Unbounded) => write!(f, "WAT"), // TODO
+            (Unbounded, Including(v)) => write!(f, "<={}", v),
+            (Unbounded, Excluding(v)) => write!(f, "<{}", v),
+            (Including(v), Unbounded) => write!(f, ">={}", v),
+            (Excluding(v), Unbounded) => write!(f, ">{}", v),
             (Including(v), Including(v2)) if v == v2 => write!(f, "{}", v),
             (Including(v), Including(v2)) => write!(f, ">={} <={}", v, v2),
             (Including(v), Excluding(v2)) => write!(f, ">={} <{}", v, v2),
