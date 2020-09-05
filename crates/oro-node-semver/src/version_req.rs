@@ -191,7 +191,7 @@ impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Predicate::*;
         match (&self.lower, &self.upper) {
-            (Unbounded, Unbounded) => write!(f, "WAT"), // TODO
+            (Unbounded, Unbounded) => write!(f, "*"),
             (Unbounded, Including(v)) => write!(f, "<={}", v),
             (Unbounded, Excluding(v)) => write!(f, "<{}", v),
             (Including(v), Unbounded) => write!(f, ">={}", v),
