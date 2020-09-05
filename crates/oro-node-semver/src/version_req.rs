@@ -15,25 +15,192 @@ use serde::ser::{Serialize, Serializer};
 use crate::{extras, number, Identifier, SemverError, Version};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum Range {
-    Open(Predicate),
-    Closed { upper: Predicate, lower: Predicate },
+struct Range {
+    upper: Predicate,
+    lower: Predicate,
 }
 
 impl Range {
-    fn satisfies(&self, version: &Version) -> bool {
-        match self {
-            Range::Open(predicate) => predicate.satisfies(version),
-            Range::Closed { upper, lower } => upper.satisfies(version) && lower.satisfies(version),
+    fn new(lower: Predicate, upper: Predicate) -> Self {
+        Self { lower, upper }
+    }
+
+    fn at_least(p: Predicate) -> Self {
+        Self {
+            lower: p,
+            upper: Predicate::Unbounded,
         }
+    }
+
+    fn at_most(p: Predicate) -> Self {
+        Self {
+            lower: Predicate::Unbounded,
+            upper: p,
+        }
+    }
+
+    fn exact(version: Version) -> Self {
+        Range::new(
+            Predicate::Including(version.clone()),
+            Predicate::Including(version),
+        )
+    }
+
+    fn satisfies(&self, version: &Version) -> bool {
+        use Predicate::*;
+
+        let lower_bound = match &self.lower {
+            Including(lower) => lower <= version,
+            Excluding(lower) => lower < version,
+            Unbounded => true,
+        };
+
+        let upper_bound = match &self.upper {
+            Including(lower) => version <= lower,
+            Excluding(lower) => version < lower,
+            Unbounded => true,
+        };
+
+        lower_bound && upper_bound
+    }
+
+    fn allows_all(&self, other: &Range) -> bool {
+        use Predicate::*;
+
+        let allows_lower = match (&self.lower, &other.lower) {
+            (Unbounded, _) => true,
+            (Including(left), Including(right)) | (Including(left), Excluding(right)) => {
+                left <= right
+            }
+            (Excluding(left), Including(right)) | (Excluding(left), Excluding(right)) => {
+                left < right
+            }
+            (_, Unbounded) => false,
+        };
+
+        if !allows_lower {
+            return false;
+        }
+
+        match (&self.upper, &other.upper) {
+            (Unbounded, _) => true,
+            (Including(left), Including(right)) | (Including(left), Excluding(right)) => {
+                right <= left
+            }
+            (Excluding(left), Including(right)) | (Excluding(left), Excluding(right)) => {
+                right < left
+            }
+            (_, Unbounded) => false,
+        }
+    }
+
+    fn allows_any(&self, other: &Range) -> bool {
+        use Predicate::*;
+
+        match (&self.lower, &self.upper, &other.lower, &other.upper) {
+            (_, Unbounded, _, Unbounded) | (Unbounded, _, Unbounded, _) => true,
+            (Including(l), Including(r), Including(l2), Including(r2))
+            | (Including(l), Including(r), Including(l2), Excluding(r2))
+            | (Including(l), Excluding(r), Including(l2), Including(r2))
+            | (Including(l), Excluding(r), Including(l2), Excluding(r2)) => {
+                (l <= l2 && l2 <= r) || (l <= r2 && r2 <= r) || (l2 <= l && r <= r2)
+            }
+            (Including(l), _, Unbounded, Including(r2)) => l <= r2,
+            (Including(l), _, Unbounded, Excluding(r2)) => l < r2,
+            (Including(l), Including(r), Including(l2), Unbounded)
+            | (Including(l), Including(r), Excluding(l2), Unbounded)
+            | (Including(l), Excluding(r), Including(l2), Unbounded)
+            | (Including(l), Excluding(r), Excluding(l2), Unbounded) => l <= l2 && l2 <= r,
+            (Including(l), Unbounded, _, Including(r2)) => l <= r2,
+            (Including(l), Unbounded, _, Excluding(r2)) => l <= r2,
+            (Excluding(l), Unbounded, Unbounded, Including(r2)) => l < r2,
+            (Excluding(l), Unbounded, Unbounded, Excluding(r2)) => l <= r2,
+            (Excluding(l), Unbounded, _, Including(r2)) => l < r2,
+            (Unbounded, Excluding(r), _, Including(r2)) => r2 < r,
+            (Unbounded, Excluding(r), Excluding(l2), Unbounded) => l2 < r,
+            (Unbounded, Excluding(r), Including(l2), Unbounded) => l2 < r,
+            (Unbounded, Including(r), Including(l2), Including(_)) => l2 < r,
+            (Unbounded, Including(r), Excluding(l2), Unbounded) => l2 < r,
+            (Unbounded, Including(r), Including(l2), Unbounded) => l2 < r,
+            e => todo!("{:#?}", e),
+        }
+    }
+
+    fn intersect(&self, other: &Self) -> Option<Self> {
+        use Predicate::*;
+
+        let lower = match (&self.lower, &other.lower) {
+            (Unbounded, any) => any.clone(),
+            (any, Unbounded) => any.clone(),
+            (Including(v1), Including(v2)) => Including(std::cmp::max(v1, v2).clone()),
+            (Including(v1), Excluding(v2)) => {
+                if v2 < v1 {
+                    Including(v1.clone())
+                } else {
+                    Excluding(v2.clone())
+                }
+            }
+            (Excluding(v1), Excluding(v2)) => Excluding(std::cmp::max(v1, v2).clone()),
+            (Excluding(v1), Including(v2)) => {
+                if v2 < v1 {
+                    Excluding(v1.clone())
+                } else {
+                    Including(v2.clone())
+                }
+            }
+        };
+
+        let upper = match (&self.upper, &other.upper) {
+            (Unbounded, any) => any.clone(),
+            (any, Unbounded) => any.clone(),
+            (Including(v1), Including(v2)) => Including(std::cmp::min(v1, v2).clone()),
+            (Including(v1), Excluding(v2)) => {
+                if v1 < v2 {
+                    Including(v1.clone())
+                } else {
+                    Excluding(v2.clone())
+                }
+            }
+            (Excluding(v1), Excluding(v2)) => Excluding(std::cmp::min(v1, v2).clone()),
+            (Excluding(v1), Including(v2)) => {
+                if v1 <= v2 {
+                    Excluding(v1.clone())
+                } else {
+                    Including(v2.clone())
+                }
+            }
+        };
+
+        match (&lower, &upper) {
+            (Including(lower), Excluding(upper))
+            | (Excluding(lower), Excluding(upper))
+            | (Excluding(lower), Including(upper))
+                if upper <= lower =>
+            {
+                return None
+            }
+            (Including(lower), Including(upper)) if upper < lower => return None,
+            _ => {}
+        }
+
+        Some(Range { lower, upper })
     }
 }
 
 impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Range::Open(p) => write!(f, "{}", p),
-            Range::Closed { lower, upper } => write!(f, "{} {}", lower, upper),
+        use Predicate::*;
+        match (&self.lower, &self.upper) {
+            (Unbounded, Unbounded) => write!(f, "*"),
+            (Unbounded, Including(v)) => write!(f, "<={}", v),
+            (Unbounded, Excluding(v)) => write!(f, "<{}", v),
+            (Including(v), Unbounded) => write!(f, ">={}", v),
+            (Excluding(v), Unbounded) => write!(f, ">{}", v),
+            (Including(v), Including(v2)) if v == v2 => write!(f, "{}", v),
+            (Including(v), Including(v2)) => write!(f, ">={} <={}", v, v2),
+            (Including(v), Excluding(v2)) => write!(f, ">={} <{}", v, v2),
+            (Excluding(v), Including(v2)) => write!(f, ">{} <={}", v, v2),
+            (Excluding(v), Excluding(v2)) => write!(f, ">{} <{}", v, v2),
         }
     }
 }
@@ -45,6 +212,18 @@ enum Operation {
     GreaterThanEquals,
     LessThan,
     LessThanEquals,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Predicate {
+    Excluding(Version), // < and >
+    Including(Version), // <= and >=
+    Unbounded,          // *
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VersionReq {
+    predicates: Vec<Range>,
 }
 
 impl fmt::Display for Operation {
@@ -60,46 +239,7 @@ impl fmt::Display for Operation {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Predicate {
-    operation: Operation,
-    version: Version,
-}
-
-impl fmt::Display for Predicate {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}{}", self.operation, self.version,)
-    }
-}
-
-/*
- * Methods I'll likely want to have:
- *  * self.satisfies(some_version): true if some_version is within what self allows, false otherwise
- *  * self.intersect(other_version_req): returns a verion_req that would be accepted by both `self`
- *  and `other_version_req` or None if its impossible
- * ==> these methods could maybe live in `Range`?
- *
- * Unification:
- *   We currently only have a single Range, but with ` <2 || >42`  we will get multiple ranges.
- *   Unification means that we make sure that all ranges are disjoint, by checking for their
- *   intersection and then splitting them at the right place
- */
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct VersionReq {
-    predicates: Vec<Range>,
-}
-
 impl VersionReq {
-    pub fn any() -> Self {
-        VersionReq {
-            predicates: vec![Range::Open(Predicate {
-                operation: Operation::GreaterThanEquals,
-                version: "0.0.0-0".parse().unwrap(),
-            })],
-        }
-    }
-
     pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
         let input = &input.as_ref()[..];
 
@@ -113,6 +253,63 @@ impl VersionReq {
                     Err::Incomplete(_) => "More data was needed".into(),
                 },
             }),
+        }
+    }
+
+    pub fn any() -> Self {
+        Self {
+            predicates: vec![Range {
+                upper: Predicate::Unbounded,
+                lower: Predicate::Unbounded,
+            }],
+        }
+    }
+
+    pub fn satisfies(&self, version: &Version) -> bool {
+        for range in &self.predicates {
+            if range.satisfies(version) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn allows_all(&self, other: &VersionReq) -> bool {
+        for this in &self.predicates {
+            for that in &other.predicates {
+                if this.allows_all(&that) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn allows_any(&self, other: &VersionReq) -> bool {
+        for this in &self.predicates {
+            for that in &other.predicates {
+                if this.allows_any(&that) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    // TODO: This needs to loop better
+    pub fn intersect(&self, other: &Self) -> Option<Self> {
+        let lefty = &self.predicates[0];
+        let righty = &other.predicates[0];
+
+        if let Some(range) = lefty.intersect(righty) {
+            Some(Self {
+                predicates: vec![range],
+            })
+        } else {
+            None
         }
     }
 }
@@ -195,11 +392,9 @@ where
 {
     context(
         "wildcard",
-        map(x_or_asterisk, |_| {
-            Range::Open(Predicate {
-                operation: Operation::GreaterThanEquals,
-                version: (0, 0, 0).into(),
-            })
+        map(x_or_asterisk, |_| Range {
+            lower: Predicate::Including((0, 0, 0).into()),
+            upper: Predicate::Unbounded,
         }),
     )(input)
 }
@@ -240,44 +435,46 @@ fn any_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, 
 where
     E: ParseError<&'a str>,
 {
+    use Operation::*;
     context(
         "operation followed by version",
         map(
             tuple((operation, preceded(space0, partial_version))),
             |parsed| match parsed {
-                (Operation::GreaterThanEquals, (major, minor, None, _, _)) => {
-                    Range::Open(Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor.unwrap_or(0), 0).into(),
-                    })
+                (GreaterThanEquals, (major, minor, patch, _, _)) => Range::at_least(
+                    Predicate::Including((major, minor.unwrap_or(0), patch.unwrap_or(0)).into()),
+                ),
+                (GreaterThan, (major, Some(minor), Some(patch), pre_release, build)) => {
+                    Range::at_least(Predicate::Excluding(Version {
+                        major,
+                        minor,
+                        patch,
+                        pre_release,
+                        build,
+                    })) // TODO: Pull through for the rest
                 }
-                (Operation::GreaterThan, (major, Some(minor), None, _, _)) => {
-                    Range::Open(Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor + 1, 0).into(),
-                    })
+                (GreaterThan, (major, Some(minor), None, _, _)) => {
+                    Range::at_least(Predicate::Including((major, minor + 1, 0).into()))
                 }
-                (Operation::GreaterThan, (major, None, None, _, _)) => Range::Open(Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major + 1, 0, 0).into(),
-                }),
-                (Operation::LessThan, (major, minor, None, _, _)) => Range::Open(Predicate {
-                    operation: Operation::LessThan,
-                    version: (major, minor.unwrap_or(0), 0, 0).into(),
-                }),
-                (operation, (major, Some(minor), Some(patch), pre_release, build)) => {
-                    Range::Open(Predicate {
-                        operation,
-                        version: Version {
-                            major,
-                            minor,
-                            patch,
-                            pre_release,
-                            build,
-                        },
-                    })
+                (GreaterThan, (major, None, None, _, _)) => {
+                    Range::at_least(Predicate::Including((major + 1, 0, 0).into()))
                 }
-                _ => unreachable!(),
+                (LessThan, (major, Some(minor), None, _, _)) => {
+                    Range::at_most(Predicate::Excluding((major, minor, 0, 0).into()))
+                }
+                (LessThan, (major, minor, patch, _, _)) => Range::at_most(Predicate::Excluding(
+                    (major, minor.unwrap_or(0), patch.unwrap_or(0)).into(),
+                )),
+                (LessThanEquals, (major, minor, None, _, _)) => Range::at_most(
+                    Predicate::Including((major, minor.unwrap_or(0), 0, 0).into()),
+                ),
+                (LessThanEquals, (major, Some(minor), Some(patch), _, _)) => {
+                    Range::at_most(Predicate::Including((major, minor, patch).into()))
+                }
+                (Exact, (major, Some(minor), Some(patch), _, _)) => {
+                    Range::exact((major, minor, patch).into())
+                }
+                _ => unreachable!("Odd parsed version: {:?}", parsed),
             },
         ),
     )(input)
@@ -295,15 +492,15 @@ where
                 preceded(
                     tag("."),
                     alt((
-                        map(tuple((x_or_asterisk, tag("."), x_or_asterisk)), |_| None), // 2.x.x
+                        map(tuple((x_or_asterisk, tag("."), x_or_asterisk)), |_| None),
                         map(tuple((number, tag("."), x_or_asterisk)), |(minor, _, _)| {
                             Some(minor)
-                        }), // 1.2.x
-                        map(x_or_asterisk, |_| None),                                   // 2.x
+                        }),
+                        map(x_or_asterisk, |_| None),
                     )),
                 ),
             )),
-            |(major, maybe_minor)| Range::Closed {
+            |(major, maybe_minor)| Range {
                 upper: upper_bound(major, maybe_minor),
                 lower: lower_bound(major, maybe_minor),
             },
@@ -312,23 +509,14 @@ where
 }
 
 fn lower_bound(major: u64, maybe_minor: Option<u64>) -> Predicate {
-    Predicate {
-        operation: Operation::GreaterThanEquals,
-        version: (major, maybe_minor.unwrap_or(0), 0).into(),
-    }
+    Predicate::Including((major, maybe_minor.unwrap_or(0), 0).into())
 }
 
 fn upper_bound(major: u64, maybe_minor: Option<u64>) -> Predicate {
     if let Some(minor) = maybe_minor {
-        Predicate {
-            operation: Operation::LessThan,
-            version: (major, minor + 1, 0, 0).into(),
-        }
+        Predicate::Excluding((major, minor + 1, 0, 0).into())
     } else {
-        Predicate {
-            operation: Operation::LessThan,
-            version: (major + 1, 0, 0, 0).into(),
-        }
+        Predicate::Excluding((major + 1, 0, 0, 0).into())
     }
 }
 
@@ -341,54 +529,28 @@ where
         map(
             preceded(tuple((tag("^"), space0)), partial_version),
             |parsed| match parsed {
-                (0, None, None, _, _) => Range::Open(Predicate {
-                    operation: Operation::LessThan,
-                    version: (1, 0, 0, 0).into(),
-                }),
-                (0, Some(minor), None, _, _) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (0, minor, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (0, minor + 1, 0, 0).into(),
-                    },
-                },
-                (major, None, None, _, _) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, 0, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (major + 1, 0, 0, 0).into(),
-                    },
-                },
-                (major, Some(minor), None, _, _) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor, 0).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: (major + 1, 0, 0, 0).into(),
-                    },
-                },
-                (major, Some(minor), Some(patch), _, _) => Range::Closed {
-                    lower: Predicate {
-                        operation: Operation::GreaterThanEquals,
-                        version: (major, minor, patch).into(),
-                    },
-                    upper: Predicate {
-                        operation: Operation::LessThan,
-                        version: match (major, minor, patch) {
-                            (0, 0, n) => Version::from((0, 0, n + 1, 0)),
-                            (0, n, _) => Version::from((0, n + 1, 0, 0)),
-                            (n, _, _) => Version::from((n + 1, 0, 0, 0)),
-                        },
-                    },
-                },
+                (0, None, None, _, _) => Range::at_most(Predicate::Excluding((1, 0, 0, 0).into())),
+                (0, Some(minor), None, _, _) => Range::new(
+                    Predicate::Including((0, minor, 0).into()),
+                    Predicate::Excluding((0, minor + 1, 0, 0).into()),
+                ),
+                // TODO: can be compressed?
+                (major, None, None, _, _) => Range::new(
+                    Predicate::Including((major, 0, 0).into()),
+                    Predicate::Excluding((major + 1, 0, 0, 0).into()),
+                ),
+                (major, Some(minor), None, _, _) => Range::new(
+                    Predicate::Including((major, minor, 0).into()),
+                    Predicate::Excluding((major + 1, 0, 0, 0).into()),
+                ),
+                (major, Some(minor), Some(patch), _, _) => Range::new(
+                    Predicate::Including((major, minor, patch).into()),
+                    Predicate::Excluding(match (major, minor, patch) {
+                        (0, 0, n) => Version::from((0, 0, n + 1, 0)),
+                        (0, n, _) => Version::from((0, n + 1, 0, 0)),
+                        (n, _, _) => Version::from((n + 1, 0, 0, 0)),
+                    }),
+                ),
                 _ => unreachable!(),
             },
         ),
@@ -412,56 +574,26 @@ where
     context(
         "tilde",
         map(tuple((tilde_gt, partial_version)), |parsed| match parsed {
-            (Some(_gt), (major, None, None, _, _)) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, 0, 0).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major + 1, 0, 0, 0).into(),
-                },
-            },
-            (Some(_gt), (major, Some(minor), Some(patch), _, _)) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor, patch).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major, minor + 1, 0, 0).into(),
-                },
-            },
-            (None, (major, Some(minor), Some(patch), _, _)) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor, patch).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major, minor + 1, 0, 0).into(),
-                },
-            },
-            (None, (major, Some(minor), None, _, _)) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, minor, 0).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major, minor + 1, 0, 0).into(),
-                },
-            },
-            (None, (major, None, None, _, _)) => Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (major, 0, 0).into(),
-                },
-                upper: Predicate {
-                    operation: Operation::LessThan,
-                    version: (major + 1, 0, 0, 0).into(),
-                },
-            },
+            (Some(_gt), (major, None, None, _, _)) => Range::new(
+                Predicate::Including((major, 0, 0).into()),
+                Predicate::Excluding((major + 1, 0, 0, 0).into()),
+            ),
+            (Some(_gt), (major, Some(minor), Some(patch), _, _)) => Range::new(
+                Predicate::Including((major, minor, patch).into()),
+                Predicate::Excluding((major, minor + 1, 0, 0).into()),
+            ),
+            (None, (major, Some(minor), Some(patch), _, _)) => Range::new(
+                Predicate::Including((major, minor, patch).into()),
+                Predicate::Excluding((major, minor + 1, 0, 0).into()),
+            ),
+            (None, (major, Some(minor), None, _, _)) => Range::new(
+                Predicate::Including((major, minor, 0).into()),
+                Predicate::Excluding((major, minor + 1, 0, 0).into()),
+            ),
+            (None, (major, None, None, _, _)) => Range::new(
+                Predicate::Including((major, 0, 0).into()),
+                Predicate::Excluding((major + 1, 0, 0, 0).into()),
+            ),
             _ => unreachable!("Should not have gotten here"),
         }),
     )(input)
@@ -492,26 +624,24 @@ where
         "hyphenated with major and minor",
         map(
             hyphenated(partial_version, partial_version),
-            |((left, maybe_l_minor, maybe_l_patch, _, _), upper)| Range::Closed {
-                lower: Predicate {
-                    operation: Operation::GreaterThanEquals,
-                    version: (left, maybe_l_minor.unwrap_or(0), maybe_l_patch.unwrap_or(0)).into(),
-                },
-                upper: match upper {
-                    (major, None, None, _, _) => Predicate {
-                        operation: Operation::LessThan,
-                        version: (major + 1, 0, 0, 0).into(),
+            |((left, maybe_l_minor, maybe_l_patch, _, _), upper)| {
+                Range::new(
+                    Predicate::Including(
+                        (left, maybe_l_minor.unwrap_or(0), maybe_l_patch.unwrap_or(0)).into(),
+                    ),
+                    match upper {
+                        (major, None, None, _, _) => {
+                            Predicate::Excluding((major + 1, 0, 0, 0).into())
+                        }
+                        (major, Some(minor), None, _, _) => {
+                            Predicate::Excluding((major, minor + 1, 0, 0).into())
+                        }
+                        (major, Some(minor), Some(patch), _, _) => {
+                            Predicate::Including((major, minor, patch).into())
+                        }
+                        _ => unreachable!("No way to a have a patch wtihout a minor"),
                     },
-                    (major, Some(minor), None, _, _) => Predicate {
-                        operation: Operation::LessThan,
-                        version: (major, minor + 1, 0, 0).into(),
-                    },
-                    (major, Some(minor), Some(patch), _, _) => Predicate {
-                        operation: Operation::LessThanEquals,
-                        version: (major, minor, patch).into(),
-                    },
-                    _ => unreachable!("No way to a have a patch wtihout a minor"),
-                },
+                )
             },
         ),
     )(input)
@@ -524,14 +654,11 @@ where
     context(
         "major and minor",
         map(partial_version, |parsed| match parsed {
-            (major, Some(minor), Some(patch), _, _) => Range::Open(Predicate {
-                operation: Operation::Exact,
-                version: (major, minor, patch).into(),
-            }),
-            (major, maybe_minor, _, _, _) => Range::Closed {
-                lower: lower_bound(major, maybe_minor),
-                upper: upper_bound(major, maybe_minor),
-            },
+            (major, Some(minor), Some(patch), _, _) => Range::exact((major, minor, patch).into()),
+            (major, maybe_minor, _, _, _) => Range::new(
+                lower_bound(major, maybe_minor),
+                upper_bound(major, maybe_minor),
+            ),
         }),
     )(input)
 }
@@ -572,47 +699,235 @@ impl fmt::Display for VersionReq {
     }
 }
 
-impl Predicate {
-    fn satisfies(&self, version: &Version) -> bool {
-        match self.operation {
-            Operation::GreaterThanEquals => self.exact(version) || self.gt(version),
-            Operation::GreaterThan => self.gt(version),
-            Operation::Exact => self.exact(version),
-            Operation::LessThan => !self.gt(version) && !self.exact(version),
-            Operation::LessThanEquals => !self.gt(version),
-        }
-    }
+macro_rules! create_tests_for {
+    ($func:ident $($name:ident => $version_range:expr , { $x:ident => $allows:expr, $y:ident => $denies:expr$(,)? }),+ ,$(,)?) => {
 
-    fn exact(&self, version: &Version) -> bool {
-        let predicate = &self.version;
-        predicate.major == version.major
-            && predicate.minor == version.minor
-            && predicate.patch == version.patch
-    }
+        #[cfg(test)]
+        mod $func {
+        use super::*;
 
-    fn gt(&self, version: &Version) -> bool {
-        let predicate = &self.version;
-        if predicate.major < version.major {
-            return true;
+            $(
+                #[test]
+                fn $name() {
+                    let version_range = VersionReq::parse($version_range).unwrap();
+
+                    let allows: Vec<VersionReq> = $allows.iter().map(|v| VersionReq::parse(v).unwrap()).collect();
+                    for version in &allows {
+                        assert!(version_range.$func(version), "should have allowed: {}", version);
+                    }
+
+                    let ranges: Vec<VersionReq> = $denies.iter().map(|v| VersionReq::parse(v).unwrap()).collect();
+                    for version in &ranges {
+                        assert!(!version_range.$func(version), "should have denied: {}", version);
+                    }
+                }
+            )+
         }
-        if predicate.major > version.major {
-            return false;
-        }
-        if predicate.minor > version.minor {
-            return false;
-        }
-        if predicate.patch >= version.patch {
-            return false;
-        }
-        true
     }
 }
 
-impl VersionReq {
-    pub fn satisfies(&self, version: &Version) -> bool {
-        self.predicates
-            .iter()
-            .any(|predicate| predicate.satisfies(version))
+create_tests_for! {
+    // The function we are testing:
+    allows_all
+
+    greater_than_eq_123   => ">=1.2.3", {
+        allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", "1.2.3", "2 - 7", ">2.0.0"],
+        denies => ["1.0.0", "<1.2", ">=1.2.2", "1 - 3", "0.1 || <1.2.0", ">1.0.0"],
+    },
+
+    greater_than_123      => ">1.2.3", {
+        allows => [">=2.0.0", ">2", "2.0.0", "0.1 || 1.4", ">2.0.0"],
+        denies => ["1.0.0", "<1.2", ">=1.2.3", "1 - 3", "0.1 || <1.2.0", "<=3"],
+    },
+
+    eq_123  => "1.2.3", {
+        allows => ["1.2.3"],
+        denies => ["1.0.0", "<1.2", "1.x", ">=1.2.2", "1 - 3", "0.1 || <1.2.0"],
+    },
+
+    lt_123  => "<1.2.3", {
+        allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4"],
+        denies => ["1 - 3", ">1", "2.0.0", "2.0 || >9", ">1.0.0"],
+    },
+
+    lt_eq_123 => "<=1.2.3", {
+        allows => ["<=1.2.0", "<1", "1.0.0", "0.1 || 1.4", "1.2.3"],
+        denies => ["1 - 3", ">1.0.0", ">=1.0.0"],
+    },
+
+    eq_123_or_gt_400  => "1.2.3 || >4", {
+        allows => [ "1.2.3", ">4", "5.x", "5.2.x", ">=8.2.1", "2.0 || 5.6.7"],
+        denies => ["<2", "1 - 7", "1.9.4 || 2-3"],
+    },
+
+    between_two_and_eight => "2 - 8", {
+        allows => [ "2.2.3", "4 - 5"],
+        denies => ["1 - 4", "5 - 9", ">3", "<=5"],
+    },
+}
+
+create_tests_for! {
+    // The function we are testing:
+    allows_any
+
+    greater_than_eq_123   => ">=1.2.3", {
+        allows => ["<=1.2.4", "3.0.0", "<2", ">=3", ">3.0.0"],
+        denies => ["<=1.2.0", "1.0.0", "<1", "<=1.2"],
+    },
+
+    greater_than_123   => ">1.2.3", {
+        allows => ["<=1.2.4", "3.0.0", "<2", ">=3", ">3.0.0"],
+        denies => ["<=1.2.3", "1.0.0", "<1", "<=1.2"],
+    },
+
+    eq_123   => "1.2.3", {
+        allows => ["1.2.3", "1 - 2"],
+        denies => ["<1.2.3", "1.0.0", "<=1.2", ">4.5.6", ">5"],
+    },
+
+    lt_eq_123  => "<=1.2.3", {
+        allows => ["<=1.2.0", "<1.0.0", "1.0.0", ">1.0.0", ">=1.2.0"],
+        denies => ["4.5.6", ">2.0.0", ">=2.0.0"],
+    },
+
+    lt_123  => "<1.2.3", {
+        allows => ["<=2.2.0", "<2.0.0", "1.0.0", ">1.0.0", ">=1.2.0"],
+        denies => ["2.0.0", ">1.8.0", ">=1.8.0"],
+    },
+
+    between_two_and_eight => "2 - 8", {
+        allows => ["2.2.3", "4 - 10", ">4", ">4.0.0", "<=4.0.0", "<9.1.2"],
+        denies => [">10", "10 - 11", "0 - 1"],
+    },
+
+    eq_123_or_gt_400  => "1.2.3 || >4", {
+        allows => [ "1.2.3", ">3", "5.x", "5.2.x", ">=8.2.1", "2 - 7", "2.0 || 5.6.7"],
+        denies => [ "1.9.4 || 2-3"],
+    },
+}
+
+#[cfg(test)]
+mod intersection {
+    use super::*;
+
+    fn v(range: &'static str) -> VersionReq {
+        range.parse().unwrap()
+    }
+
+    #[test]
+    fn gt_eq_123() {
+        let base_range = v(">=1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some(">=1.2.3 <=2.0.0")),
+            ("<2.0.0", Some(">=1.2.3 <2.0.0")),
+            (">=2.0.0", Some(">=2.0.0")),
+            (">2.0.0", Some(">2.0.0")),
+            (">1.0.0", Some(">=1.2.3")),
+            (">1.2.3", Some(">1.2.3")),
+            ("<=1.2.3", Some("1.2.3")),
+            ("2.0.0", Some("2.0.0")),
+            ("1.1.1", None),
+            ("<1.0.0", None),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn gt_123() {
+        let base_range = v(">1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some(">1.2.3 <=2.0.0")),
+            ("<2.0.0", Some(">1.2.3 <2.0.0")),
+            (">=2.0.0", Some(">=2.0.0")),
+            (">2.0.0", Some(">2.0.0")),
+            ("2.0.0", Some("2.0.0")),
+            (">1.2.3", Some(">1.2.3")),
+            ("<=1.2.3", None),
+            ("1.1.1", None),
+            ("<1.0.0", None),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn eq_123() {
+        let base_range = v("1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some("1.2.3")),
+            ("<2.0.0", Some("1.2.3")),
+            (">=2.0.0", None),
+            (">2.0.0", None),
+            ("2.0.0", None),
+            ("1.2.3", Some("1.2.3")),
+            (">1.2.3", None),
+            ("<=1.2.3", Some("1.2.3")),
+            ("1.1.1", None),
+            ("<1.0.0", None),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn lt_123() {
+        let base_range = v("<1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some("<1.2.3")),
+            ("<2.0.0", Some("<1.2.3")),
+            (">=2.0.0", None),
+            (">=1.0.0", Some(">=1.0.0 <1.2.3")),
+            (">2.0.0", None),
+            ("2.0.0", None),
+            ("1.2.3", None),
+            (">1.2.3", None),
+            ("<=1.2.3", Some("<1.2.3")),
+            ("1.1.1", Some("1.1.1")),
+            ("<1.0.0", Some("<1.0.0")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn lt_eq_123() {
+        let base_range = v("<=1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some("<=1.2.3")),
+            ("<2.0.0", Some("<=1.2.3")),
+            (">=2.0.0", None),
+            (">=1.0.0", Some(">=1.0.0 <=1.2.3")),
+            (">2.0.0", None),
+            ("2.0.0", None),
+            ("1.2.3", Some("1.2.3")),
+            (">1.2.3", None),
+            ("<=1.2.3", Some("<=1.2.3")),
+            ("1.1.1", Some("1.1.1")),
+            ("<1.0.0", Some("<1.0.0")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    fn assert_ranges_match(base: VersionReq, samples: Vec<(&'static str, Option<&'static str>)>) {
+        for (other, expected) in samples {
+            let other = v(other);
+            let resulting_range = base.intersect(&other).map(|v| v.to_string());
+            assert_eq!(
+                resulting_range.clone(),
+                expected.map(|e| e.to_string()),
+                "{} ∩ {} := {}",
+                base,
+                other,
+                resulting_range.unwrap_or("⊗".into())
+            );
+        }
     }
 }
 
@@ -732,6 +1047,7 @@ mod tests {
         single_sided_lower_equals_bound_2 => [">=0.1.97", ">=0.1.97"],
         single_sided_lower_bound => [">1.0.0", ">1.0.0"],
         single_sided_upper_equals_bound => ["<=2.0.0", "<=2.0.0"],
+        single_sided_upper_equals_bound_with_minor => ["<=2.0", "<=2.0.0-0"],
         single_sided_upper_bound => ["<2.0.0", "<2.0.0"],
         major_and_minor => ["2.3", ">=2.3.0 <2.4.0-0"],
         major_dot_x => ["2.x", ">=2.0.0 <3.0.0-0"],
@@ -760,6 +1076,7 @@ mod tests {
         either_one_version_range_or_another => [">=0.2.3 || <0.0.1", ">=0.2.3||<0.0.1"],
         either_x_version_works => ["1.2.x || 2.x", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
         either_asterisk_version_works => ["1.2.* || 2.*", ">=1.2.0 <1.3.0-0||>=2.0.0 <3.0.0-0"],
+        one_two_three_or_greater_than_four => ["1.2.3 || >4", "1.2.3||>=5.0.0"],
         any_version_asterisk => ["*", ">=0.0.0"],
         any_version_x => ["x", ">=0.0.0"],
         whitespace_1 => [">= 1.0.0", ">=1.0.0"],
@@ -776,8 +1093,8 @@ mod tests {
         whitespace_12 => ["~> 1", ">=1.0.0 <2.0.0-0"],
         whitespace_13 => ["~ 1.0", ">=1.0.0 <1.1.0-0"],
     ];
-    /*
 
+    /*
     // From here onwards we might have to deal with pre-release tags to?
     ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
     ["^1.2.3-beta.4", ">=1.2.3-beta.4 <2.0.0-0"],
@@ -807,15 +1124,29 @@ mod tests {
     fn serialize_a_versionreq_to_string() {
         let output = serde_json::to_string(&WithVersionReq {
             req: VersionReq {
-                predicates: vec![Range::Open(Predicate {
-                    operation: Operation::LessThan,
-                    version: "1.2.3".parse().unwrap(),
-                })],
+                predicates: vec![Range::at_most(Predicate::Excluding(
+                    "1.2.3".parse().unwrap(),
+                ))],
             },
         })
         .unwrap();
         let expected: String = r#"{"req":"<1.2.3"}"#.into();
 
         assert_eq!(output, expected);
+    }
+}
+
+#[cfg(test)]
+mod ranges {
+    use super::*;
+
+    #[test]
+    fn one() {
+        let r = Range::new(
+            Predicate::Including((1, 2, 0).into()),
+            Predicate::Excluding((3, 3, 4).into()),
+        );
+
+        assert_eq!(r.to_string(), ">=1.2.0 <3.3.4")
     }
 }
