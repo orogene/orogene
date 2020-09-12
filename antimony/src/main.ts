@@ -4,8 +4,7 @@ import router from './router';
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faUserSecret } from '@fortawesome/free-solid-svg-icons';
-// @ts-ignore expect error here since this is not a TS file. This is until the currently pending PR on that repo is accepted and merged.
-import { FontAwesomeIcon } from './assets/temp-deps/vue-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 library.add(faUserSecret);
 
