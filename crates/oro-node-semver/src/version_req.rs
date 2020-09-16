@@ -106,6 +106,32 @@ impl Range {
 
         Range::new(lower.clone(), upper.clone())
     }
+
+    fn difference(&self, other: &Self) -> Option<Vec<Self>> {
+        use Bound::*;
+
+        if let Some(overlap) = self.intersect(&other) {
+            if &overlap == self {
+                return None
+            }
+
+            if self.lower < overlap.lower && overlap.upper < self.upper {
+                return Some(vec![
+                    Range::new(self.lower.clone(), Upper(overlap.lower.predicate().flip())).unwrap(),
+                    Range::new(Lower(overlap.upper.predicate().flip()), self.upper.clone()).unwrap(),
+                ])
+            }
+
+            if self.lower < overlap.lower  {
+                return Range::new(self.lower.clone(), Upper(overlap.lower.predicate().flip())).map(|f| vec![f])
+            }
+
+            Range::new(Lower(overlap.upper.predicate().flip()), self.upper.clone()).map(|f| vec![f])
+        } else {
+            Some(vec![self.clone()])
+        }
+
+    }
 }
 
 impl fmt::Display for Range {
@@ -144,6 +170,17 @@ pub enum Predicate {
     Unbounded,          // *
 }
 
+impl Predicate {
+    fn flip(self: &Self) -> Self {
+        use Predicate::*;
+        match self {
+            Excluding(v) => Including(v.clone()),
+            Including(v) => Excluding(v.clone()),
+            Unbounded => Unbounded,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Bound {
     Lower(Predicate),
@@ -157,6 +194,25 @@ impl Bound {
 
     fn lower() -> Self {
         Bound::Lower(Predicate::Unbounded)
+    }
+
+    fn version(self: &Self) -> Option<Version> {
+        use Bound::*;
+        use Predicate::*;
+
+        match self {
+            Upper(Including(v)) | Upper(Excluding(v)) | Lower(Including(v)) | Lower(Excluding(v)) => Some(v.clone()),
+            _ => None,
+        }
+    }
+
+    fn predicate(self: &Self) -> Predicate {
+        use Bound::*;
+
+        match self {
+            Lower(p) => p.clone(),
+            Upper(p) => p.clone(),
+        }
     }
 }
 
@@ -298,7 +354,6 @@ impl VersionReq {
         false
     }
 
-    // TODO: This needs to loop better
     pub fn intersect(&self, other: &Self) -> Option<Self> {
         let lefty = &self.predicates[0];
         let righty = &other.predicates[0];
@@ -306,6 +361,19 @@ impl VersionReq {
         if let Some(range) = lefty.intersect(righty) {
             Some(Self {
                 predicates: vec![range],
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn difference(&self, other: &Self) -> Option<Self> {
+        let lefty = &self.predicates[0];
+        let righty = &other.predicates[0];
+
+        if let Some(predicates) = lefty.difference(righty) {
+            Some(Self {
+                predicates,
             })
         } else {
             None
@@ -923,6 +991,131 @@ mod intersection {
                 resulting_range.clone(),
                 expected.map(|e| e.to_string()),
                 "{} ∩ {} := {}",
+                base,
+                other,
+                resulting_range.unwrap_or("⊗".into())
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod difference {
+    use super::*;
+
+    fn v(range: &'static str) -> VersionReq {
+        range.parse().unwrap()
+    }
+
+    #[test]
+    fn gt_eq_123() {
+        let base_range = v(">=1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some(">2.0.0")),
+            ("<2.0.0", Some(">=2.0.0")),
+            (">=2.0.0", Some(">=1.2.3 <2.0.0")),
+            (">2.0.0", Some(">=1.2.3 <=2.0.0")),
+            (">1.0.0", None),
+            (">1.2.3", Some("1.2.3")),
+            ("<=1.2.3", Some(">1.2.3")),
+            ("1.1.1", Some(">=1.2.3")),
+            ("<1.0.0", Some(">=1.2.3")),
+            ("2.0.0", Some(">=1.2.3 <2.0.0||>2.0.0")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn gt_123() {
+        let base_range = v(">1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", Some(">2.0.0")),
+            ("<2.0.0", Some(">=2.0.0")),
+            (">=2.0.0", Some(">1.2.3 <2.0.0")),
+            (">2.0.0", Some(">1.2.3 <=2.0.0")),
+            (">1.0.0", None),
+            (">1.2.3", None),
+            ("<=1.2.3", Some(">1.2.3")),
+            ("1.1.1", Some(">1.2.3")),
+            ("<1.0.0", Some(">1.2.3")),
+            ("2.0.0", Some(">1.2.3 <2.0.0||>2.0.0")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn eq_123() {
+        let base_range = v("1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", None),
+            ("<2.0.0", None),
+            (">=2.0.0", Some("1.2.3")),
+            (">2.0.0", Some("1.2.3")),
+            (">1.0.0", None),
+            (">1.2.3", Some("1.2.3")),
+            ("1.2.3", None),
+            ("<=1.2.3", None),
+            ("1.1.1", Some("1.2.3")),
+            ("<1.0.0", Some("1.2.3")),
+            ("2.0.0", Some("1.2.3")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn lt_123() {
+        let base_range = v("<1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", None),
+            ("<2.0.0", None),
+            (">=2.0.0", Some("<1.2.3")),
+            (">2.0.0", Some("<1.2.3")),
+            (">1.0.0", Some("<=1.0.0")),
+            (">1.2.3", Some("<1.2.3")),
+            ("<=1.2.3", None),
+            ("1.1.1", Some("<1.1.1||>1.1.1 <1.2.3")),
+            ("<1.0.0", Some(">=1.0.0 <1.2.3")),
+            ("2.0.0", Some("<1.2.3")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn lt_eq_123() {
+        let base_range = v("<=1.2.3");
+
+        let samples = vec![
+            ("<=2.0.0", None),
+            ("<2.0.0", None),
+            (">=2.0.0", Some("<=1.2.3")),
+            (">2.0.0", Some("<=1.2.3")),
+            (">1.0.0", Some("<=1.0.0")),
+            (">1.2.3", Some("<=1.2.3")),
+            ("<=1.2.3", None),
+            ("1.1.1", Some("<1.1.1||>1.1.1 <=1.2.3")),
+            ("<1.0.0", Some(">=1.0.0 <=1.2.3")),
+            ("2.0.0", Some("<=1.2.3")),
+        ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    fn assert_ranges_match(base: VersionReq, samples: Vec<(&'static str, Option<&'static str>)>) {
+        for (other, expected) in samples {
+            let other = v(other);
+            let resulting_range = base.difference(&other).map(|v| v.to_string());
+            assert_eq!(
+                resulting_range.clone(),
+                expected.map(|e| e.to_string()),
+                "{} \\ {} := {}",
                 base,
                 other,
                 resulting_range.unwrap_or("⊗".into())
