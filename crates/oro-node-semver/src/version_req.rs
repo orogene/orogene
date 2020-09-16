@@ -112,25 +112,27 @@ impl Range {
 
         if let Some(overlap) = self.intersect(&other) {
             if &overlap == self {
-                return None
+                return None;
             }
 
             if self.lower < overlap.lower && overlap.upper < self.upper {
                 return Some(vec![
-                    Range::new(self.lower.clone(), Upper(overlap.lower.predicate().flip())).unwrap(),
-                    Range::new(Lower(overlap.upper.predicate().flip()), self.upper.clone()).unwrap(),
-                ])
+                    Range::new(self.lower.clone(), Upper(overlap.lower.predicate().flip()))
+                        .unwrap(),
+                    Range::new(Lower(overlap.upper.predicate().flip()), self.upper.clone())
+                        .unwrap(),
+                ]);
             }
 
-            if self.lower < overlap.lower  {
-                return Range::new(self.lower.clone(), Upper(overlap.lower.predicate().flip())).map(|f| vec![f])
+            if self.lower < overlap.lower {
+                return Range::new(self.lower.clone(), Upper(overlap.lower.predicate().flip()))
+                    .map(|f| vec![f]);
             }
 
             Range::new(Lower(overlap.upper.predicate().flip()), self.upper.clone()).map(|f| vec![f])
         } else {
             Some(vec![self.clone()])
         }
-
     }
 }
 
@@ -201,7 +203,8 @@ impl Bound {
         use Predicate::*;
 
         match self {
-            Upper(Including(v)) | Upper(Excluding(v)) | Lower(Including(v)) | Lower(Excluding(v)) => Some(v.clone()),
+            Upper(Including(v)) | Upper(Excluding(v)) | Lower(Including(v))
+            | Lower(Excluding(v)) => Some(v.clone()),
             _ => None,
         }
     }
@@ -372,9 +375,7 @@ impl VersionReq {
         let righty = &other.predicates[0];
 
         if let Some(predicates) = lefty.difference(righty) {
-            Some(Self {
-                predicates,
-            })
+            Some(Self { predicates })
         } else {
             None
         }
