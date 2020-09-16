@@ -198,17 +198,6 @@ impl Bound {
         Bound::Lower(Predicate::Unbounded)
     }
 
-    fn version(self: &Self) -> Option<Version> {
-        use Bound::*;
-        use Predicate::*;
-
-        match self {
-            Upper(Including(v)) | Upper(Excluding(v)) | Lower(Including(v))
-            | Lower(Excluding(v)) => Some(v.clone()),
-            _ => None,
-        }
-    }
-
     fn predicate(self: &Self) -> Predicate {
         use Bound::*;
 
