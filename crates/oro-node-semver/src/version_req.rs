@@ -347,26 +347,38 @@ impl VersionReq {
     }
 
     pub fn intersect(&self, other: &Self) -> Option<Self> {
-        let lefty = &self.predicates[0];
-        let righty = &other.predicates[0];
+        let mut predicates = Vec::new();
 
-        if let Some(range) = lefty.intersect(righty) {
-            Some(Self {
-                predicates: vec![range],
-            })
-        } else {
+        for lefty in &self.predicates {
+            for righty in &other.predicates {
+                if let Some(range) = lefty.intersect(righty) {
+                    predicates.push(range)
+                }
+            }
+        }
+
+        if predicates.is_empty() {
             None
+        } else {
+            Some(Self { predicates })
         }
     }
 
     pub fn difference(&self, other: &Self) -> Option<Self> {
-        let lefty = &self.predicates[0];
-        let righty = &other.predicates[0];
+        let mut predicates = Vec::new();
 
-        if let Some(predicates) = lefty.difference(righty) {
-            Some(Self { predicates })
-        } else {
+        for lefty in &self.predicates {
+            for righty in &other.predicates {
+                if let Some(mut range) = lefty.difference(righty) {
+                    predicates.append(&mut range)
+                }
+            }
+        }
+
+        if predicates.is_empty() {
             None
+        } else {
+            Some(Self { predicates })
         }
     }
 }
@@ -973,6 +985,15 @@ mod intersection {
         assert_ranges_match(base_range, samples);
     }
 
+    #[test]
+    fn multiple() {
+        let base_range = v("<1 || 3-4");
+
+        let samples = vec![("0.5 - 3.5.0", Some(">=0.5.0 <1.0.0||>=3.0.0 <=3.5.0"))];
+
+        assert_ranges_match(base_range, samples);
+    }
+
     fn assert_ranges_match(base: VersionReq, samples: Vec<(&'static str, Option<&'static str>)>) {
         for (other, expected) in samples {
             let other = v(other);
@@ -1094,6 +1115,15 @@ mod difference {
             ("<1.0.0", Some(">=1.0.0 <=1.2.3")),
             ("2.0.0", Some("<=1.2.3")),
         ];
+
+        assert_ranges_match(base_range, samples);
+    }
+
+    #[test]
+    fn multiple() {
+        let base_range = v("<1 || 3-4");
+
+        let samples = vec![("0.5 - 3.5.0", Some("<0.5.0||>3.5.0 <4.0.0-0"))];
 
         assert_ranges_match(base_range, samples);
     }
