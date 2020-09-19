@@ -19,7 +19,8 @@ fn default_ignore_cruft() -> std::io::Result<()> {
     pkg_json.write_all(
         r#"
     { 
-        "name": "testpackage"
+        "name": "testpackage",
+        "files": []
     }
     "#
         .as_bytes(),

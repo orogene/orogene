@@ -19,7 +19,8 @@ fn always_included_files() -> std::io::Result<()> {
     pkg_json.write_all(
         r#"
     { 
-        "name": "testpackage"
+        "name": "testpackage",
+        "files": []
     }
     "#
         .as_bytes(),
