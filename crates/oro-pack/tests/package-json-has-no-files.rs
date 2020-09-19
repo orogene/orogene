@@ -14,13 +14,25 @@ fn pkg_json_has_no_files() {
     let dir_path = dir.path();
     let pkg_path = dir_path.join("package.json");
 
-    let pkg_json = File::create(pkg_path).unwrap();
+    let mut pkg_json = File::create(pkg_path).unwrap();
+
+    pkg_json
+        .write_all(
+            r#"
+    { 
+        "name": "testpackage"
+    }
+    "#
+            .as_bytes(),
+        )
+        .unwrap();
 
     env::set_current_dir(dir.path()).unwrap();
 
     let mut pack = OroPack::new();
 
     pack.load();
+    pack.project_paths();
 
     env::set_current_dir(cwd).unwrap();
 

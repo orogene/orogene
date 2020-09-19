@@ -51,11 +51,7 @@ fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     let patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
 
-    println!("{:#?}", patterns_as_slice);
-
     for entry in WalkDir::new(cwd).into_iter().filter_entry(|e| {
-        println!("{}", e.path().display());
-        println!("{}", ig.ignores(&patterns_as_slice, e.path()));
         let stripped = e.path().strip_prefix(env::current_dir().unwrap()).unwrap();
         let y = patterns_as_slice
             .iter()
@@ -64,7 +60,6 @@ fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
     }) {
         let entry = entry.unwrap();
         if !entry.path().is_dir() {
-            println!("{}", entry.path().display());
             paths.push(entry.path().to_path_buf());
         }
     }
@@ -140,7 +135,7 @@ impl OroPack {
 
         match &pkg.files {
             Some(files) => files.clone(),
-            None => Vec::new(),
+            None => panic!("package.json must have files field!"),
         }
     }
 }

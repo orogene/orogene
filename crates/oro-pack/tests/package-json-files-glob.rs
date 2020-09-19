@@ -20,7 +20,8 @@ fn pkg_json_files_glob() -> std::io::Result<()> {
     { 
         "name": "testpackage",
         "files": [
-            "src/*.js"
+            "src/*.js",
+            "!src/add.js"
         ]
     }
     "#
@@ -38,7 +39,6 @@ fn pkg_json_files_glob() -> std::io::Result<()> {
     let mut pack = OroPack::new();
     let mut expected_paths = vec![
         Path::new("src/module.js"),
-        Path::new("src/add.js"),
         Path::new("package.json"),
         Path::new("README.md"),
     ];
