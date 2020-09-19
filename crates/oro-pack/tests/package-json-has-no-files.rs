@@ -1,8 +1,8 @@
 use fs::File;
 use oro_pack::*;
 use std::env;
+use std::fs;
 use std::io::Write as _;
-use std::{fs, path::Path};
 use tempfile::tempdir;
 
 #[test]

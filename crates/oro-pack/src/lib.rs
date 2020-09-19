@@ -4,36 +4,9 @@ use regex::RegexBuilder;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use walkdir::{DirEntry, WalkDir};
+use walkdir::WalkDir;
 
 const PKG_PATH: &str = "package.json";
-const ALWAYS_IGNORED: [&str; 25] = [
-    ".gitignore",
-    ".npmignore",
-    "**/.git",
-    "**/.svn",
-    "**/.hg",
-    "**/CVS",
-    "**/.git/**",
-    "**/.svn/**",
-    "**/.hg/**",
-    "**/CVS/**",
-    "/.lock-wscript",
-    "/.wafpickle-*",
-    "/build/config.gypi",
-    "npm-debug.log",
-    "**/.npmrc",
-    ".*.swp",
-    ".DS_Store",
-    "**/.DS_Store/**",
-    "._*",
-    "**/._*/**",
-    "*.orig",
-    "/package-lock.json",
-    "/yarn.lock",
-    "/archived-packages/**",
-    "/node_modules/",
-];
 
 const ALWAYS_INCLUDED: &str = "readme|copying|license|licence|notice|changes|changelog|history";
 
@@ -51,12 +24,14 @@ fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
     let mut paths = Vec::new();
     let patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
 
-    for entry in WalkDir::new(cwd).into_iter().filter_entry(|e| {
-        let stripped = e.path().strip_prefix(env::current_dir().unwrap()).unwrap();
-        let y = patterns_as_slice
+    for entry in WalkDir::new(&cwd).into_iter().filter_entry(|e| {
+        let stripped = e.path().strip_prefix(&cwd).unwrap();
+
+        // TODO: avoid converting stripped path to str for comparison
+        let should_descend = patterns_as_slice
             .iter()
             .any(|p| p.starts_with(stripped.to_str().unwrap()));
-        (ig.ignores(&patterns_as_slice, e.path()) || e.path() == ig.root) || y
+        ig.ignores(&patterns_as_slice, e.path()) || e.path() == ig.root || should_descend
     }) {
         let entry = entry.unwrap();
         if !entry.path().is_dir() {
