@@ -17,6 +17,25 @@ const ALWAYS_INCLUDED: [&str; 8] = [
     "/history*",
 ];
 
+struct Include {
+    ig: Gitignore<PathBuf>,
+    root: PathBuf,
+}
+
+impl Default for Include {
+    fn default() -> Self {
+        let ig = Gitignore::default();
+        let root = ig.root.clone();
+        Self { ig, root }
+    }
+}
+
+impl Include {
+    fn includes(&mut self, patterns: &[&str], target: impl AsRef<Path>) -> bool {
+        self.ig.ignores(patterns, target)
+    }
+}
+
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
         Ok(pkg) => pkg,
@@ -26,7 +45,7 @@ fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
 
 fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
     let cwd = env::current_dir().unwrap();
-    let mut ig = Gitignore::default();
+    let mut incl = Include::default();
 
     let mut patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
     let mut paths = Vec::new();
@@ -43,7 +62,7 @@ fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
         let should_descend = patterns_as_slice
             .iter()
             .any(|p| p.starts_with(stripped.to_str().unwrap()));
-        ig.ignores(&patterns_as_slice, e.path()) || e.path() == ig.root || should_descend
+        incl.includes(&patterns_as_slice, e.path()) || e.path() == incl.root || should_descend
     }) {
         let entry = entry.unwrap();
         if !entry.path().is_dir() {
