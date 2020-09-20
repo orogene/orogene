@@ -2125,7 +2125,6 @@ version = "0.1.0"
 dependencies = [
  "gitignored",
  "oro-manifest",
- "regex",
  "serde_json",
  "tempfile",
  "walkdir",
