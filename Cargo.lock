@@ -1454,9 +1454,9 @@ checksum = "aaf91faf136cb47367fa430cd46e37a788775e7fa104f8b4bcb3861dc389b724"
 
 [[package]]
 name = "gitignored"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dca2023f90d5bc8baa7e0d1f98220f8ab8d24b407ecf02cf2bac736a056b8e1"
+checksum = "f5379b8c27fb164ca8e769cb31b262e8988b4e4d0c4772004533a03c31993cc6"
 dependencies = [
  "globset",
  "regex",

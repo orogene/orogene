@@ -6,9 +6,18 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-const PKG_PATH: &str = "package.json";
+const MANIFEST_PATH: &str = "package.json";
 
-const ALWAYS_INCLUDED: &str = "readme|copying|license|licence|notice|changes|changelog|history";
+const ALWAYS_INCLUDED: [&str; 8] = [
+    "/readme*",
+    "/copying*",
+    "/license*",
+    "/licence*",
+    "/notice*",
+    "/changes*",
+    "/changelog*",
+    "/history*",
+];
 
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
@@ -17,11 +26,16 @@ fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     }
 }
 
-fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
+fn find_pkg_paths(mut patterns: Vec<String>) -> Vec<PathBuf> {
     let cwd = env::current_dir().unwrap();
     let mut ig = Gitignore::default();
 
     let mut paths = Vec::new();
+
+    for inc in ALWAYS_INCLUDED.iter() {
+        patterns.push(inc.to_string());
+    }
+
     let patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
 
     for entry in WalkDir::new(&cwd).into_iter().filter_entry(|e| {
@@ -65,7 +79,7 @@ impl OroPack {
         let mut pj_paths = find_pkg_paths(pkg_files);
 
         // Always include files that are matched by the regex above
-        for entry in fs::read_dir(&cwd).unwrap() {
+        /* for entry in fs::read_dir(&cwd).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
 
@@ -80,7 +94,7 @@ impl OroPack {
                     pj_paths.push(path);
                 }
             }
-        }
+        } */
 
         let pkg_json = PathBuf::from("package.json");
 
@@ -101,7 +115,7 @@ impl OroPack {
     /// Load package.json.
     pub fn load(&mut self) {
         let mut path = env::current_dir().unwrap();
-        path.push(PKG_PATH);
+        path.push(MANIFEST_PATH);
         self.pkg = Some(read_package_json(path));
     }
 
