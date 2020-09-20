@@ -1,8 +1,6 @@
 use gitignored::Gitignore;
 use oro_manifest::OroManifest;
-use regex::RegexBuilder;
 use std::env;
-use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -26,17 +24,17 @@ fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     }
 }
 
-fn find_pkg_paths(mut patterns: Vec<String>) -> Vec<PathBuf> {
+fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
     let cwd = env::current_dir().unwrap();
     let mut ig = Gitignore::default();
 
+    let mut patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
     let mut paths = Vec::new();
 
+    // Always include certain files
     for inc in ALWAYS_INCLUDED.iter() {
-        patterns.push(inc.to_string());
+        patterns_as_slice.push(inc);
     }
-
-    let patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
 
     for entry in WalkDir::new(&cwd).into_iter().filter_entry(|e| {
         let stripped = e.path().strip_prefix(&cwd).unwrap();
@@ -77,24 +75,6 @@ impl OroPack {
         let cwd = env::current_dir().unwrap();
 
         let mut pj_paths = find_pkg_paths(pkg_files);
-
-        // Always include files that are matched by the regex above
-        /* for entry in fs::read_dir(&cwd).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-
-            if !path.is_dir() {
-                let re = RegexBuilder::new(ALWAYS_INCLUDED)
-                    .case_insensitive(true)
-                    .build()
-                    .unwrap();
-                let file_name = path.file_name().unwrap();
-
-                if re.is_match(file_name.to_str().unwrap()) {
-                    pj_paths.push(path);
-                }
-            }
-        } */
 
         let pkg_json = PathBuf::from("package.json");
 
