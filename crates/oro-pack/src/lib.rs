@@ -1,49 +1,76 @@
-use ignore::{
-    overrides::{Override, OverrideBuilder},
-    WalkBuilder,
-};
+use gitignored::Gitignore;
 use oro_manifest::OroManifest;
-use regex::RegexBuilder;
 use std::env;
-use std::fs;
 use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
-const PKG_PATH: &str = "package.json";
-const ALWAYS_IGNORED: [&str; 25] = [
-    ".gitignore",
-    ".npmignore",
-    "**/.git",
-    "**/.svn",
-    "**/.hg",
-    "**/CVS",
-    "**/.git/**",
-    "**/.svn/**",
-    "**/.hg/**",
-    "**/CVS/**",
-    "/.lock-wscript",
-    "/.wafpickle-*",
-    "/build/config.gypi",
-    "npm-debug.log",
-    "**/.npmrc",
-    ".*.swp",
-    ".DS_Store",
-    "**/.DS_Store/**",
-    "._*",
-    "**/._*/**",
-    "*.orig",
-    "/package-lock.json",
-    "/yarn.lock",
-    "/archived-packages/**",
-    "/node_modules/",
+const MANIFEST_PATH: &str = "package.json";
+
+const ALWAYS_INCLUDED: [&str; 8] = [
+    "/readme*",
+    "/copying*",
+    "/license*",
+    "/licence*",
+    "/notice*",
+    "/changes*",
+    "/changelog*",
+    "/history*",
 ];
 
-const ALWAYS_INCLUDED: &str = "readme|copying|license|licence|notice|changes|changelog|history";
+struct Include {
+    ig: Gitignore<PathBuf>,
+    root: PathBuf,
+}
+
+impl Default for Include {
+    fn default() -> Self {
+        let ig = Gitignore::default();
+        let root = ig.root.clone();
+        Self { ig, root }
+    }
+}
+
+impl Include {
+    fn includes(&mut self, patterns: &[&str], target: impl AsRef<Path>) -> bool {
+        self.ig.ignores(patterns, target)
+    }
+}
 
 fn read_package_json<P: AsRef<Path>>(pkg_path: P) -> OroManifest {
     match OroManifest::from_file(pkg_path) {
         Ok(pkg) => pkg,
         Err(e) => panic!("Problem loading package.json: {:?}", e),
     }
+}
+
+fn find_pkg_paths(patterns: Vec<String>) -> Vec<PathBuf> {
+    let cwd = env::current_dir().unwrap();
+    let mut incl = Include::default();
+
+    let mut patterns_as_slice: Vec<&str> = patterns.iter().map(AsRef::as_ref).collect();
+    let mut paths = Vec::new();
+
+    // Always include certain files
+    for inc in ALWAYS_INCLUDED.iter() {
+        patterns_as_slice.push(inc);
+    }
+
+    for entry in WalkDir::new(&cwd).into_iter().filter_entry(|e| {
+        let stripped = e.path().strip_prefix(&cwd).unwrap();
+
+        // TODO: avoid converting stripped path to str for comparison
+        let should_descend = patterns_as_slice
+            .iter()
+            .any(|p| p.starts_with(stripped.to_str().unwrap()));
+        incl.includes(&patterns_as_slice, e.path()) || e.path() == incl.root || should_descend
+    }) {
+        let entry = entry.unwrap();
+        if !entry.path().is_dir() {
+            paths.push(entry.path().to_path_buf());
+        }
+    }
+
+    paths
 }
 
 pub struct OroPack {
@@ -61,72 +88,23 @@ impl OroPack {
         OroPack { pkg: None }
     }
 
-    /// Ignore cruft and always include paths specicied in the files field of package.json.
-    /// Use reverse gitignore syntax.
-    fn generate_overrides(&self, pkg_files: Vec<String>) -> Override {
-        let mut builder = OverrideBuilder::new(env::current_dir().unwrap());
-
-        for ig in ALWAYS_IGNORED.iter() {
-            let rev = format!("!{}", ig);
-            builder.add(&rev).unwrap();
-        }
-
-        if !pkg_files.is_empty() {
-            for f in pkg_files {
-                builder.add(&f).unwrap();
-            }
-        }
-
-        builder.build().unwrap()
-    }
-
     /// Get a list of all paths that will be included in a package.
     pub fn project_paths(&self) -> Vec<PathBuf> {
         let pkg_files = self.pkg_files();
-        let overrides = self.generate_overrides(pkg_files);
-
-        let mut paths = Vec::new();
-
         let cwd = env::current_dir().unwrap();
 
-        for path in WalkBuilder::new(&cwd)
-            .overrides(overrides)
-            .add_custom_ignore_filename(".gitignore")
-            .build()
-        {
-            if let Ok(entry) = path {
-                paths.push(entry.path().to_owned());
-            }
-        }
-
-        // Always include files that are matched by the regex above
-        for entry in fs::read_dir(&cwd).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-
-            if !path.is_dir() {
-                let re = RegexBuilder::new(ALWAYS_INCLUDED)
-                    .case_insensitive(true)
-                    .build()
-                    .unwrap();
-                let file_name = path.file_name().unwrap();
-
-                if re.is_match(file_name.to_str().unwrap()) {
-                    paths.push(path);
-                }
-            }
-        }
+        let mut pj_paths = find_pkg_paths(pkg_files);
 
         let pkg_json = PathBuf::from("package.json");
 
-        if !paths.contains(&pkg_json) {
-            paths.push(cwd.join(pkg_json));
+        if !pj_paths.contains(&pkg_json) {
+            pj_paths.push(cwd.join(pkg_json));
         }
 
-        paths.sort();
-        paths.dedup();
+        pj_paths.sort();
+        pj_paths.dedup();
 
-        paths
+        pj_paths
             .iter()
             .filter(|f| !f.is_dir())
             .map(|p| p.strip_prefix(&cwd).unwrap().to_path_buf())
@@ -136,9 +114,7 @@ impl OroPack {
     /// Load package.json.
     pub fn load(&mut self) {
         let mut path = env::current_dir().unwrap();
-
-        path.push(PKG_PATH);
-
+        path.push(MANIFEST_PATH);
         self.pkg = Some(read_package_json(path));
     }
 
@@ -147,7 +123,7 @@ impl OroPack {
 
         match &pkg.files {
             Some(files) => files.clone(),
-            None => Vec::new(),
+            None => panic!("package.json must have files field!"),
         }
     }
 }

@@ -32,12 +32,7 @@ fn pkg_json_empty_files() -> std::io::Result<()> {
     let _b = File::create(dir_path.join("src/index.js"))?;
 
     let mut pack = OroPack::new();
-    let mut expected_paths = vec![
-        Path::new("src/module.js"),
-        Path::new("src/index.js"),
-        Path::new("package.json"),
-        Path::new("README.md"),
-    ];
+    let mut expected_paths = vec![Path::new("package.json"), Path::new("README.md")];
 
     env::set_current_dir(dir.path())?;
 
