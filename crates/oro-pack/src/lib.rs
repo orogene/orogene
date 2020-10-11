@@ -1,3 +1,5 @@
+use async_std::fs::File;
+use async_tar::Builder;
 use gitignored::Gitignore;
 use oro_manifest::OroManifest;
 use std::env;
@@ -109,6 +111,20 @@ impl OroPack {
             .filter(|f| !f.is_dir())
             .map(|p| p.strip_prefix(&cwd).unwrap().to_path_buf())
             .collect()
+    }
+
+    pub fn pack(&self) {
+        async_std::task::block_on(async {
+            let borrowed = self.pkg.as_ref().unwrap();
+            let name = borrowed.name.as_ref().unwrap();
+            let file = File::create(format!("{}.tar", name)).await.unwrap();
+            let mut a = Builder::new(file);
+            let paths = self.project_paths();
+
+            for path in &paths {
+                a.append_path(path).await.unwrap();
+            }
+        });
     }
 
     /// Load package.json.
