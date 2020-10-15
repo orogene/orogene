@@ -173,7 +173,7 @@ pub enum Predicate {
 }
 
 impl Predicate {
-    fn flip(self: &Self) -> Self {
+    fn flip(&self) -> Self {
         use Predicate::*;
         match self {
             Excluding(v) => Including(v.clone()),
@@ -198,7 +198,7 @@ impl Bound {
         Bound::Lower(Predicate::Unbounded)
     }
 
-    fn predicate(self: &Self) -> Predicate {
+    fn predicate(&self) -> Predicate {
         use Bound::*;
 
         match self {
@@ -1004,7 +1004,7 @@ mod intersection {
                 "{} ∩ {} := {}",
                 base,
                 other,
-                resulting_range.unwrap_or("⊗".into())
+                resulting_range.unwrap_or_else(|| "⊗".into())
             );
         }
     }
@@ -1138,7 +1138,7 @@ mod difference {
                 "{} \\ {} := {}",
                 base,
                 other,
-                resulting_range.unwrap_or("⊗".into())
+                resulting_range.unwrap_or_else(|| "⊗".into())
             );
         }
     }
