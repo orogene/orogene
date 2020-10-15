@@ -67,15 +67,13 @@ impl Writer {
     pub fn new(cache: PathBuf, algo: Algorithm, size: Option<usize>) -> Result<Self> {
         let cache_path = cache;
 
-        let cursor = size
-            .and_then(|size| {
-                if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
-                    Some(Cursor::new(Vec::with_capacity(size)))
-                } else {
-                    None
-                }
-            });
-
+        let cursor = size.and_then(|size| {
+            if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
+                Some(Cursor::new(Vec::with_capacity(size)))
+            } else {
+                None
+            }
+        });
 
         let tmpfile = if cursor.is_none() {
             let mut tmp_path = cache_path.clone();
