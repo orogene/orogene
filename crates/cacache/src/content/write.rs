@@ -74,8 +74,8 @@ impl Writer {
                 } else {
                     None
                 }
-            })
-            .map(|cursor| cursor);
+            });
+
 
         let tmpfile = if cursor.is_none() {
             let mut tmp_path = cache_path.clone();
