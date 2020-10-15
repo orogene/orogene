@@ -45,6 +45,9 @@ pub enum Error {
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
 
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
+
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
     /// don't implement std::error::Error.

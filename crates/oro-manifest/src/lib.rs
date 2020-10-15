@@ -108,7 +108,7 @@ pub struct OroManifest {
 
     #[serde(default)]
     #[builder(default)]
-    pub publish_config: HashMap<String, String>,
+    pub publish_config: HashMap<String, Value>,
 
     // Deps
     #[serde(default)]
@@ -245,6 +245,7 @@ pub enum Exports {
     Str(String),
     Vec(Vec<String>),
     Obj(HashMap<String, Exports>),
+    Other(Value)
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -253,6 +254,7 @@ pub enum Imports {
     Str(String),
     Vec(Vec<String>),
     Obj(HashMap<String, Imports>),
+    Other(Value),
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]

@@ -24,6 +24,7 @@ pub struct RoggaOpts {
     cache: Option<PathBuf>,
     dir: Option<PathBuf>,
     registry: Option<String>,
+    use_corgi: Option<bool>,
 }
 
 impl RoggaOpts {
@@ -46,6 +47,11 @@ impl RoggaOpts {
         self
     }
 
+    pub fn use_corgi(mut self, use_corgi: bool) -> Self {
+        self.use_corgi = Some(use_corgi);
+        self
+    }
+
     pub fn build(self) -> Rogga {
         let reg = self
             .registry
@@ -54,6 +60,7 @@ impl RoggaOpts {
             // cache: self.cache,
             dir: self.dir.unwrap_or_else(|| PathBuf::from("")),
             client: Arc::new(Mutex::new(OroClient::new(reg))),
+            use_corgi: self.use_corgi.unwrap_or(true)
         }
     }
 }
@@ -63,6 +70,7 @@ pub struct Rogga {
     client: Arc<Mutex<OroClient>>,
     // cache: Option<PathBuf>,
     dir: PathBuf,
+    use_corgi: bool,
 }
 
 impl Rogga {
@@ -112,7 +120,7 @@ impl Rogga {
         match *arg {
             Dir { .. } => RwLock::new(Box::new(DirFetcher::new(&self.dir))),
             Alias { ref package, .. } => self.pick_fetcher(package),
-            Npm { .. } => RwLock::new(Box::new(RegistryFetcher::new(self.client.clone()))),
+            Npm { .. } => RwLock::new(Box::new(RegistryFetcher::new(self.client.clone(), self.use_corgi))),
         }
     }
 }

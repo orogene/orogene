@@ -7,7 +7,7 @@ use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
 use oro_manifest::{Bin, OroManifest, PersonField};
-use rogga::{Human, Rogga, VersionMetadata};
+use rogga::{Human, RoggaOpts, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
@@ -28,7 +28,11 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkgreq = Rogga::new(&self.registry, std::env::current_dir()?)
+        let pkgreq = RoggaOpts::new()
+            .registry(&self.registry)
+            .dir(std::env::current_dir()?)
+            .use_corgi(false)
+            .build()
             .arg_request(&self.pkg)
             .await?;
         let packument = pkgreq.packument().await?;
@@ -44,6 +48,10 @@ impl OroCommand for ViewCmd {
             println!("{}", serde_json::to_string_pretty(&manifest)?);
         } else {
             let VersionMetadata {
+                ref npm_user,
+                ref dist,
+                ref deprecated,
+                ref maintainers,
                 manifest:
                     OroManifest {
                         ref name,
@@ -56,10 +64,6 @@ impl OroCommand for ViewCmd {
                         ref bin,
                         ..
                     },
-                ref npm_user,
-                ref dist,
-                ref deprecated,
-                ref maintainers,
                 ..
             } = manifest;
 

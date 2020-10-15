@@ -11,6 +11,7 @@ use oro_node_semver::Version;
 /// object containing information about package versions, dist-tags, etc.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Packument {
+    #[serde(default)]
     pub versions: HashMap<Version, VersionMetadata>,
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,

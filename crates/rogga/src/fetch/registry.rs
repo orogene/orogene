@@ -14,13 +14,15 @@ use crate::packument::{Packument, VersionMetadata};
 pub struct RegistryFetcher {
     client: Arc<Mutex<OroClient>>,
     packument: Option<Packument>,
+    use_corgi: bool,
 }
 
 impl RegistryFetcher {
-    pub fn new(client: Arc<Mutex<OroClient>>) -> Self {
+    pub fn new(client: Arc<Mutex<OroClient>>, use_corgi: bool) -> Self {
         Self {
             client,
             packument: None,
+            use_corgi,
         }
     }
 }
@@ -30,18 +32,18 @@ impl RegistryFetcher {
         if self.packument.is_none() {
             let client = self.client.lock().await.clone();
             let opts = client.opts(Method::Get, name.as_ref());
-            self.packument = Some(
+            let packument_bytes =
                 client
                     .send(opts.header(
                         "Accept",
-                        "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+                        if self.use_corgi { "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*" } else { "application/json" },
                     ))
                     .await
                     .with_context(|| "Failed to get packument.".into())?
-                    .body_json::<Packument>()
+                    .body_string()
                     .await
-                    .map_err(|e| Error::MiscError(e.to_string()))?,
-            );
+                    .map_err(|e| Error::MiscError(e.to_string()))?;
+            self.packument = serde_json::from_str(&packument_bytes).map_err(Error::SerdeError)?;
         }
         Ok(self.packument.as_ref().unwrap())
     }
