@@ -14,6 +14,10 @@ use crate::packument::{Packument, VersionMetadata};
 pub struct RegistryFetcher {
     client: Arc<Mutex<OroClient>>,
     packument: Option<Packument>,
+    /// Corgis are a compressed kind of packument that omits some
+    /// "unnecessary" fields (for some common operations during package
+    /// management). This can significantly speed up installs, and is done
+    /// through a special Accept header on request.
     use_corgi: bool,
 }
 
