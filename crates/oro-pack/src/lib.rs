@@ -1,4 +1,6 @@
 use async_std::fs::File;
+use async_std::io as AsyncIO;
+use async_std::task::block_on;
 use async_tar::Builder;
 use gitignored::Gitignore;
 use oro_manifest::OroManifest;
@@ -113,18 +115,25 @@ impl OroPack {
             .collect()
     }
 
-    pub fn pack(&self) {
-        async_std::task::block_on(async {
-            let borrowed = self.pkg.as_ref().unwrap();
-            let name = borrowed.name.as_ref().unwrap();
-            let file = File::create(format!("{}.tar", name)).await.unwrap();
-            let mut a = Builder::new(file);
-            let paths = self.project_paths();
+    async fn archive_files(&self) -> AsyncIO::Result<()> {
+        let manifest = self.pkg.as_ref().unwrap();
+        let pkg_name = manifest.name.as_ref().unwrap();
 
-            for path in &paths {
-                a.append_path(path).await.unwrap();
-            }
-        });
+        let file = File::create(format!("{}.tar", pkg_name)).await.unwrap();
+        let mut archive = Builder::new(file);
+        let paths = self.project_paths();
+
+        for path in &paths {
+            archive.append_path(path).await.unwrap();
+        }
+
+        Ok(())
+    }
+
+    pub fn pack(&self) -> AsyncIO::Result<()> {
+        block_on(self.archive_files())?;
+
+        Ok(())
     }
 
     /// Load package.json.
