@@ -60,7 +60,7 @@ impl RoggaOpts {
             // cache: self.cache,
             dir: self.dir.unwrap_or_else(|| PathBuf::from("")),
             client: Arc::new(Mutex::new(OroClient::new(reg))),
-            use_corgi: self.use_corgi.unwrap_or(true)
+            use_corgi: self.use_corgi.unwrap_or(true),
         }
     }
 }
@@ -120,7 +120,10 @@ impl Rogga {
         match *arg {
             Dir { .. } => RwLock::new(Box::new(DirFetcher::new(&self.dir))),
             Alias { ref package, .. } => self.pick_fetcher(package),
-            Npm { .. } => RwLock::new(Box::new(RegistryFetcher::new(self.client.clone(), self.use_corgi))),
+            Npm { .. } => RwLock::new(Box::new(RegistryFetcher::new(
+                self.client.clone(),
+                self.use_corgi,
+            ))),
         }
     }
 }

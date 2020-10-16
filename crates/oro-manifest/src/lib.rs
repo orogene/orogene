@@ -245,7 +245,7 @@ pub enum Exports {
     Str(String),
     Vec(Vec<String>),
     Obj(HashMap<String, Exports>),
-    Other(Value)
+    Other(Value),
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
