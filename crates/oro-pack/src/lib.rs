@@ -119,12 +119,12 @@ impl OroPack {
         let manifest = self.pkg.as_ref().unwrap();
         let pkg_name = manifest.name.as_ref().unwrap();
 
-        let file = File::create(format!("{}.tar", pkg_name)).await.unwrap();
+        let file = File::create(format!("{}.tar", pkg_name)).await?;
         let mut archive = Builder::new(file);
         let paths = self.project_paths();
 
         for path in &paths {
-            archive.append_path(path).await.unwrap();
+            archive.append_path(path).await?;
         }
 
         Ok(())
