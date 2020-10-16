@@ -67,8 +67,6 @@ impl OroCommand for ViewCmd {
                 ..
             } = manifest;
 
-            // TODO: unpublished N days ago by Foo
-
             // name@version | license | deps: 123 | releases: 123
             println!(
                 "{}@{} | {} | deps: {} | releases: {}",

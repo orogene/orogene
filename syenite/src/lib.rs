@@ -29,17 +29,10 @@ pub struct Syenite {
         global = true,
         about = "Log output level (off, error, warn, info, debug, trace)",
         long,
-        default_value = "warn",
-        conflicts_with = "quiet"
+        default_value = "warn"
     )]
     loglevel: log::LevelFilter,
-    #[clap(
-        global = true,
-        about = "Disable all output",
-        long,
-        short = 'q',
-        conflicts_with = "loglevel"
-    )]
+    #[clap(global = true, about = "Disable all output", long, short = 'q')]
     quiet: bool,
     #[clap(global = true, long, about = "Format output as JSON.")]
     json: bool,

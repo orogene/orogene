@@ -29,9 +29,8 @@ pub struct PingCmd {
 #[async_trait]
 impl OroCommand for PingCmd {
     async fn execute(self) -> Result<()> {
-        let quiet = self.loglevel == log::LevelFilter::Off || self.quiet;
         let start = Instant::now();
-        if !quiet && !self.json {
+        if !self.quiet && !self.json {
             eprintln!("ping: {}", self.registry);
         }
         let client = OroClient::new(self.registry.clone());
@@ -41,7 +40,7 @@ impl OroCommand for PingCmd {
             .await
             .with_context(|| Code::OR1001(self.registry.to_string()))?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
-        if !quiet && !self.json {
+        if !self.quiet && !self.json {
             eprintln!("pong: {}ms", time);
         }
         if self.json {
@@ -53,10 +52,10 @@ impl OroCommand for PingCmd {
                 "time": time,
                 "details": details,
             }))?;
-            if !quiet {
+            if !self.quiet {
                 println!("{}", output);
             }
-        } else if !quiet {
+        } else if !self.quiet {
             eprintln!(
                 "payload: {}",
                 res.body_string().await.unwrap_or_else(|_| "".into())
