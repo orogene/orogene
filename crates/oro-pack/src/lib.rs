@@ -1,5 +1,5 @@
 use async_std::fs::File;
-use async_std::io as AsyncIO;
+use async_std::io as aio;
 use async_std::task::block_on;
 use async_tar::Builder;
 use gitignored::Gitignore;
@@ -115,7 +115,7 @@ impl OroPack {
             .collect()
     }
 
-    async fn archive_files(&self) -> AsyncIO::Result<()> {
+    async fn archive_files(&self) -> aio::Result<()> {
         let manifest = self.pkg.as_ref().unwrap();
         let pkg_name = manifest.name.as_ref().unwrap();
 
@@ -130,7 +130,7 @@ impl OroPack {
         Ok(())
     }
 
-    pub fn pack(&self) -> AsyncIO::Result<()> {
+    pub fn pack(&self) -> aio::Result<()> {
         block_on(self.archive_files())?;
 
         Ok(())

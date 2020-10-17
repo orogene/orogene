@@ -1,5 +1,5 @@
 use async_std::fs::File as AsyncFile;
-use async_std::io as AsyncIO;
+use async_std::io as aio;
 use async_std::prelude::*;
 use async_std::task::block_on;
 use async_tar::Archive;
@@ -10,7 +10,7 @@ use std::fs;
 use std::io::Write as _;
 use tempfile::tempdir;
 
-async fn load_archive() -> AsyncIO::Result<Vec<String>> {
+async fn load_archive() -> aio::Result<Vec<String>> {
     let mut archived_files: Vec<String> = Vec::new();
 
     let archive = Archive::new(AsyncFile::open("testpackage.tar").await.unwrap());
@@ -26,7 +26,7 @@ async fn load_archive() -> AsyncIO::Result<Vec<String>> {
 }
 
 #[test]
-fn outputs_archive() -> AsyncIO::Result<()> {
+fn outputs_archive() -> aio::Result<()> {
     let cwd = env::current_dir()?;
 
     let dir = tempdir()?;
