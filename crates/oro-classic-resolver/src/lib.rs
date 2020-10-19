@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
-use package_arg::{PackageArg, VersionReq};
+use package_spec::{PackageSpec, VersionSpec};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 use thiserror::Error;
 
@@ -36,18 +36,23 @@ impl ClassicResolver {
 #[async_trait]
 impl PackageResolver for ClassicResolver {
     async fn resolve(&self, wanted: &PackageRequest) -> Result<PackageResolution, ResolverError> {
-        use PackageArg::*;
+        use PackageSpec::*;
         let spec = match wanted.spec() {
             Alias { package, .. } => &*package,
             spec => spec,
         };
 
-        if let Dir { ref path } = spec {
-            return Ok(PackageResolution::Dir { path: path.clone() });
+        if let Dir { ref path, ref from } = spec {
+            return Ok(PackageResolution::Dir {
+                path: from
+                    .join(path)
+                    .canonicalize()
+                    .map_err(|e| ResolverError::OtherError(Box::new(e)))?,
+            });
         }
 
         // TODO, move a lot of this out into a generic "PackumentResolver"
-        // that takes a package_arg::VersionReq and an existing packument,
+        // that takes a package_spec::VersionReq and an existing packument,
         // since it's going to apply to a set of resolvers, but not to all of
         // them.
         let packument = wanted
@@ -60,15 +65,15 @@ impl PackageResolver for ClassicResolver {
 
         let mut target: Option<&SemVerVersion> = match spec {
             Npm {
-                requested: Some(VersionReq::Version(version)),
+                requested: Some(VersionSpec::Version(version)),
                 ..
             } => Some(version),
             Npm {
-                requested: Some(VersionReq::Tag(tag)),
+                requested: Some(VersionSpec::Tag(tag)),
                 ..
             } => packument.tags.get(tag.as_str()),
             Npm {
-                requested: Some(VersionReq::Range(_)),
+                requested: Some(VersionSpec::Range(_)),
                 ..
             }
             | Npm {
@@ -90,11 +95,11 @@ impl PackageResolver for ClassicResolver {
                 .get(tag_version.as_ref().unwrap())
                 .is_some()
             && match spec {
-                PackageArg::Npm {
+                PackageSpec::Npm {
                     requested: None, ..
                 } => true,
-                PackageArg::Npm {
-                    requested: Some(VersionReq::Range(range)),
+                PackageSpec::Npm {
+                    requested: Some(VersionSpec::Range(range)),
                     ..
                 } => range.satisfies(tag_version.as_ref().unwrap()),
                 _ => false,
@@ -105,7 +110,7 @@ impl PackageResolver for ClassicResolver {
 
         if target.is_none() {
             if let Npm {
-                requested: Some(VersionReq::Range(range)),
+                requested: Some(VersionSpec::Range(range)),
                 ..
             } = spec
             {
@@ -115,7 +120,7 @@ impl PackageResolver for ClassicResolver {
 
         if target.is_none() {
             if let Npm {
-                requested: Some(VersionReq::Range(range)),
+                requested: Some(VersionSpec::Range(range)),
                 ..
             } = spec
             {
@@ -127,13 +132,19 @@ impl PackageResolver for ClassicResolver {
 
         target
             .and_then(|v| packument.versions.get(&v))
-            .map(|v| PackageResolution::Npm {
-                version: v
-                    .manifest
-                    .version
-                    .clone()
-                    .unwrap_or_else(|| "0.0.0".parse().unwrap()),
-                tarball: v.dist.tarball.clone(),
+            .and_then(|v| {
+                Some(PackageResolution::Npm {
+                    version: v
+                        .manifest
+                        .version
+                        .clone()
+                        .unwrap_or_else(|| "0.0.0".parse().unwrap()),
+                    tarball: if let Some(tarball) = &v.dist.tarball {
+                        tarball.clone()
+                    } else {
+                        return None;
+                    },
+                })
             })
             .ok_or_else(|| ResolverError::NoVersion)
     }

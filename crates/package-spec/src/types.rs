@@ -14,25 +14,26 @@ pub enum PackageArgError {
     InvalidDriveLetter(char),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum VersionReq {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum VersionSpec {
     Tag(String),
     Version(Version),
     Range(Range),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PackageArg {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum PackageSpec {
     Dir {
         path: PathBuf,
+        from: PathBuf,
     },
     Alias {
         name: String,
-        package: Box<PackageArg>,
+        package: Box<PackageSpec>,
     },
     Npm {
         scope: Option<String>,
         name: String,
-        requested: Option<VersionReq>,
+        requested: Option<VersionSpec>,
     },
 }

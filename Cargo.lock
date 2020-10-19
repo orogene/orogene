@@ -2088,7 +2088,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "oro-node-semver",
- "package-arg",
+ "package-spec",
  "rogga",
  "thiserror",
 ]
@@ -2252,7 +2252,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "package-arg"
+name = "package-spec"
 version = "0.1.0"
 dependencies = [
  "nom 5.1.2",
@@ -2630,7 +2630,7 @@ dependencies = [
  "oro-error-code",
  "oro-manifest",
  "oro-node-semver",
- "package-arg",
+ "package-spec",
  "serde 1.0.115",
  "serde_json",
  "ssri",

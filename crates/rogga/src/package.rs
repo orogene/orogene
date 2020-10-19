@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use async_std::sync::RwLock;
@@ -5,7 +6,7 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Url;
 use oro_node_semver::Version;
-use package_arg::PackageArg;
+use package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -14,14 +15,15 @@ use crate::fetch::PackageFetcher;
 use crate::packument::{Packument, VersionMetadata};
 
 /// A package request from which more information can be derived. PackageRequest objects can be resolved into a `Package` by using a `PackageResolver`
+#[derive(Debug)]
 pub struct PackageRequest {
     pub(crate) name: String,
-    pub(crate) spec: PackageArg,
+    pub(crate) spec: PackageSpec,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 
 impl PackageRequest {
-    pub fn spec(&self) -> &PackageArg {
+    pub fn spec(&self) -> &PackageSpec {
         &self.spec
     }
 
@@ -51,6 +53,21 @@ impl PackageRequest {
     }
 }
 
+impl PartialEq for PackageRequest {
+    fn eq(&self, other: &PackageRequest) -> bool {
+        self.name() == other.name() && self.spec().target() == other.spec().target()
+    }
+}
+
+impl Eq for PackageRequest {}
+
+impl Hash for PackageRequest {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.spec().target().hash(state);
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ResolverError {
     #[error("No matching version.")]
@@ -67,6 +84,19 @@ pub trait PackageResolver {
     ) -> std::result::Result<PackageResolution, ResolverError>;
 }
 
+#[async_trait]
+impl<F> PackageResolver for F
+where
+    F: Fn(&PackageRequest) -> std::result::Result<PackageResolution, ResolverError> + Sync + Send,
+{
+    async fn resolve(
+        &self,
+        wanted: &PackageRequest,
+    ) -> std::result::Result<PackageResolution, ResolverError> {
+        self(wanted)
+    }
+}
+
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageResolution {
@@ -77,7 +107,7 @@ pub enum PackageResolution {
 /// A resolved package. A concrete version has been determined from its
 /// PackageArg by the version resolver.
 pub struct Package {
-    pub from: PackageArg,
+    pub from: PackageSpec,
     pub name: String,
     pub resolved: PackageResolution,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,

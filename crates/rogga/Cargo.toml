@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 oro-client = { path = "../oro-client" }
 oro-error-code = { path = "../oro-error-code" }
-package-arg = { path = "../package-arg" }
+package-spec = { path = "../package-spec" }
 cacache = { path = "../cacache", version = "8.0.0" }
 oro-node-semver = { path = "../oro-node-semver" }
 oro-manifest = { path = "../oro-manifest" }

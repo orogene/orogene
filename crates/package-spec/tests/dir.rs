@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use package_arg::{PackageArg, PackageArgError};
+use package_spec::{PackageArgError, PackageSpec};
 
 type Result<T> = std::result::Result<T, PackageArgError>;
 
-fn ppa(input: &str) -> Result<PackageArg> {
-    input.parse()
+fn ppa(input: &str) -> Result<PackageSpec> {
+    PackageSpec::from_string(input, "/root/")
 }
 
 #[test]
@@ -13,8 +13,9 @@ fn relative_path_current_dir() -> Result<()> {
     let res = ppa("./")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from("./")
+        PackageSpec::Dir {
+            path: PathBuf::from("./"),
+            from: PathBuf::from("/root/")
         }
     );
     Ok(())
@@ -25,8 +26,9 @@ fn relative_path_current_dir_no_slash() -> Result<()> {
     let res = ppa(".")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from(".")
+        PackageSpec::Dir {
+            path: PathBuf::from("."),
+            from: PathBuf::from("/root/")
         }
     );
     Ok(())
@@ -37,8 +39,9 @@ fn relative_path_unix() -> Result<()> {
     let res = ppa("./foo/bar/baz")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from("./foo/bar/baz")
+        PackageSpec::Dir {
+            path: PathBuf::from("./foo/bar/baz"),
+            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -49,8 +52,9 @@ fn absolute_path_unix() -> Result<()> {
     let res = ppa("/foo/bar/baz")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from("/foo/bar/baz")
+        PackageSpec::Dir {
+            path: PathBuf::from("/foo/bar/baz"),
+            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -61,8 +65,9 @@ fn relative_path_windows() -> Result<()> {
     let res = ppa(".\\foo\\bar\\baz")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from(".\\foo\\bar\\baz")
+        PackageSpec::Dir {
+            path: PathBuf::from(".\\foo\\bar\\baz"),
+            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -73,8 +78,9 @@ fn absolute_path_windows() -> Result<()> {
     let res = ppa("C:\\foo\\bar\\baz")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from("C:\\foo\\bar\\baz")
+        PackageSpec::Dir {
+            path: PathBuf::from("C:\\foo\\bar\\baz"),
+            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -85,8 +91,9 @@ fn absolute_path_windows_qmark() -> Result<()> {
     let res = ppa("\\\\?\\foo\\bar\\baz")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from("\\\\?\\foo\\bar\\baz")
+        PackageSpec::Dir {
+            path: PathBuf::from("\\\\?\\foo\\bar\\baz"),
+            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -97,8 +104,9 @@ fn absolute_path_windows_double_slash() -> Result<()> {
     let res = ppa("\\\\foo\\bar\\baz")?;
     assert_eq!(
         res,
-        PackageArg::Dir {
-            path: PathBuf::from("\\\\foo\\bar\\baz")
+        PackageSpec::Dir {
+            path: PathBuf::from("\\\\foo\\bar\\baz"),
+            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -116,10 +124,11 @@ fn named() -> Result<()> {
     let res = ppa("foo@./hey")?;
     assert_eq!(
         res,
-        PackageArg::Alias {
+        PackageSpec::Alias {
             name: "foo".into(),
-            package: Box::new(PackageArg::Dir {
-                path: PathBuf::from("./hey")
+            package: Box::new(PackageSpec::Dir {
+                path: PathBuf::from("./hey"),
+                from: PathBuf::from("/root/"),
             })
         }
     );

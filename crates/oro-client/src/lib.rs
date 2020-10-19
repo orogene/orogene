@@ -41,7 +41,7 @@ struct NpmError {
     message: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct OroClient {
     base: Url,
     client: Client,

@@ -1,4 +1,4 @@
-use package_arg::PackageArgError;
+use package_spec::PackageArgError;
 use thiserror::Error;
 
 use crate::package::ResolverError;

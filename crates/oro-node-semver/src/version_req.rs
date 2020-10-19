@@ -15,7 +15,7 @@ use serde::ser::{Serialize, Serializer};
 
 use crate::{extras, number, Identifier, SemverError, Version};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct Range {
     upper: Bound,
     lower: Bound,
@@ -156,7 +156,7 @@ impl fmt::Display for Range {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum Operation {
     Exact,
     GreaterThan,
@@ -165,7 +165,7 @@ enum Operation {
     LessThanEquals,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Predicate {
     Excluding(Version), // < and >
     Including(Version), // <= and >=
@@ -183,7 +183,7 @@ impl Predicate {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 enum Bound {
     Lower(Predicate),
     Upper(Predicate),
@@ -271,7 +271,7 @@ impl PartialOrd for Bound {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct VersionReq {
     predicates: Vec<Range>,
 }

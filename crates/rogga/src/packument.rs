@@ -28,6 +28,7 @@ pub struct VersionMetadata {
     pub maintainers: Vec<PersonField>,
     #[serde(rename = "_npmUser")]
     pub npm_user: Option<Human>,
+    #[serde(default)]
     pub dist: Dist,
     #[serde(rename = "_hasShrinkwrap")]
     pub has_shrinkwrap: Option<bool>,
@@ -53,10 +54,10 @@ pub struct Human {
 }
 
 /// Distribution information for a particular package version.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Dist {
-    pub shasum: String,
-    pub tarball: Url,
+    pub shasum: Option<String>,
+    pub tarball: Option<Url>,
 
     pub integrity: Option<String>,
     #[serde(rename = "fileCount")]

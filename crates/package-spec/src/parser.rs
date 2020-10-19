@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use oro_error_code::OroErrCode as ErrCode;
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
@@ -13,7 +13,7 @@ use nom::multi::{many0, many1};
 use nom::sequence::{delimited, preceded, tuple};
 use nom::{Err, IResult};
 
-use crate::types::{PackageArg, PackageArgError, VersionReq};
+use crate::types::{PackageArgError, PackageSpec, VersionSpec};
 
 const JS_ENCODED: &AsciiSet = {
     &NON_ALPHANUMERIC
@@ -28,9 +28,13 @@ const JS_ENCODED: &AsciiSet = {
         .remove(b')')
 };
 
-pub fn parse_package_arg<I: AsRef<str>>(input: I) -> Result<PackageArg, PackageArgError> {
+pub fn parse_package_spec<I, D>(input: I, dir: D) -> Result<PackageSpec, PackageArgError>
+where
+    I: AsRef<str>,
+    D: AsRef<Path>,
+{
     let input = &input.as_ref()[..];
-    match all_consuming(package_arg::<VerboseError<&str>>)(input) {
+    match all_consuming(package_spec::<VerboseError<&str>>(dir.as_ref()))(input) {
         Ok((_, arg)) => Ok(arg),
         Err(err) => Err(PackageArgError::ParseError(ErrCode::OR1000 {
             input: input.into(),
@@ -44,63 +48,71 @@ pub fn parse_package_arg<I: AsRef<str>>(input: I) -> Result<PackageArg, PackageA
 }
 
 /// package-arg := alias | ( [ "npm:" ] npm-pkg ) | ( [ "ent:" ] ent-pkg ) | ( [ "file:" ] path )
-fn package_arg<'a, E>(input: &'a str) -> IResult<&'a str, PackageArg, E>
+fn package_spec<'a, E>(dir: &'a Path) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    context(
-        "package arg",
-        alt((
-            alias,
-            preceded(opt(tag("file:")), path),
-            preceded(opt(tag("npm:")), npm_pkg),
-        )),
-    )(input)
+    move |input: &str| {
+        context(
+            "package arg",
+            alt((
+                alias(&dir),
+                preceded(opt(tag("file:")), path(&dir)),
+                preceded(opt(tag("npm:")), npm_pkg),
+            )),
+        )(input)
+    }
 }
 
 /// prefixed_package-arg := ( "npm:" npm-pkg ) | ( [ "file:" ] path )
-fn prefixed_package_arg<'a, E>(input: &'a str) -> IResult<&'a str, PackageArg, E>
+fn prefixed_package_spec<'a, E>(
+    dir: &'a Path,
+) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    context(
-        "package spec",
-        alt((
-            // Paths don't need to be prefixed, but they can be.
-            preceded(opt(tag("file:")), path),
-            preceded(tag("npm:"), npm_pkg),
-        )),
-    )(input)
+    move |input: &str| {
+        context(
+            "package spec",
+            alt((
+                // Paths don't need to be prefixed, but they can be.
+                preceded(opt(tag("file:")), path(&dir)),
+                preceded(tag("npm:"), npm_pkg),
+            )),
+        )(input)
+    }
 }
 
 // alias := [ [ '@' ], not('/')+ '/' ] not('@/')+ '@' prefixed-package-arg
-fn alias<'a, E>(input: &'a str) -> IResult<&'a str, PackageArg, E>
+fn alias<'a, E>(dir: &'a Path) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    context(
-        "alias",
-        map(
-            tuple((
-                opt(scope),
-                map_res(take_till1(|c| c == '@' || c == '/'), no_url_encode),
-                tag("@"),
-                prefixed_package_arg,
-            )),
-            |(scope, name, _, arg)| {
-                let mut fullname = String::new();
-                if let Some(scope) = scope {
-                    fullname.push_str(&scope);
-                    fullname.push_str("/");
-                }
-                fullname.push_str(name);
-                PackageArg::Alias {
-                    name: fullname,
-                    package: Box::new(arg),
-                }
-            },
-        ),
-    )(input)
+    move |input: &str| {
+        context(
+            "alias",
+            map(
+                tuple((
+                    opt(scope),
+                    map_res(take_till1(|c| c == '@' || c == '/'), no_url_encode),
+                    tag("@"),
+                    prefixed_package_spec(dir),
+                )),
+                |(scope, name, _, arg)| {
+                    let mut fullname = String::new();
+                    if let Some(scope) = scope {
+                        fullname.push_str(&scope);
+                        fullname.push_str("/");
+                    }
+                    fullname.push_str(name);
+                    PackageSpec::Alias {
+                        name: fullname,
+                        package: Box::new(arg),
+                    }
+                },
+            ),
+        )(input)
+    }
 }
 
 fn scope<'a, E>(input: &'a str) -> IResult<&'a str, String, E>
@@ -128,7 +140,7 @@ where
 }
 
 /// npm-pkg := [ '@' not('/')+ '/' ] not('@/')+ [ '@' version-req ]
-fn npm_pkg<'a, E>(input: &'a str) -> IResult<&'a str, PackageArg, E>
+fn npm_pkg<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
@@ -144,7 +156,7 @@ where
                 map_res(take_till1(|x| x == '@' || x == '/'), no_url_encode),
                 opt(preceded(tag("@"), cut(version_req))),
             )),
-            |(scope_opt, name, req)| PackageArg::Npm {
+            |(scope_opt, name, req)| PackageSpec::Npm {
                 scope: scope_opt.map(|x| x.into()),
                 name: name.into(),
                 requested: req,
@@ -153,7 +165,7 @@ where
     )(input)
 }
 
-fn version_req<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
+fn version_req<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
 where
     E: ParseError<&'a str>,
 {
@@ -163,30 +175,30 @@ where
     )(input)
 }
 
-fn semver_version<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
+fn semver_version<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
 where
     E: ParseError<&'a str>,
 {
     let (input, version) = map_res(take_till1(|_| false), SemVerVersion::parse)(input)?;
-    Ok((input, VersionReq::Version(version)))
+    Ok((input, VersionSpec::Version(version)))
 }
 
-fn semver_range<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
+fn semver_range<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
 where
     E: ParseError<&'a str>,
 {
     let (input, range) = map_res(take_till1(|_| false), SemVerVersionReq::parse)(input)?;
-    Ok((input, VersionReq::Range(range)))
+    Ok((input, VersionSpec::Range(range)))
 }
 
-fn version_tag<'a, E>(input: &'a str) -> IResult<&'a str, VersionReq, E>
+fn version_tag<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
 where
     E: ParseError<&'a str>,
 {
     context(
         "dist tag",
         map(map_res(take_till1(|_| false), no_url_encode), |t| {
-            VersionReq::Tag(t.into())
+            VersionSpec::Tag(t.into())
         }),
     )(input)
 }
@@ -200,13 +212,16 @@ fn no_url_encode(tag: &str) -> Result<&str, PackageArgError> {
 }
 
 /// path := ( relative-dir | absolute-dir )
-fn path<'a, E>(input: &'a str) -> IResult<&'a str, PackageArg, E>
+fn path<'a, E>(dir: &'a Path) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    map(alt((relative_path, absolute_path)), |p| PackageArg::Dir {
-        path: p,
-    })(input)
+    move |input: &'a str| {
+        map(alt((relative_path, absolute_path)), |p| PackageSpec::Dir {
+            path: p,
+            from: PathBuf::from(dir),
+        })(input)
+    }
 }
 
 /// relative-path := [ '.' ] '.' [path-sep] .*

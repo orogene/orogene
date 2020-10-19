@@ -30,10 +30,9 @@ impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
         let pkgreq = RoggaOpts::new()
             .registry(&self.registry)
-            .dir(std::env::current_dir()?)
             .use_corgi(false)
             .build()
-            .arg_request(&self.pkg)
+            .arg_request(&self.pkg, std::env::current_dir()?)
             .await?;
         let packument = pkgreq.packument().await?;
         let pkg = pkgreq.resolve_with(&ClassicResolver::new()).await?;
@@ -134,8 +133,12 @@ impl OroCommand for ViewCmd {
 
             // dist.foo.bar.baz
             println!("dist");
-            println!(".tarball: {}", dist.tarball.to_string().cyan());
-            println!(".shasum: {}", dist.shasum.yellow());
+            if let Some(tarball) = &dist.tarball {
+                println!(".tarball: {}", tarball.to_string().cyan());
+            }
+            if let Some(shasum) = &dist.shasum {
+                println!(".shasum: {}", shasum.yellow());
+            }
             if let Some(sri) = &dist.integrity {
                 println!(".integrity: {}", sri.to_string().yellow());
             }
