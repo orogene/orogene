@@ -94,10 +94,12 @@ dependencies = [
  "anyhow",
  "async-std",
  "async-trait",
+ "directories 3.0.1",
  "erased-serde",
  "oro-config",
  "oro-gui-handler",
  "oro-handle-ping",
+ "oro-pkg-root",
  "serde 1.0.115",
  "serde_json",
  "tauri",
@@ -781,7 +783,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap 3.0.0-beta.1",
- "directories",
+ "directories 2.0.2",
  "log",
  "oro-command",
  "oro-config",
@@ -1173,6 +1175,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "551a778172a450d7fc12e629ca3b0428d00f6afa9a43da1b630d54604e97371c"
 dependencies = [
  "cfg-if",
+ "dirs-sys",
+]
+
+[[package]]
+name = "directories"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8fed639d60b58d0f53498ab13d26f621fd77569cc6edb031f4cc36a2ad9da0f"
+dependencies = [
  "dirs-sys",
 ]
 
@@ -2127,7 +2138,6 @@ dependencies = [
  "anyhow",
  "clap 3.0.0-beta.1",
  "config 0.9.3",
- "directories",
  "oro-config-derive",
  "pretty_assertions",
  "serde 1.0.115",
@@ -2218,6 +2228,10 @@ dependencies = [
  "tempfile",
  "walkdir",
 ]
+
+[[package]]
+name = "oro-pkg-root"
+version = "0.1.0"
 
 [[package]]
 name = "oro-tree"
@@ -3114,12 +3128,14 @@ dependencies = [
  "cmd-restore",
  "cmd-shell",
  "cmd-view",
+ "directories 3.0.1",
  "embed-resource",
  "fern",
  "log",
  "oro-command",
  "oro-config",
  "oro-error-code",
+ "oro-pkg-root",
  "smol 0.1.18",
 ]
 
@@ -3329,18 +3345,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dfdd070ccd8ccb78f4ad66bf1982dc37f620ef696c6b5028fe2ed83dd3d0d08"
+checksum = "318234ffa22e0920fe9a40d7b8369b5f649d490980cf7aadcf1eb91594869b42"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd80fc12f73063ac132ac92aceea36734f04a1d93c1240c6944e23a3b8841793"
+checksum = "cae2447b6282786c3493999f40a9be2a6ad20cb8bd268b0a0dbf5a065535c0ab"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -1,8 +1,10 @@
+use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::{ArgMatches, Clap, FromArgMatches, IntoApp};
+use directories::ProjectDirs;
 use oro_command::OroCommand;
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 
@@ -23,6 +25,8 @@ pub use oro_error_code::OroErrCode as Code;
     setting = clap::AppSettings::DeriveDisplayOrder,
 )]
 pub struct Syenite {
+    #[clap(global = true, long = "root", about = "Package path to operate on.")]
+    pkg_root: Option<PathBuf>,
     #[clap(global = true, about = "File to read configuration values from.", long)]
     config: Option<PathBuf>,
     #[clap(
@@ -79,12 +83,23 @@ impl Syenite {
         let clp = Syenite::into_app();
         let matches = clp.get_matches();
         let mut oro = Syenite::from_arg_matches(&matches);
+        let cwd = env::current_dir()?;
+        oro.pkg_root = Some(
+            oro.pkg_root
+                .unwrap_or_else(|| oro_pkg_root::pkg_root(&cwd).unwrap_or(cwd)),
+        );
         let cfg = if let Some(file) = &oro.config {
             OroConfigOptions::new()
                 .global_config_file(Some(file.clone()))
                 .load()?
         } else {
-            OroConfigOptions::new().load()?
+            OroConfigOptions::new()
+                .global_config_file(
+                    ProjectDirs::from("", "", "orogene")
+                        .map(|d| d.config_dir().to_owned().join("ororc.toml")),
+                )
+                .pkg_root(oro.pkg_root.clone())
+                .load()?
         };
         oro.layer_config(&matches, &cfg)?;
         oro.setup_logging()?;

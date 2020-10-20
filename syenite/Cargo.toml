@@ -21,6 +21,7 @@ cmd-shell = { path = "./commands/cmd-shell" }
 oro-command = { path = "../crates/oro-command" }
 oro-error-code = { path = "../crates/oro-error-code" }
 oro-config = { path = "../crates/oro-config" }
+oro-pkg-root = { path = "../crates/oro-pkg-root" }
 
 # Regular deps
 anyhow = "1.0.31"
@@ -30,6 +31,7 @@ clap = { git = "https://github.com/zkat/clap" }
 fern = "0.6.0"
 log = "0.4.11"
 smol = "0.1.18"
+directories = "3.0.1"
 
 [build-dependencies]
 embed-resource = "1.3.3"

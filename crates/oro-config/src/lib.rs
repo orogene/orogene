@@ -4,7 +4,6 @@ use anyhow::Result;
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
-use directories::ProjectDirs;
 
 pub use oro_config_derive::*;
 
@@ -17,6 +16,7 @@ pub trait OroConfigLayer {
 pub struct OroConfigOptions {
     global: bool,
     env: bool,
+    pkg_root: Option<PathBuf>,
     global_config_file: Option<PathBuf>,
 }
 
@@ -25,9 +25,8 @@ impl Default for OroConfigOptions {
         OroConfigOptions {
             global: true,
             env: true,
-            // TODO: Move this to main app.
-            global_config_file: ProjectDirs::from("", "", "orogene")
-                .map(|d| d.config_dir().to_owned().join("ororc.toml")),
+            pkg_root: None,
+            global_config_file: None,
         }
     }
 }
@@ -47,6 +46,11 @@ impl OroConfigOptions {
         self
     }
 
+    pub fn pkg_root(mut self, root: Option<PathBuf>) -> Self {
+        self.pkg_root = root;
+        self
+    }
+
     pub fn global_config_file(mut self, file: Option<PathBuf>) -> Self {
         self.global_config_file = file;
         self
@@ -62,6 +66,16 @@ impl OroConfigOptions {
         }
         if self.env {
             c.merge(Environment::with_prefix("oro_config"))?;
+        }
+        if let Some(root) = self.pkg_root {
+            c.merge(File::with_name(&root.join("ororc").display().to_string()).required(false))?;
+            c.merge(File::with_name(&root.join(".ororc").display().to_string()).required(false))?;
+            c.merge(
+                File::with_name(&root.join("ororc.toml").display().to_string()).required(false),
+            )?;
+            c.merge(
+                File::with_name(&root.join(".ororc.toml").display().to_string()).required(false),
+            )?;
         }
         Ok(c)
     }

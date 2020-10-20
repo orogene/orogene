@@ -3,7 +3,10 @@
     windows_subsystem = "windows"
 )]
 
+use std::env;
+
 use anyhow::Result;
+use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
 use oro_config::OroConfigOptions;
@@ -27,7 +30,14 @@ struct Response {
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    let config = OroConfigOptions::new().load()?;
+    // TODO: calculate root
+    let config = OroConfigOptions::new()
+        .global_config_file(
+            ProjectDirs::from("", "", "orogene")
+                .map(|d| d.config_dir().to_owned().join("ororc.toml")),
+        )
+        .pkg_root(oro_pkg_root::pkg_root(env::current_dir()?))
+        .load()?;
     tauri::AppBuilder::new()
         .invoke_handler(move |_webview, arg| {
             let Request { callback, error } =

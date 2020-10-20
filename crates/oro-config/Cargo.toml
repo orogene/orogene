@@ -11,7 +11,6 @@ anyhow = "1.0.24"
 clap = { git = "https://github.com/zkat/clap" }
 config = { version = "0.9.3", features = ["toml"] }
 serde = { version = "1.0.103", features = ["derive"] }
-directories = "2.0.2"
 
 [dev-dependencies]
 tempfile = "3.1.0"
