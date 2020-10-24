@@ -308,26 +308,16 @@ fn identifier<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
 where
     E: ParseError<&'a str>,
 {
-    context("identifier", alt((numeric, alphannumeric_ident)))(input)
-}
-
-fn numeric<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
-where
-    E: ParseError<&'a str>,
-{
-    map(digit1, |res: &str| {
-        let val: u64 = str::parse(res).unwrap();
-        Identifier::Numeric(val)
-    })(input)
-}
-
-fn alphannumeric_ident<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
-where
-    E: ParseError<&'a str>,
-{
-    map(
-        take_while(|x: char| is_alphanumeric(x as u8) || x == '-'),
-        |s: &str| Identifier::AlphaNumeric(s.to_string()),
+    context(
+        "identifier",
+        map(
+            take_while(|x: char| is_alphanumeric(x as u8) || x == '-'),
+            |s: &str| {
+                str::parse::<u64>(s)
+                    .map(Identifier::Numeric)
+                    .unwrap_or_else(|_err| Identifier::AlphaNumeric(s.to_string()))
+            },
+        ),
     )(input)
 }
 
@@ -423,6 +413,25 @@ mod tests {
                 patch: 34,
                 pre_release: vec![AlphaNumeric("abc".into()), Numeric(123)],
                 build: vec![Numeric(1),]
+            }
+        );
+    }
+
+    #[test]
+    fn pre_release_that_could_look_numeric_at_first() {
+        let v = Version::parse("1.0.0-rc.2-migration").unwrap();
+
+        assert_eq!(
+            v,
+            Version {
+                major: 1,
+                minor: 0,
+                patch: 0,
+                pre_release: vec![
+                    Identifier::AlphaNumeric("rc".into()),
+                    Identifier::AlphaNumeric("2-migration".into())
+                ],
+                build: vec![],
             }
         );
     }
