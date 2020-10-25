@@ -613,8 +613,14 @@ where
                     Bound::Lower(Predicate::Including((major, minor, 0).into())),
                     Bound::Upper(Predicate::Excluding((major + 1, 0, 0, 0).into())),
                 ),
-                (major, Some(minor), Some(patch), _, _) => Range::new(
-                    Bound::Lower(Predicate::Including((major, minor, patch).into())),
+                (major, Some(minor), Some(patch), pre_release, _) => Range::new(
+                    Bound::Lower(Predicate::Including(Version {
+                        major,
+                        minor,
+                        patch,
+                        pre_release,
+                        build: vec![],
+                    })),
                     Bound::Upper(Predicate::Excluding(match (major, minor, patch) {
                         (0, 0, n) => Version::from((0, 0, n + 1, 0)),
                         (0, n, _) => Version::from((0, n + 1, 0, 0)),
@@ -694,11 +700,15 @@ where
         "hyphenated with major and minor",
         map_opt(
             hyphenated(partial_version, partial_version),
-            |((left, maybe_l_minor, maybe_l_patch, _, _), upper)| {
+            |((left, maybe_l_minor, maybe_l_patch, pre_release, _), upper)| {
                 Range::new(
-                    Bound::Lower(Predicate::Including(
-                        (left, maybe_l_minor.unwrap_or(0), maybe_l_patch.unwrap_or(0)).into(),
-                    )),
+                    Bound::Lower(Predicate::Including(Version {
+                        major: left,
+                        minor: maybe_l_minor.unwrap_or(0),
+                        patch: maybe_l_patch.unwrap_or(0),
+                        pre_release,
+                        build: vec![],
+                    })),
                     Bound::Upper(match upper {
                         (major, None, None, _, _) => {
                             Predicate::Excluding((major + 1, 0, 0, 0).into())
@@ -706,8 +716,14 @@ where
                         (major, Some(minor), None, _, _) => {
                             Predicate::Excluding((major, minor + 1, 0, 0).into())
                         }
-                        (major, Some(minor), Some(patch), _, _) => {
-                            Predicate::Including((major, minor, patch).into())
+                        (major, Some(minor), Some(patch), pre_release, _) => {
+                            Predicate::Including(Version {
+                                major,
+                                minor,
+                                patch,
+                                pre_release,
+                                build: vec![],
+                            })
                         }
                         _ => unreachable!("No way to a have a patch wtihout a minor"),
                     }),
@@ -1305,12 +1321,14 @@ mod tests {
         whitespace_11 => ["^ 1", ">=1.0.0 <2.0.0-0"],
         whitespace_12 => ["~> 1", ">=1.0.0 <2.0.0-0"],
         whitespace_13 => ["~ 1.0", ">=1.0.0 <1.1.0-0"],
+        beta          => ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
+        beta_4        => ["^1.2.3-beta.4", ">=1.2.3-beta.4 <2.0.0-0"],
+        pre_release_on_both => ["1.0.0-alpha - 2.0.0-beta", ">=1.0.0-alpha <=2.0.0-beta"],
+        single_sided_lower_bound_with_pre_release => [">1.0.0-alpha", ">1.0.0-alpha"],
     ];
 
     /*
     // From here onwards we might have to deal with pre-release tags to?
-    ["^0.0.1-beta", ">=0.0.1-beta <0.0.2-0"],
-    ["^1.2.3-beta.4", ">=1.2.3-beta.4 <2.0.0-0"],
     [">01.02.03", ">1.2.3", true],
     [">01.02.03", null],
     ["~1.2.3beta", ">=1.2.3-beta <1.3.0-0", { loose: true }],
