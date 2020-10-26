@@ -9,15 +9,15 @@ edition = "2018"
 [dependencies]
 oro-error-code = { path = "../oro-error-code" }
 
-surf = { git = "git://github.com/http-rs/surf.git", branch = "main", default-features = false, features = ["h1-client"]}
-thiserror = "1.0.20"
-serde = "1.0.114"
-async-std = "1.6.2"
-async-h1 = "2.1.0"
-http-client = "4.0.0"
-http-types = "2.3.0"
-futures = "0.3.5"
+surf = { version = "2.1.0", default-features = false, features = ["h1-client"] }
+thiserror = "1.0.21"
+serde = "1.0.117"
+async-std = "1.6.5"
+async-h1 = "2.1.3"
+http-client = { version = "6.1.0", default-features = false }
+http-types = "2.6.0"
+futures = "0.3.7"
 async-native-tls = "0.3.3"
 log = "0.4.11"
 deadpool = "0.5.2"
-async-trait = "0.1.36"
+async-trait = "0.1.41"
