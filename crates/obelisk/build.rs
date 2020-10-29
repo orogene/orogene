@@ -1,5 +1,4 @@
 #![allow(clippy::single_component_path_imports)]
-#![allow(unused_imports)]
 
 use cc;
 use ci_info::is_ci;
@@ -43,11 +42,11 @@ fn main() {
         println!("cargo:rustc-link-lib=static=llhttp");
         println!("cargo:rustc-link-lib=static=nghttp2");
         println!("cargo:rustc-link-lib=static=openssl");
-        println!("cargo:rustc-link-lib=static=torque_base");
+        println!("cargo:rustc-link-lib=static=torque_base"); */
 
         cc::Build::new()
             .cpp(true)
             .file("node.cpp")
-            .compile("liboronode.a"); */
+            .compile("liboronode.a");
     }
 }
