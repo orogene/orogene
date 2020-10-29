@@ -699,6 +699,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d29eb15132782371f71da8f947dba48b3717bdb6fa771b9b434d645e40a7193"
 
 [[package]]
+name = "ci_info"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d240a3b5a8a7cb577fa8d595d8ec30828b252a58d477b4ae3309b9603204c3b5"
+dependencies = [
+ "envmnt",
+]
+
+[[package]]
 name = "clap"
 version = "2.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2026,6 +2035,14 @@ checksum = "05499f3756671c15885fee9034446956fff3f243d6077b91e5767df161f766b3"
 dependencies = [
  "hermit-abi",
  "libc",
+]
+
+[[package]]
+name = "obelisk"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "ci_info",
 ]
 
 [[package]]
