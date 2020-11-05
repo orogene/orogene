@@ -4,7 +4,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use oro_manifest::OroManifest;
-use package_spec::PackageSpec;
+use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Internal, Result};

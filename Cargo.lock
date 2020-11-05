@@ -2152,7 +2152,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "oro-node-semver",
- "package-spec",
+ "oro-package-spec",
  "rogga",
  "thiserror",
 ]
@@ -2283,6 +2283,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oro-package-spec"
+version = "0.1.0"
+dependencies = [
+ "nom 5.1.2",
+ "oro-error-code",
+ "oro-node-semver",
+ "percent-encoding",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "oro-pkg-root"
 version = "0.1.0"
 
@@ -2316,18 +2328,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53cdc5b785b7a58c5aad8216b3dfa114df64b0b06ae6e1501cef91df2fbdf8f9"
 dependencies = [
  "winapi",
-]
-
-[[package]]
-name = "package-spec"
-version = "0.1.0"
-dependencies = [
- "nom 5.1.2",
- "oro-error-code",
- "oro-node-semver",
- "percent-encoding",
- "thiserror",
- "url",
 ]
 
 [[package]]
@@ -2727,7 +2727,7 @@ dependencies = [
  "oro-error-code",
  "oro-manifest",
  "oro-node-semver",
- "package-spec",
+ "oro-package-spec",
  "serde 1.0.117",
  "serde_json",
  "ssri",

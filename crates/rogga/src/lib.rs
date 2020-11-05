@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use async_std::sync::{Arc, Mutex, RwLock};
 use oro_client::OroClient;
 
-pub use package_spec::{PackageSpec, VersionSpec};
+pub use oro_package_spec::{PackageSpec, VersionSpec};
 
 pub mod cache;
 mod error;

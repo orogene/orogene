@@ -1,4 +1,4 @@
-use package_spec::PackageArgError;
+use oro_package_spec::PackageArgError;
 use thiserror::Error;
 
 use crate::package::ResolverError;

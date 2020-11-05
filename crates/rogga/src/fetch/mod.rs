@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use futures::io::AsyncRead;
-use package_spec::PackageSpec;
+use oro_package_spec::PackageSpec;
 
 use crate::error::Result;
 use crate::package::Package;

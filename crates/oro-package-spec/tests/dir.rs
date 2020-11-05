@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
-use package_spec::{PackageArgError, PackageSpec};
+use oro_package_spec::{PackageArgError, PackageSpec};
 
 type Result<T> = std::result::Result<T, PackageArgError>;
 
-fn ppa(input: &str) -> Result<PackageSpec> {
+fn parse(input: &str) -> Result<PackageSpec> {
     PackageSpec::from_string(input, "/root/")
 }
 
 #[test]
 fn relative_path_current_dir() -> Result<()> {
-    let res = ppa("./")?;
+    let res = parse("./")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -23,7 +23,7 @@ fn relative_path_current_dir() -> Result<()> {
 
 #[test]
 fn relative_path_current_dir_no_slash() -> Result<()> {
-    let res = ppa(".")?;
+    let res = parse(".")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -36,7 +36,7 @@ fn relative_path_current_dir_no_slash() -> Result<()> {
 
 #[test]
 fn relative_path_unix() -> Result<()> {
-    let res = ppa("./foo/bar/baz")?;
+    let res = parse("./foo/bar/baz")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -49,7 +49,7 @@ fn relative_path_unix() -> Result<()> {
 
 #[test]
 fn absolute_path_unix() -> Result<()> {
-    let res = ppa("/foo/bar/baz")?;
+    let res = parse("/foo/bar/baz")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -62,7 +62,7 @@ fn absolute_path_unix() -> Result<()> {
 
 #[test]
 fn relative_path_windows() -> Result<()> {
-    let res = ppa(".\\foo\\bar\\baz")?;
+    let res = parse(".\\foo\\bar\\baz")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -75,7 +75,7 @@ fn relative_path_windows() -> Result<()> {
 
 #[test]
 fn absolute_path_windows() -> Result<()> {
-    let res = ppa("C:\\foo\\bar\\baz")?;
+    let res = parse("C:\\foo\\bar\\baz")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -88,7 +88,7 @@ fn absolute_path_windows() -> Result<()> {
 
 #[test]
 fn absolute_path_windows_qmark() -> Result<()> {
-    let res = ppa("\\\\?\\foo\\bar\\baz")?;
+    let res = parse("\\\\?\\foo\\bar\\baz")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -101,7 +101,7 @@ fn absolute_path_windows_qmark() -> Result<()> {
 
 #[test]
 fn absolute_path_windows_double_slash() -> Result<()> {
-    let res = ppa("\\\\foo\\bar\\baz")?;
+    let res = parse("\\\\foo\\bar\\baz")?;
     assert_eq!(
         res,
         PackageSpec::Dir {
@@ -114,14 +114,14 @@ fn absolute_path_windows_double_slash() -> Result<()> {
 
 #[test]
 fn absolute_path_windows_multiple_drive_letters() -> Result<()> {
-    let res = ppa("ACAB:\\foo\\bar\\baz");
+    let res = parse("ACAB:\\foo\\bar\\baz");
     assert!(res.is_err());
     Ok(())
 }
 
 #[test]
 fn named() -> Result<()> {
-    let res = ppa("foo@./hey")?;
+    let res = parse("foo@./hey")?;
     assert_eq!(
         res,
         PackageSpec::Alias {
@@ -139,7 +139,7 @@ fn named() -> Result<()> {
 fn spaces() -> Result<()> {
     // NOTE: This succeeds in NPM, but we treat it as an error because we
     // require ./ for relative paths.
-    let res = ppa("@f fo o al/ a d s ;f");
+    let res = parse("@f fo o al/ a d s ;f");
     assert!(res.is_err());
     Ok(())
 }

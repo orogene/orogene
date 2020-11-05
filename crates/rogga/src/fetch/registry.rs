@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Method;
 use oro_client::{self, OroClient};
-use package_spec::PackageSpec;
+use oro_package_spec::PackageSpec;
 
 use crate::error::{Error, Internal, Result};
 use crate::fetch::PackageFetcher;

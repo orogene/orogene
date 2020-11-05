@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Url;
 use oro_node_semver::Version;
-use package_spec::PackageSpec;
+use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
