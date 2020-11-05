@@ -5,8 +5,8 @@ use std::str::FromStr;
 
 use derive_builder::Builder;
 use error::{Internal, Result};
-use oro_node_semver::Version;
-use serde::{Deserialize, Serialize};
+use oro_node_semver::{Version, VersionReq};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
 pub use error::Error;
@@ -31,10 +31,6 @@ pub struct OroManifest {
     #[serde(default, alias = "licence")]
     #[builder(setter(into, strip_option), default)]
     pub license: Option<String>,
-
-    #[serde(default)]
-    #[builder(setter(strip_option), default)]
-    pub browser: Option<bool>,
 
     #[serde(default)]
     #[builder(setter(strip_option), default)]
@@ -65,7 +61,7 @@ pub struct OroManifest {
     #[builder(setter(strip_option), default)]
     pub man: Option<Man>,
 
-    #[serde(default)]
+    #[serde(skip, default)]
     #[builder(default)]
     pub directories: Option<Directories>,
 
@@ -89,10 +85,12 @@ pub struct OroManifest {
     #[builder(setter(strip_option), default)]
     pub config: Option<Value>,
 
-    #[serde(default)]
+    // NOTE: using object_or_bust here because lodash has `"engines": []` in
+    // some versions? This is obviously obnoxious, but we're playing
+    // whack-a-mole here.
+    #[serde(default, deserialize_with = "object_or_bust")]
     #[builder(default)]
-    // TODO: VersionReq needs to support more syntaxes before we can make this a VersionReq value
-    pub engines: HashMap<String, String>,
+    pub engines: HashMap<String, VersionReq>,
 
     #[serde(default)]
     #[builder(default)]
@@ -106,7 +104,7 @@ pub struct OroManifest {
     #[builder(setter(strip_option), default)]
     pub private: Option<bool>,
 
-    #[serde(default)]
+    #[serde(default, rename = "publishConfig")]
     #[builder(default)]
     pub publish_config: HashMap<String, Value>,
 
@@ -167,6 +165,30 @@ impl OroManifest {
         fs::write(file, serde_json::to_vec_pretty(&pkg_json).to_internal()?).to_internal()?;
         Ok(())
     }
+}
+
+fn object_or_bust<'de, D, K, V>(deserializer: D) -> std::result::Result<HashMap<K, V>, D::Error>
+where
+    D: Deserializer<'de>,
+    K: std::hash::Hash + Eq + Deserialize<'de>,
+    V: Deserialize<'de>,
+{
+    let val: ObjectOrBust<K, V> = Deserialize::deserialize(deserializer)?;
+    if let ObjectOrBust::Object(map) = val {
+        Ok(map)
+    } else {
+        Ok(HashMap::new())
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ObjectOrBust<K, V>
+where
+    K: std::hash::Hash + Eq,
+{
+    Object(HashMap<K, V>),
+    Value(serde_json::Value),
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -410,6 +432,24 @@ mod tests {
     }
 
     #[test]
+    fn array_engines() -> Result<()> {
+        let string = r#"
+{
+    "engines": []
+}
+        "#;
+        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        assert_eq!(
+            parsed,
+            OroManifestBuilder::default()
+                .engines(HashMap::new())
+                .build()
+                .unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
     fn licence_alias() -> Result<()> {
         let string = r#"
 {
@@ -457,18 +497,13 @@ mod tests {
     fn bool_props() -> Result<()> {
         let string = r#"
 {
-    "private": true,
-    "browser": true
+    "private": true
 }
         "#;
         let parsed = serde_json::from_str::<OroManifest>(&string)?;
         assert_eq!(
             parsed,
-            OroManifestBuilder::default()
-                .private(true)
-                .browser(true)
-                .build()
-                .unwrap()
+            OroManifestBuilder::default().private(true).build().unwrap()
         );
         Ok(())
     }

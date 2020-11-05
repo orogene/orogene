@@ -52,9 +52,8 @@ impl RoggaOpts {
             .unwrap_or_else(|| "https://registry.npmjs.org".into());
         Rogga {
             // cache: self.cache,
-            // TODO: expect() :\
             client: Arc::new(Mutex::new(OroClient::new(reg))),
-            use_corgi: self.use_corgi.unwrap_or(true),
+            use_corgi: self.use_corgi.unwrap_or(false),
         }
     }
 }

@@ -10,18 +10,14 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [workspace]
+exclude = [
+    "crates/obelisk"
+]
 members = [
     ".",
     "crates/*",
     "syenite",
     "syenite/commands/*",
-    "antimony/src-tauri",
-    "antimony/handlers/*"
-]
-default-members = [
-    ".",
-    "crates/*",
-    "syenite",
     "antimony/src-tauri",
     "antimony/handlers/*"
 ]

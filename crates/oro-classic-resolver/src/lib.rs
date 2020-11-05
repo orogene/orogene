@@ -19,7 +19,7 @@ impl Default for ClassicResolver {
 #[derive(Debug, Error)]
 pub enum ClassicResolverError {
     #[error("Only Version, Tag, Range, and Alias package args are supported.")]
-    InvalidPackageArg,
+    InvalidPackageSpec,
 }
 
 impl ClassicResolver {
@@ -60,7 +60,11 @@ impl PackageResolver for ClassicResolver {
             .await
             .map_err(|e| ResolverError::OtherError(Box::new(e)))?;
         if packument.versions.is_empty() {
-            return Err(ResolverError::NoVersion);
+            return Err(ResolverError::NoVersion {
+                name: wanted.name().clone(),
+                spec: wanted.spec().clone(),
+                versions: Vec::new(),
+            });
         }
 
         let mut target: Option<&SemVerVersion> = match spec {
@@ -81,7 +85,7 @@ impl PackageResolver for ClassicResolver {
             } => None,
             _ => {
                 return Err(ResolverError::OtherError(Box::new(
-                    ClassicResolverError::InvalidPackageArg,
+                    ClassicResolverError::InvalidPackageSpec,
                 )))
             }
         };
@@ -114,7 +118,10 @@ impl PackageResolver for ClassicResolver {
                 ..
             } = spec
             {
-                target = max_satisfying(packument.versions.keys(), range)
+                target = max_satisfying(packument.versions.keys(), range);
+                if target.is_none() {
+                    eprintln!("Failed to find version for {}", wanted.name());
+                }
             }
         }
 
@@ -146,7 +153,11 @@ impl PackageResolver for ClassicResolver {
                     },
                 })
             })
-            .ok_or_else(|| ResolverError::NoVersion)
+            .ok_or_else(|| ResolverError::NoVersion {
+                name: wanted.name().clone(),
+                spec: wanted.spec().clone(),
+                versions: packument.versions.keys().map(|k| k.to_string()).collect(),
+            })
     }
 }
 

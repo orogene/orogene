@@ -16,12 +16,12 @@ cmd-ping = { path = "./commands/cmd-ping" }
 cmd-restore = { path = "./commands/cmd-restore" }
 cmd-view = { path = "./commands/cmd-view" }
 cmd-shell = { path = "./commands/cmd-shell" }
+cmd-prime = { path = "./commands/cmd-prime" }
 
 # Workspace Deps
 oro-command = { path = "../crates/oro-command" }
 oro-error-code = { path = "../crates/oro-error-code" }
 oro-config = { path = "../crates/oro-config" }
-oro-pkg-root = { path = "../crates/oro-pkg-root" }
 
 # Regular deps
 anyhow = "1.0.31"

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::Path;
 
 mod parser;
@@ -44,6 +45,50 @@ impl PackageSpec {
         match self {
             Alias { ref package, .. } => package,
             _ => self,
+        }
+    }
+}
+
+impl fmt::Display for PackageSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use PackageSpec::*;
+        match self {
+            Dir { from, path } => write!(f, "{}", from.join(path).display()),
+            Npm {
+                ref scope,
+                ref name,
+                ref requested,
+            } => {
+                if let Some(scope) = scope {
+                    write!(f, "@{}/", scope)?;
+                }
+                write!(f, "{}", name)?;
+                if let Some(req) = requested {
+                    write!(f, "{}", req)?;
+                }
+                Ok(())
+            }
+            Alias {
+                ref name,
+                ref package,
+            } => {
+                write!(f, "{}@", name)?;
+                if let Npm { .. } = **package {
+                    write!(f, "npm:")?;
+                }
+                write!(f, "{}", package)
+            }
+        }
+    }
+}
+
+impl fmt::Display for VersionSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use VersionSpec::*;
+        match self {
+            Tag(tag) => write!(f, "{}", tag),
+            Version(v) => write!(f, "{}", v),
+            Range(range) => write!(f, "{}", range),
         }
     }
 }

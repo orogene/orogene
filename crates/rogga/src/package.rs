@@ -1,3 +1,4 @@
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
@@ -35,7 +36,7 @@ impl PackageRequest {
     /// Returns the packument with general metadata about the package and its
     /// various versions.
     pub async fn packument(&self) -> Result<Packument> {
-        self.fetcher.write().await.packument(&self).await
+        self.fetcher.write().await.packument(&self.spec).await
     }
 
     pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package> {
@@ -70,8 +71,12 @@ impl Hash for PackageRequest {
 
 #[derive(Debug, Error)]
 pub enum ResolverError {
-    #[error("No matching version.")]
-    NoVersion,
+    #[error("No matching version found for spec {name}@{spec:?} in {versions:#?}.")]
+    NoVersion {
+        name: String,
+        spec: PackageSpec,
+        versions: Vec<String>,
+    },
     #[error(transparent)]
     OtherError(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
@@ -113,11 +118,21 @@ pub struct Package {
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 impl Package {
-    pub async fn manifest(&self) -> Result<VersionMetadata> {
-        self.fetcher.write().await.manifest(&self).await
+    pub async fn metadata(&self) -> Result<VersionMetadata> {
+        self.fetcher.write().await.metadata(&self).await
     }
 
     pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
         self.fetcher.write().await.tarball(&self).await
+    }
+}
+
+impl fmt::Debug for Package {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Package")
+            .field("from", &self.from)
+            .field("name", &self.name)
+            .field("resolved", &self.resolved)
+            .finish()
     }
 }

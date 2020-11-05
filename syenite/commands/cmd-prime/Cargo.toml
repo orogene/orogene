@@ -1,0 +1,21 @@
+[package]
+name = "cmd-prime"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+[dependencies]
+rogga = { path = "../../../crates/rogga" }
+oro-command = { path = "../../../crates/oro-command" }
+oro-config = { path = "../../../crates/oro-config" }
+oro-error-code = { path = "../../../crates/oro-error-code" }
+oro-pkg-root = { path = "../../../crates/oro-pkg-root" }
+oro-classic-resolver = { path = "../../../crates/oro-classic-resolver" }
+node-maintainer = { path = "../../../crates/node-maintainer" }
+
+anyhow = "1.0.25"
+clap = { git = "https://github.com/zkat/clap" }
+async-trait = "0.1.19"
+log = "0.4.11"
+url = "2.1.1"
+async-std = "1.6.2"

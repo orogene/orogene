@@ -7,7 +7,7 @@ use package_spec::PackageSpec;
 
 use crate::error::{Error, Internal, Result};
 use crate::fetch::PackageFetcher;
-use crate::package::{Package, PackageRequest, PackageResolution};
+use crate::package::{Package, PackageResolution};
 use crate::packument::{Packument, VersionMetadata};
 
 #[derive(Debug)]
@@ -32,11 +32,23 @@ impl RegistryFetcher {
 }
 
 impl RegistryFetcher {
-    async fn packument_from_name<T: AsRef<str>>(&mut self, name: T) -> Result<&Packument> {
+    async fn packument_from_name(
+        &mut self,
+        scope: &Option<String>,
+        name: &str,
+    ) -> Result<&Packument> {
         if self.packument.is_none() {
             let client = self.client.lock().await.clone();
-            let opts = client.opts(Method::Get, name.as_ref());
-            let packument_bytes = client
+            let full_name = format!(
+                "{}{}",
+                scope
+                    .clone()
+                    .map(|s| format!("@{}/", s))
+                    .unwrap_or_else(|| String::from("")),
+                name
+            );
+            let opts = client.opts(Method::Get, &full_name);
+            let packument_data = client
                 .send(opts.header(
                     "Accept",
                     if self.use_corgi {
@@ -46,11 +58,18 @@ impl RegistryFetcher {
                     },
                 ))
                 .await
-                .with_context(|| "Failed to get packument.".into())?
+                .with_context(|| format!("Failed to get packument for {}.", full_name))?
                 .body_string()
                 .await
                 .map_err(|e| Error::MiscError(e.to_string()))?;
-            self.packument = serde_json::from_str(&packument_bytes).map_err(Error::SerdeError)?;
+            // let val: serde_json::Value = serde_json::from_str(&packument_data).to_internal()?;
+            // println!("{:#?}", val);
+            self.packument =
+                serde_json::from_str(&packument_data).map_err(|err| Error::SerdeError {
+                    name: full_name,
+                    data: packument_data,
+                    serde_error: err,
+                })?;
         }
         Ok(self.packument.as_ref().unwrap())
     }
@@ -60,6 +79,7 @@ impl RegistryFetcher {
 impl PackageFetcher for RegistryFetcher {
     async fn name(&mut self, spec: &PackageSpec) -> Result<String> {
         match spec {
+            // TODO: scopes
             PackageSpec::Npm { ref name, .. } | PackageSpec::Alias { ref name, .. } => {
                 Ok(name.clone())
             }
@@ -67,33 +87,31 @@ impl PackageFetcher for RegistryFetcher {
         }
     }
 
-    async fn manifest(&mut self, pkg: &Package) -> Result<VersionMetadata> {
+    async fn metadata(&mut self, pkg: &Package) -> Result<VersionMetadata> {
         let wanted = match pkg.resolved {
             PackageResolution::Npm { ref version, .. } => version,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
-        let client = self.client.lock().await.clone();
-        let opts = client.opts(Method::Get, format!("{}/{}", pkg.name, wanted));
-        let info = client
-            .send(opts)
-            .await
-            .with_context(|| "Failed to get manifest.".into())?
-            .body_json::<VersionMetadata>()
-            .await
-            .map_err(|e| Error::MiscError(e.to_string()))?;
-        Ok(info)
+        let packument = self.packument(&pkg.from).await?;
+        // TODO: unwrap
+        Ok(packument.versions.get(&wanted).unwrap().clone())
     }
 
-    async fn packument(&mut self, pkg: &PackageRequest) -> Result<Packument> {
+    async fn packument(&mut self, spec: &PackageSpec) -> Result<Packument> {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
-        let pkg = match pkg.spec() {
+        let pkg = match spec {
             PackageSpec::Alias { ref package, .. } => package,
             pkg @ PackageSpec::Npm { .. } => pkg,
             _ => unreachable!(),
         };
-        if let PackageSpec::Npm { ref name, .. } = pkg {
-            Ok(self.packument_from_name(name).await?.clone())
+        if let PackageSpec::Npm {
+            ref scope,
+            ref name,
+            ..
+        } = pkg
+        {
+            Ok(self.packument_from_name(scope, name).await?.clone())
         } else {
             unreachable!()
         }
@@ -112,7 +130,7 @@ impl PackageFetcher for RegistryFetcher {
             client
                 .send(client.opts(Method::Get, url))
                 .await
-                .with_context(|| "Failed to get packument.".into())?,
+                .with_context(|| format!("Failed to get tarball for {:#?}.", pkg.resolved))?,
         ))
     }
 }

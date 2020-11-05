@@ -13,6 +13,8 @@ use oro_node_semver::Version;
 pub struct Packument {
     #[serde(default)]
     pub versions: HashMap<Version, VersionMetadata>,
+    // Note: This one seems to choke on full packument data sometimes, and I
+    // don't know why?
     #[serde(default)]
     pub time: HashMap<String, DateTime<Utc>>,
     #[serde(default, rename = "dist-tags")]

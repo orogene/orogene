@@ -6,7 +6,6 @@ extern "C" {
 
 #[cfg(test)]
 mod tests {
-    use ci_info;
     #[test]
     fn it_works() {
         let ci = ci_info::is_ci();
