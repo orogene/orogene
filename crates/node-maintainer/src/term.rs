@@ -36,7 +36,7 @@ impl Term {
                 other.request.name().clone(),
             ));
         }
-        spec_relation((&self, self.request.spec()), (&other, other.request.spec())).await
+        spec_relation((&self, &self.request), (&other, &other.request)).await
     }
 
     pub fn intersect(&self, other: &Term) -> Option<Term> {
@@ -54,17 +54,20 @@ impl Term {
 }
 
 fn spec_relation<'a>(
-    left: (&'a Term, &'a PackageSpec),
-    right: (&'a Term, &'a PackageSpec),
+    left: (&'a Term, &'a PackageRequest),
+    right: (&'a Term, &'a PackageRequest),
 ) -> Pin<Box<dyn Future<Output = Result<SetRelation>> + 'a>> {
     // NOTE: Shenanigans because async fn need to be boxed futures instead.
     Box::pin(async move {
         use PackageSpec::*;
-        Ok(match (left.1, right.1) {
+        Ok(match (left.1.spec(), right.1.spec()) {
             (Dir { .. }, Dir { .. }) => dir_relation(left, right)?,
             (Npm { .. }, Npm { .. }) => npm_relation(left, right).await?,
-            (Alias { ref package, .. }, _) => spec_relation((left.0, package), right).await?,
-            (_, Alias { ref package, .. }) => spec_relation(left, (right.0, package)).await?,
+            (Alias { ref package, .. }, _) => match **package {
+                Dir { .. } => dir_relation(left, right)?,
+                Npm { .. } => npm_relation(left, right).await?,
+                _ => unreachable!(),
+            },
             _ => {
                 if left.0.positive && right.0.positive {
                     SetRelation::Disjoint
@@ -80,21 +83,32 @@ fn spec_relation<'a>(
     })
 }
 
-fn dir_relation(left: (&Term, &PackageSpec), right: (&Term, &PackageSpec)) -> Result<SetRelation> {
-    Ok(match (left.1, right.1) {
+fn dir_relation(
+    left: (&Term, &PackageRequest),
+    right: (&Term, &PackageRequest),
+) -> Result<SetRelation> {
+    Ok(match (left.1.spec(), right.1.spec()) {
         (
             PackageSpec::Dir {
                 path: ref left_path,
-                from: ref left_from,
             },
             PackageSpec::Dir {
                 path: ref right_path,
-                from: ref right_from,
             },
         ) => {
             // TODO: would be nice to cache these some day, huh
-            let left_path = left_from.join(left_path).canonicalize().to_internal()?;
-            let right_path = right_from.join(right_path).canonicalize().to_internal()?;
+            let left_path = left
+                .1
+                .base_dir()
+                .join(left_path)
+                .canonicalize()
+                .to_internal()?;
+            let right_path = right
+                .1
+                .base_dir()
+                .join(right_path)
+                .canonicalize()
+                .to_internal()?;
             if left.0.positive == right.0.positive {
                 if left_path == right_path {
                     SetRelation::Overlapping
@@ -112,8 +126,8 @@ fn dir_relation(left: (&Term, &PackageSpec), right: (&Term, &PackageSpec)) -> Re
 }
 
 async fn npm_relation(
-    left: (&Term, &PackageSpec),
-    right: (&Term, &PackageSpec),
+    left: (&Term, &PackageRequest),
+    right: (&Term, &PackageRequest),
 ) -> Result<SetRelation> {
     let left_req = npm_version_req(&left).await?;
     let right_req = npm_version_req(&right).await?;
@@ -146,8 +160,8 @@ async fn npm_relation(
     })
 }
 
-async fn npm_version_req(req: &(&Term, &PackageSpec)) -> Result<VersionReq> {
-    if let PackageSpec::Npm { ref requested, .. } = req.1 {
+async fn npm_version_req(req: &(&Term, &PackageRequest)) -> Result<VersionReq> {
+    if let PackageSpec::Npm { ref requested, .. } = req.1.spec() {
         let vspec = if let Some(vspec) = requested {
             vspec.clone()
         } else {

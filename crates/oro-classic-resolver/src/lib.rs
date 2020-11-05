@@ -42,9 +42,10 @@ impl PackageResolver for ClassicResolver {
             spec => spec,
         };
 
-        if let Dir { ref path, ref from } = spec {
+        if let Dir { ref path } = spec {
             return Ok(PackageResolution::Dir {
-                path: from
+                path: wanted
+                    .base_dir()
                     .join(path)
                     .canonicalize()
                     .map_err(|e| ResolverError::OtherError(Box::new(e)))?,

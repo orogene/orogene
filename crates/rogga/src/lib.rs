@@ -75,10 +75,10 @@ impl Rogga {
     pub async fn arg_request(
         &self,
         arg: impl AsRef<str>,
-        dir: impl AsRef<Path>,
+        base_dir: impl AsRef<Path>,
     ) -> Result<PackageRequest> {
-        let spec = PackageSpec::from_string(arg.as_ref(), dir.as_ref())?;
-        let fetcher = self.pick_fetcher(&spec);
+        let spec = arg.as_ref().parse()?;
+        let fetcher = self.pick_fetcher(&spec, base_dir.as_ref());
         let name = {
             let mut locked = fetcher.write().await;
             locked.name(&spec).await?
@@ -87,6 +87,7 @@ impl Rogga {
             name,
             spec,
             fetcher,
+            base_dir: base_dir.as_ref().into(),
         })
     }
 
@@ -96,24 +97,25 @@ impl Rogga {
         &self,
         name: impl AsRef<str>,
         spec: impl AsRef<str>,
-        dir: impl AsRef<Path>,
+        base_dir: impl AsRef<Path>,
     ) -> Result<PackageRequest> {
-        let spec = PackageSpec::resolve(name.as_ref(), spec.as_ref(), dir.as_ref())?;
-        let fetcher = self.pick_fetcher(&spec);
+        let spec = format!("{}@{}", name.as_ref(), spec.as_ref()).parse()?;
+        let fetcher = self.pick_fetcher(&spec, base_dir.as_ref());
         Ok(PackageRequest {
             name: name.as_ref().into(),
             spec,
             fetcher,
+            base_dir: base_dir.as_ref().into(),
         })
     }
 
     /// Picks a fetcher from the fetchers available in src/fetch, according to
     /// the requested PackageArg.
-    fn pick_fetcher(&self, arg: &PackageSpec) -> RwLock<Box<dyn PackageFetcher>> {
+    fn pick_fetcher(&self, arg: &PackageSpec, base_dir: &Path) -> RwLock<Box<dyn PackageFetcher>> {
         use PackageSpec::*;
         match *arg {
-            Dir { .. } => RwLock::new(Box::new(DirFetcher::new())),
-            Alias { ref package, .. } => self.pick_fetcher(package),
+            Dir { .. } => RwLock::new(Box::new(DirFetcher::new(PathBuf::from(base_dir)))),
+            Alias { ref package, .. } => self.pick_fetcher(package, base_dir),
             Npm { .. } => RwLock::new(Box::new(RegistryFetcher::new(
                 self.client.clone(),
                 self.use_corgi,

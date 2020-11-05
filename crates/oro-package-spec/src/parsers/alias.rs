@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case as tag, take_till1};
 use nom::combinator::{map, map_res, opt};
@@ -11,54 +9,48 @@ use crate::parsers::{npm, path, util};
 use crate::PackageSpec;
 
 // alias_spec := [ [ '@' ], not('/')+ '/' ] not('@/')+ '@' prefixed-package-arg
-pub fn alias_spec<'a, E>(dir: &'a Path) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
+pub fn alias_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    move |input: &str| {
-        context(
-            "alias",
-            map(
-                tuple((
-                    opt(scope),
-                    map_res(take_till1(|c| c == '@' || c == '/'), util::no_url_encode),
-                    tag("@"),
-                    prefixed_package_spec(dir),
-                )),
-                |(scope, name, _, arg)| {
-                    let mut fullname = String::new();
-                    if let Some(scope) = scope {
-                        fullname.push_str(&scope);
-                        fullname.push_str("/");
-                    }
-                    fullname.push_str(name);
-                    PackageSpec::Alias {
-                        name: fullname,
-                        package: Box::new(arg),
-                    }
-                },
-            ),
-        )(input)
-    }
+    context(
+        "alias",
+        map(
+            tuple((
+                opt(scope),
+                map_res(take_till1(|c| c == '@' || c == '/'), util::no_url_encode),
+                tag("@"),
+                prefixed_package_spec,
+            )),
+            |(scope, name, _, arg)| {
+                let mut fullname = String::new();
+                if let Some(scope) = scope {
+                    fullname.push_str(&scope);
+                    fullname.push_str("/");
+                }
+                fullname.push_str(name);
+                PackageSpec::Alias {
+                    name: fullname,
+                    package: Box::new(arg),
+                }
+            },
+        ),
+    )(input)
 }
 
 /// prefixed_package-arg := ( "npm:" npm-pkg ) | ( [ "file:" ] path )
-fn prefixed_package_spec<'a, E>(
-    dir: &'a Path,
-) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
+fn prefixed_package_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    move |input: &str| {
-        context(
-            "package spec",
-            alt((
-                // Paths don't need to be prefixed, but they can be.
-                preceded(opt(tag("file:")), path::path_spec(&dir)),
-                preceded(tag("npm:"), npm::npm_spec),
-            )),
-        )(input)
-    }
+    context(
+        "package spec",
+        alt((
+            // Paths don't need to be prefixed, but they can be.
+            preceded(opt(tag("file:")), path::path_spec),
+            preceded(tag("npm:"), npm::npm_spec),
+        )),
+    )(input)
 }
 
 fn scope<'a, E>(input: &'a str) -> IResult<&'a str, String, E>

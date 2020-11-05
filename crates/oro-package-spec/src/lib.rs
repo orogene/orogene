@@ -1,5 +1,6 @@
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use std::str::FromStr;
 
 use nom::combinator::all_consuming;
 use nom::error::{convert_error, VerboseError};
@@ -24,7 +25,6 @@ pub enum VersionSpec {
 pub enum PackageSpec {
     Dir {
         path: PathBuf,
-        from: PathBuf,
     },
     Alias {
         name: String,
@@ -37,30 +37,7 @@ pub enum PackageSpec {
     },
 }
 
-// TODO:
-// 1. Stop taking a dir arg and move that to PackageRequest?
-// 2. Implement FromStr
-// 3. Remove PackageSpec::resolve()
 impl PackageSpec {
-    pub fn from_string(
-        s: impl AsRef<str>,
-        dir: impl AsRef<Path>,
-    ) -> Result<PackageSpec, PackageSpecError> {
-        parse_package_spec(&s.as_ref(), dir.as_ref())
-    }
-
-    pub fn resolve<N, S, D>(name: N, spec: S, dir: D) -> Result<PackageSpec, PackageSpecError>
-    where
-        N: AsRef<str>,
-        S: AsRef<str>,
-        D: AsRef<Path>,
-    {
-        parse_package_spec(
-            &(format!("{}@{}", name.as_ref(), spec.as_ref())),
-            dir.as_ref(),
-        )
-    }
-
     pub fn is_registry(&self) -> bool {
         use PackageSpec::*;
         match self {
@@ -79,11 +56,19 @@ impl PackageSpec {
     }
 }
 
+impl FromStr for PackageSpec {
+    type Err = PackageSpecError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_package_spec(s)
+    }
+}
+
 impl fmt::Display for PackageSpec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use PackageSpec::*;
         match self {
-            Dir { from, path } => write!(f, "{}", from.join(path).display()),
+            Dir { path } => write!(f, "{}", path.display()),
             Npm {
                 ref scope,
                 ref name,
@@ -123,13 +108,12 @@ impl fmt::Display for VersionSpec {
     }
 }
 
-pub fn parse_package_spec<I, D>(input: I, dir: D) -> Result<PackageSpec, PackageSpecError>
+pub fn parse_package_spec<I>(input: I) -> Result<PackageSpec, PackageSpecError>
 where
     I: AsRef<str>,
-    D: AsRef<Path>,
 {
     let input = &input.as_ref()[..];
-    match all_consuming(package::package_spec::<VerboseError<&str>>(dir.as_ref()))(input) {
+    match all_consuming(package::package_spec::<VerboseError<&str>>)(input) {
         Ok((_, arg)) => Ok(arg),
         Err(err) => Err(PackageSpecError::ParseError(ErrCode::OR1000 {
             input: input.into(),
