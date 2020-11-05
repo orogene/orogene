@@ -1,4 +1,4 @@
-use oro_package_spec::PackageArgError;
+use oro_package_spec::PackageSpecError;
 use thiserror::Error;
 
 use crate::package::ResolverError;
@@ -40,7 +40,7 @@ pub enum Error {
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
-    PackageArgError(#[from] PackageArgError),
+    PackageArgError(#[from] PackageSpecError),
 
     #[error(transparent)]
     ResolverError(#[from] ResolverError),

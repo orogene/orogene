@@ -1,7 +1,7 @@
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
-use oro_package_spec::{PackageArgError, PackageSpec, VersionSpec};
+use oro_package_spec::{PackageSpec, PackageSpecError, VersionSpec};
 
-type Result<T> = std::result::Result<T, PackageArgError>;
+type Result<T> = std::result::Result<T, PackageSpecError>;
 
 fn parse(input: &str) -> Result<PackageSpec> {
     PackageSpec::from_string(input, "/root/")

@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use oro_package_spec::{PackageArgError, PackageSpec};
+use oro_package_spec::{PackageSpec, PackageSpecError};
 
-type Result<T> = std::result::Result<T, PackageArgError>;
+type Result<T> = std::result::Result<T, PackageSpecError>;
 
 fn parse(input: &str) -> Result<PackageSpec> {
     PackageSpec::from_string(input, "/root/")
