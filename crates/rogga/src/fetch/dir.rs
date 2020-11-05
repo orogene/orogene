@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use futures::io::AsyncRead;
@@ -17,18 +17,22 @@ use oro_node_semver::Version;
 #[derive(Debug)]
 pub struct DirFetcher {
     name: Option<String>,
+    base_dir: PathBuf,
 }
 
 impl DirFetcher {
-    pub fn new() -> Self {
-        Self { name: None }
+    pub fn new(base_dir: PathBuf) -> Self {
+        Self {
+            name: None,
+            base_dir,
+        }
     }
 }
 
 impl DirFetcher {
     async fn manifest(&mut self, spec: &PackageSpec) -> Result<Manifest> {
         let path = match spec {
-            PackageSpec::Dir { path, from } => from.join(path),
+            PackageSpec::Dir { path } => self.base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
         // TODO: Orogene.toml?
@@ -44,7 +48,7 @@ impl DirFetcher {
 
     async fn metadata_from_spec(&mut self, spec: &PackageSpec) -> Result<VersionMetadata> {
         let path = match spec {
-            PackageSpec::Dir { path, from } => from.join(path),
+            PackageSpec::Dir { path } => self.base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
         Ok(self.manifest(spec).await?.into_metadata(&path)?)
@@ -52,7 +56,7 @@ impl DirFetcher {
 
     async fn packument_from_spec(&mut self, spec: &PackageSpec) -> Result<Packument> {
         let path = match spec {
-            PackageSpec::Dir { path, from } => from.join(path),
+            PackageSpec::Dir { path } => self.base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
         Ok(self.manifest(spec).await?.into_packument(&path)?)
@@ -64,7 +68,7 @@ impl PackageFetcher for DirFetcher {
     async fn name(&mut self, spec: &PackageSpec) -> Result<String> {
         if let Some(ref name) = self.name {
             Ok(name.clone())
-        } else if let PackageSpec::Dir { ref path, ref from } = spec {
+        } else if let PackageSpec::Dir { ref path } = spec {
             self.name = Some(
                 self.packument_from_spec(spec)
                     .await?
@@ -77,7 +81,7 @@ impl PackageFetcher for DirFetcher {
                     .clone()
                     .name
                     .unwrap_or_else(|| {
-                        let canon = from.join(path).canonicalize();
+                        let canon = self.base_dir.join(path).canonicalize();
                         let path = canon.as_ref().map(|p| p.file_name());
                         if let Ok(Some(name)) = path {
                             name.to_string_lossy().into()

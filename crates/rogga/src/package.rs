@@ -20,6 +20,7 @@ use crate::packument::{Packument, VersionMetadata};
 pub struct PackageRequest {
     pub(crate) name: String,
     pub(crate) spec: PackageSpec,
+    pub(crate) base_dir: PathBuf,
     pub(crate) fetcher: RwLock<Box<dyn PackageFetcher>>,
 }
 
@@ -31,6 +32,10 @@ impl PackageRequest {
     // TODO: do this before instantiating the PackageRequest
     pub fn name(&self) -> &String {
         &self.name
+    }
+
+    pub fn base_dir(&self) -> &PathBuf {
+        &self.base_dir
     }
 
     /// Returns the packument with general metadata about the package and its

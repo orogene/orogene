@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use nom::branch::alt;
 use nom::bytes::complete::tag_no_case as tag;
@@ -13,16 +13,13 @@ use crate::error::PackageSpecError;
 use crate::PackageSpec;
 
 /// path := ( relative-dir | absolute-dir )
-pub fn path_spec<'a, E>(dir: &'a Path) -> impl Fn(&'a str) -> IResult<&'a str, PackageSpec, E>
+pub fn path_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
 {
-    move |input: &'a str| {
-        map(alt((relative_path, absolute_path)), |p| PackageSpec::Dir {
-            path: p,
-            from: PathBuf::from(dir),
-        })(input)
-    }
+    map(alt((relative_path, absolute_path)), |p| PackageSpec::Dir {
+        path: p,
+    })(input)
 }
 
 /// relative-path := [ '.' ] '.' [path-sep] .*

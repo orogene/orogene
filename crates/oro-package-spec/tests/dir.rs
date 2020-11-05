@@ -5,7 +5,7 @@ use oro_package_spec::{PackageSpec, PackageSpecError};
 type Result<T> = std::result::Result<T, PackageSpecError>;
 
 fn parse(input: &str) -> Result<PackageSpec> {
-    PackageSpec::from_string(input, "/root/")
+    input.parse()
 }
 
 #[test]
@@ -15,7 +15,6 @@ fn relative_path_current_dir() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("./"),
-            from: PathBuf::from("/root/")
         }
     );
     Ok(())
@@ -28,7 +27,6 @@ fn relative_path_current_dir_no_slash() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("."),
-            from: PathBuf::from("/root/")
         }
     );
     Ok(())
@@ -41,7 +39,6 @@ fn relative_path_unix() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("./foo/bar/baz"),
-            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -54,7 +51,6 @@ fn absolute_path_unix() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("/foo/bar/baz"),
-            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -67,7 +63,6 @@ fn relative_path_windows() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from(".\\foo\\bar\\baz"),
-            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -80,7 +75,6 @@ fn absolute_path_windows() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("C:\\foo\\bar\\baz"),
-            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -93,7 +87,6 @@ fn absolute_path_windows_qmark() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("\\\\?\\foo\\bar\\baz"),
-            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -106,7 +99,6 @@ fn absolute_path_windows_double_slash() -> Result<()> {
         res,
         PackageSpec::Dir {
             path: PathBuf::from("\\\\foo\\bar\\baz"),
-            from: PathBuf::from("/root/"),
         }
     );
     Ok(())
@@ -128,7 +120,6 @@ fn named() -> Result<()> {
             name: "foo".into(),
             package: Box::new(PackageSpec::Dir {
                 path: PathBuf::from("./hey"),
-                from: PathBuf::from("/root/"),
             })
         }
     );
