@@ -45,8 +45,14 @@ pub enum Error {
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
 
-    #[error(transparent)]
-    SerdeError(#[from] serde_json::Error),
+    #[error("Failed to deserialize package data for {name}: {serde_error}\n{}",
+            &.data[(.serde_error.column() - 100) .. (.serde_error.column() + 30)])]
+    SerdeError {
+        name: String,
+        data: String,
+        #[source]
+        serde_error: serde_json::Error,
+    },
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that

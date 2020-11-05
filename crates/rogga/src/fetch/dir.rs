@@ -3,13 +3,13 @@ use std::path::Path;
 
 use async_trait::async_trait;
 use futures::io::AsyncRead;
-use oro_manifest::OroManifestBuilder;
+use oro_manifest::OroManifest;
 use package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Internal, Result};
 use crate::fetch::PackageFetcher;
-use crate::package::{Package, PackageRequest};
+use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
 
 use oro_node_semver::Version;
@@ -26,20 +26,20 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    async fn pkgjson(&mut self, spec: &PackageSpec) -> Result<PkgJson> {
+    async fn manifest(&mut self, spec: &PackageSpec) -> Result<Manifest> {
         let path = match spec {
             PackageSpec::Dir { path, from } => from.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
         // TODO: Orogene.toml?
-        let json = async_std::fs::read_to_string(&path.join("package.json"))
+        let json = async_std::fs::read(&path.join("package.json"))
             .await
             .to_internal()
             .with_context(|| "Failed to read package.json".into())?;
-        let pkgjson: PkgJson = serde_json::from_str(&json)
+        let pkgjson: OroManifest = serde_json::from_slice(&json[..])
             .to_internal()
             .with_context(|| "Failed to parse package.json".into())?;
-        Ok(pkgjson)
+        Ok(Manifest(pkgjson))
     }
 
     async fn metadata_from_spec(&mut self, spec: &PackageSpec) -> Result<VersionMetadata> {
@@ -47,7 +47,7 @@ impl DirFetcher {
             PackageSpec::Dir { path, from } => from.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
-        Ok(self.pkgjson(spec).await?.into_metadata(&path)?)
+        Ok(self.manifest(spec).await?.into_metadata(&path)?)
     }
 
     async fn packument_from_spec(&mut self, spec: &PackageSpec) -> Result<Packument> {
@@ -55,7 +55,7 @@ impl DirFetcher {
             PackageSpec::Dir { path, from } => from.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
-        Ok(self.pkgjson(spec).await?.into_packument(&path)?)
+        Ok(self.manifest(spec).await?.into_packument(&path)?)
     }
 }
 
@@ -95,12 +95,12 @@ impl PackageFetcher for DirFetcher {
         }
     }
 
-    async fn manifest(&mut self, pkg: &Package) -> Result<VersionMetadata> {
+    async fn metadata(&mut self, pkg: &Package) -> Result<VersionMetadata> {
         self.metadata_from_spec(&pkg.from).await
     }
 
-    async fn packument(&mut self, pkg: &PackageRequest) -> Result<Packument> {
-        self.packument_from_spec(pkg.spec()).await
+    async fn packument(&mut self, spec: &PackageSpec) -> Result<Packument> {
+        self.packument_from_spec(spec).await
     }
 
     async fn tarball(
@@ -113,28 +113,28 @@ impl PackageFetcher for DirFetcher {
 }
 
 #[derive(Serialize, Deserialize)]
-struct PkgJson {
-    name: Option<String>,
-    version: Option<Version>,
-    description: Option<String>,
-}
+struct Manifest(OroManifest);
 
-impl PkgJson {
+impl Manifest {
     pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {
-        let PkgJson { name, version, .. } = self;
-        let name = name.or_else(|| {
+        let Manifest(OroManifest {
+            ref name,
+            ref version,
+            ..
+        }) = self;
+        let name = name.clone().or_else(|| {
             if let Some(name) = path.as_ref().file_name() {
                 Some(name.to_string_lossy().into())
             } else {
                 None
             }
         }).ok_or_else(|| Error::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
-        let version = version.unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
-        let manifest = OroManifestBuilder::default()
-            .name(name)
-            .version(version)
-            .build()
-            .unwrap();
+        let version = version
+            .clone()
+            .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
+        let mut new_manifest = self.0.clone();
+        new_manifest.name = Some(name);
+        new_manifest.version = Some(version);
         Ok(VersionMetadata {
             dist: Dist {
                 shasum: None,
@@ -150,7 +150,7 @@ impl PkgJson {
             has_shrinkwrap: None,
             maintainers: Vec::new(),
             deprecated: None,
-            manifest,
+            manifest: self.0.clone(),
         })
     }
 

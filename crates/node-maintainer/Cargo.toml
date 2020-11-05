@@ -1,0 +1,15 @@
+[package]
+name = "node-maintainer"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+[dependencies]
+oro-node-semver = { path = "../oro-node-semver" }
+oro-classic-resolver = { path = "../oro-classic-resolver" }
+rogga = { path = "../rogga" }
+
+thiserror = "1.0.20"
+petgraph = "0.5.1"
+url = "2.1.1"
+futures = "0.3.7"

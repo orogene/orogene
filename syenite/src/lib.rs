@@ -9,6 +9,7 @@ use oro_command::OroCommand;
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 
 use cmd_ping::PingCmd;
+use cmd_prime::PrimeCmd;
 use cmd_restore::RestoreCmd;
 use cmd_shell::ShellCmd;
 use cmd_view::ViewCmd;
@@ -26,7 +27,7 @@ pub use oro_error_code::OroErrCode as Code;
 )]
 pub struct Syenite {
     #[clap(global = true, long = "root", about = "Package path to operate on.")]
-    pkg_root: Option<PathBuf>,
+    root: Option<PathBuf>,
     #[clap(global = true, about = "File to read configuration values from.", long)]
     config: Option<PathBuf>,
     #[clap(
@@ -83,11 +84,6 @@ impl Syenite {
         let clp = Syenite::into_app();
         let matches = clp.get_matches();
         let mut oro = Syenite::from_arg_matches(&matches);
-        let cwd = env::current_dir()?;
-        oro.pkg_root = Some(
-            oro.pkg_root
-                .unwrap_or_else(|| oro_pkg_root::pkg_root(&cwd).unwrap_or(cwd)),
-        );
         let cfg = if let Some(file) = &oro.config {
             OroConfigOptions::new()
                 .global_config_file(Some(file.clone()))
@@ -98,7 +94,7 @@ impl Syenite {
                     ProjectDirs::from("", "", "orogene")
                         .map(|d| d.config_dir().to_owned().join("ororc.toml")),
                 )
-                .pkg_root(oro.pkg_root.clone())
+                .pkg_root(oro.root.clone())
                 .load()?
         };
         oro.layer_config(&matches, &cfg)?;
@@ -118,6 +114,13 @@ pub enum OroCmd {
         setting = clap::AppSettings::DeriveDisplayOrder,
     )]
     Ping(PingCmd),
+    #[clap(
+        about = "Prime the current project for execution",
+        setting = clap::AppSettings::ColoredHelp,
+        setting = clap::AppSettings::DisableHelpSubcommand,
+        setting = clap::AppSettings::DeriveDisplayOrder,
+    )]
+    Prime(PrimeCmd),
     #[clap(
         about = "Restore required packages into the global cache",
         setting = clap::AppSettings::ColoredHelp,
@@ -148,6 +151,7 @@ impl OroCommand for Syenite {
         log::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
+            OroCmd::Prime(prime) => prime.execute().await,
             OroCmd::Restore(restore) => restore.execute().await,
             OroCmd::View(view) => view.execute().await,
             OroCmd::Shell(shell) => shell.execute().await,
@@ -160,6 +164,9 @@ impl OroConfigLayer for Syenite {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
                 ping.layer_config(&args.subcommand_matches("ping").unwrap(), conf)
+            }
+            OroCmd::Prime(ref mut prime) => {
+                prime.layer_config(&args.subcommand_matches("prime").unwrap(), conf)
             }
             OroCmd::Restore(ref mut restore) => {
                 restore.layer_config(&args.subcommand_matches("restore").unwrap(), conf)

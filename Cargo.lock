@@ -766,6 +766,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmd-prime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "clap 3.0.0-beta.1",
+ "log",
+ "node-maintainer",
+ "oro-classic-resolver",
+ "oro-command",
+ "oro-config",
+ "oro-error-code",
+ "oro-pkg-root",
+ "rogga",
+ "url",
+]
+
+[[package]]
 name = "cmd-restore"
 version = "0.1.0"
 dependencies = [
@@ -1322,6 +1341,12 @@ dependencies = [
  "redox_syscall",
  "winapi",
 ]
+
+[[package]]
+name = "fixedbitset"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
 
 [[package]]
 name = "flate2"
@@ -1970,6 +1995,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "node-maintainer"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "oro-classic-resolver",
+ "oro-node-semver",
+ "petgraph",
+ "rogga",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "nom"
 version = "4.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2309,6 +2347,16 @@ name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
+
+[[package]]
+name = "petgraph"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "467d164a6de56270bd7c4d070df81d07beace25012d5103ced4e9ff08d6afdb7"
+dependencies = [
+ "fixedbitset",
+ "indexmap",
+]
 
 [[package]]
 name = "phf"
@@ -3172,6 +3220,7 @@ dependencies = [
  "async-trait",
  "clap 3.0.0-beta.1",
  "cmd-ping",
+ "cmd-prime",
  "cmd-restore",
  "cmd-shell",
  "cmd-view",
@@ -3182,7 +3231,6 @@ dependencies = [
  "oro-command",
  "oro-config",
  "oro-error-code",
- "oro-pkg-root",
  "smol 0.1.18",
 ]
 
@@ -3529,9 +3577,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.6"
+version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
+checksum = "75cf45bb0bef80604d001caaec0d09da99611b3c0fd39d3080468875cdb65645"
 dependencies = [
  "serde 1.0.117",
 ]
@@ -3910,7 +3958,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff4fb510bbfe5b8992ff15f77a2e6fe6cf062878f0eda00c0f44963a807ca5dc"
 dependencies = [
- "toml 0.5.6",
+ "toml 0.5.7",
 ]
 
 [[package]]

@@ -36,7 +36,7 @@ impl OroCommand for ViewCmd {
             .await?;
         let packument = pkgreq.packument().await?;
         let pkg = pkgreq.resolve_with(&ClassicResolver::new()).await?;
-        let manifest = pkg.manifest().await?;
+        let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]
         // Probably the best way to do this is to support doing raw
         // packument/manifest requests that just deserialize to
@@ -44,7 +44,7 @@ impl OroCommand for ViewCmd {
         if self.json {
             // TODO: What should this be? NPM is actually a weird mishmash of
             // the packument and the manifest?
-            println!("{}", serde_json::to_string_pretty(&manifest)?);
+            println!("{}", serde_json::to_string_pretty(&metadata)?);
         } else {
             let VersionMetadata {
                 ref npm_user,
@@ -64,7 +64,7 @@ impl OroCommand for ViewCmd {
                         ..
                     },
                 ..
-            } = manifest;
+            } = metadata;
 
             // name@version | license | deps: 123 | releases: 123
             println!(
