@@ -5,7 +5,7 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-oro-error-code = { path = "../oro-error-code" }
+oro-diagnostics = { path = "../oro-diagnostics" }
 oro-node-semver = { path = "../oro-node-semver" }
 
 url = "2.1.0"

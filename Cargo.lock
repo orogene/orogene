@@ -2208,6 +2208,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "oro-diagnostics"
+version = "0.1.0"
+
+[[package]]
 name = "oro-error-code"
 version = "0.1.0"
 dependencies = [
@@ -2287,7 +2291,7 @@ name = "oro-package-spec"
 version = "0.1.0"
 dependencies = [
  "nom 5.1.2",
- "oro-error-code",
+ "oro-diagnostics",
  "oro-node-semver",
  "percent-encoding",
  "thiserror",
