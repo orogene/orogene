@@ -2000,6 +2000,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "oro-classic-resolver",
+ "oro-diagnostics",
  "oro-node-semver",
  "petgraph",
  "rogga",
@@ -2151,6 +2152,7 @@ name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "oro-diagnostics",
  "oro-node-semver",
  "oro-package-spec",
  "rogga",
@@ -2266,6 +2268,7 @@ name = "oro-node-semver"
 version = "0.1.0"
 dependencies = [
  "nom 5.1.2",
+ "oro-diagnostics",
  "pretty_assertions",
  "serde 1.0.117",
  "serde_derive",
@@ -2728,6 +2731,7 @@ dependencies = [
  "log",
  "mkdirp",
  "oro-client",
+ "oro-diagnostics",
  "oro-error-code",
  "oro-manifest",
  "oro-node-semver",

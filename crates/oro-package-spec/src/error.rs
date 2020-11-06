@@ -16,12 +16,12 @@ pub enum PackageSpecError {
 }
 
 impl Diagnostic for PackageSpecError {
-    fn code(&self) -> &DiagnosticCode {
+    fn code(&self) -> DiagnosticCode {
         use PackageSpecError::*;
         match self {
-            ParseError { ref code, .. } => code,
-            InvalidCharacters(ref code, ..) => code,
-            InvalidDriveLetter(ref code, ..) => code,
+            ParseError { code, .. } => *code,
+            InvalidCharacters(code, ..) => *code,
+            InvalidDriveLetter(code, ..) => *code,
         }
     }
 }

@@ -1,3 +1,6 @@
+use std::cmp::{Ord, Ordering, PartialOrd};
+use std::fmt;
+
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
@@ -6,10 +9,7 @@ use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::multi::separated_nonempty_list;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
-
-use std::cmp::{Ord, Ordering, PartialOrd};
-use std::fmt;
-
+use oro_diagnostics::DiagnosticCode;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
@@ -296,6 +296,7 @@ impl VersionReq {
         match all_consuming(many_predicates::<VerboseError<&str>>)(input) {
             Ok((_, predicates)) => Ok(VersionReq { predicates }),
             Err(err) => Err(SemverError::ParseError {
+                code: DiagnosticCode::OR1010,
                 input: input.into(),
                 msg: match err {
                     Err::Error(e) => convert_error(input, e),

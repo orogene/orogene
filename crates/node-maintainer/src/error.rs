@@ -1,13 +1,14 @@
+use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
     /// Should probably be an internal error. Signals that we tried to match
     /// two packages with different names.
-    #[error("{0} and {1} do not match.")]
-    NameMismatch(String, String),
-    #[error("Tag '{0}' does not exist in registry.")]
-    TagNotFound(String),
+    #[error("{0:#?}: {1} and {2} do not match.")]
+    NameMismatch(DiagnosticCode, String, String),
+    #[error("{0:#?}: Tag '{1}' does not exist in registry.")]
+    TagNotFound(DiagnosticCode, String),
     /// Error returned from Rogga
     #[error(transparent)]
     RoggaError {
@@ -21,6 +22,18 @@ pub enum Error {
         /// The underlying error
         source: InternalError,
     },
+}
+
+impl Diagnostic for Error {
+    fn code(&self) -> DiagnosticCode {
+        use Error::*;
+        match self {
+            NameMismatch(code, ..) => *code,
+            TagNotFound(code, ..) => *code,
+            RoggaError { source } => source.code(),
+            InternalError { .. } => DiagnosticCode::OR1000,
+        }
+    }
 }
 
 #[derive(Error, Debug)]

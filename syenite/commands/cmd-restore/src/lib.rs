@@ -54,13 +54,9 @@ impl<'a> PackageResolver for PkgLockResolver<'a> {
                 }
             }
             PackageSpec::Dir { .. } => PackageResolution::Dir {
-                path: self
-                    .dep
-                    .version
-                    .parse()
-                    .map_err(|e| ResolverError::OtherError(Box::new(e)))?,
+                path: PathBuf::from(&self.dep.version),
             },
-            _ => panic!("Should not be getting any other type right now"),
+            PackageSpec::Alias { .. } => unreachable!(),
         })
     }
 }

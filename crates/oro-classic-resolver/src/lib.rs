@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use oro_package_spec::{PackageSpec, VersionSpec};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
@@ -18,8 +19,19 @@ impl Default for ClassicResolver {
 
 #[derive(Debug, Error)]
 pub enum ClassicResolverError {
-    #[error("Only Version, Tag, Range, and Alias package args are supported.")]
-    InvalidPackageSpec,
+    #[error("{0:#?}: Only Version, Tag, Range, and Alias package args are supported.")]
+    InvalidPackageSpec(DiagnosticCode),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
+}
+
+impl Diagnostic for ClassicResolverError {
+    fn code(&self) -> DiagnosticCode {
+        match self {
+            ClassicResolverError::InvalidPackageSpec(code) => *code,
+            ClassicResolverError::IoError(_) => DiagnosticCode::OR1000,
+        }
+    }
 }
 
 impl ClassicResolver {
@@ -44,11 +56,9 @@ impl PackageResolver for ClassicResolver {
 
         if let Dir { ref path } = spec {
             return Ok(PackageResolution::Dir {
-                path: wanted
-                    .base_dir()
-                    .join(path)
-                    .canonicalize()
-                    .map_err(|e| ResolverError::OtherError(Box::new(e)))?,
+                path: wanted.base_dir().join(path).canonicalize().map_err(|e| {
+                    ResolverError::OtherError(Box::new(ClassicResolverError::IoError(e)))
+                })?,
             });
         }
 
@@ -62,6 +72,7 @@ impl PackageResolver for ClassicResolver {
             .map_err(|e| ResolverError::OtherError(Box::new(e)))?;
         if packument.versions.is_empty() {
             return Err(ResolverError::NoVersion {
+                code: DiagnosticCode::OR1009,
                 name: wanted.name().clone(),
                 spec: wanted.spec().clone(),
                 versions: Vec::new(),
@@ -86,7 +97,7 @@ impl PackageResolver for ClassicResolver {
             } => None,
             _ => {
                 return Err(ResolverError::OtherError(Box::new(
-                    ClassicResolverError::InvalidPackageSpec,
+                    ClassicResolverError::InvalidPackageSpec(DiagnosticCode::OR1007),
                 )))
             }
         };
@@ -155,6 +166,7 @@ impl PackageResolver for ClassicResolver {
                 })
             })
             .ok_or_else(|| ResolverError::NoVersion {
+                code: DiagnosticCode::OR1008,
                 name: wanted.name().clone(),
                 spec: wanted.spec().clone(),
                 versions: packument.versions.keys().map(|k| k.to_string()).collect(),

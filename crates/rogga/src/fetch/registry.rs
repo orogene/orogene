@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Method;
 use oro_client::{self, OroClient};
+use oro_diagnostics::DiagnosticCode;
 use oro_package_spec::PackageSpec;
 
 use crate::error::{Error, Internal, Result};
@@ -66,6 +67,7 @@ impl RegistryFetcher {
             // println!("{:#?}", val);
             self.packument =
                 serde_json::from_str(&packument_data).map_err(|err| Error::SerdeError {
+                    code: DiagnosticCode::OR1006,
                     name: full_name,
                     data: packument_data,
                     serde_error: err,
