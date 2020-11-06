@@ -1,9 +1,15 @@
+/// Adds diagnostic code support to a given error. All errors defined in
+/// orogene include diagnostics this way.
 pub trait Diagnostic: std::error::Error + Send + Sync {
     fn code(&self) -> DiagnosticCode;
 }
 
+// This is needed so Box<dyn Diagnostic> is correctly treated as an Error.
 impl std::error::Error for Box<dyn Diagnostic> {}
 
+/// All known orogene-related diagnostic codes. These codes are used to
+/// provide easily-searchable diagnostics for users, as well as document them
+/// and any advice for addressing them.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum DiagnosticCode {
