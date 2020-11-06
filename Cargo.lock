@@ -759,7 +759,7 @@ dependencies = [
  "oro-client",
  "oro-command",
  "oro-config",
- "oro-error-code",
+ "oro-diagnostics",
  "serde 1.0.117",
  "serde_json",
  "url",
@@ -778,7 +778,6 @@ dependencies = [
  "oro-classic-resolver",
  "oro-command",
  "oro-config",
- "oro-error-code",
  "oro-pkg-root",
  "rogga",
  "url",
@@ -796,7 +795,6 @@ dependencies = [
  "log",
  "oro-command",
  "oro-config",
- "oro-error-code",
  "oro-tree",
  "rogga",
  "serde_json",
@@ -815,7 +813,7 @@ dependencies = [
  "log",
  "oro-command",
  "oro-config",
- "oro-error-code",
+ "oro-diagnostics",
  "ssri",
 ]
 
@@ -835,7 +833,6 @@ dependencies = [
  "oro-client",
  "oro-command",
  "oro-config",
- "oro-error-code",
  "oro-manifest",
  "rogga",
  "serde_json",
@@ -1156,17 +1153,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2791ea3e372c8495c0bc2033991d76b512cd799d07491fbd6890124db9458bef"
 dependencies = [
  "darling",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "derive_more"
-version = "0.99.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "298998b1cf6b5b2c8a7b023dfd45821825ce3ba8a8af55c921a0e734e4653f76"
-dependencies = [
  "proc-macro2",
  "quote",
  "syn",
@@ -2172,7 +2158,7 @@ dependencies = [
  "http-client",
  "http-types",
  "log",
- "oro-error-code",
+ "oro-diagnostics",
  "serde 1.0.117",
  "surf",
  "thiserror",
@@ -2212,14 +2198,6 @@ dependencies = [
 [[package]]
 name = "oro-diagnostics"
 version = "0.1.0"
-
-[[package]]
-name = "oro-error-code"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "http-types",
-]
 
 [[package]]
 name = "oro-gui-handler"
@@ -2732,7 +2710,6 @@ dependencies = [
  "mkdirp",
  "oro-client",
  "oro-diagnostics",
- "oro-error-code",
  "oro-manifest",
  "oro-node-semver",
  "oro-package-spec",
@@ -2740,7 +2717,6 @@ dependencies = [
  "serde_json",
  "ssri",
  "thiserror",
- "url",
 ]
 
 [[package]]
@@ -3238,7 +3214,6 @@ dependencies = [
  "log",
  "oro-command",
  "oro-config",
- "oro-error-code",
  "smol 0.1.18",
 ]
 

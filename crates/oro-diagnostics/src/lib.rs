@@ -38,4 +38,20 @@ pub enum DiagnosticCode {
     OR1013,
     /// Semver number component is larger than the allowed limit (JavaScript's Number.MAX_SAFE_INTEGER).
     OR1014,
+    /// Registry returned error-level response status code.
+    OR1015,
+    /// Registry request failed.
+    OR1016,
+    /// Failed to run node executable.
+    OR1017,
+    /// Failed to get current executable path while setting $ORO_BIN.
+    OR1018,
+    /// Couldn't find home directory while getting data dir for `oro shell`.
+    OR1019,
+    /// Failed to create data dir used by `oro shell` to store alabaster data.
+    OR1020,
+    /// Failed to write alabaster patches to data dir for `oro shell`.
+    OR1021,
+    /// Failed to deserialize ping response details.
+    OR1022,
 }

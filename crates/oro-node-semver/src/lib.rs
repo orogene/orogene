@@ -27,14 +27,18 @@ const MAX_LENGTH: usize = 256;
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum SemverError {
     #[error("{code:#?}: Failed to parse Semver string `{input}`:\n{msg}")]
-    ParseError { code: DiagnosticCode, input: String, msg: String },
+    ParseError {
+        code: DiagnosticCode,
+        input: String,
+        msg: String,
+    },
 }
 
 impl Diagnostic for SemverError {
     fn code(&self) -> DiagnosticCode {
         use SemverError::*;
         match self {
-            ParseError { code, .. } => *code
+            ParseError { code, .. } => *code,
         }
     }
 }

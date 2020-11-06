@@ -94,7 +94,7 @@ impl Diagnostic for ResolverError {
         match self {
             NoVersion { code, .. } => *code,
             // TODO: Maybe make the value of OtherError a Diagnostic?
-            OtherError(..)=> DiagnosticCode::OR1000,
+            OtherError(..) => DiagnosticCode::OR1000,
         }
     }
 }
