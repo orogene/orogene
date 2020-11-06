@@ -14,8 +14,6 @@ use cmd_restore::RestoreCmd;
 use cmd_shell::ShellCmd;
 use cmd_view::ViewCmd;
 
-pub use oro_error_code::OroErrCode as Code;
-
 #[derive(Debug, Clap)]
 #[clap(
     author = "Kat Marchán <kzm@zkat.tech>",

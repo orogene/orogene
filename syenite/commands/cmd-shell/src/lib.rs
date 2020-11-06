@@ -4,7 +4,7 @@ use clap::Clap;
 use directories::ProjectDirs;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
-use oro_error_code::OroErrCode as Code;
+use oro_diagnostics::DiagnosticCode;
 use ssri::Integrity;
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
@@ -35,8 +35,17 @@ pub struct ShellCmd {
 #[async_trait]
 impl OroCommand for ShellCmd {
     async fn execute(self) -> Result<()> {
-        let code = Command::new(&self.node)
-            .env("DS_BIN", env::current_exe().context(Code::OR1006)?)
+        let node = self.node;
+        let code = Command::new(&node)
+            .env(
+                "ORO_BIN",
+                env::current_exe().with_context(|| {
+                    format!(
+                        "{:#?}: Failed to get path for current executable.",
+                        DiagnosticCode::OR1018
+                    )
+                })?,
+            )
             .arg("-r")
             .arg(require_alabaster(self.data_dir)?)
             .args(self.args)
@@ -44,7 +53,13 @@ impl OroCommand for ShellCmd {
             .stderr(Stdio::inherit())
             .stdin(Stdio::inherit())
             .status()
-            .context(Code::OR1007(self.node))?
+            .with_context(|| {
+                format!(
+                    "{:#?}: Failed to execute node binary at `{}`.",
+                    DiagnosticCode::OR1017,
+                    node
+                )
+            })?
             .code()
             .unwrap_or(1);
         if code > 0 {
@@ -58,17 +73,33 @@ fn require_alabaster(dir_override: Option<PathBuf>) -> Result<PathBuf> {
     let dir = match dir_override {
         Some(dir) => dir,
         None => ProjectDirs::from("", "", "orogene") // TODO I'd rather get this from oro-config?
-            .ok_or_else(|| anyhow!("Couldn't find home directory."))
-            .context(Code::OR1008)?
+            .ok_or_else(|| {
+                anyhow!(
+                    "{:#?}: Couldn't find home directory.",
+                    DiagnosticCode::OR1019
+                )
+            })?
             .data_dir()
             .to_path_buf(),
     };
-    fs::create_dir_all(&dir).with_context(|| Code::OR1010(dir.clone()))?;
+    fs::create_dir_all(&dir).with_context(|| {
+        format!(
+            "{:#?}: Failed to create data directory at `{:?}`",
+            DiagnosticCode::OR1020,
+            dir
+        )
+    })?;
     let data = include_bytes!("../../../../alabaster/dist/alabaster.js").to_vec();
     let hash = Integrity::from(&data).to_hex().1;
     let script = dir.join(format!("oro-{}", hash));
     if !script.exists() {
-        fs::write(&script, &data).with_context(|| Code::OR1009(script.clone()))?;
+        fs::write(&script, &data).with_context(|| {
+            format!(
+                "{:#?}: Failed to write alabaster patches to orogene data dir at {:?}.",
+                DiagnosticCode::OR1021,
+                script
+            )
+        })?;
     }
     Ok(script)
 }

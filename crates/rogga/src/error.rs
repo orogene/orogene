@@ -1,3 +1,4 @@
+use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use oro_package_spec::PackageSpecError;
 use thiserror::Error;
 
@@ -36,11 +37,11 @@ impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::resul
 pub enum Error {
     /// Something went wrong while fetching a package.
     #[error("Something went wrong with fetching a package.")]
-    PackageFetcherError(String),
+    PackageFetcherError(DiagnosticCode, String),
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
-    PackageArgError(#[from] PackageSpecError),
+    PackageSpecError(#[from] PackageSpecError),
 
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
@@ -50,6 +51,7 @@ pub enum Error {
     SerdeError {
         name: String,
         data: String,
+        code: DiagnosticCode,
         #[source]
         serde_error: serde_json::Error,
     },
@@ -67,6 +69,19 @@ pub enum Error {
         /// The underlying error
         source: InternalError,
     },
+}
+
+impl Diagnostic for Error {
+    fn code(&self) -> DiagnosticCode {
+        use Error::*;
+        match self {
+            PackageFetcherError(code, ..) => *code,
+            PackageSpecError(err) => err.code(),
+            ResolverError(err) => err.code(),
+            SerdeError { code, .. } => *code,
+            MiscError(..) | InternalError { .. } => DiagnosticCode::OR1000,
+        }
+    }
 }
 
 /// The result type returned by calls to this library

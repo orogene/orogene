@@ -1,4 +1,4 @@
-use oro_error_code::OroErrCode as Code;
+use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;
@@ -14,21 +14,32 @@ mod http_client;
 
 #[derive(Debug, Error)]
 pub enum OroClientError {
-    #[error(transparent)]
-    UrlParseError(#[from] ParseError),
-    #[error("Request failed: {0}")]
-    RequestError(SurfError),
-    #[error("{}", context.join("\n  "))]
+    // TODO: add registry URL here?
+    #[error("{0:#?}: Registry request failed: {1}")]
+    RequestError(DiagnosticCode, SurfError),
+    #[error("{code:#?}: Registry returned failed status code {status_code}: {}", context.join("\n  "))]
     ResponseError {
-        code: StatusCode,
+        code: DiagnosticCode,
+        status_code: StatusCode,
         context: Vec<String>,
     },
+}
+
+impl Diagnostic for OroClientError {
+    fn code(&self) -> DiagnosticCode {
+        use OroClientError::*;
+        match self {
+            RequestError(code, ..) => *code,
+            ResponseError { code, .. } => *code,
+        }
+    }
 }
 
 impl OroClientError {
     fn res_err(res: &Response, ctx: Vec<String>) -> Self {
         Self::ResponseError {
-            code: res.status(),
+            code: DiagnosticCode::OR1015,
+            status_code: res.status(),
             context: ctx,
         }
     }
@@ -64,7 +75,7 @@ impl OroClient {
             .client
             .send(request)
             .await
-            .map_err(OroClientError::RequestError)?;
+            .map_err(|e| OroClientError::RequestError(DiagnosticCode::OR1016, e))?;
         if res.status().is_client_error() || res.status().is_server_error() {
             let msg = match res.body_json::<NpmError>().await {
                 Ok(err) => err.message,
@@ -73,26 +84,12 @@ impl OroClient {
                     body_err @ Err(_) => {
                         return Err(OroClientError::res_err(
                             &res,
-                            vec![
-                                format!("{}", Code::OR1002),
-                                format!("{:?}", parse_err),
-                                format!("{:?}", body_err),
-                            ],
+                            vec![format!("{:?}", parse_err), format!("{:?}", body_err)],
                         ));
                     }
                 },
             };
-            Err(OroClientError::res_err(
-                &res,
-                vec![format!(
-                    "{}",
-                    Code::OR1003 {
-                        registry: self.base.to_string(),
-                        status: res.status(),
-                        message: msg,
-                    }
-                )],
-            ))
+            Err(OroClientError::res_err(&res, vec![msg]))
         } else {
             Ok(res)
         }

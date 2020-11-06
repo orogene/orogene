@@ -8,7 +8,6 @@ edition = "2018"
 rogga = { path = "../../../crates/rogga" }
 oro-command = { path = "../../../crates/oro-command" }
 oro-config = { path = "../../../crates/oro-config" }
-oro-error-code = { path = "../../../crates/oro-error-code" }
 oro-pkg-root = { path = "../../../crates/oro-pkg-root" }
 oro-classic-resolver = { path = "../../../crates/oro-classic-resolver" }
 node-maintainer = { path = "../../../crates/node-maintainer" }

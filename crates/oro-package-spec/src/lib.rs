@@ -5,7 +5,7 @@ use std::str::FromStr;
 use nom::combinator::all_consuming;
 use nom::error::{convert_error, VerboseError};
 use nom::Err;
-use oro_error_code::OroErrCode as ErrCode;
+use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::{Version, VersionReq as Range};
 
 pub use crate::error::PackageSpecError;
@@ -115,13 +115,14 @@ where
     let input = &input.as_ref()[..];
     match all_consuming(package::package_spec::<VerboseError<&str>>)(input) {
         Ok((_, arg)) => Ok(arg),
-        Err(err) => Err(PackageSpecError::ParseError(ErrCode::OR1000 {
+        Err(err) => Err(PackageSpecError::ParseError {
+            code: DiagnosticCode::OR1001,
             input: input.into(),
             msg: match err {
                 Err::Error(e) => convert_error(input, e),
                 Err::Failure(e) => convert_error(input, e),
                 Err::Incomplete(_) => "More data was needed".into(),
             },
-        })),
+        }),
     }
 }

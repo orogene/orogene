@@ -6,6 +6,7 @@ use async_std::sync::RwLock;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use http_types::Url;
+use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
@@ -78,12 +79,24 @@ impl Hash for PackageRequest {
 pub enum ResolverError {
     #[error("No matching version found for spec {name}@{spec:?} in {versions:#?}.")]
     NoVersion {
+        code: DiagnosticCode,
         name: String,
         spec: PackageSpec,
         versions: Vec<String>,
     },
     #[error(transparent)]
-    OtherError(#[from] Box<dyn std::error::Error + Send + Sync>),
+    OtherError(#[from] Box<dyn Diagnostic>),
+}
+
+impl Diagnostic for ResolverError {
+    fn code(&self) -> DiagnosticCode {
+        use ResolverError::*;
+        match self {
+            NoVersion { code, .. } => *code,
+            // TODO: Maybe make the value of OtherError a Diagnostic?
+            OtherError(..) => DiagnosticCode::OR1000,
+        }
+    }
 }
 
 #[async_trait]

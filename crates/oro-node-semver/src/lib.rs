@@ -1,3 +1,6 @@
+use std::cmp::{self, Ordering};
+use std::fmt;
+
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::bytes::complete::take_while;
@@ -8,13 +11,10 @@ use nom::error::{context, convert_error, ParseError, VerboseError};
 use nom::multi::separated_list;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
-
-use thiserror::Error;
-
+use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
-use std::cmp::{self, Ordering};
-use std::fmt;
+use thiserror::Error;
 
 pub use version_req::VersionReq;
 
@@ -26,8 +26,21 @@ const MAX_LENGTH: usize = 256;
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum SemverError {
-    #[error("{input}: {msg}")]
-    ParseError { input: String, msg: String },
+    #[error("{code:#?}: Failed to parse Semver string `{input}`:\n{msg}")]
+    ParseError {
+        code: DiagnosticCode,
+        input: String,
+        msg: String,
+    },
+}
+
+impl Diagnostic for SemverError {
+    fn code(&self) -> DiagnosticCode {
+        use SemverError::*;
+        match self {
+            ParseError { code, .. } => *code,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -62,6 +75,7 @@ impl Version {
 
         if input.len() > MAX_LENGTH {
             return Err(SemverError::ParseError {
+                code: DiagnosticCode::OR1011,
                 input: input.into(),
                 msg: format!("version is longer than {} characters", MAX_LENGTH),
             });
@@ -70,6 +84,7 @@ impl Version {
         match all_consuming(version::<VerboseError<&str>>)(input) {
             Ok((_, arg)) => Ok(arg),
             Err(err) => Err(SemverError::ParseError {
+                code: DiagnosticCode::OR1012,
                 input: input.into(),
                 msg: match err {
                     Err::Error(e) => convert_error(input, e),
@@ -349,12 +364,14 @@ where
         "number component",
         map_res(recognize(digit1), |raw| {
             let value = str::parse(raw).map_err(|e| SemverError::ParseError {
+                code: DiagnosticCode::OR1013,
                 input: input.into(),
                 msg: format!("{}", e),
             })?;
 
             if value > MAX_SAFE_INTEGER {
                 return Err(SemverError::ParseError {
+                    code: DiagnosticCode::OR1014,
                     input: input.into(),
                     msg: format!("'{}' is larger than Number.MAX_SAFE_INTEGER", value),
                 });

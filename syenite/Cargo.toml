@@ -20,7 +20,6 @@ cmd-prime = { path = "./commands/cmd-prime" }
 
 # Workspace Deps
 oro-command = { path = "../crates/oro-command" }
-oro-error-code = { path = "../crates/oro-error-code" }
 oro-config = { path = "../crates/oro-config" }
 
 # Regular deps
