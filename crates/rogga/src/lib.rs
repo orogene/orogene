@@ -120,6 +120,7 @@ impl Rogga {
                 self.client.clone(),
                 self.use_corgi,
             ))),
+            Git(..) => todo!(),
         }
     }
 }

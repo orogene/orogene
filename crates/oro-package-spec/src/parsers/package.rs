@@ -5,10 +5,10 @@ use nom::error::{context, ParseError};
 use nom::sequence::preceded;
 use nom::IResult;
 
-use crate::parsers::{alias, npm, path};
+use crate::parsers::{alias, git, npm, path};
 use crate::PackageSpec;
 
-/// package-spec := alias | ( [ "npm:" ] npm-pkg ) | ( [ "ent:" ] ent-pkg ) | ( [ "file:" ] path )
+/// package-spec := alias | ( [ "npm:" ] npm-pkg ) | ( [ "file:" ] path ) | git-pkg
 pub fn package_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
 where
     E: ParseError<&'a str>,
@@ -18,6 +18,7 @@ where
         alt((
             alias::alias_spec,
             preceded(opt(tag("file:")), path::path_spec),
+            git::git_spec,
             preceded(opt(tag("npm:")), npm::npm_spec),
         )),
     )(input)

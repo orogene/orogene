@@ -5,7 +5,7 @@ use nom::error::{context, ParseError};
 use nom::sequence::{preceded, tuple};
 use nom::IResult;
 
-use crate::parsers::{npm, path, util};
+use crate::parsers::{git, npm, path, util};
 use crate::PackageSpec;
 
 // alias_spec := [ [ '@' ], not('/')+ '/' ] not('@/')+ '@' prefixed-package-arg
@@ -48,6 +48,7 @@ where
         alt((
             // Paths don't need to be prefixed, but they can be.
             preceded(opt(tag("file:")), path::path_spec),
+            git::git_spec,
             preceded(tag("npm:"), npm::npm_spec),
         )),
     )(input)

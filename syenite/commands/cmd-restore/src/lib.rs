@@ -57,6 +57,7 @@ impl<'a> PackageResolver for PkgLockResolver<'a> {
                 path: PathBuf::from(&self.dep.version),
             },
             PackageSpec::Alias { .. } => unreachable!(),
+            PackageSpec::Git(..) => todo!(),
         })
     }
 }

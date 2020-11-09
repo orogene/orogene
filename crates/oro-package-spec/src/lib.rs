@@ -9,9 +9,11 @@ use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::{Version, VersionReq as Range};
 
 pub use crate::error::PackageSpecError;
+pub use crate::gitinfo::GitInfo;
 use crate::parsers::package;
 
 mod error;
+mod gitinfo;
 mod parsers;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,6 +37,7 @@ pub enum PackageSpec {
         name: String,
         requested: Option<VersionSpec>,
     },
+    Git(GitInfo),
 }
 
 impl PackageSpec {
@@ -42,7 +45,7 @@ impl PackageSpec {
         use PackageSpec::*;
         match self {
             Alias { package, .. } => package.is_registry(),
-            Dir { .. } => false,
+            Dir { .. } | Git(..) => false,
             Npm { .. } => true,
         }
     }
@@ -69,6 +72,7 @@ impl fmt::Display for PackageSpec {
         use PackageSpec::*;
         match self {
             Dir { path } => write!(f, "{}", path.display()),
+            Git(info) => write!(f, "{}", info),
             Npm {
                 ref scope,
                 ref name,
