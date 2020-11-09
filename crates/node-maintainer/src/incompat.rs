@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use crate::term::Term;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Incompat {
     cause: IncompatCause,
     terms: Vec<Term>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum IncompatCause {
     Root,
     NoVersions,

@@ -1,5 +1,8 @@
+use std::path::Path;
+
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
+use deadpool::managed::{Manager, RecycleResult};
 use futures::io::AsyncRead;
 use http_types::Method;
 use oro_client::{self, OroClient};
@@ -8,13 +11,37 @@ use oro_package_spec::PackageSpec;
 
 use crate::error::{Error, Internal, Result};
 use crate::fetch::PackageFetcher;
-use crate::package::{Package, PackageResolution};
+use crate::package::Package;
 use crate::packument::{Packument, VersionMetadata};
+use crate::resolver::PackageResolution;
 
-#[derive(Debug)]
-pub struct RegistryFetcher {
+pub struct RegistryFetcherPool {
     client: Arc<Mutex<OroClient>>,
-    packument: Option<Packument>,
+    use_corgi: bool,
+}
+
+impl RegistryFetcherPool {
+    pub fn new(client: Arc<Mutex<OroClient>>, use_corgi: bool) -> Self {
+        Self { client, use_corgi }
+    }
+}
+
+#[async_trait]
+impl Manager<Box<dyn PackageFetcher>, Error> for RegistryFetcherPool {
+    async fn create(&self) -> Result<Box<dyn PackageFetcher>> {
+        Ok(Box::new(RegistryFetcher::new(
+            self.client.clone(),
+            self.use_corgi,
+        )))
+    }
+
+    async fn recycle(&self, _fetcher: &mut Box<dyn PackageFetcher>) -> RecycleResult<Error> {
+        Ok(())
+    }
+}
+#[derive(Debug)]
+struct RegistryFetcher {
+    client: Arc<Mutex<OroClient>>,
     /// Corgis are a compressed kind of packument that omits some
     /// "unnecessary" fields (for some common operations during package
     /// management). This can significantly speed up installs, and is done
@@ -23,12 +50,8 @@ pub struct RegistryFetcher {
 }
 
 impl RegistryFetcher {
-    pub fn new(client: Arc<Mutex<OroClient>>, use_corgi: bool) -> Self {
-        Self {
-            client,
-            packument: None,
-            use_corgi,
-        }
+    fn new(client: Arc<Mutex<OroClient>>, use_corgi: bool) -> Self {
+        Self { client, use_corgi }
     }
 }
 
@@ -37,49 +60,47 @@ impl RegistryFetcher {
         &mut self,
         scope: &Option<String>,
         name: &str,
-    ) -> Result<&Packument> {
-        if self.packument.is_none() {
-            let client = self.client.lock().await.clone();
-            let full_name = format!(
-                "{}{}",
-                scope
-                    .clone()
-                    .map(|s| format!("@{}/", s))
-                    .unwrap_or_else(|| String::from("")),
-                name
-            );
-            let opts = client.opts(Method::Get, &full_name);
-            let packument_data = client
-                .send(opts.header(
-                    "Accept",
-                    if self.use_corgi {
-                        "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*"
-                    } else {
-                        "application/json"
-                    },
-                ))
-                .await
-                .with_context(|| format!("Failed to get packument for {}.", full_name))?
-                .body_string()
-                .await
-                .map_err(|e| Error::MiscError(e.to_string()))?;
-            // let val: serde_json::Value = serde_json::from_str(&packument_data).to_internal()?;
-            // println!("{:#?}", val);
-            self.packument =
-                serde_json::from_str(&packument_data).map_err(|err| Error::SerdeError {
-                    code: DiagnosticCode::OR1006,
-                    name: full_name,
-                    data: packument_data,
-                    serde_error: err,
-                })?;
-        }
-        Ok(self.packument.as_ref().unwrap())
+    ) -> Result<Packument> {
+        let client = self.client.lock().await.clone();
+        let full_name = format!(
+            "{}{}",
+            scope
+                .clone()
+                .map(|s| format!("@{}/", s))
+                .unwrap_or_else(|| String::from("")),
+            name
+        );
+        let opts = client.opts(Method::Get, &full_name);
+        let packument_data = client
+            .send(opts.header(
+                "Accept",
+                if self.use_corgi {
+                    "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*"
+                } else {
+                    "application/json"
+                },
+            ))
+            .await
+            .with_context(|| format!("Failed to get packument for {}.", full_name))?
+            .body_string()
+            .await
+            .map_err(|e| Error::MiscError(e.to_string()))?;
+        // let val: serde_json::Value = serde_json::from_str(&packument_data).to_internal()?;
+        // println!("{:#?}", val);
+        Ok(
+            serde_json::from_str(&packument_data).map_err(|err| Error::SerdeError {
+                code: DiagnosticCode::OR1006,
+                name: full_name,
+                data: packument_data,
+                serde_error: err,
+            })?,
+        )
     }
 }
 
 #[async_trait]
 impl PackageFetcher for RegistryFetcher {
-    async fn name(&mut self, spec: &PackageSpec) -> Result<String> {
+    async fn name(&mut self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         match spec {
             // TODO: scopes
             PackageSpec::Npm { ref name, .. } | PackageSpec::Alias { ref name, .. } => {
@@ -94,12 +115,12 @@ impl PackageFetcher for RegistryFetcher {
             PackageResolution::Npm { ref version, .. } => version,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
-        let packument = self.packument(&pkg.from).await?;
+        let packument = self.packument(&pkg.from, &Path::new("")).await?;
         // TODO: unwrap
         Ok(packument.versions.get(&wanted).unwrap().clone())
     }
 
-    async fn packument(&mut self, spec: &PackageSpec) -> Result<Packument> {
+    async fn packument(&mut self, spec: &PackageSpec, _base_dir: &Path) -> Result<Packument> {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
         let pkg = match spec {
@@ -113,7 +134,7 @@ impl PackageFetcher for RegistryFetcher {
             ..
         } = pkg
         {
-            Ok(self.packument_from_name(scope, name).await?.clone())
+            Ok(self.packument_from_name(scope, name).await?)
         } else {
             unreachable!()
         }

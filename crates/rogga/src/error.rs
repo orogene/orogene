@@ -2,7 +2,7 @@ use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use oro_package_spec::PackageSpecError;
 use thiserror::Error;
 
-use crate::package::ResolverError;
+use crate::resolver::ResolverError;
 
 #[derive(Error, Debug)]
 #[error("{source}\n\n  {}", context.join("\n  "))]
