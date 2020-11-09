@@ -10,7 +10,7 @@ use crate::error::{Error, Internal, Result};
 use crate::set_relation::SetRelation;
 
 // TODO: Implement Debug, Eq, PArtialEq
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Term {
     pub positive: bool,
     pub root: bool,

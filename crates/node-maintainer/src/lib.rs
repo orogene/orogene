@@ -21,7 +21,7 @@ pub mod set_relation;
 pub mod solver;
 pub mod term;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DepType {
     Prod,
     Dev,
@@ -29,7 +29,7 @@ pub enum DepType {
     Peer,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dependency {
     pub requested: PackageSpec,
     pub dep_type: DepType,
@@ -99,6 +99,7 @@ impl NodeMaintainer {
             format!("{:?}", Dot::new(&self.graph)),
         )
         .expect("Failed to write rendered graph");
+        println!("graph written to {}", self.cwd.join("graph.dot").display());
     }
 
     pub async fn resolve(&mut self) -> Result<(), Error> {
@@ -122,7 +123,9 @@ impl NodeMaintainer {
                         .map(|x| (x, DepType::Peer)),
                 )
             {
-                if !names.contains(&name[..]) {
+                if !names.contains(&name[..])
+                    && (dep_type != DepType::Dev || package_idx != self.root)
+                {
                     names.insert(&name[..]);
                     let request = self.rogga.dep_request(&name[..], &spec[..], &self.cwd)?;
                     packages.push(
