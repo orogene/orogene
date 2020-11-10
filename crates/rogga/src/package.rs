@@ -1,10 +1,11 @@
 use std::fmt;
 
+use async_std::sync::Arc;
 use futures::io::AsyncRead;
 use oro_package_spec::PackageSpec;
 
 use crate::error::Result;
-use crate::fetch::PackageFetcherPool;
+use crate::fetch::PackageFetcher;
 use crate::packument::VersionMetadata;
 use crate::resolver::PackageResolution;
 
@@ -14,16 +15,16 @@ pub struct Package {
     pub from: PackageSpec,
     pub name: String,
     pub resolved: PackageResolution,
-    pub(crate) fetcher_pool: PackageFetcherPool,
+    pub(crate) fetcher: Arc<dyn PackageFetcher>,
 }
 
 impl Package {
     pub async fn metadata(&self) -> Result<VersionMetadata> {
-        self.fetcher_pool.get().await.metadata(&self).await
+        self.fetcher.metadata(&self).await
     }
 
     pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
-        self.fetcher_pool.get().await.tarball(&self).await
+        self.fetcher.tarball(&self).await
     }
 }
 

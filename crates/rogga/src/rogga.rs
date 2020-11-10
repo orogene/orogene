@@ -6,7 +6,7 @@ use oro_client::OroClient;
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
 use crate::error::Result;
-use crate::fetch::PackageFetcherPool;
+use crate::fetch::{DirFetcher, GitFetcher, PackageFetcher, RegistryFetcher};
 use crate::request::PackageRequest;
 
 /// Build a new Rogga instance with specified options.
@@ -15,7 +15,6 @@ pub struct RoggaOpts {
     cache: Option<PathBuf>,
     registry: Option<String>,
     use_corgi: Option<bool>,
-    pool_capacity: Option<usize>,
 }
 
 impl RoggaOpts {
@@ -38,23 +37,17 @@ impl RoggaOpts {
         self
     }
 
-    pub fn pool_capacity(mut self, capacity: usize) -> Self {
-        self.pool_capacity = Some(capacity);
-        self
-    }
-
     pub fn build(self) -> Rogga {
         let reg = self
             .registry
             .unwrap_or_else(|| "https://registry.npmjs.org".into());
         let client = Arc::new(Mutex::new(OroClient::new(reg)));
         let use_corgi = self.use_corgi.unwrap_or(false);
-        let capacity = self.pool_capacity.unwrap_or(20);
         Rogga {
             // cache: self.cache,
-            registry_pool: PackageFetcherPool::new_registry(client.clone(), use_corgi, capacity),
-            dir_pool: PackageFetcherPool::new_dir(capacity),
-            git_pool: PackageFetcherPool::new_git(client, capacity),
+            registry_fetcher: Arc::new(RegistryFetcher::new(client.clone(), use_corgi)),
+            dir_fetcher: Arc::new(DirFetcher::new()),
+            git_fetcher: Arc::new(GitFetcher::new(client)),
         }
     }
 }
@@ -62,9 +55,9 @@ impl RoggaOpts {
 /// Toplevel client for making package requests.
 pub struct Rogga {
     // cache: Option<PathBuf>,
-    registry_pool: PackageFetcherPool,
-    dir_pool: PackageFetcherPool,
-    git_pool: PackageFetcherPool,
+    registry_fetcher: Arc<dyn PackageFetcher>,
+    dir_fetcher: Arc<dyn PackageFetcher>,
+    git_fetcher: Arc<dyn PackageFetcher>,
 }
 
 impl Rogga {
@@ -80,12 +73,12 @@ impl Rogga {
         base_dir: impl AsRef<Path>,
     ) -> Result<PackageRequest> {
         let spec = arg.as_ref().parse()?;
-        let pool = self.pick_pool(&spec);
-        let name = pool.get().await.name(&spec, base_dir.as_ref()).await?;
+        let fetcher = self.pick_fetcher(&spec);
+        let name = fetcher.name(&spec, base_dir.as_ref()).await?;
         Ok(PackageRequest {
             name,
             spec,
-            fetcher_pool: pool,
+            fetcher,
             base_dir: base_dir.as_ref().into(),
         })
     }
@@ -99,22 +92,22 @@ impl Rogga {
         base_dir: impl AsRef<Path>,
     ) -> Result<PackageRequest> {
         let spec = format!("{}@{}", name.as_ref(), spec.as_ref()).parse()?;
-        let pool = self.pick_pool(&spec);
+        let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {
             name: name.as_ref().into(),
             spec,
-            fetcher_pool: pool,
+            fetcher,
             base_dir: base_dir.as_ref().into(),
         })
     }
 
-    fn pick_pool(&self, arg: &PackageSpec) -> PackageFetcherPool {
+    fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {
         use PackageSpec::*;
         match *arg {
-            Dir { .. } => self.dir_pool.clone(),
-            Alias { ref package, .. } => self.pick_pool(package),
-            Npm { .. } => self.registry_pool.clone(),
-            Git(..) => self.git_pool.clone(),
+            Dir { .. } => self.dir_fetcher.clone(),
+            Alias { ref package, .. } => self.pick_fetcher(package),
+            Npm { .. } => self.registry_fetcher.clone(),
+            Git(..) => self.git_fetcher.clone(),
         }
     }
 }

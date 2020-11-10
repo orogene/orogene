@@ -1,10 +1,11 @@
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
+use async_std::sync::Arc;
 use oro_package_spec::PackageSpec;
 
 use crate::error::Result;
-use crate::fetch::PackageFetcherPool;
+use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::Packument;
 use crate::resolver::{PackageResolution, PackageResolver};
@@ -14,7 +15,7 @@ pub struct PackageRequest {
     pub(crate) name: String,
     pub(crate) spec: PackageSpec,
     pub(crate) base_dir: PathBuf,
-    pub(crate) fetcher_pool: PackageFetcherPool,
+    pub(crate) fetcher: Arc<dyn PackageFetcher>,
 }
 
 impl PackageRequest {
@@ -34,11 +35,7 @@ impl PackageRequest {
     /// Returns the packument with general metadata about the package and its
     /// various versions.
     pub async fn packument(&self) -> Result<Packument> {
-        self.fetcher_pool
-            .get()
-            .await
-            .packument(&self.spec, &self.base_dir)
-            .await
+        self.fetcher.packument(&self.spec, &self.base_dir).await
     }
 
     pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package> {
@@ -51,7 +48,7 @@ impl PackageRequest {
             from: self.spec,
             name: self.name,
             resolved,
-            fetcher_pool: self.fetcher_pool,
+            fetcher: self.fetcher,
         })
     }
 }

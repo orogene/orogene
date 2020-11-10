@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use async_trait::async_trait;
-use deadpool::managed::{Manager, RecycleResult};
 use futures::io::AsyncRead;
 use oro_manifest::OroManifest;
 use oro_package_spec::PackageSpec;
@@ -16,27 +15,8 @@ use crate::resolver::PackageResolution;
 
 use oro_node_semver::Version;
 
-pub struct DirFetcherPool;
-
-impl DirFetcherPool {
-    pub fn new() -> Self {
-        DirFetcherPool
-    }
-}
-
-#[async_trait]
-impl Manager<Box<dyn PackageFetcher>, Error> for DirFetcherPool {
-    async fn create(&self) -> Result<Box<dyn PackageFetcher>> {
-        Ok(Box::new(DirFetcher::new()))
-    }
-
-    async fn recycle(&self, _fetcher: &mut Box<dyn PackageFetcher>) -> RecycleResult<Error> {
-        Ok(())
-    }
-}
-
 #[derive(Debug)]
-struct DirFetcher;
+pub struct DirFetcher;
 
 impl DirFetcher {
     pub fn new() -> Self {
@@ -45,7 +25,7 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    async fn manifest(&mut self, path: &Path) -> Result<Manifest> {
+    async fn manifest(&self, path: &Path) -> Result<Manifest> {
         // TODO: Orogene.toml?
         let json = async_std::fs::read(&path.join("package.json"))
             .await
@@ -57,7 +37,7 @@ impl DirFetcher {
         Ok(Manifest(pkgjson))
     }
 
-    async fn metadata_from_resolved(&mut self, res: &PackageResolution) -> Result<VersionMetadata> {
+    async fn metadata_from_resolved(&self, res: &PackageResolution) -> Result<VersionMetadata> {
         let path = match res {
             PackageResolution::Dir { path } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -65,11 +45,7 @@ impl DirFetcher {
         Ok(self.manifest(path).await?.into_metadata(&path)?)
     }
 
-    async fn packument_from_spec(
-        &mut self,
-        spec: &PackageSpec,
-        base_dir: &Path,
-    ) -> Result<Packument> {
+    async fn packument_from_spec(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Packument> {
         let path = match spec {
             PackageSpec::Dir { path } => base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -80,7 +56,7 @@ impl DirFetcher {
 
 #[async_trait]
 impl PackageFetcher for DirFetcher {
-    async fn name(&mut self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
+    async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
         if let PackageSpec::Dir { ref path } = spec {
             Ok(self
                 .packument_from_spec(spec, base_dir)
@@ -107,18 +83,15 @@ impl PackageFetcher for DirFetcher {
         }
     }
 
-    async fn metadata(&mut self, pkg: &Package) -> Result<VersionMetadata> {
+    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         self.metadata_from_resolved(&pkg.resolved).await
     }
 
-    async fn packument(&mut self, spec: &PackageSpec, base_dir: &Path) -> Result<Packument> {
+    async fn packument(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Packument> {
         self.packument_from_spec(spec, base_dir).await
     }
 
-    async fn tarball(
-        &mut self,
-        _pkg: &Package,
-    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+    async fn tarball(&self, _pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
         // TODO: need to implement pack before this can be implemented :(
         unimplemented!()
     }
