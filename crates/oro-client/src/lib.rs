@@ -52,21 +52,23 @@ struct NpmError {
 
 #[derive(Clone, Debug)]
 pub struct OroClient {
-    base: Url,
     client: Client,
 }
 
-impl OroClient {
-    pub fn new(registry_uri: impl AsRef<str>) -> Self {
+impl Default for OroClient {
+    fn default() -> Self {
         Self {
-            base: Url::parse(registry_uri.as_ref()).expect("Invalid registry URI"),
             client: Client::with_http_client(PoolingClient::new()),
         }
     }
+}
 
-    pub fn opts<T: AsRef<str>>(&self, method: Method, uri: T) -> RequestBuilder {
-        let uri =
-            Url::parse(uri.as_ref()).unwrap_or_else(|_| self.base.join(uri.as_ref()).unwrap());
+impl OroClient {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn opts(&self, method: Method, uri: Url) -> RequestBuilder {
         RequestBuilder::new(method, uri)
     }
 

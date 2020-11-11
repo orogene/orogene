@@ -84,7 +84,7 @@ fn npm_pkg_scoped() -> Result<()> {
         res,
         PackageSpec::Npm {
             scope: Some("hello".into()),
-            name: "world".into(),
+            name: "@hello/world".into(),
             requested: None
         }
     );
@@ -126,7 +126,7 @@ fn npm_pkg_scoped_with_req() -> Result<()> {
         res,
         PackageSpec::Npm {
             scope: Some("hello".into()),
-            name: "world".into(),
+            name: "@hello/world".into(),
             requested: Some(VersionSpec::Version(SemVerVersion::parse("1.2.3").unwrap()))
         }
     );
@@ -140,7 +140,7 @@ fn npm_pkg_prefixed_with_req() -> Result<()> {
         res,
         PackageSpec::Npm {
             scope: Some("hello".into()),
-            name: "world".into(),
+            name: "@hello/world".into(),
             requested: Some(VersionSpec::Version(SemVerVersion::parse("1.2.3").unwrap()))
         }
     );

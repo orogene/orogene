@@ -10,6 +10,7 @@ use oro_config::OroConfigLayer;
 use oro_tree::{self, Package, PkgLock};
 use rogga::{
     PackageRequest, PackageResolution, PackageResolver, PackageSpec, ResolverError, Rogga,
+    RoggaOpts,
 };
 use url::Url;
 
@@ -109,7 +110,9 @@ impl RestoreCmd {
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
         let pkglock: PkgLock = oro_tree::read("./package-lock.json")?;
-        let rogga = Rogga::new(&self.registry);
+        let rogga = RoggaOpts::new()
+            .add_registry("", self.registry.clone())
+            .build();
         let mut futs = Vec::new();
         for (name, dep) in pkglock.dependencies.iter() {
             futs.push(self.extract(&rogga, name, dep, std::env::current_dir()?));

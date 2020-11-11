@@ -33,8 +33,11 @@ impl OroCommand for PingCmd {
         if !self.quiet && !self.json {
             eprintln!("ping: {}", self.registry);
         }
-        let client = OroClient::new(self.registry.clone());
-        let req = client.opts(Method::Get, "-/ping?write=true");
+        let client = OroClient::new();
+        let req = client.opts(
+            Method::Get,
+            self.registry.join("-/ping?write=true").unwrap(),
+        );
         let mut res = client.send(req).await?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
         if !self.quiet && !self.json {

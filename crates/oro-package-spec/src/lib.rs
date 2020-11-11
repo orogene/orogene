@@ -41,10 +41,10 @@ pub enum PackageSpec {
 }
 
 impl PackageSpec {
-    pub fn is_registry(&self) -> bool {
+    pub fn is_npm(&self) -> bool {
         use PackageSpec::*;
         match self {
-            Alias { package, .. } => package.is_registry(),
+            Alias { package, .. } => package.is_npm(),
             Dir { .. } | Git(..) => false,
             Npm { .. } => true,
         }

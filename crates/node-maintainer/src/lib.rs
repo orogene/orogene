@@ -59,7 +59,8 @@ impl NodeMaintainerOptions {
     pub async fn init(self, request: impl AsRef<str>) -> Result<NodeMaintainer, Error> {
         let rogga = RoggaOpts::new()
             .use_corgi(true)
-            .registry(
+            .add_registry(
+                "",
                 self.registry
                     .unwrap_or_else(|| Url::parse("https://registry.npmjs.org").unwrap()),
             )

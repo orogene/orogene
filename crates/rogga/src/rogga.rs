@@ -1,19 +1,21 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_std::sync::{Arc, Mutex};
 use oro_client::OroClient;
+use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
 use crate::error::Result;
-use crate::fetch::{DirFetcher, GitFetcher, PackageFetcher, RegistryFetcher};
+use crate::fetch::{DirFetcher, GitFetcher, NpmFetcher, PackageFetcher};
 use crate::request::PackageRequest;
 
 /// Build a new Rogga instance with specified options.
 #[derive(Default)]
 pub struct RoggaOpts {
     cache: Option<PathBuf>,
-    registry: Option<String>,
+    registries: HashMap<String, Url>,
     use_corgi: Option<bool>,
 }
 
@@ -27,8 +29,8 @@ impl RoggaOpts {
         self
     }
 
-    pub fn registry(mut self, registry: impl AsRef<str>) -> Self {
-        self.registry = Some(String::from(registry.as_ref()));
+    pub fn add_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
+        self.registries.insert(scope.as_ref().into(), registry);
         self
     }
 
@@ -38,14 +40,11 @@ impl RoggaOpts {
     }
 
     pub fn build(self) -> Rogga {
-        let reg = self
-            .registry
-            .unwrap_or_else(|| "https://registry.npmjs.org".into());
-        let client = Arc::new(Mutex::new(OroClient::new(reg)));
+        let client = Arc::new(Mutex::new(OroClient::new()));
         let use_corgi = self.use_corgi.unwrap_or(false);
         Rogga {
             // cache: self.cache,
-            registry_fetcher: Arc::new(RegistryFetcher::new(client.clone(), use_corgi)),
+            npm_fetcher: Arc::new(NpmFetcher::new(client.clone(), use_corgi, self.registries)),
             dir_fetcher: Arc::new(DirFetcher::new()),
             git_fetcher: Arc::new(GitFetcher::new(client)),
         }
@@ -55,15 +54,21 @@ impl RoggaOpts {
 /// Toplevel client for making package requests.
 pub struct Rogga {
     // cache: Option<PathBuf>,
-    registry_fetcher: Arc<dyn PackageFetcher>,
+    npm_fetcher: Arc<dyn PackageFetcher>,
     dir_fetcher: Arc<dyn PackageFetcher>,
     git_fetcher: Arc<dyn PackageFetcher>,
 }
 
+impl Default for Rogga {
+    fn default() -> Self {
+        RoggaOpts::new().build()
+    }
+}
+
 impl Rogga {
     /// Creates a new Rogga instance.
-    pub fn new(registry: impl AsRef<str>) -> Self {
-        RoggaOpts::new().registry(registry.as_ref()).build()
+    pub fn new() -> Self {
+        Default::default()
     }
 
     /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3`.
@@ -106,7 +111,7 @@ impl Rogga {
         match *arg {
             Dir { .. } => self.dir_fetcher.clone(),
             Alias { ref package, .. } => self.pick_fetcher(package),
-            Npm { .. } => self.registry_fetcher.clone(),
+            Npm { .. } => self.npm_fetcher.clone(),
             Git(..) => self.git_fetcher.clone(),
         }
     }

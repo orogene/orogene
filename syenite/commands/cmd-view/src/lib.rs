@@ -29,7 +29,7 @@ pub struct ViewCmd {
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
         let pkgreq = RoggaOpts::new()
-            .registry(&self.registry)
+            .add_registry("", self.registry)
             .use_corgi(false)
             .build()
             .arg_request(&self.pkg, std::env::current_dir()?)

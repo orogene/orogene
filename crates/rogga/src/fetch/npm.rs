@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 
 use async_std::sync::{Arc, Mutex};
@@ -17,38 +18,60 @@ use crate::packument::{Packument, VersionMetadata};
 use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
-pub struct RegistryFetcher {
+pub struct NpmFetcher {
     client: Arc<Mutex<OroClient>>,
     /// Corgis are a compressed kind of packument that omits some
     /// "unnecessary" fields (for some common operations during package
     /// management). This can significantly speed up installs, and is done
     /// through a special Accept header on request.
     use_corgi: bool,
+    registries: HashMap<String, Url>,
     packuments: DashMap<Url, Packument>,
 }
 
-impl RegistryFetcher {
-    pub fn new(client: Arc<Mutex<OroClient>>, use_corgi: bool) -> Self {
+impl NpmFetcher {
+    pub fn new(
+        client: Arc<Mutex<OroClient>>,
+        use_corgi: bool,
+        registries: HashMap<String, Url>,
+    ) -> Self {
         Self {
             client,
             use_corgi,
+            registries,
             packuments: DashMap::new(),
         }
     }
 }
 
-impl RegistryFetcher {
+impl NpmFetcher {
+    fn pick_registry(&self, scope: &Option<String>) -> Url {
+        if let Some(scope) = scope {
+            self.registries
+                .get(scope)
+                .or_else(|| self.registries.get(""))
+                .cloned()
+                .or_else(|| Some("https://registry.npmjs.org/".parse().unwrap()))
+                .unwrap()
+        } else {
+            self.registries
+                .get("")
+                .cloned()
+                .or_else(|| Some("https://registry.npmjs.org/".parse().unwrap()))
+                .unwrap()
+        }
+    }
+
     async fn packument_from_name(&self, scope: &Option<String>, name: &str) -> Result<Packument> {
         let client = self.client.lock().await.clone();
-        let full_name = format!(
-            "{}{}",
-            scope
-                .clone()
-                .map(|s| format!("@{}/", s))
-                .unwrap_or_else(|| String::from("")),
-            name
-        );
-        let opts = client.opts(Method::Get, &full_name);
+        let packument_url = self
+            .pick_registry(scope)
+            .join(&name)
+            .with_context(|| format!("Invalid package name: {}", name))?;
+        if let Some(packument) = self.packuments.get(&packument_url) {
+            return Ok(packument.value().clone());
+        }
+        let opts = client.opts(Method::Get, packument_url.clone());
         let packument_data = client
             .send(opts.header(
                 "Accept",
@@ -59,25 +82,24 @@ impl RegistryFetcher {
                 },
             ))
             .await
-            .with_context(|| format!("Failed to get packument for {}.", full_name))?
+            .with_context(|| format!("Failed to get packument for {}.", name))?
             .body_string()
             .await
             .map_err(|e| Error::MiscError(e.to_string()))?;
-        // let val: serde_json::Value = serde_json::from_str(&packument_data).to_internal()?;
-        // println!("{:#?}", val);
-        Ok(
+        let packument: Packument =
             serde_json::from_str(&packument_data).map_err(|err| Error::SerdeError {
                 code: DiagnosticCode::OR1006,
-                name: full_name,
+                name: name.into(),
                 data: packument_data,
                 serde_error: err,
-            })?,
-        )
+            })?;
+        self.packuments.insert(packument_url, packument.clone());
+        Ok(packument)
     }
 }
 
 #[async_trait]
-impl PackageFetcher for RegistryFetcher {
+impl PackageFetcher for NpmFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         match spec {
             // TODO: scopes
@@ -129,7 +151,7 @@ impl PackageFetcher for RegistryFetcher {
         };
         Ok(Box::new(
             client
-                .send(client.opts(Method::Get, url))
+                .send(client.opts(Method::Get, url.clone()))
                 .await
                 .with_context(|| format!("Failed to get tarball for {:#?}.", pkg.resolved))?,
         ))

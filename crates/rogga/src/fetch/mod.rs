@@ -10,11 +10,11 @@ use crate::packument::{Packument, VersionMetadata};
 
 pub use dir::DirFetcher;
 pub use git::GitFetcher;
-pub use registry::RegistryFetcher;
+pub use npm::NpmFetcher;
 
 mod dir;
 mod git;
-mod registry;
+mod npm;
 
 #[async_trait]
 pub trait PackageFetcher: std::fmt::Debug + Send + Sync {

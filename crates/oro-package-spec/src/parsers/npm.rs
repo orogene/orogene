@@ -28,10 +28,17 @@ where
                 map_res(take_till1(|x| x == '@' || x == '/'), util::no_url_encode),
                 opt(preceded(tag("@"), cut(version_req))),
             )),
-            |(scope_opt, name, req)| PackageSpec::Npm {
-                scope: scope_opt.map(|x| x.into()),
-                name: name.into(),
-                requested: req,
+            |(scope_opt, name, req)| {
+                let name = if let Some(scope) = scope_opt {
+                    format!("@{}/{}", scope, name)
+                } else {
+                    name.into()
+                };
+                PackageSpec::Npm {
+                    scope: scope_opt.map(|x| x.into()),
+                    name,
+                    requested: req,
+                }
             },
         ),
     )(input)
