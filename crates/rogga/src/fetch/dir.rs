@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use async_std::sync::Arc;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use oro_manifest::OroManifest;
@@ -45,12 +46,12 @@ impl DirFetcher {
         Ok(self.manifest(path).await?.into_metadata(&path)?)
     }
 
-    async fn packument_from_spec(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Packument> {
+    async fn packument_from_spec(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>> {
         let path = match spec {
             PackageSpec::Dir { path } => base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
-        Ok(self.manifest(&path).await?.into_packument(&path)?)
+        Ok(Arc::new(self.manifest(&path).await?.into_packument(&path)?))
     }
 }
 
@@ -87,7 +88,7 @@ impl PackageFetcher for DirFetcher {
         self.metadata_from_resolved(&pkg.resolved).await
     }
 
-    async fn packument(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Packument> {
+    async fn packument(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>> {
         self.packument_from_spec(spec, base_dir).await
     }
 

@@ -35,7 +35,7 @@ impl PackageFetcher for GitFetcher {
         &self,
         _pkg: &PackageSpec,
         _base_dir: &Path,
-    ) -> crate::error::Result<crate::Packument> {
+    ) -> crate::error::Result<Arc<crate::Packument>> {
         todo!()
     }
 

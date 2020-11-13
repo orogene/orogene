@@ -26,7 +26,7 @@ pub struct NpmFetcher {
     /// through a special Accept header on request.
     use_corgi: bool,
     registries: HashMap<String, Url>,
-    packuments: DashMap<Url, Packument>,
+    packuments: DashMap<Url, Arc<Packument>>,
 }
 
 impl NpmFetcher {
@@ -60,7 +60,7 @@ impl NpmFetcher {
         }
     }
 
-    async fn packument_from_name(&self, scope: &Option<String>, name: &str) -> Result<Packument> {
+    async fn packument_from_name(&self, scope: &Option<String>, name: &str) -> Result<Arc<Packument>> {
         let client = self.client.lock().await.clone();
         let packument_url = self
             .pick_registry(scope)
@@ -86,13 +86,14 @@ impl NpmFetcher {
             .body_string()
             .await
             .map_err(|e| Error::MiscError(e.to_string()))?;
-        let packument: Packument =
-            serde_json::from_str(&packument_data).map_err(|err| Error::SerdeError {
+        let packument: Arc<Packument> = Arc::new(serde_json::from_str(&packument_data).map_err(
+            |err| Error::SerdeError {
                 code: DiagnosticCode::OR1006,
                 name: name.into(),
                 data: packument_data,
                 serde_error: err,
-            })?;
+            },
+        )?);
         self.packuments.insert(packument_url, packument.clone());
         Ok(packument)
     }
@@ -126,7 +127,7 @@ impl PackageFetcher for NpmFetcher {
         })
     }
 
-    async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Packument> {
+    async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
         let pkg = match spec {

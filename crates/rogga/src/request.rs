@@ -34,7 +34,7 @@ impl PackageRequest {
 
     /// Returns the packument with general metadata about the package and its
     /// various versions.
-    pub async fn packument(&self) -> Result<Packument> {
+    pub async fn packument(&self) -> Result<Arc<Packument>> {
         self.fetcher.packument(&self.spec, &self.base_dir).await
     }
 
