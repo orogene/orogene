@@ -17,9 +17,10 @@ pub enum OroClientError {
     // TODO: add registry URL here?
     #[error("{0:#?}: Registry request failed: {1}")]
     RequestError(DiagnosticCode, SurfError),
-    #[error("{code:#?}: Registry returned failed status code {status_code}: {}", context.join("\n  "))]
+    #[error("{code:#?}: Registry returned failed status code {status_code} for a request to {url}: {}", context.join("\n  "))]
     ResponseError {
         code: DiagnosticCode,
+        url: Url,
         status_code: StatusCode,
         context: Vec<String>,
     },
@@ -36,11 +37,12 @@ impl Diagnostic for OroClientError {
 }
 
 impl OroClientError {
-    fn res_err(res: &Response, ctx: Vec<String>) -> Self {
+    fn res_err(url: Url, res: &Response, ctx: Vec<String>) -> Self {
         Self::ResponseError {
             code: DiagnosticCode::OR1015,
             status_code: res.status(),
             context: ctx,
+            url,
         }
     }
 }
@@ -73,9 +75,11 @@ impl OroClient {
     }
 
     pub async fn send(&self, request: RequestBuilder) -> Result<Response, OroClientError> {
+        let req = request.build();
+        let url = req.url().clone();
         let mut res = self
             .client
-            .send(request)
+            .send(req)
             .await
             .map_err(|e| OroClientError::RequestError(DiagnosticCode::OR1016, e))?;
         if res.status().is_client_error() || res.status().is_server_error() {
@@ -85,13 +89,14 @@ impl OroClient {
                     Ok(msg) => msg,
                     body_err @ Err(_) => {
                         return Err(OroClientError::res_err(
+                            url,
                             &res,
                             vec![format!("{:?}", parse_err), format!("{:?}", body_err)],
                         ));
                     }
                 },
             };
-            Err(OroClientError::res_err(&res, vec![msg]))
+            Err(OroClientError::res_err(url, &res, vec![msg]))
         } else {
             Ok(res)
         }

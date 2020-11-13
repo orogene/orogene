@@ -60,4 +60,6 @@ pub enum DiagnosticCode {
     OR1021,
     /// Failed to deserialize ping response details.
     OR1022,
+    /// Package found, but specific requested version could not be not found.
+    OR1023,
 }

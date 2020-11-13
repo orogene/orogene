@@ -51,14 +51,12 @@ impl NpmFetcher {
                 .get(scope)
                 .or_else(|| self.registries.get(""))
                 .cloned()
-                .or_else(|| Some("https://registry.npmjs.org/".parse().unwrap()))
-                .unwrap()
+                .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap())
         } else {
             self.registries
                 .get("")
                 .cloned()
-                .or_else(|| Some("https://registry.npmjs.org/".parse().unwrap()))
-                .unwrap()
+                .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap())
         }
     }
 
@@ -67,7 +65,9 @@ impl NpmFetcher {
         let packument_url = self
             .pick_registry(scope)
             .join(&name)
-            .with_context(|| format!("Invalid package name: {}", name))?;
+            // This... should not fail unless you did some shenanigans like
+            // constructing PackageRequests by hand, so no error code.
+            .with_context(|| format!("Invalid package name: {}.", name))?;
         if let Some(packument) = self.packuments.get(&packument_url) {
             return Ok(packument.value().clone());
         }
@@ -102,7 +102,6 @@ impl NpmFetcher {
 impl PackageFetcher for NpmFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         match spec {
-            // TODO: scopes
             PackageSpec::Npm { ref name, .. } | PackageSpec::Alias { ref name, .. } => {
                 Ok(name.clone())
             }
@@ -113,11 +112,18 @@ impl PackageFetcher for NpmFetcher {
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         let wanted = match pkg.resolved {
             PackageResolution::Npm { ref version, .. } => version,
-            _ => panic!("How did a non-Npm resolution get here?"),
+            _ => unreachable!(),
         };
         let packument = self.packument(&pkg.from, &Path::new("")).await?;
-        // TODO: unwrap
-        Ok(packument.versions.get(&wanted).unwrap().clone())
+        packument.versions.get(&wanted).cloned().ok_or_else(|| {
+            Error::PackageFetcherError(
+                DiagnosticCode::OR1023,
+                format!(
+                    "Requested version `{}` for `{}` does not exist.",
+                    wanted, pkg.from
+                ),
+            )
+        })
     }
 
     async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Packument> {
