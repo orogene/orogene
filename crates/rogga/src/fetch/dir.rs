@@ -46,7 +46,11 @@ impl DirFetcher {
         Ok(self.manifest(path).await?.into_metadata(&path)?)
     }
 
-    async fn packument_from_spec(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>> {
+    async fn packument_from_spec(
+        &self,
+        spec: &PackageSpec,
+        base_dir: &Path,
+    ) -> Result<Arc<Packument>> {
         let path = match spec {
             PackageSpec::Dir { path } => base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),

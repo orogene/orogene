@@ -60,7 +60,11 @@ impl NpmFetcher {
         }
     }
 
-    async fn packument_from_name(&self, scope: &Option<String>, name: &str) -> Result<Arc<Packument>> {
+    async fn packument_from_name(
+        &self,
+        scope: &Option<String>,
+        name: &str,
+    ) -> Result<Arc<Packument>> {
         let client = self.client.lock().await.clone();
         let packument_url = self
             .pick_registry(scope)
