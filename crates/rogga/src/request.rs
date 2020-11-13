@@ -23,7 +23,6 @@ impl PackageRequest {
         &self.spec
     }
 
-    // TODO: do this before instantiating the PackageRequest
     pub fn name(&self) -> &String {
         &self.name
     }
