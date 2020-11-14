@@ -2,7 +2,7 @@ use oro_diagnostics::{Diagnostic, DiagnosticCode};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum NodeMaintainerError {
     /// Should probably be an internal error. Signals that we tried to match
     /// two packages with different names.
     #[error("{0:#?}: {1} and {2} do not match.")]
@@ -13,7 +13,7 @@ pub enum Error {
     #[error(transparent)]
     RoggaError {
         #[from]
-        source: rogga::Error,
+        source: rogga::RoggaError,
     },
     /// Returned if an internal (e.g. io) operation has failed.
     #[error(transparent)]
@@ -24,9 +24,9 @@ pub enum Error {
     },
 }
 
-impl Diagnostic for Error {
+impl Diagnostic for NodeMaintainerError {
     fn code(&self) -> DiagnosticCode {
-        use Error::*;
+        use NodeMaintainerError::*;
         match self {
             NameMismatch(code, ..) => *code,
             TagNotFound(code, ..) => *code,
@@ -65,6 +65,6 @@ impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::resul
 }
 
 /// The result type returned by calls to this library
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, NodeMaintainerError>;
 
 pub type InternalResult<T> = std::result::Result<T, InternalError>;

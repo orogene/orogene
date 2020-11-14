@@ -8,7 +8,7 @@ use oro_manifest::OroManifest;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Internal, Result};
+use crate::error::{Internal, Result, RoggaError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
@@ -118,7 +118,7 @@ impl Manifest {
             } else {
                 None
             }
-        }).ok_or_else(|| Error::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
+        }).ok_or_else(|| RoggaError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
         let version = version
             .clone()
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));

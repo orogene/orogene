@@ -34,7 +34,7 @@ impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::resul
 
 /// Error type returned by all API calls.
 #[derive(Error, Debug)]
-pub enum Error {
+pub enum RoggaError {
     /// Something went wrong while fetching a package.
     #[error("Something went wrong with fetching a package.")]
     PackageFetcherError(DiagnosticCode, String),
@@ -71,9 +71,9 @@ pub enum Error {
     },
 }
 
-impl Diagnostic for Error {
+impl Diagnostic for RoggaError {
     fn code(&self) -> DiagnosticCode {
-        use Error::*;
+        use RoggaError::*;
         match self {
             PackageFetcherError(code, ..) => *code,
             PackageSpecError(err) => err.code(),
@@ -85,6 +85,6 @@ impl Diagnostic for Error {
 }
 
 /// The result type returned by calls to this library
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, RoggaError>;
 
 pub type InternalResult<T> = std::result::Result<T, InternalError>;

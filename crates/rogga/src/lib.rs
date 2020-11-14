@@ -11,7 +11,7 @@ mod resolver;
 mod rogga;
 
 pub use crate::rogga::*;
-pub use error::Error;
+pub use error::RoggaError;
 pub use package::*;
 pub use packument::*;
 pub use request::*;

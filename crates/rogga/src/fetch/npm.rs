@@ -11,7 +11,7 @@ use oro_diagnostics::DiagnosticCode;
 use oro_package_spec::PackageSpec;
 use url::Url;
 
-use crate::error::{Error, Internal, Result};
+use crate::error::{Internal, Result, RoggaError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Packument, VersionMetadata};
@@ -89,15 +89,16 @@ impl NpmFetcher {
             .with_context(|| format!("Failed to get packument for {}.", name))?
             .body_string()
             .await
-            .map_err(|e| Error::MiscError(e.to_string()))?;
-        let packument: Arc<Packument> = Arc::new(serde_json::from_str(&packument_data).map_err(
-            |err| Error::SerdeError {
-                code: DiagnosticCode::OR1006,
-                name: name.into(),
-                data: packument_data,
-                serde_error: err,
-            },
-        )?);
+            .map_err(|e| RoggaError::MiscError(e.to_string()))?;
+        let packument: Arc<Packument> =
+            Arc::new(serde_json::from_str(&packument_data).map_err(|err| {
+                RoggaError::SerdeError {
+                    code: DiagnosticCode::OR1006,
+                    name: name.into(),
+                    data: packument_data,
+                    serde_error: err,
+                }
+            })?);
         self.packuments.insert(packument_url, packument.clone());
         Ok(packument)
     }
@@ -121,7 +122,7 @@ impl PackageFetcher for NpmFetcher {
         };
         let packument = self.packument(&pkg.from(), &Path::new("")).await?;
         packument.versions.get(&wanted).cloned().ok_or_else(|| {
-            Error::PackageFetcherError(
+            RoggaError::PackageFetcherError(
                 DiagnosticCode::OR1023,
                 format!(
                     "Requested version `{}` for `{}` does not exist.",

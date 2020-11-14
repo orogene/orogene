@@ -10,7 +10,7 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use rogga::{Package, PackageSpec, Rogga, RoggaOpts};
 use url::Url;
 
-use crate::error::{Error, Internal};
+use crate::error::{Internal, NodeMaintainerError};
 
 // Public so I don't get warnings about unused stuff right now
 pub mod assignment;
@@ -56,7 +56,10 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub async fn init(self, request: impl AsRef<str>) -> Result<NodeMaintainer, Error> {
+    pub async fn init(
+        self,
+        request: impl AsRef<str>,
+    ) -> Result<NodeMaintainer, NodeMaintainerError> {
         let rogga = RoggaOpts::new()
             .use_corgi(true)
             .add_registry(
@@ -103,7 +106,7 @@ impl NodeMaintainer {
         println!("graph written to {}", self.cwd.join("graph.dot").display());
     }
 
-    pub async fn resolve(&mut self) -> Result<(), Error> {
+    pub async fn resolve(&mut self) -> Result<(), NodeMaintainerError> {
         let mut packages = Vec::new();
         let mut q = VecDeque::new();
         q.push_back(self.root);
