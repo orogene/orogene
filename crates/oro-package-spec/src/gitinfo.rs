@@ -1,7 +1,55 @@
 use std::fmt;
+use std::str::FromStr;
 
+use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::VersionReq as Range;
 use url::Url;
+
+use crate::error::PackageSpecError;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum GitHost {
+    GitHub,
+    Gist,
+    GitLab,
+    Bitbucket,
+}
+
+impl FromStr for GitHost {
+    type Err = PackageSpecError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "github" => GitHost::GitHub,
+            "gist" => GitHost::Gist,
+            "gitlab" => GitHost::GitLab,
+            "bitbucket" => GitHost::Bitbucket,
+            _ => {
+                return Err(PackageSpecError::InvalidGitHost(
+                    DiagnosticCode::OR1024,
+                    s.into(),
+                ))
+            }
+        })
+    }
+}
+
+impl fmt::Display for GitHost {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use GitHost::*;
+        write!(
+            f,
+            "{}",
+            match self {
+                GitHub => "github",
+                Gist => "gist",
+                GitLab => "gitlab",
+                Bitbucket => "bitbucket",
+            }
+        )?;
+        Ok(())
+    }
+}
 
 // TODO: impl FromStr? We already have a parser, just need to hook it up.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9,7 +57,7 @@ pub enum GitInfo {
     Hosted {
         owner: String,
         repo: String,
-        host: String,
+        host: GitHost,
         committish: Option<String>,
         semver: Option<Range>,
         requested: Option<String>,
@@ -148,7 +196,7 @@ mod tests {
         let info = GitInfo::Hosted {
             owner: "foo".into(),
             repo: "bar".into(),
-            host: "github".into(),
+            host: GitHost::GitHub,
             committish: None,
             semver: None,
             requested: None,
@@ -157,7 +205,7 @@ mod tests {
         let info = GitInfo::Hosted {
             owner: "foo".into(),
             repo: "bar".into(),
-            host: "github".into(),
+            host: GitHost::GitHub,
             committish: Some("deadbeef".into()),
             semver: None,
             requested: Some("https://github.com/foo/bar.git".into()),
@@ -169,7 +217,7 @@ mod tests {
         let info = GitInfo::Hosted {
             owner: "foo".into(),
             repo: "bar".into(),
-            host: "github".into(),
+            host: GitHost::GitHub,
             committish: Some("deadbeef".into()),
             semver: None,
             requested: Some("git://gitlab.com/foo/bar.git".into()),

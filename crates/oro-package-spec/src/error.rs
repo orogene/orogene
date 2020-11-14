@@ -13,6 +13,10 @@ pub enum PackageSpecError {
     InvalidCharacters(DiagnosticCode, String),
     #[error("{0:#?}: Drive letters on Windows can only be alphabetical. Got {1}")]
     InvalidDriveLetter(DiagnosticCode, char),
+    #[error(
+        "{0:#?}: Invalid git host `{1}`. Only GitHub, GitLab, Gist, and Bitbucket are supported."
+    )]
+    InvalidGitHost(DiagnosticCode, String),
 }
 
 impl Diagnostic for PackageSpecError {
@@ -22,6 +26,7 @@ impl Diagnostic for PackageSpecError {
             ParseError { code, .. } => *code,
             InvalidCharacters(code, ..) => *code,
             InvalidDriveLetter(code, ..) => *code,
+            InvalidGitHost(code, ..) => *code,
         }
     }
 }

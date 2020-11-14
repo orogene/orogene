@@ -62,4 +62,6 @@ pub enum DiagnosticCode {
     OR1022,
     /// Package found, but specific requested version could not be not found.
     OR1023,
+    /// Found invalid git host while parsing. Only GitHub, GitLab, Gist, and Bitbucket are supported.
+    OR1024,
 }

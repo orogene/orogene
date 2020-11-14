@@ -9,7 +9,7 @@ use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::{Version, VersionReq as Range};
 
 pub use crate::error::PackageSpecError;
-pub use crate::gitinfo::GitInfo;
+pub use crate::gitinfo::{GitHost, GitInfo};
 use crate::parsers::package;
 
 mod error;

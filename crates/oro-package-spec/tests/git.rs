@@ -1,4 +1,4 @@
-use oro_package_spec::{GitInfo, PackageSpec, PackageSpecError};
+use oro_package_spec::{GitHost, GitInfo, PackageSpec, PackageSpecError};
 use url::Url;
 
 type Result<T> = std::result::Result<T, PackageSpecError>;
@@ -13,7 +13,7 @@ fn git_spec_hosted_basic() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -30,7 +30,7 @@ fn git_spec_hosted_supported_hosts() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -42,7 +42,7 @@ fn git_spec_hosted_supported_hosts() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "gitlab".into(),
+            host: GitHost::GitLab,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -54,7 +54,7 @@ fn git_spec_hosted_supported_hosts() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "bitbucket".into(),
+            host: GitHost::Bitbucket,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -66,7 +66,7 @@ fn git_spec_hosted_supported_hosts() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "gist".into(),
+            host: GitHost::Gist,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -85,7 +85,7 @@ fn git_spec_hosted_committish() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: Some("dsfargeg".into()),
@@ -102,7 +102,7 @@ fn git_spec_hosted_semver() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -114,7 +114,7 @@ fn git_spec_hosted_semver() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -131,7 +131,7 @@ fn git_spec_hosted_implicit_github() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -204,7 +204,7 @@ fn git_spec_url_hosted() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -221,7 +221,7 @@ fn git_spec_url_hosted_dotgit() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -238,7 +238,7 @@ fn git_spec_url_hosted_committish() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: Some("mybranch".into()),
@@ -306,7 +306,7 @@ fn git_spec_scp_hosted() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,
@@ -323,7 +323,7 @@ fn git_spec_scp_hosted_dotgit() -> Result<()> {
     assert_eq!(
         res,
         PackageSpec::Git(GitInfo::Hosted {
-            host: "github".into(),
+            host: GitHost::GitHub,
             owner: "foo".into(),
             repo: "bar".into(),
             committish: None,

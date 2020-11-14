@@ -8,7 +8,7 @@ use oro_node_semver::VersionReq;
 use url::Url;
 
 use crate::parsers::util;
-use crate::{GitInfo, PackageSpec};
+use crate::{GitHost, GitInfo, PackageSpec};
 
 /// `git-spec := git-shorthand | git-scp | git-url`
 pub fn git_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
@@ -33,7 +33,7 @@ where
     Ok((
         input,
         GitInfo::Hosted {
-            host: maybe_host.unwrap_or_else(|| "github".into()),
+            host: maybe_host.unwrap_or_else(|| GitHost::GitHub),
             owner: owner.into(),
             repo: repo.into(),
             committish: committish.map(String::from),
@@ -44,16 +44,16 @@ where
 }
 
 /// `hosted-git-prefix := 'github:' | 'bitbucket:' | 'gist:' | 'gitlab:'`
-fn hosted_git_prefix<'a, E>(input: &'a str) -> IResult<&'a str, String, E>
+fn hosted_git_prefix<'a, E>(input: &'a str) -> IResult<&'a str, GitHost, E>
 where
     E: ParseError<&'a str>,
 {
-    map(
+    map_res(
         terminated(
             alt((tag("github"), tag("gist"), tag("gitlab"), tag("bitbucket"))),
             tag(":"),
         ),
-        String::from,
+        |host: &str| host.parse(),
     )(input)
 }
 
@@ -111,13 +111,12 @@ where
                     input,
                     GitInfo::Hosted {
                         host: match host {
-                            "github.com" => "github",
-                            "gitlab.com" => "gitlab",
-                            "gist.github.com" => "gist",
-                            "bitbucket.org" => "bitbucket",
+                            "github.com" => GitHost::GitHub,
+                            "gitlab.com" => GitHost::GitLab,
+                            "gist.github.com" => GitHost::Gist,
+                            "bitbucket.org" => GitHost::Bitbucket,
                             _ => unreachable!(),
-                        }
-                        .into(),
+                        },
                         owner: owner.clone(),
                         repo: if repo.ends_with(".git") {
                             String::from(&repo[..].replace(".git", ""))
@@ -189,13 +188,12 @@ where
                     input,
                     GitInfo::Hosted {
                         host: match host {
-                            "github.com" => "github",
-                            "gitlab.com" => "gitlab",
-                            "gist.github.com" => "gist",
-                            "bitbucket.org" => "bitbucket",
+                            "github.com" => GitHost::GitHub,
+                            "gitlab.com" => GitHost::GitLab,
+                            "gist.github.com" => GitHost::Gist,
+                            "bitbucket.org" => GitHost::Bitbucket,
                             _ => unreachable!(),
-                        }
-                        .into(),
+                        },
                         owner: owner.clone(),
                         repo: if repo.ends_with(".git") {
                             String::from(&repo[..].replace(".git", ""))
