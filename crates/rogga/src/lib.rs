@@ -1,4 +1,4 @@
-pub use oro_package_spec::{PackageSpec, VersionSpec};
+pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 
 pub mod cache;
 mod error;
