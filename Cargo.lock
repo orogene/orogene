@@ -2776,6 +2776,7 @@ dependencies = [
  "serde 1.0.117",
  "serde_json",
  "ssri",
+ "tempfile",
  "thiserror",
  "url",
 ]

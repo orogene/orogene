@@ -5,6 +5,7 @@ use async_std::sync::Arc;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use oro_manifest::OroManifest;
+use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +14,6 @@ use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
 use crate::resolver::PackageResolution;
-
-use oro_node_semver::Version;
 
 #[derive(Debug)]
 pub struct DirFetcher;
@@ -27,9 +26,8 @@ impl DirFetcher {
 
 impl DirFetcher {
     async fn manifest(&self, path: &Path) -> Result<Manifest> {
-        // TODO: Orogene.toml?
         let pkg_path = path.join("package.json");
-        let json = async_std::fs::read(&path.join("package.json"))
+        let json = async_std::fs::read(&pkg_path)
             .await
             .map_err(|err| RoggaError::IoError(err, pkg_path))?;
         let pkgjson: OroManifest =

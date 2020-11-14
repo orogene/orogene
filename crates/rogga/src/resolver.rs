@@ -71,6 +71,17 @@ where
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PackageResolution {
-    Npm { version: Version, tarball: Url },
-    Dir { path: PathBuf },
+    Npm {
+        version: Version,
+        tarball: Url,
+    },
+    Dir {
+        path: PathBuf,
+    },
+    Git {
+        tarball: Option<Url>,
+        https: Option<Url>,
+        scp: Option<String>,
+        requested: Option<String>,
+    },
 }

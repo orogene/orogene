@@ -115,7 +115,7 @@ impl GitInfo {
                 ..
             } => committish.as_ref().map(|commit| {
                 format!(
-                    "https://gitlab.org/{}/{}/repository/archive.tar.gz?ref={}",
+                    "https://gitlab.com/{}/{}/repository/archive.tar.gz?ref={}",
                     owner, repo, commit
                 )
                 .parse()
