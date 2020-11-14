@@ -76,10 +76,65 @@ pub enum GitInfo {
 
 impl GitInfo {
     pub fn tarball(&self) -> Option<Url> {
+        use GitHost::*;
         use GitInfo::*;
         match self {
             GitInfo::Url { .. } | Ssh { .. } => None,
-            Hosted { .. } => todo!(),
+            Hosted {
+                host: GitHub,
+                ref owner,
+                ref repo,
+                ref committish,
+                ..
+            } => committish.as_ref().map(|commit| {
+                format!(
+                    "https://codeload.github.com/{}/{}/tar.gz/{}",
+                    owner, repo, commit
+                )
+                .parse()
+                .expect("Failed to parse URL?")
+            }),
+            Hosted {
+                host: Gist,
+                ref repo,
+                ref committish,
+                ..
+            } => committish.as_ref().map(|commit| {
+                format!(
+                    "https://codeload.github.com/gist/{}/tar.gz/{}",
+                    repo, commit
+                )
+                .parse()
+                .expect("Failed to parse URL?")
+            }),
+            Hosted {
+                host: GitLab,
+                ref owner,
+                ref repo,
+                ref committish,
+                ..
+            } => committish.as_ref().map(|commit| {
+                format!(
+                    "https://gitlab.org/{}/{}/repository/archive.tar.gz?ref={}",
+                    owner, repo, commit
+                )
+                .parse()
+                .expect("Failed to parse URL?")
+            }),
+            Hosted {
+                host: Bitbucket,
+                ref owner,
+                ref repo,
+                ref committish,
+                ..
+            } => committish.as_ref().map(|commit| {
+                format!(
+                    "https://bitbucket.org/{}/{}/get/{}.tar.gz",
+                    owner, repo, commit
+                )
+                .parse()
+                .expect("Failed to parse URL?")
+            }),
         }
     }
 }
