@@ -4,7 +4,6 @@ use clap::Clap;
 use directories::ProjectDirs;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
-use oro_diagnostics::DiagnosticCode;
 use ssri::Integrity;
 use std::path::PathBuf;
 use std::process::{self, Command, Stdio};
@@ -39,12 +38,8 @@ impl OroCommand for ShellCmd {
         let code = Command::new(&node)
             .env(
                 "ORO_BIN",
-                env::current_exe().with_context(|| {
-                    format!(
-                        "{:#?}: Failed to get path for current executable.",
-                        DiagnosticCode::OR1018
-                    )
-                })?,
+                env::current_exe()
+                    .with_context(|| String::from("Failed to get path for current executable."))?,
             )
             .arg("-r")
             .arg(require_alabaster(self.data_dir)?)
@@ -53,13 +48,7 @@ impl OroCommand for ShellCmd {
             .stderr(Stdio::inherit())
             .stdin(Stdio::inherit())
             .status()
-            .with_context(|| {
-                format!(
-                    "{:#?}: Failed to execute node binary at `{}`.",
-                    DiagnosticCode::OR1017,
-                    node
-                )
-            })?
+            .with_context(|| format!("Failed to execute node binary at `{}`.", node))?
             .code()
             .unwrap_or(1);
         if code > 0 {
@@ -73,30 +62,19 @@ fn require_alabaster(dir_override: Option<PathBuf>) -> Result<PathBuf> {
     let dir = match dir_override {
         Some(dir) => dir,
         None => ProjectDirs::from("", "", "orogene") // TODO I'd rather get this from oro-config?
-            .ok_or_else(|| {
-                anyhow!(
-                    "{:#?}: Couldn't find home directory.",
-                    DiagnosticCode::OR1019
-                )
-            })?
+            .ok_or_else(|| anyhow!("Couldn't find home directory.",))?
             .data_dir()
             .to_path_buf(),
     };
-    fs::create_dir_all(&dir).with_context(|| {
-        format!(
-            "{:#?}: Failed to create data directory at `{:?}`",
-            DiagnosticCode::OR1020,
-            dir
-        )
-    })?;
+    fs::create_dir_all(&dir)
+        .with_context(|| format!("Failed to create data directory at `{:?}`", dir))?;
     let data = include_bytes!("../../../../alabaster/dist/alabaster.js").to_vec();
     let hash = Integrity::from(&data).to_hex().1;
     let script = dir.join(format!("oro-{}", hash));
     if !script.exists() {
         fs::write(&script, &data).with_context(|| {
             format!(
-                "{:#?}: Failed to write alabaster patches to orogene data dir at {:?}.",
-                DiagnosticCode::OR1021,
+                "Failed to write alabaster patches to orogene data dir at {:?}.",
                 script
             )
         })?;

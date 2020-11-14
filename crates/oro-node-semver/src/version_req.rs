@@ -5,15 +5,14 @@ use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::space0;
 use nom::combinator::{all_consuming, map, map_opt, opt};
-use nom::error::{context, convert_error, ParseError, VerboseError};
-use nom::multi::separated_nonempty_list;
+use nom::error::context;
+use nom::multi::separated_list1;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
-use oro_diagnostics::DiagnosticCode;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
-use crate::{extras, number, Identifier, SemverError, Version};
+use crate::{extras, number, Identifier, SemverError, SemverErrorKind, SemverParseError, Version};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 struct Range {
@@ -293,15 +292,24 @@ impl VersionReq {
     pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
         let input = &input.as_ref()[..];
 
-        match all_consuming(many_predicates::<VerboseError<&str>>)(input) {
+        match all_consuming(many_predicates)(input) {
             Ok((_, predicates)) => Ok(VersionReq { predicates }),
-            Err(err) => Err(SemverError::ParseError {
-                code: DiagnosticCode::OR1010,
-                input: input.into(),
-                msg: match err {
-                    Err::Error(e) => convert_error(input, e),
-                    Err::Failure(e) => convert_error(input, e),
-                    Err::Incomplete(_) => "More data was needed".into(),
+            Err(err) => Err(match err {
+                Err::Error(e) | Err::Failure(e) => SemverError {
+                    input: input.into(),
+                    offset: e.input.as_ptr() as usize - input.as_ptr() as usize,
+                    kind: if let Some(kind) = e.kind {
+                        kind
+                    } else if let Some(ctx) = e.context {
+                        SemverErrorKind::Context(ctx)
+                    } else {
+                        SemverErrorKind::Other
+                    },
+                },
+                Err::Incomplete(_) => SemverError {
+                    input: input.into(),
+                    offset: input.len() - 1,
+                    kind: SemverErrorKind::IncompleteInput,
                 },
             }),
         }
@@ -428,20 +436,11 @@ impl<'de> Deserialize<'de> for VersionReq {
     }
 }
 
-fn many_predicates<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Range>, E>
-where
-    E: ParseError<&'a str>,
-{
-    context(
-        "many predicats",
-        separated_nonempty_list(tag(" || "), predicates),
-    )(input)
+fn many_predicates<'a>(input: &'a str) -> IResult<&'a str, Vec<Range>, SemverParseError<&'a str>> {
+    context("many predicats", separated_list1(tag(" || "), predicates))(input)
 }
 
-fn predicates<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn predicates<'a>(input: &'a str) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "predicate alternatives",
         alt((
@@ -456,10 +455,7 @@ where
     )(input)
 }
 
-fn wildcard<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn wildcard<'a>(input: &'a str) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "wildcard",
         map_opt(x_or_asterisk, |_| {
@@ -468,10 +464,7 @@ where
     )(input)
 }
 
-fn x_or_asterisk<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
-where
-    E: ParseError<&'a str>,
-{
+fn x_or_asterisk<'a>(input: &'a str) -> IResult<&'a str, (), SemverParseError<&'a str>> {
     map(alt((tag("x"), tag("*"))), |_| ())(input)
 }
 
@@ -483,27 +476,24 @@ type PartialVersion = (
     Vec<Identifier>,
 );
 
-fn partial_version<'a, E>(input: &'a str) -> IResult<&'a str, PartialVersion, E>
-where
-    E: ParseError<&'a str>,
-{
+fn partial_version<'a>(
+    input: &'a str,
+) -> IResult<&'a str, PartialVersion, SemverParseError<&'a str>> {
     map(
         tuple((number, maybe_dot_number, maybe_dot_number, extras)),
         |(major, minor, patch, (pre_release, build))| (major, minor, patch, pre_release, build),
     )(input)
 }
 
-fn maybe_dot_number<'a, E>(input: &'a str) -> IResult<&'a str, Option<u64>, E>
-where
-    E: ParseError<&'a str>,
-{
+fn maybe_dot_number<'a>(
+    input: &'a str,
+) -> IResult<&'a str, Option<u64>, SemverParseError<&'a str>> {
     opt(preceded(tag("."), number))(input)
 }
 
-fn any_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn any_operation_followed_by_version<'a>(
+    input: &'a str,
+) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     use Operation::*;
     context(
         "operation followed by version",
@@ -549,10 +539,9 @@ where
     )(input)
 }
 
-fn x_and_asterisk_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn x_and_asterisk_version<'a>(
+    input: &'a str,
+) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "minor X patch X",
         map(
@@ -591,10 +580,7 @@ fn upper_bound(major: u64, maybe_minor: Option<u64>) -> Bound {
     }
 }
 
-fn caret<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn caret<'a>(input: &'a str) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "caret",
         map_opt(
@@ -634,20 +620,14 @@ where
     )(input)
 }
 
-fn tilde_gt<'a, E>(input: &'a str) -> IResult<&'a str, Option<&'a str>, E>
-where
-    E: ParseError<&'a str>,
-{
+fn tilde_gt<'a>(input: &'a str) -> IResult<&'a str, Option<&'a str>, SemverParseError<&'a str>> {
     map(
         tuple((tag("~"), space0, opt(tag(">")), space0)),
         |(_, _, gt, _)| gt,
     )(input)
 }
 
-fn tilde<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn tilde<'a>(input: &'a str) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "tilde",
         map_opt(tuple((tilde_gt, partial_version)), |parsed| match parsed {
@@ -676,14 +656,13 @@ where
     )(input)
 }
 
-fn hyphenated<'a, F, G, S, T, E>(
+fn hyphenated<'a, F, G, S, T>(
     left: F,
     right: G,
-) -> impl Fn(&'a str) -> IResult<&'a str, (S, T), E>
+) -> impl Fn(&'a str) -> IResult<&'a str, (S, T), SemverParseError<&'a str>>
 where
-    F: Fn(&'a str) -> IResult<&'a str, S, E>,
-    G: Fn(&'a str) -> IResult<&'a str, T, E>,
-    E: ParseError<&'a str>,
+    F: Fn(&'a str) -> IResult<&'a str, S, SemverParseError<&'a str>>,
+    G: Fn(&'a str) -> IResult<&'a str, T, SemverParseError<&'a str>>,
 {
     move |input: &'a str| {
         context(
@@ -693,10 +672,7 @@ where
     }
 }
 
-fn hyphenated_range<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn hyphenated_range<'a>(input: &'a str) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "hyphenated with major and minor",
         map_opt(
@@ -734,10 +710,9 @@ where
     )(input)
 }
 
-fn no_operation_followed_by_version<'a, E>(input: &'a str) -> IResult<&'a str, Range, E>
-where
-    E: ParseError<&'a str>,
-{
+fn no_operation_followed_by_version<'a>(
+    input: &'a str,
+) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
     context(
         "major and minor",
         map_opt(partial_version, |parsed| match parsed {
@@ -750,17 +725,11 @@ where
     )(input)
 }
 
-fn spaced_hypen<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
-where
-    E: ParseError<&'a str>,
-{
+fn spaced_hypen<'a>(input: &'a str) -> IResult<&'a str, (), SemverParseError<&'a str>> {
     map(tuple((space0, tag("-"), space0)), |_| ())(input)
 }
 
-fn operation<'a, E>(input: &'a str) -> IResult<&'a str, Operation, E>
-where
-    E: ParseError<&'a str>,
-{
+fn operation<'a>(input: &'a str) -> IResult<&'a str, Operation, SemverParseError<&'a str>> {
     use Operation::*;
     context(
         "operation",

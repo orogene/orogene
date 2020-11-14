@@ -1,43 +1,15 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCode};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory};
 use oro_package_spec::PackageSpecError;
 use thiserror::Error;
 
 use crate::resolver::ResolverError;
 
-#[derive(Error, Debug)]
-#[error("{source}\n\n  {}", context.join("\n  "))]
-pub struct InternalError {
-    source: Box<dyn std::error::Error + Send + Sync>,
-    context: Vec<String>,
-}
-
-pub trait Internal<T> {
-    fn to_internal(self) -> InternalResult<T>;
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> InternalResult<T>;
-}
-
-impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::result::Result<T, E> {
-    fn to_internal(self) -> InternalResult<T> {
-        self.map_err(|e| InternalError {
-            source: Box::new(e),
-            context: Vec::new(),
-        })
-    }
-
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> InternalResult<T> {
-        self.map_err(|e| InternalError {
-            source: Box::new(e),
-            context: vec![f()],
-        })
-    }
-}
-
 /// Error type returned by all API calls.
 #[derive(Error, Debug)]
 pub enum RoggaError {
     /// Something went wrong while fetching a package.
-    #[error("Something went wrong with fetching a package.")]
-    PackageFetcherError(DiagnosticCode, String),
+    #[error("Something went wrong with fetching a package:\n\t{0}")]
+    PackageFetcherError(String),
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
@@ -46,12 +18,10 @@ pub enum RoggaError {
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
 
-    #[error("Failed to deserialize package data for {name}: {serde_error}\n{}",
-            &.data[(.serde_error.column() - 100) .. (.serde_error.column() + 30)])]
+    #[error("Failed to deserialize package data for `{name}`:\n\t{serde_error}")]
     SerdeError {
         name: String,
         data: String,
-        code: DiagnosticCode,
         #[source]
         serde_error: serde_json::Error,
     },
@@ -61,30 +31,21 @@ pub enum RoggaError {
     /// don't implement std::error::Error.
     #[error("A miscellaneous error occurred: {0}")]
     MiscError(String),
-
-    /// Returned if an internal (e.g. io) operation has failed.
-    #[error(transparent)]
-    InternalError {
-        #[from]
-        /// The underlying error
-        source: InternalError,
-    },
 }
 
 impl Diagnostic for RoggaError {
-    fn code(&self) -> DiagnosticCode {
-        use RoggaError::*;
-        match self {
-            PackageFetcherError(code, ..) => *code,
-            PackageSpecError(err) => err.code(),
-            ResolverError(err) => err.code(),
-            SerdeError { code, .. } => *code,
-            MiscError(..) | InternalError { .. } => DiagnosticCode::OR1000,
-        }
+    fn category(&self) -> DiagnosticCategory {
+        todo!()
+    }
+
+    fn subpath(&self) -> String {
+        todo!()
+    }
+
+    fn advice(&self) -> Option<String> {
+        todo!()
     }
 }
 
 /// The result type returned by calls to this library
 pub type Result<T> = std::result::Result<T, RoggaError>;
-
-pub type InternalResult<T> = std::result::Result<T, InternalError>;

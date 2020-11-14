@@ -1,7 +1,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::VersionReq as Range;
 use url::Url;
 
@@ -24,12 +23,7 @@ impl FromStr for GitHost {
             "gist" => GitHost::Gist,
             "gitlab" => GitHost::GitLab,
             "bitbucket" => GitHost::Bitbucket,
-            _ => {
-                return Err(PackageSpecError::InvalidGitHost(
-                    DiagnosticCode::OR1024,
-                    s.into(),
-                ))
-            }
+            _ => return Err(PackageSpecError::InvalidGitHost(s.into())),
         })
     }
 }

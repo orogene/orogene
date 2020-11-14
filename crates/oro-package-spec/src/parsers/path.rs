@@ -8,7 +8,6 @@ use nom::error::ParseError;
 use nom::multi::{many0, many1};
 use nom::sequence::{delimited, preceded, tuple};
 use nom::IResult;
-use oro_diagnostics::DiagnosticCode;
 
 use crate::error::PackageSpecError;
 use crate::PackageSpec;
@@ -47,10 +46,7 @@ where
                         if c.is_alphabetic() {
                             Ok(c)
                         } else {
-                            Err(PackageSpecError::InvalidDriveLetter(
-                                DiagnosticCode::OR1002,
-                                c,
-                            ))
+                            Err(PackageSpecError::InvalidDriveLetter(c))
                         }
                     }),
                     tag(":"),

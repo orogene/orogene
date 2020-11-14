@@ -1,4 +1,3 @@
-use oro_diagnostics::DiagnosticCode;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 
 use crate::error::PackageSpecError;
@@ -20,9 +19,6 @@ pub fn no_url_encode(tag: &str) -> Result<&str, PackageSpecError> {
     if format!("{}", utf8_percent_encode(tag, JS_ENCODED)) == tag {
         Ok(tag)
     } else {
-        Err(PackageSpecError::InvalidCharacters(
-            DiagnosticCode::OR1003,
-            tag.into(),
-        ))
+        Err(PackageSpecError::InvalidCharacters(tag.into()))
     }
 }

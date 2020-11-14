@@ -1,3 +1,4 @@
+/*
 use std::collections::HashMap;
 
 use async_compression::futures::bufread::GzipDecoder;
@@ -165,3 +166,4 @@ where
             .to_internal()?,
     )
 }
+*/

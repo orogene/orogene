@@ -9,9 +9,10 @@ edition = "2018"
 [dependencies]
 oro-diagnostics = { path = "../oro-diagnostics" }
 
-nom = "5.1.2"
+nom = "6.0.0"
 thiserror = "1.0.9"
 serde = "1.0.115"
+bytecount = "0.6.0"
 
 [dev-dependencies]
 serde_json = "1.0.57"

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use http_types::Url;
-use oro_diagnostics::{Diagnostic, DiagnosticCode};
+use oro_diagnostics::Diagnostic;
 use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,6 @@ use crate::request::PackageRequest;
 pub enum ResolverError {
     #[error("No matching version found for spec {name}@{spec:?} in {versions:#?}.")]
     NoVersion {
-        code: DiagnosticCode,
         name: String,
         spec: PackageSpec,
         versions: Vec<String>,
@@ -24,13 +23,16 @@ pub enum ResolverError {
 }
 
 impl Diagnostic for ResolverError {
-    fn code(&self) -> DiagnosticCode {
-        use ResolverError::*;
-        match self {
-            NoVersion { code, .. } => *code,
-            // TODO: Maybe make the value of OtherError a Diagnostic?
-            OtherError(..) => DiagnosticCode::OR1000,
-        }
+    fn category(&self) -> oro_diagnostics::DiagnosticCategory {
+        todo!()
+    }
+
+    fn subpath(&self) -> String {
+        todo!()
+    }
+
+    fn advice(&self) -> Option<String> {
+        todo!()
     }
 }
 

@@ -6,7 +6,6 @@ use clap::Clap;
 use oro_client::{self, Method, OroClient};
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
-use oro_diagnostics::DiagnosticCode;
 use serde_json::Value;
 use url::Url;
 
@@ -46,12 +45,7 @@ impl OroCommand for PingCmd {
         if self.json {
             let details: Value =
                 serde_json::from_str(&res.body_string().await.unwrap_or_else(|_| "{}".into()))
-                    .with_context(|| {
-                        format!(
-                            "{:#?}: Failed to deserialize ping response details.",
-                            DiagnosticCode::OR1022
-                        )
-                    })?;
+                    .with_context(|| String::from("Failed to deserialize ping response details."))?;
             let output = serde_json::to_string_pretty(&serde_json::json!({
                 "registry": self.registry.to_string(),
                 "time": time,

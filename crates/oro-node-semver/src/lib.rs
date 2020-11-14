@@ -1,5 +1,6 @@
 use std::cmp::{self, Ordering};
 use std::fmt;
+use std::num::ParseIntError;
 
 use nom::branch::alt;
 use nom::bytes::complete::tag;
@@ -7,11 +8,11 @@ use nom::bytes::complete::take_while;
 use nom::character::complete::digit1;
 use nom::character::is_alphanumeric;
 use nom::combinator::{all_consuming, map, map_res, opt, recognize};
-use nom::error::{context, convert_error, ParseError, VerboseError};
-use nom::multi::separated_list;
+use nom::error::{context, ContextError, ErrorKind, FromExternalError, ParseError};
+use nom::multi::separated_list1;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
-use oro_diagnostics::{Diagnostic, DiagnosticCode};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 use thiserror::Error;
@@ -25,21 +26,115 @@ const MAX_SAFE_INTEGER: u64 = 900_719_925_474_099;
 const MAX_LENGTH: usize = 256;
 
 #[derive(Debug, Error, Eq, PartialEq)]
-pub enum SemverError {
-    #[error("{code:#?}: Failed to parse Semver string `{input}`:\n{msg}")]
-    ParseError {
-        code: DiagnosticCode,
-        input: String,
-        msg: String,
-    },
+#[error("Error parsing semver string: {kind}")]
+pub struct SemverError {
+    input: String,
+    offset: usize,
+    kind: SemverErrorKind,
+}
+
+impl SemverError {
+    pub fn location(&self) -> (usize, usize) {
+        // Taken partially from nom.
+        let prefix = &self.input.as_bytes()[..self.offset];
+
+        // Count the number of newlines in the first `offset` bytes of input
+        let line_number = bytecount::count(prefix, b'\n');
+
+        // Find the line that includes the subslice:
+        // Find the *last* newline before the substring starts
+        let line_begin = prefix
+            .iter()
+            .rev()
+            .position(|&b| b == b'\n')
+            .map(|pos| self.offset - pos)
+            .unwrap_or(0);
+
+        // Find the full line after that newline
+        let line = self.input[line_begin..]
+            .lines()
+            .next()
+            .unwrap_or(&self.input[line_begin..])
+            .trim_end();
+
+        // The (1-indexed) column number is the offset of our substring into that line
+        let column_number = self.input[self.offset..].as_ptr() as usize - line.as_ptr() as usize;
+
+        (line_number, column_number)
+    }
+}
+
+#[derive(Debug, Error, Eq, PartialEq)]
+pub enum SemverErrorKind {
+    #[error("Semver string can't be longer than {} characters.", MAX_LENGTH)]
+    MaxLengthError,
+    #[error("Incomplete input to semver parser.")]
+    IncompleteInput,
+    #[error("Failed to parse an integer component of a semver string: {0}")]
+    ParseIntError(ParseIntError),
+    #[error("Integer component of semver string is larger than JavaScript's Number.MAX_SAFE_INTEGER: {0}")]
+    MaxIntError(u64),
+    #[error("Failed to parse {0} component of semver string.")]
+    Context(&'static str),
+    #[error("An unspecified error occurred.")]
+    Other,
+}
+
+#[derive(Debug)]
+struct SemverParseError<I> {
+    input: I,
+    context: Option<&'static str>,
+    kind: Option<SemverErrorKind>,
 }
 
 impl Diagnostic for SemverError {
-    fn code(&self) -> DiagnosticCode {
-        use SemverError::*;
-        match self {
-            ParseError { code, .. } => *code,
+    fn category(&self) -> DiagnosticCategory {
+        let (row, col) = self.location();
+        DiagnosticCategory::Parse {
+            input: self.input.clone(),
+            path: None,
+            row,
+            col,
         }
+    }
+
+    fn subpath(&self) -> String {
+        "semver".into()
+    }
+
+    fn advice(&self) -> Option<String> {
+        todo!()
+    }
+}
+
+impl<I> ParseError<I> for SemverParseError<I> {
+    fn from_error_kind(input: I, _kind: nom::error::ErrorKind) -> Self {
+        Self {
+            input,
+            context: None,
+            kind: None,
+        }
+    }
+
+    fn append(_input: I, _kind: nom::error::ErrorKind, other: Self) -> Self {
+        other
+    }
+}
+
+impl<I> ContextError<I> for SemverParseError<I> {
+    fn add_context(_input: I, ctx: &'static str, mut other: Self) -> Self {
+        other.context = Some(ctx);
+        other
+    }
+}
+
+impl<'a> FromExternalError<&'a str, SemverParseError<&'a str>> for SemverParseError<&'a str> {
+    fn from_external_error(
+        _input: &'a str,
+        _kind: ErrorKind,
+        e: SemverParseError<&'a str>,
+    ) -> Self {
+        e
     }
 }
 
@@ -74,22 +169,31 @@ impl Version {
         let input = &input.as_ref()[..];
 
         if input.len() > MAX_LENGTH {
-            return Err(SemverError::ParseError {
-                code: DiagnosticCode::OR1011,
+            return Err(SemverError {
                 input: input.into(),
-                msg: format!("version is longer than {} characters", MAX_LENGTH),
+                offset: 0,
+                kind: SemverErrorKind::MaxLengthError,
             });
         }
 
-        match all_consuming(version::<VerboseError<&str>>)(input) {
+        match all_consuming(version)(input) {
             Ok((_, arg)) => Ok(arg),
-            Err(err) => Err(SemverError::ParseError {
-                code: DiagnosticCode::OR1012,
-                input: input.into(),
-                msg: match err {
-                    Err::Error(e) => convert_error(input, e),
-                    Err::Failure(e) => convert_error(input, e),
-                    Err::Incomplete(_) => "More data was needed".into(),
+            Err(err) => Err(match err {
+                Err::Error(e) | Err::Failure(e) => SemverError {
+                    input: input.into(),
+                    offset: e.input.as_ptr() as usize - input.as_ptr() as usize,
+                    kind: if let Some(kind) = e.kind {
+                        kind
+                    } else if let Some(ctx) = e.context {
+                        SemverErrorKind::Context(ctx)
+                    } else {
+                        SemverErrorKind::Other
+                    },
+                },
+                Err::Incomplete(_) => SemverError {
+                    input: input.into(),
+                    offset: input.len() - 1,
+                    kind: SemverErrorKind::IncompleteInput,
                 },
             }),
         }
@@ -268,10 +372,7 @@ impl Extras {
 ///                 | <version core> "-" <pre-release>
 ///                 | <version core> "+" <build>
 ///                 | <version core> "-" <pre-release> "+" <build>
-fn version<'a, E>(input: &'a str) -> IResult<&'a str, Version, E>
-where
-    E: ParseError<&'a str>,
-{
+fn version<'a>(input: &'a str) -> IResult<&'a str, Version, SemverParseError<&'a str>> {
     context(
         "version",
         map(
@@ -287,10 +388,9 @@ where
     )(input)
 }
 
-fn extras<'a, E>(input: &'a str) -> IResult<&'a str, (Vec<Identifier>, Vec<Identifier>), E>
-where
-    E: ParseError<&'a str>,
-{
+fn extras<'a>(
+    input: &'a str,
+) -> IResult<&'a str, (Vec<Identifier>, Vec<Identifier>), SemverParseError<&'a str>> {
     map(
         opt(alt((
             map(tuple((pre_release, build)), Extras::ReleaseAndBuild),
@@ -305,10 +405,9 @@ where
 }
 
 /// <version core> ::= <major> "." <minor> "." <patch>
-fn version_core<'a, E>(input: &'a str) -> IResult<&'a str, (u64, u64, u64), E>
-where
-    E: ParseError<&'a str>,
-{
+fn version_core<'a>(
+    input: &'a str,
+) -> IResult<&'a str, (u64, u64, u64), SemverParseError<&'a str>> {
     context(
         "version core",
         map(
@@ -319,30 +418,21 @@ where
 }
 
 // I believe build, pre_release, and identifier are not 100% spec compliant.
-fn build<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Identifier>, E>
-where
-    E: ParseError<&'a str>,
-{
+fn build<'a>(input: &'a str) -> IResult<&'a str, Vec<Identifier>, SemverParseError<&'a str>> {
     context(
         "build version",
-        preceded(tag("+"), separated_list(tag("."), identifier)),
+        preceded(tag("+"), separated_list1(tag("."), identifier)),
     )(input)
 }
 
-fn pre_release<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Identifier>, E>
-where
-    E: ParseError<&'a str>,
-{
+fn pre_release<'a>(input: &'a str) -> IResult<&'a str, Vec<Identifier>, SemverParseError<&'a str>> {
     context(
         "pre_release version",
-        preceded(tag("-"), separated_list(tag("."), identifier)),
+        preceded(tag("-"), separated_list1(tag("."), identifier)),
     )(input)
 }
 
-fn identifier<'a, E>(input: &'a str) -> IResult<&'a str, Identifier, E>
-where
-    E: ParseError<&'a str>,
-{
+fn identifier<'a>(input: &'a str) -> IResult<&'a str, Identifier, SemverParseError<&'a str>> {
     context(
         "identifier",
         map(
@@ -356,24 +446,21 @@ where
     )(input)
 }
 
-pub(crate) fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
-where
-    E: ParseError<&'a str>,
-{
+pub(crate) fn number<'a>(input: &'a str) -> IResult<&'a str, u64, SemverParseError<&'a str>> {
     context(
         "number component",
         map_res(recognize(digit1), |raw| {
-            let value = str::parse(raw).map_err(|e| SemverError::ParseError {
-                code: DiagnosticCode::OR1013,
-                input: input.into(),
-                msg: format!("{}", e),
+            let value = str::parse(raw).map_err(|e| SemverParseError {
+                input,
+                context: None,
+                kind: Some(SemverErrorKind::ParseIntError(e)),
             })?;
 
             if value > MAX_SAFE_INTEGER {
-                return Err(SemverError::ParseError {
-                    code: DiagnosticCode::OR1014,
-                    input: input.into(),
-                    msg: format!("'{}' is larger than Number.MAX_SAFE_INTEGER", value),
+                return Err(SemverParseError {
+                    input,
+                    context: None,
+                    kind: Some(SemverErrorKind::MaxIntError(value)),
                 });
             }
 
@@ -606,8 +693,7 @@ mod tests {
     fn individual_version_component_has_an_upper_bound() {
         let out_of_range = MAX_SAFE_INTEGER + 1;
         let v = Version::parse(format!("1.2.{}", out_of_range));
-
-        assert!(v.is_err());
+        assert_eq!(v.err().expect("Parse should have failed.").to_string(), "Integer component of semver string is larger than JavaScript's Number.MAX_SAFE_INTEGER: 900719925474100");
     }
 
     #[test]
@@ -616,9 +702,9 @@ mod tests {
         let version_string = format!("1.1.1-{}", prebuild);
         let v = Version::parse(version_string.clone());
 
-        assert!(
-            v.is_err(),
-            "version string should have been detected as too long"
+        assert_eq!(
+            v.err().expect("Parse should have failed").to_string(),
+            "Semver string cann't be longer than 256 characters."
         );
 
         let ok_version = version_string[0..255].to_string();

@@ -8,7 +8,7 @@ use oro_manifest::OroManifest;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Internal, Result, RoggaError};
+use crate::error::{Result, RoggaError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
