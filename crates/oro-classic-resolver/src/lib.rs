@@ -50,7 +50,7 @@ impl PackageResolver for ClassicResolver {
     async fn resolve(&self, wanted: &PackageRequest) -> Result<PackageResolution, ResolverError> {
         use PackageSpec::*;
         let spec = match wanted.spec() {
-            Alias { package, .. } => &*package,
+            Alias { spec, .. } => &*spec,
             spec => spec,
         };
 

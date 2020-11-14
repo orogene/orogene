@@ -46,7 +46,7 @@ fn alias_npm_pkg_basic() -> Result<()> {
         res,
         PackageSpec::Alias {
             name: "foo".into(),
-            package: Box::new(PackageSpec::Npm {
+            spec: Box::new(PackageSpec::Npm {
                 scope: None,
                 name: "hello-world".into(),
                 requested: None

@@ -118,7 +118,7 @@ fn named() -> Result<()> {
         res,
         PackageSpec::Alias {
             name: "foo".into(),
-            package: Box::new(PackageSpec::Dir {
+            spec: Box::new(PackageSpec::Dir {
                 path: PathBuf::from("./hey"),
             })
         }

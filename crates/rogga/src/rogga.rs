@@ -110,7 +110,7 @@ impl Rogga {
         use PackageSpec::*;
         match *arg {
             Dir { .. } => self.dir_fetcher.clone(),
-            Alias { ref package, .. } => self.pick_fetcher(package),
+            Alias { ref spec, .. } => self.pick_fetcher(spec),
             Npm { .. } => self.npm_fetcher.clone(),
             Git(..) => self.git_fetcher.clone(),
         }

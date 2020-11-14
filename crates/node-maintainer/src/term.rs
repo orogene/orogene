@@ -65,7 +65,7 @@ fn spec_relation<'a>(
         Ok(match (left.1.spec(), right.1.spec()) {
             (Dir { .. }, Dir { .. }) => dir_relation(left, right)?,
             (Npm { .. }, Npm { .. }) => npm_relation(left, right).await?,
-            (Alias { ref package, .. }, _) => match **package {
+            (Alias { ref spec, .. }, _) => match **spec {
                 Dir { .. } => dir_relation(left, right)?,
                 Npm { .. } => npm_relation(left, right).await?,
                 _ => unreachable!(),

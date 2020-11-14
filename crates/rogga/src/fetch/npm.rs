@@ -125,7 +125,8 @@ impl PackageFetcher for NpmFetcher {
                 DiagnosticCode::OR1023,
                 format!(
                     "Requested version `{}` for `{}` does not exist.",
-                    wanted, pkg.from()
+                    wanted,
+                    pkg.from()
                 ),
             )
         })
@@ -135,7 +136,7 @@ impl PackageFetcher for NpmFetcher {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
         let pkg = match spec {
-            PackageSpec::Alias { ref package, .. } => package,
+            PackageSpec::Alias { ref spec, .. } => spec,
             pkg @ PackageSpec::Npm { .. } => pkg,
             _ => unreachable!(),
         };

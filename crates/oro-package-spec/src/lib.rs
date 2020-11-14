@@ -30,7 +30,7 @@ pub enum PackageSpec {
     },
     Alias {
         name: String,
-        package: Box<PackageSpec>,
+        spec: Box<PackageSpec>,
     },
     Npm {
         scope: Option<String>,
@@ -44,7 +44,7 @@ impl PackageSpec {
     pub fn is_npm(&self) -> bool {
         use PackageSpec::*;
         match self {
-            Alias { package, .. } => package.is_npm(),
+            Alias { spec, .. } => spec.is_npm(),
             Dir { .. } | Git(..) => false,
             Npm { .. } => true,
         }
@@ -53,7 +53,7 @@ impl PackageSpec {
     pub fn target(&self) -> &PackageSpec {
         use PackageSpec::*;
         match self {
-            Alias { ref package, .. } => package,
+            Alias { ref spec, .. } => spec,
             _ => self,
         }
     }
@@ -87,15 +87,12 @@ impl fmt::Display for PackageSpec {
                 }
                 Ok(())
             }
-            Alias {
-                ref name,
-                ref package,
-            } => {
+            Alias { ref name, ref spec } => {
                 write!(f, "{}@", name)?;
-                if let Npm { .. } = **package {
+                if let Npm { .. } = **spec {
                     write!(f, "npm:")?;
                 }
-                write!(f, "{}", package)
+                write!(f, "{}", spec)
             }
         }
     }

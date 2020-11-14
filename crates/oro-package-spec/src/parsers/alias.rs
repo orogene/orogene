@@ -31,7 +31,7 @@ where
                 fullname.push_str(name);
                 PackageSpec::Alias {
                     name: fullname,
-                    package: Box::new(arg),
+                    spec: Box::new(arg),
                 }
             },
         ),
