@@ -89,7 +89,7 @@ impl PackageFetcher for DirFetcher {
     }
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
-        self.metadata_from_resolved(&pkg.resolved).await
+        self.metadata_from_resolved(pkg.resolved()).await
     }
 
     async fn packument(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>> {

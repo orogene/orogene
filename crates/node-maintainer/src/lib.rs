@@ -138,7 +138,7 @@ impl NodeMaintainer {
             }
             for (package, dep_type) in future::join_all(packages.drain(..)).await {
                 let package = package?;
-                let requested = package.from.clone();
+                let requested = package.from().clone();
                 let child_idx = self.graph.add_node(package);
                 q.push_back(child_idx);
                 self.graph.add_edge(

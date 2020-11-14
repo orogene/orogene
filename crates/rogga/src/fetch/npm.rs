@@ -115,17 +115,17 @@ impl PackageFetcher for NpmFetcher {
     }
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
-        let wanted = match pkg.resolved {
+        let wanted = match pkg.resolved() {
             PackageResolution::Npm { ref version, .. } => version,
             _ => unreachable!(),
         };
-        let packument = self.packument(&pkg.from, &Path::new("")).await?;
+        let packument = self.packument(&pkg.from(), &Path::new("")).await?;
         packument.versions.get(&wanted).cloned().ok_or_else(|| {
             Error::PackageFetcherError(
                 DiagnosticCode::OR1023,
                 format!(
                     "Requested version `{}` for `{}` does not exist.",
-                    wanted, pkg.from
+                    wanted, pkg.from()
                 ),
             )
         })
@@ -156,7 +156,7 @@ impl PackageFetcher for NpmFetcher {
         // would otherwise, you know, make it so we can only make one request
         // at a time :(
         let client = self.client.lock().await.clone();
-        let url = match pkg.resolved {
+        let url = match pkg.resolved() {
             PackageResolution::Npm { ref tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
@@ -164,7 +164,7 @@ impl PackageFetcher for NpmFetcher {
             client
                 .send(client.opts(Method::Get, url.clone()))
                 .await
-                .with_context(|| format!("Failed to get tarball for {:#?}.", pkg.resolved))?,
+                .with_context(|| format!("Failed to get tarball for {:#?}.", pkg.resolved()))?,
         ))
     }
 }

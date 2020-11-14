@@ -12,13 +12,25 @@ use crate::resolver::PackageResolution;
 /// A resolved package. A concrete version has been determined from its
 /// PackageSpec by the version resolver.
 pub struct Package {
-    pub from: PackageSpec,
-    pub name: String,
-    pub resolved: PackageResolution,
+    pub(crate) from: PackageSpec,
+    pub(crate) name: String,
+    pub(crate) resolved: PackageResolution,
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
 }
 
 impl Package {
+    pub fn from(&self) -> &PackageSpec {
+        &self.from
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name[..]
+    }
+
+    pub fn resolved(&self) -> &PackageResolution {
+        &self.resolved
+    }
+
     pub async fn metadata(&self) -> Result<VersionMetadata> {
         self.fetcher.metadata(&self).await
     }
