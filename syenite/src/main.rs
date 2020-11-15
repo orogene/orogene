@@ -1,8 +1,7 @@
-use anyhow::Result;
-
+use oro_diagnostics::DiagnosticResult;
 use syenite::Syenite;
 
 #[async_std::main]
-async fn main() -> Result<()> {
-    Syenite::load().await
+async fn main() -> DiagnosticResult<()> {
+    Ok(Syenite::load().await?)
 }

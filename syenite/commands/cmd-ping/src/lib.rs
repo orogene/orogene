@@ -1,11 +1,11 @@
 use std::time::Instant;
 
-use anyhow::{Context, Result};
 use async_trait::async_trait;
 use clap::Clap;
 use oro_client::{self, Method, OroClient};
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
+use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 use serde_json::Value;
 use url::Url;
 
@@ -45,12 +45,13 @@ impl OroCommand for PingCmd {
         if self.json {
             let details: Value =
                 serde_json::from_str(&res.body_string().await.unwrap_or_else(|_| "{}".into()))
-                    .with_context(|| String::from("Failed to deserialize ping response details."))?;
+                    .as_diagnostic("ping::deserialize")?;
             let output = serde_json::to_string_pretty(&serde_json::json!({
                 "registry": self.registry.to_string(),
                 "time": time,
                 "details": details,
-            }))?;
+            }))
+            .as_diagnostic("ping::serialize")?;
             if !self.quiet {
                 println!("{}", output);
             }

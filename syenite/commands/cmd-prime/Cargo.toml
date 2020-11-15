@@ -8,11 +8,11 @@ edition = "2018"
 rogga = { path = "../../../crates/rogga" }
 oro-command = { path = "../../../crates/oro-command" }
 oro-config = { path = "../../../crates/oro-config" }
+oro-diagnostics = { path = "../../../crates/oro-diagnostics" }
 oro-pkg-root = { path = "../../../crates/oro-pkg-root" }
 oro-classic-resolver = { path = "../../../crates/oro-classic-resolver" }
 node-maintainer = { path = "../../../crates/node-maintainer" }
 
-anyhow = "1.0.25"
 clap = { git = "https://github.com/zkat/clap" }
 async-trait = "0.1.19"
 log = "0.4.11"

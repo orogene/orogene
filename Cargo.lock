@@ -770,7 +770,6 @@ dependencies = [
 name = "cmd-ping"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "clap 3.0.0-beta.1",
  "log",
@@ -787,7 +786,6 @@ dependencies = [
 name = "cmd-prime"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-std",
  "async-trait",
  "clap 3.0.0-beta.1",
@@ -796,6 +794,7 @@ dependencies = [
  "oro-classic-resolver",
  "oro-command",
  "oro-config",
+ "oro-diagnostics",
  "oro-pkg-root",
  "rogga",
  "url",
@@ -805,7 +804,6 @@ dependencies = [
 name = "cmd-restore"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-std",
  "async-trait",
  "clap 3.0.0-beta.1",
@@ -813,6 +811,7 @@ dependencies = [
  "log",
  "oro-command",
  "oro-config",
+ "oro-diagnostics",
  "oro-tree",
  "rogga",
  "serde_json",
@@ -824,7 +823,6 @@ dependencies = [
 name = "cmd-shell"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "clap 3.0.0-beta.1",
  "directories 2.0.2",
@@ -839,7 +837,6 @@ dependencies = [
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
  "chrono",
  "chrono-humanize",
@@ -851,6 +848,7 @@ dependencies = [
  "oro-client",
  "oro-command",
  "oro-config",
+ "oro-diagnostics",
  "oro-manifest",
  "rogga",
  "serde_json",
@@ -2213,8 +2211,8 @@ dependencies = [
 name = "oro-command"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-trait",
+ "oro-diagnostics",
 ]
 
 [[package]]
@@ -2225,9 +2223,11 @@ dependencies = [
  "clap 3.0.0-beta.1",
  "config 0.9.3",
  "oro-config-derive",
+ "oro-diagnostics",
  "pretty_assertions",
  "serde 1.0.117",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -2244,6 +2244,7 @@ dependencies = [
 name = "oro-diagnostics"
 version = "0.1.0"
 dependencies = [
+ "thiserror",
  "url",
 ]
 
@@ -3258,7 +3259,6 @@ dependencies = [
 name = "syenite"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-std",
  "async-trait",
  "clap 3.0.0-beta.1",
@@ -3273,6 +3273,7 @@ dependencies = [
  "log",
  "oro-command",
  "oro-config",
+ "oro-diagnostics",
  "smol 0.1.18",
 ]
 
@@ -3488,18 +3489,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.21"
+version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "318234ffa22e0920fe9a40d7b8369b5f649d490980cf7aadcf1eb91594869b42"
+checksum = "0e9ae34b84616eedaaf1e9dd6026dbe00dcafa92aa0c8077cb69df1fcfe5e53e"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.21"
+version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cae2447b6282786c3493999f40a9be2a6ad20cb8bd268b0a0dbf5a065535c0ab"
+checksum = "9ba20f23e85b10754cd195504aebf6a27e2e6cbe28c17778a0c930724628dd56"
 dependencies = [
  "proc-macro2",
  "quote",

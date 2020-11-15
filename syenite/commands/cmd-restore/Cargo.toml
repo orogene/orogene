@@ -10,9 +10,9 @@ edition = "2018"
 rogga = { path = "../../../crates/rogga" }
 oro-command = { path = "../../../crates/oro-command" }
 oro-config = { path = "../../../crates/oro-config" }
+oro-diagnostics = { path = "../../../crates/oro-diagnostics" }
 oro-tree = { path = "../../../crates/oro-tree" }
 
-anyhow = "1.0.25"
 clap = { git = "https://github.com/zkat/clap" }
 async-trait = "0.1.19"
 serde_json = "1.0.42"

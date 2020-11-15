@@ -13,7 +13,9 @@ use crate::parsers::util;
 use crate::{PackageSpec, VersionSpec};
 
 /// npm-spec := [ '@' not('/')+ '/' ] not('@/')+ [ '@' version-req ]
-pub(crate) fn npm_spec<'a>(input: &'a str) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
+pub(crate) fn npm_spec<'a>(
+    input: &'a str,
+) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
     context(
         "npm package spec",
         map(

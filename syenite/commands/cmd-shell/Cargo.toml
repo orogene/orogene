@@ -12,7 +12,6 @@ oro-config = { path = "../../../crates/oro-config" }
 oro-diagnostics = { path = "../../../crates/oro-diagnostics" }
 clap = { git = "https://github.com/zkat/clap" }
 
-anyhow = "1.0.25"
 async-trait = "0.1.19"
 directories = "2.0.2"
 log = "0.4.11"

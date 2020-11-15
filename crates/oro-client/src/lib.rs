@@ -94,7 +94,10 @@ impl OroClient {
             .client
             .send(req)
             .await
-            .map_err(|e| OroClientError::RequestError { surf_err: e, url: url.clone() })?;
+            .map_err(|e| OroClientError::RequestError {
+                surf_err: e,
+                url: url.clone(),
+            })?;
         if res.status().is_client_error() || res.status().is_server_error() {
             let msg = match res.body_json::<NpmError>().await {
                 Ok(err) => err.message,
