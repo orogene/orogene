@@ -4,7 +4,7 @@ use std::str::FromStr;
 use oro_node_semver::VersionReq as Range;
 use url::Url;
 
-use crate::error::PackageSpecError;
+use crate::error::{PackageSpecError, SpecErrorKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GitHost {
@@ -23,7 +23,13 @@ impl FromStr for GitHost {
             "gist" => GitHost::Gist,
             "gitlab" => GitHost::GitLab,
             "bitbucket" => GitHost::Bitbucket,
-            _ => return Err(PackageSpecError::InvalidGitHost(s.into())),
+            _ => {
+                return Err(PackageSpecError {
+                    input: s.into(),
+                    offset: 0,
+                    kind: SpecErrorKind::InvalidGitHost(s.into()),
+                })
+            }
         })
     }
 }

@@ -4,20 +4,18 @@ use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case as tag, take_till1};
 use nom::character::complete::char;
 use nom::combinator::{cut, map, map_res, opt};
-use nom::error::{context, ParseError};
+use nom::error::context;
 use nom::sequence::{delimited, preceded, tuple};
 use nom::IResult;
 
+use crate::error::SpecParseError;
 use crate::parsers::util;
 use crate::{PackageSpec, VersionSpec};
 
 /// npm-spec := [ '@' not('/')+ '/' ] not('@/')+ [ '@' version-req ]
-pub fn npm_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+pub(crate) fn npm_spec<'a>(input: &'a str) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
     context(
-        "npm package",
+        "npm package spec",
         map(
             tuple((
                 opt(delimited(
@@ -44,36 +42,24 @@ where
     )(input)
 }
 
-fn version_req<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+fn version_req<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
     context(
         "version requirement",
         alt((semver_version, semver_range, version_tag)),
     )(input)
 }
 
-fn semver_version<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+fn semver_version<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
     let (input, version) = map_res(take_till1(|_| false), SemVerVersion::parse)(input)?;
     Ok((input, VersionSpec::Version(version)))
 }
 
-fn semver_range<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+fn semver_range<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
     let (input, range) = map_res(take_till1(|_| false), SemVerVersionReq::parse)(input)?;
     Ok((input, VersionSpec::Range(range)))
 }
 
-fn version_tag<'a, E>(input: &'a str) -> IResult<&'a str, VersionSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+fn version_tag<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
     context(
         "dist tag",
         map(map_res(take_till1(|_| false), util::no_url_encode), |t| {

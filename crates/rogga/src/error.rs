@@ -1,3 +1,5 @@
+use std::io::Error as IoError;
+
 use oro_diagnostics::{Diagnostic, DiagnosticCategory};
 use oro_package_spec::PackageSpecError;
 use thiserror::Error;
@@ -18,13 +20,11 @@ pub enum RoggaError {
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
 
-    #[error("Failed to deserialize package data for `{name}`:\n\t{serde_error}")]
-    SerdeError {
-        name: String,
-        data: String,
-        #[source]
-        serde_error: serde_json::Error,
-    },
+    #[error(transparent)]
+    IoError(#[from] IoError),
+
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that

@@ -30,11 +30,9 @@ impl DirFetcher {
         // TODO: Orogene.toml?
         let json = async_std::fs::read(&path.join("package.json"))
             .await
-            .to_internal()
-            .with_context(|| "Failed to read package.json".into())?;
-        let pkgjson: OroManifest = serde_json::from_slice(&json[..])
-            .to_internal()
-            .with_context(|| "Failed to parse package.json".into())?;
+            .map_err(RoggaError::IoError)?;
+        let pkgjson: OroManifest =
+            serde_json::from_slice(&json[..]).map_err(RoggaError::SerdeError)?;
         Ok(Manifest(pkgjson))
     }
 

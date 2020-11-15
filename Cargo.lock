@@ -2321,7 +2321,8 @@ dependencies = [
 name = "oro-package-spec"
 version = "0.1.0"
 dependencies = [
- "nom 5.1.2",
+ "bytecount",
+ "nom 6.0.0",
  "oro-diagnostics",
  "oro-node-semver",
  "percent-encoding",

@@ -90,13 +90,7 @@ impl NpmFetcher {
             .await
             .map_err(|e| RoggaError::MiscError(e.to_string()))?;
         let packument: Arc<Packument> =
-            Arc::new(serde_json::from_str(&packument_data).map_err(|err| {
-                RoggaError::SerdeError {
-                    name: name.into(),
-                    data: packument_data,
-                    serde_error: err,
-                }
-            })?);
+            Arc::new(serde_json::from_str(&packument_data).map_err(RoggaError::SerdeError)?);
         self.packuments.insert(packument_url, packument.clone());
         Ok(packument)
     }
