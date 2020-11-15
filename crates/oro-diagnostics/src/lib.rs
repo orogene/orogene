@@ -1,10 +1,11 @@
+use std::fmt;
 use std::path::PathBuf;
 
 use thiserror::Error;
 use url::{Host, Url};
 
-#[derive(Debug, Error)]
-#[error("{}", self.pretty_print())]
+#[derive(Error)]
+#[error("{:?}", self)]
 pub struct DiagnosticError {
     pub error: Box<dyn std::error::Error + Send + Sync>,
     pub category: DiagnosticCategory,
@@ -12,36 +13,41 @@ pub struct DiagnosticError {
     pub advice: Option<String>,
 }
 
+impl fmt::Debug for DiagnosticError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            return fmt::Debug::fmt(&self.error, f);
+        } else {
+            use DiagnosticCategory::*;
+            write!(f, "{}\n\n", self.diagnostic_path())?;
+            write!(f, "{}", self.error)?;
+            write!(
+                f,
+                "{}",
+                match self.category {
+                    Misc => "".into(),
+                    Net { ref host, ref url } => {
+                        if let Some(url) = url {
+                            format!("\n\nurl: {}", url)
+                        } else {
+                            format!("\n\nhost: {}", host)
+                        }
+                    }
+                    Fs { .. } => "something happened with the filesystem".into(),
+                    Parse { .. } => "something happened while parsing".into(),
+                },
+            )?;
+            if let Some(advice) = &self.advice {
+                write!(f, "\nhelp: {}", advice)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 impl DiagnosticError {
     fn diagnostic_path(&self) -> String {
         format!("{}::{}", self.category.prefix(), self.subpath)
-    }
-
-    fn pretty_print(&self) -> String {
-        use DiagnosticCategory::*;
-        let mut output = String::new();
-        output.push_str("Code: ");
-        output.push_str(&self.diagnostic_path()[..]);
-        output.push_str("\n\n");
-        output.push_str(&self.to_string()[..]);
-        output.push_str(
-            &match self.category {
-                Misc => "".into(),
-                Net { ref host, ref url } => {
-                    if let Some(url) = url {
-                        format!("\n\nurl: {}", url)
-                    } else {
-                        format!("\n\nhost: {}", host)
-                    }
-                }
-                Fs { .. } => "something happened with the filesystem".into(),
-                Parse { .. } => "something happened while parsing".into(),
-            }[..],
-        );
-        if let Some(advice) = &self.advice {
-            output.push_str(&format!("\n\nhelp: {}", advice)[..])
-        }
-        output
     }
 }
 
