@@ -437,7 +437,7 @@ impl<'de> Deserialize<'de> for VersionReq {
 }
 
 fn many_predicates<'a>(input: &'a str) -> IResult<&'a str, Vec<Range>, SemverParseError<&'a str>> {
-    context("many predicats", separated_list1(tag(" || "), predicates))(input)
+    context("many predicates", separated_list1(tag(" || "), predicates))(input)
 }
 
 fn predicates<'a>(input: &'a str) -> IResult<&'a str, Range, SemverParseError<&'a str>> {
