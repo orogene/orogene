@@ -70,7 +70,7 @@ impl NpmFetcher {
             .join(&name)
             // This... should not fail unless you did some shenanigans like
             // constructing PackageRequests by hand, so no error code.
-            .with_context(|| format!("Invalid package name: {}.", name))?;
+            .map_err(RoggaError::UrlError)?;
         if let Some(packument) = self.packuments.get(&packument_url) {
             return Ok(packument.value().clone());
         }
@@ -85,7 +85,7 @@ impl NpmFetcher {
                 },
             ))
             .await
-            .with_context(|| format!("Failed to get packument for {}.", name))?
+            .map_err(RoggaError::OroClientError)?
             .body_string()
             .await
             .map_err(|e| RoggaError::MiscError(e.to_string()))?;
@@ -155,7 +155,7 @@ impl PackageFetcher for NpmFetcher {
             client
                 .send(client.opts(Method::Get, url.clone()))
                 .await
-                .with_context(|| format!("Failed to get tarball for {:#?}.", pkg.resolved()))?,
+                .map_err(RoggaError::OroClientError)?,
         ))
     }
 }

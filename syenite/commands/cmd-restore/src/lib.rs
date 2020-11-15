@@ -67,23 +67,23 @@ impl RestoreCmd {
     fn extract<'a>(
         &'a self,
         rogga: &'a Rogga,
-        name: &'a str,
+        _name: &'a str,
         dep: &'a Package,
         dir: PathBuf,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let mut futs = Vec::new();
-            let req = rogga.dep_request(name, &dep.version, &dir)?;
-            let resolver = PkgLockResolver { dep };
+            // let req = rogga.dep_request(name, &dep.version, &dir)?;
+            // let resolver = PkgLockResolver { dep };
             for (name, dep) in dep.dependencies.iter() {
                 if !dep.bundled {
                     futs.push(self.extract(rogga, name, dep, dir.join("node_modules").join(name)));
                 }
             }
             futs.push(Box::pin(async move {
-                let resolved = req.resolve_with(&resolver).await?;
-                let tarball = resolved.tarball().await?;
-                rogga::cache::from_tarball(&self.cache, tarball).await?;
+                // let resolved = req.resolve_with(&resolver).await?;
+                // let tarball = resolved.tarball().await?;
+                // rogga::cache::from_tarball(&self.cache, tarball).await?;
                 // rogga::cache::tarball_itself(&self.cache, tarball).await?;
                 // rogga::cache::tarball_to_mem(&self.cache, tarball).await?;
                 // rogga::cache::to_node_modules(

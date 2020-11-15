@@ -2,7 +2,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::{Version, VersionReq};
 use rogga::{PackageRequest, PackageSpec, VersionSpec};
 
@@ -33,7 +32,6 @@ impl Term {
     pub async fn relation(&self, other: &Term) -> Result<SetRelation> {
         if self.request.name() != other.request.name() {
             return Err(NodeMaintainerError::NameMismatch(
-                DiagnosticCode::OR1004,
                 self.request.name().clone(),
                 other.request.name().clone(),
             ));
@@ -178,10 +176,7 @@ async fn npm_version_req(req: &(&Term, &PackageRequest)) -> Result<VersionReq> {
                 let version = if let Some(version) = packument.tags.get(tag) {
                     version
                 } else {
-                    return Err(NodeMaintainerError::TagNotFound(
-                        DiagnosticCode::OR1005,
-                        tag.clone(),
-                    ));
+                    return Err(NodeMaintainerError::TagNotFound(tag.clone()));
                 };
                 version_to_exact(version)
             }

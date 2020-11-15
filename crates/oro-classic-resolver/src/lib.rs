@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use oro_diagnostics::{Diagnostic, DiagnosticCode};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory};
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use oro_package_spec::{PackageSpec, VersionSpec};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
@@ -19,18 +19,23 @@ impl Default for ClassicResolver {
 
 #[derive(Debug, Error)]
 pub enum ClassicResolverError {
-    #[error("{0:#?}: Only Version, Tag, Range, and Alias package args are supported.")]
-    InvalidPackageSpec(DiagnosticCode),
+    #[error("Only Version, Tag, Range, and Alias package args are supported, but got `{0}`.")]
+    InvalidPackageSpec(PackageSpec),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
 
 impl Diagnostic for ClassicResolverError {
-    fn code(&self) -> DiagnosticCode {
-        match self {
-            ClassicResolverError::InvalidPackageSpec(code) => *code,
-            ClassicResolverError::IoError(_) => DiagnosticCode::OR1000,
-        }
+    fn category(&self) -> DiagnosticCategory {
+        todo!()
+    }
+
+    fn subpath(&self) -> String {
+        todo!()
+    }
+
+    fn advice(&self) -> Option<String> {
+        todo!()
     }
 }
 
@@ -72,7 +77,6 @@ impl PackageResolver for ClassicResolver {
             .map_err(|e| ResolverError::OtherError(Box::new(e)))?;
         if packument.versions.is_empty() {
             return Err(ResolverError::NoVersion {
-                code: DiagnosticCode::OR1009,
                 name: wanted.name().clone(),
                 spec: wanted.spec().clone(),
                 versions: Vec::new(),
@@ -97,7 +101,7 @@ impl PackageResolver for ClassicResolver {
             } => None,
             _ => {
                 return Err(ResolverError::OtherError(Box::new(
-                    ClassicResolverError::InvalidPackageSpec(DiagnosticCode::OR1007),
+                    ClassicResolverError::InvalidPackageSpec(spec.clone()),
                 )))
             }
         };
@@ -166,7 +170,6 @@ impl PackageResolver for ClassicResolver {
                 })
             })
             .ok_or_else(|| ResolverError::NoVersion {
-                code: DiagnosticCode::OR1008,
                 name: wanted.name().clone(),
                 spec: wanted.spec().clone(),
                 versions: packument.versions.keys().map(|k| k.to_string()).collect(),
