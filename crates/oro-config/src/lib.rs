@@ -24,15 +24,15 @@ pub enum OroConfigError {
 
 impl Diagnostic for OroConfigError {
     fn category(&self) -> DiagnosticCategory {
-        todo!()
+        DiagnosticCategory::Misc
     }
 
     fn subpath(&self) -> String {
-        todo!()
+        "config::error".into()
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
+        None
     }
 }
 

@@ -5,7 +5,7 @@ use thiserror::Error;
 use url::ParseError as UrlParseError;
 
 #[derive(Debug, Error)]
-#[error("Error parsing package spec: {kind}")]
+#[error("Error parsing package spec. {kind}")]
 pub struct PackageSpecError {
     pub input: String,
     pub offset: usize,
@@ -45,7 +45,7 @@ impl PackageSpecError {
 
 #[derive(Debug, Error)]
 pub enum SpecErrorKind {
-    #[error("Found invalid characters in identifier: `{0}`")]
+    #[error("Found invalid characters: `{0}`")]
     InvalidCharacters(String),
     #[error("Drive letters on Windows can only be alphabetical. Got `{0}`.")]
     InvalidDriveLetter(char),
@@ -115,6 +115,9 @@ impl<I> ContextError<I> for SpecParseError<I> {
     }
 }
 
+// There's a few parsers that just... manually return SpecParseError in a
+// map_res, so this absurd thing is actually needed. Curious? Just comment it
+// out and look at all the red.
 impl<'a> FromExternalError<&'a str, SpecParseError<&'a str>> for SpecParseError<&'a str> {
     fn from_external_error(_input: &'a str, _kind: ErrorKind, e: SpecParseError<&'a str>) -> Self {
         e

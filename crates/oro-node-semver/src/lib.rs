@@ -26,7 +26,7 @@ const MAX_SAFE_INTEGER: u64 = 900_719_925_474_099;
 const MAX_LENGTH: usize = 256;
 
 #[derive(Debug, Error, Eq, PartialEq)]
-#[error("Error parsing semver string: {kind}")]
+#[error("Error parsing semver string. {kind}")]
 pub struct SemverError {
     input: String,
     offset: usize,
@@ -103,7 +103,7 @@ impl Diagnostic for SemverError {
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
+        None
     }
 }
 

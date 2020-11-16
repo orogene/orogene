@@ -50,7 +50,7 @@ impl Diagnostic for OroClientError {
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
+        None
     }
 }
 
