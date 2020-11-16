@@ -9,64 +9,45 @@ pub enum NodeMaintainerError {
     NameMismatch(String, String),
     #[error("Tag `{0}` does not exist in registry.")]
     TagNotFound(String),
+    #[error("Current directory could not be detected.")]
+    NoCwd(#[from] std::io::Error),
     /// Error returned from Rogga
     #[error(transparent)]
-    RoggaError {
-        #[from]
-        source: rogga::RoggaError,
-    },
-    /// Returned if an internal (e.g. io) operation has failed.
-    #[error(transparent)]
-    InternalError {
-        #[from]
-        /// The underlying error
-        source: InternalError,
-    },
+    RoggaError(#[from] rogga::RoggaError),
 }
 
 impl Diagnostic for NodeMaintainerError {
     fn category(&self) -> DiagnosticCategory {
-        todo!()
+        use DiagnosticCategory::*;
+        use NodeMaintainerError::*;
+        match self {
+            NameMismatch(_, _) => Misc,
+            TagNotFound(_) => Misc,
+            NoCwd(_) => Misc,
+            RoggaError(source) => source.category(),
+        }
     }
 
     fn subpath(&self) -> String {
-        todo!()
+        use NodeMaintainerError::*;
+        match self {
+            NameMismatch(_, _) => "node_maintainer::name_mismatch".into(),
+            TagNotFound(_) => "node_maintainer::tag_not_found".into(),
+            NoCwd(_) => "node_maintainer::no_cwd".into(),
+            RoggaError(source) => source.subpath(),
+        }
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
-    }
-}
-
-#[derive(Error, Debug)]
-#[error("{source}\n\n  {}", context.join("\n  "))]
-pub struct InternalError {
-    source: Box<dyn std::error::Error + Send + Sync>,
-    context: Vec<String>,
-}
-
-pub trait Internal<T> {
-    fn to_internal(self) -> InternalResult<T>;
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> InternalResult<T>;
-}
-
-impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::result::Result<T, E> {
-    fn to_internal(self) -> InternalResult<T> {
-        self.map_err(|e| InternalError {
-            source: Box::new(e),
-            context: Vec::new(),
-        })
-    }
-
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> InternalResult<T> {
-        self.map_err(|e| InternalError {
-            source: Box::new(e),
-            context: vec![f()],
-        })
+        use NodeMaintainerError::*;
+        match self {
+            NameMismatch(_, _) => None,
+            TagNotFound(_) => None,
+            NoCwd(_) => None,
+            RoggaError(source) => source.advice(),
+        }
     }
 }
 
 /// The result type returned by calls to this library
 pub type Result<T> = std::result::Result<T, NodeMaintainerError>;
-
-pub type InternalResult<T> = std::result::Result<T, InternalError>;

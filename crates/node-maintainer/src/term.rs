@@ -1,3 +1,4 @@
+/*
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -5,7 +6,7 @@ use std::sync::Arc;
 use oro_node_semver::{Version, VersionReq};
 use rogga::{PackageRequest, PackageSpec, VersionSpec};
 
-use crate::error::{Internal, NodeMaintainerError, Result};
+use crate::error::{NodeMaintainerError, Result};
 use crate::set_relation::SetRelation;
 
 // TODO: Implement Debug, Eq, PArtialEq
@@ -171,7 +172,6 @@ async fn npm_version_req(req: &(&Term, &PackageRequest)) -> Result<VersionReq> {
         use VersionSpec::*;
         Ok(match vspec {
             Tag(ref tag) => {
-                // TODO: Oh no this triggers a clone. Should .packument() just return &Packument?
                 let packument = req.0.request.packument().await.to_internal()?;
                 let version = if let Some(version) = packument.tags.get(tag) {
                     version
@@ -191,3 +191,5 @@ async fn npm_version_req(req: &(&Term, &PackageRequest)) -> Result<VersionReq> {
 fn version_to_exact(v: &Version) -> VersionReq {
     format!("={}", v).parse().unwrap()
 }
+
+*/
