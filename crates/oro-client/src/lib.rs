@@ -17,11 +17,11 @@ pub enum OroClientError {
     // TODO: add registry URL here?
     #[error("Registry request failed:\n\t{surf_err}")]
     RequestError { surf_err: SurfError, url: Url },
-    #[error("Registry returned failed status code {status_code} for a request.\n\t{}", context.join("\n  "))]
+    #[error("Registry returned failed status code {status_code} for a request.")]
     ResponseError {
         url: Url,
         status_code: StatusCode,
-        context: Vec<String>,
+        message: Option<String>,
     },
 }
 
@@ -42,21 +42,15 @@ impl Diagnostic for OroClientError {
     }
 
     fn subpath(&self) -> String {
-        todo!()
+        use OroClientError::*;
+        match self {
+            RequestError { .. } => "http::bad_request".into(),
+            ResponseError { .. } => "http::response_failure".into(),
+        }
     }
 
     fn advice(&self) -> Option<String> {
         todo!()
-    }
-}
-
-impl OroClientError {
-    fn res_err(url: Url, res: &Response, ctx: Vec<String>) -> Self {
-        Self::ResponseError {
-            status_code: res.status(),
-            context: ctx,
-            url,
-        }
     }
 }
 
@@ -101,18 +95,22 @@ impl OroClient {
         if res.status().is_client_error() || res.status().is_server_error() {
             let msg = match res.body_json::<NpmError>().await {
                 Ok(err) => err.message,
-                parse_err @ Err(_) => match res.body_string().await {
+                Err(_) => match res.body_string().await {
                     Ok(msg) => msg,
-                    body_err @ Err(_) => {
-                        return Err(OroClientError::res_err(
+                    Err(_) => {
+                        return Err(OroClientError::ResponseError {
                             url,
-                            &res,
-                            vec![format!("{:?}", parse_err), format!("{:?}", body_err)],
-                        ));
+                            status_code: res.status(),
+                            message: None,
+                        });
                     }
                 },
             };
-            Err(OroClientError::res_err(url, &res, vec![msg]))
+            Err(OroClientError::ResponseError {
+                status_code: res.status(),
+                url,
+                message: Some(msg),
+            })
         } else {
             Ok(res)
         }

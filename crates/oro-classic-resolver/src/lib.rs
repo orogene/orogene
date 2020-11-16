@@ -135,9 +135,6 @@ impl PackageResolver for ClassicResolver {
             } = spec
             {
                 target = max_satisfying(packument.versions.keys(), range);
-                if target.is_none() {
-                    eprintln!("Failed to find version for {}", wanted.name());
-                }
             }
         }
 

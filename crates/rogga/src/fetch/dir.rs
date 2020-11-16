@@ -28,9 +28,10 @@ impl DirFetcher {
 impl DirFetcher {
     async fn manifest(&self, path: &Path) -> Result<Manifest> {
         // TODO: Orogene.toml?
+        let pkg_path = path.join("package.json");
         let json = async_std::fs::read(&path.join("package.json"))
             .await
-            .map_err(RoggaError::IoError)?;
+            .map_err(|err| RoggaError::IoError(err, pkg_path))?;
         let pkgjson: OroManifest =
             serde_json::from_slice(&json[..]).map_err(RoggaError::SerdeError)?;
         Ok(Manifest(pkgjson))

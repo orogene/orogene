@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 url = "2.2.0"
 thiserror = "1.0.22"
+colored = "2.0.0"

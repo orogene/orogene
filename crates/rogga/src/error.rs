@@ -1,4 +1,8 @@
+use std::path::PathBuf;
+
 use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_node_semver::Version;
+use oro_package_spec::PackageSpec;
 use thiserror::Error;
 
 use crate::resolver::ResolverError;
@@ -7,8 +11,8 @@ use crate::resolver::ResolverError;
 #[derive(Error, Debug)]
 pub enum RoggaError {
     /// Something went wrong while fetching a package.
-    #[error("Something went wrong with fetching a package:\n\t{0}")]
-    PackageFetcherError(String),
+    #[error("Package for `{0}` was found, but resolved version `{1}` does not exist.")]
+    MissingVersion(PackageSpec, Version),
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
@@ -17,8 +21,8 @@ pub enum RoggaError {
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
 
-    #[error(transparent)]
-    IoError(#[from] std::io::Error),
+    #[error("{0}")]
+    IoError(#[source] std::io::Error, PathBuf),
 
     #[error(transparent)]
     OroClientError(#[from] oro_client::OroClientError),
@@ -38,15 +42,48 @@ pub enum RoggaError {
 
 impl Diagnostic for RoggaError {
     fn category(&self) -> DiagnosticCategory {
-        todo!()
+        use DiagnosticCategory::*;
+        use RoggaError::*;
+        match self {
+            MissingVersion(..) => Misc,
+            PackageSpecError(err) => err.category(),
+            ResolverError(err) => err.category(),
+            IoError(_, ref path) => Fs { path: path.clone() },
+            OroClientError(err) => err.category(),
+            SerdeError(_) => todo!(),
+            UrlError(_) => todo!(),
+            MiscError(_) => Misc,
+        }
     }
 
     fn subpath(&self) -> String {
-        todo!()
+        use RoggaError::*;
+        match self {
+            MissingVersion(..) => "rogga::missing_version".into(),
+            PackageSpecError(err) => err.subpath(),
+            ResolverError(err) => err.subpath(),
+            IoError(_, _) => "rogga::dir::read".into(),
+            OroClientError(err) => err.subpath(),
+            SerdeError(_) => "rogga::serde".into(),
+            UrlError(_) => "rogga::bad_url".into(),
+            MiscError(_) => "rogga::misc".into(),
+        }
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
+        use RoggaError::*;
+        match self {
+            MissingVersion(..) => {
+                Some("Try using `oro view` to see what versions are available".into())
+            }
+            PackageSpecError(err) => err.advice(),
+            ResolverError(err) => err.advice(),
+            IoError(..) => None,
+            OroClientError(err) => err.advice(),
+            SerdeError(..) => None,
+            UrlError(..) => None,
+            MiscError(..) => None,
+        }
     }
 }
 

@@ -113,13 +113,11 @@ impl PackageFetcher for NpmFetcher {
             _ => unreachable!(),
         };
         let packument = self.packument(&pkg.from(), &Path::new("")).await?;
-        packument.versions.get(&wanted).cloned().ok_or_else(|| {
-            RoggaError::PackageFetcherError(format!(
-                "Requested version `{}` for `{}` does not exist.",
-                wanted,
-                pkg.from()
-            ))
-        })
+        packument
+            .versions
+            .get(&wanted)
+            .cloned()
+            .ok_or_else(|| RoggaError::MissingVersion(pkg.from().clone(), wanted.clone()))
     }
 
     async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {

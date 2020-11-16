@@ -1,6 +1,7 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use colored::Colorize;
 use thiserror::Error;
 use url::{Host, Url};
 
@@ -19,26 +20,19 @@ impl fmt::Debug for DiagnosticError {
             return fmt::Debug::fmt(&self.error, f);
         } else {
             use DiagnosticCategory::*;
-            write!(f, "{}\n\n", self.diagnostic_path())?;
+            write!(f, "{}", self.diagnostic_path().red())?;
+            if let Net { ref host, ref url } = &self.category {
+                if let Some(url) = url {
+                    write!(f, " @ {}", format!("{}", url).cyan().underline())?;
+                } else {
+                    write!(f, " @ {}", format!("{}", host).cyan().underline())?;
+                }
+            }
+            write!(f, "\n\n")?;
             write!(f, "{}", self.error)?;
-            write!(
-                f,
-                "{}",
-                match self.category {
-                    Misc => "".into(),
-                    Net { ref host, ref url } => {
-                        if let Some(url) = url {
-                            format!("\n\nurl: {}", url)
-                        } else {
-                            format!("\n\nhost: {}", host)
-                        }
-                    }
-                    Fs { .. } => "something happened with the filesystem".into(),
-                    Parse { .. } => "something happened while parsing".into(),
-                },
-            )?;
             if let Some(advice) = &self.advice {
-                write!(f, "\nhelp: {}", advice)?;
+                write!(f, "\n\n{}", "help".yellow())?;
+                write!(f, ": {}", advice)?;
             }
         }
         Ok(())

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use http_types::Url;
-use oro_diagnostics::Diagnostic;
+use oro_diagnostics::{Diagnostic, DiagnosticCategory};
 use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use crate::request::PackageRequest;
 
 #[derive(Debug, Error)]
 pub enum ResolverError {
-    #[error("No matching version found for spec {name}@{spec:?} in {versions:#?}.")]
+    #[error("No matching `{name}` version found for spec `{spec}`.")]
     NoVersion {
         name: String,
         spec: PackageSpec,
@@ -23,16 +23,27 @@ pub enum ResolverError {
 }
 
 impl Diagnostic for ResolverError {
-    fn category(&self) -> oro_diagnostics::DiagnosticCategory {
-        todo!()
+    fn category(&self) -> DiagnosticCategory {
+        DiagnosticCategory::Misc
     }
 
     fn subpath(&self) -> String {
-        todo!()
+        use ResolverError::*;
+        match self {
+            NoVersion { .. } => "classic_resolver::no_matching_version".into(),
+            OtherError(err) => err.subpath(),
+        }
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
+        use ResolverError::*;
+        match self {
+            NoVersion { ref name, .. } => Some(format!(
+                "Try using `oro view {}` to see what versions are available",
+                name
+            )),
+            OtherError(err) => err.advice(),
+        }
     }
 }
 
