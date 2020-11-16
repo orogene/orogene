@@ -30,7 +30,7 @@ impl Diagnostic for ResolverError {
     fn subpath(&self) -> String {
         use ResolverError::*;
         match self {
-            NoVersion { .. } => "classic_resolver::no_matching_version".into(),
+            NoVersion { .. } => "resolver::no_matching_version".into(),
             OtherError(err) => err.subpath(),
         }
     }
