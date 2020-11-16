@@ -27,15 +27,15 @@ pub enum ClassicResolverError {
 
 impl Diagnostic for ClassicResolverError {
     fn category(&self) -> DiagnosticCategory {
-        todo!()
+        DiagnosticCategory::Misc
     }
 
     fn subpath(&self) -> String {
-        todo!()
+        "classic_resolver::error".into()
     }
 
     fn advice(&self) -> Option<String> {
-        todo!()
+        None
     }
 }
 

@@ -10,7 +10,7 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use rogga::{Package, PackageSpec, Rogga, RoggaOpts};
 use url::Url;
 
-use crate::error::{NodeMaintainerError};
+use crate::error::NodeMaintainerError;
 
 // Public so I don't get warnings about unused stuff right now
 pub mod assignment;
