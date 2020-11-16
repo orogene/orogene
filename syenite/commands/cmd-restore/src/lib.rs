@@ -2,11 +2,11 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
+use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 use oro_tree::{self, Package, PkgLock};
 use rogga::{
     PackageRequest, PackageResolution, PackageResolver, PackageSpec, ResolverError, Rogga,
@@ -67,23 +67,23 @@ impl RestoreCmd {
     fn extract<'a>(
         &'a self,
         rogga: &'a Rogga,
-        name: &'a str,
+        _name: &'a str,
         dep: &'a Package,
         dir: PathBuf,
     ) -> Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>> {
         Box::pin(async move {
             let mut futs = Vec::new();
-            let req = rogga.dep_request(name, &dep.version, &dir)?;
-            let resolver = PkgLockResolver { dep };
+            // let req = rogga.dep_request(name, &dep.version, &dir)?;
+            // let resolver = PkgLockResolver { dep };
             for (name, dep) in dep.dependencies.iter() {
                 if !dep.bundled {
                     futs.push(self.extract(rogga, name, dep, dir.join("node_modules").join(name)));
                 }
             }
             futs.push(Box::pin(async move {
-                let resolved = req.resolve_with(&resolver).await?;
-                let tarball = resolved.tarball().await?;
-                rogga::cache::from_tarball(&self.cache, tarball).await?;
+                // let resolved = req.resolve_with(&resolver).await?;
+                // let tarball = resolved.tarball().await?;
+                // rogga::cache::from_tarball(&self.cache, tarball).await?;
                 // rogga::cache::tarball_itself(&self.cache, tarball).await?;
                 // rogga::cache::tarball_to_mem(&self.cache, tarball).await?;
                 // rogga::cache::to_node_modules(
@@ -109,13 +109,19 @@ impl RestoreCmd {
 #[async_trait]
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
-        let pkglock: PkgLock = oro_tree::read("./package-lock.json")?;
+        let pkglock: PkgLock =
+            oro_tree::read("./package-lock.json").as_diagnostic("restore::read::packagelock")?;
         let rogga = RoggaOpts::new()
             .add_registry("", self.registry.clone())
             .build();
         let mut futs = Vec::new();
         for (name, dep) in pkglock.dependencies.iter() {
-            futs.push(self.extract(&rogga, name, dep, std::env::current_dir()?));
+            futs.push(self.extract(
+                &rogga,
+                name,
+                dep,
+                std::env::current_dir().as_diagnostic("restore::nocwd")?,
+            ));
         }
         futures::future::try_join_all(futs).await?;
         Ok(())

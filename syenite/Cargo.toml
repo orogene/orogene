@@ -21,9 +21,9 @@ cmd-prime = { path = "./commands/cmd-prime" }
 # Workspace Deps
 oro-command = { path = "../crates/oro-command" }
 oro-config = { path = "../crates/oro-config" }
+oro-diagnostics = { path = "../crates/oro-diagnostics" }
 
 # Regular deps
-anyhow = "1.0.31"
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }
 async-trait = "0.1.36"
 clap = { git = "https://github.com/zkat/clap" }

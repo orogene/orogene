@@ -1,12 +1,12 @@
 use std::env;
 use std::path::PathBuf;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use node_maintainer::NodeMaintainerOptions;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
+use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 use url::Url;
 
 #[derive(Debug, Clap, OroConfigLayer)]
@@ -28,7 +28,7 @@ pub struct PrimeCmd {
 #[async_trait]
 impl OroCommand for PrimeCmd {
     async fn execute(self) -> Result<()> {
-        let cwd = env::current_dir()?;
+        let cwd = env::current_dir().as_diagnostic("prime::nocwd")?;
         let root = self
             .root
             .unwrap_or_else(|| oro_pkg_root::pkg_root(&cwd).unwrap_or(cwd));

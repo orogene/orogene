@@ -10,7 +10,7 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use rogga::{Package, PackageSpec, Rogga, RoggaOpts};
 use url::Url;
 
-use crate::error::{Internal, NodeMaintainerError};
+use crate::error::NodeMaintainerError;
 
 // Public so I don't get warnings about unused stuff right now
 pub mod assignment;
@@ -69,7 +69,7 @@ impl NodeMaintainerOptions {
             )
             .build();
         let mut graph = StableGraph::new();
-        let current_dir = env::current_dir().to_internal()?;
+        let current_dir = env::current_dir().map_err(NodeMaintainerError::NoCwd)?;
         let cwd = self.path.unwrap_or(current_dir);
         let resolver = ClassicResolver::new();
         let root_dep = rogga

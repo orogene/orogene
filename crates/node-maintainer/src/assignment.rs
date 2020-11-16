@@ -1,3 +1,4 @@
+/*
 use rogga::PackageResolution;
 
 use crate::incompat::Incompat;
@@ -41,3 +42,4 @@ impl Assignment {
         }
     }
 }
+*/

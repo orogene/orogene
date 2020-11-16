@@ -8,7 +8,7 @@ use oro_manifest::OroManifest;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Internal, Result, RoggaError};
+use crate::error::{Result, RoggaError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
@@ -28,13 +28,12 @@ impl DirFetcher {
 impl DirFetcher {
     async fn manifest(&self, path: &Path) -> Result<Manifest> {
         // TODO: Orogene.toml?
+        let pkg_path = path.join("package.json");
         let json = async_std::fs::read(&path.join("package.json"))
             .await
-            .to_internal()
-            .with_context(|| "Failed to read package.json".into())?;
-        let pkgjson: OroManifest = serde_json::from_slice(&json[..])
-            .to_internal()
-            .with_context(|| "Failed to parse package.json".into())?;
+            .map_err(|err| RoggaError::IoError(err, pkg_path))?;
+        let pkgjson: OroManifest =
+            serde_json::from_slice(&json[..]).map_err(RoggaError::SerdeError)?;
         Ok(Manifest(pkgjson))
     }
 

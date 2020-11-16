@@ -1,90 +1,91 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCode};
-use oro_package_spec::PackageSpecError;
+use std::path::PathBuf;
+
+use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_node_semver::Version;
+use oro_package_spec::PackageSpec;
 use thiserror::Error;
 
 use crate::resolver::ResolverError;
-
-#[derive(Error, Debug)]
-#[error("{source}\n\n  {}", context.join("\n  "))]
-pub struct InternalError {
-    source: Box<dyn std::error::Error + Send + Sync>,
-    context: Vec<String>,
-}
-
-pub trait Internal<T> {
-    fn to_internal(self) -> InternalResult<T>;
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> InternalResult<T>;
-}
-
-impl<T, E: 'static + std::error::Error + Send + Sync> Internal<T> for std::result::Result<T, E> {
-    fn to_internal(self) -> InternalResult<T> {
-        self.map_err(|e| InternalError {
-            source: Box::new(e),
-            context: Vec::new(),
-        })
-    }
-
-    fn with_context<F: FnOnce() -> String>(self, f: F) -> InternalResult<T> {
-        self.map_err(|e| InternalError {
-            source: Box::new(e),
-            context: vec![f()],
-        })
-    }
-}
 
 /// Error type returned by all API calls.
 #[derive(Error, Debug)]
 pub enum RoggaError {
     /// Something went wrong while fetching a package.
-    #[error("Something went wrong with fetching a package.")]
-    PackageFetcherError(DiagnosticCode, String),
+    #[error("Package for `{0}` was found, but resolved version `{1}` does not exist.")]
+    MissingVersion(PackageSpec, Version),
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
-    PackageSpecError(#[from] PackageSpecError),
+    PackageSpecError(#[from] oro_package_spec::PackageSpecError),
 
     #[error(transparent)]
     ResolverError(#[from] ResolverError),
 
-    #[error("Failed to deserialize package data for {name}: {serde_error}\n{}",
-            &.data[(.serde_error.column() - 100) .. (.serde_error.column() + 30)])]
-    SerdeError {
-        name: String,
-        data: String,
-        code: DiagnosticCode,
-        #[source]
-        serde_error: serde_json::Error,
-    },
+    #[error("{0}")]
+    IoError(#[source] std::io::Error, PathBuf),
+
+    #[error(transparent)]
+    OroClientError(#[from] oro_client::OroClientError),
+
+    #[error(transparent)]
+    SerdeError(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    UrlError(#[from] url::ParseError),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
     /// don't implement std::error::Error.
     #[error("A miscellaneous error occurred: {0}")]
     MiscError(String),
-
-    /// Returned if an internal (e.g. io) operation has failed.
-    #[error(transparent)]
-    InternalError {
-        #[from]
-        /// The underlying error
-        source: InternalError,
-    },
 }
 
 impl Diagnostic for RoggaError {
-    fn code(&self) -> DiagnosticCode {
+    fn category(&self) -> DiagnosticCategory {
+        use DiagnosticCategory::*;
         use RoggaError::*;
         match self {
-            PackageFetcherError(code, ..) => *code,
-            PackageSpecError(err) => err.code(),
-            ResolverError(err) => err.code(),
-            SerdeError { code, .. } => *code,
-            MiscError(..) | InternalError { .. } => DiagnosticCode::OR1000,
+            MissingVersion(..) => Misc,
+            PackageSpecError(err) => err.category(),
+            ResolverError(err) => err.category(),
+            IoError(_, ref path) => Fs { path: path.clone() },
+            OroClientError(err) => err.category(),
+            SerdeError(_) => todo!(),
+            UrlError(_) => todo!(),
+            MiscError(_) => Misc,
+        }
+    }
+
+    fn subpath(&self) -> String {
+        use RoggaError::*;
+        match self {
+            MissingVersion(..) => "rogga::missing_version".into(),
+            PackageSpecError(err) => err.subpath(),
+            ResolverError(err) => err.subpath(),
+            IoError(_, _) => "rogga::dir::read".into(),
+            OroClientError(err) => err.subpath(),
+            SerdeError(_) => "rogga::serde".into(),
+            UrlError(_) => "rogga::bad_url".into(),
+            MiscError(_) => "rogga::misc".into(),
+        }
+    }
+
+    fn advice(&self) -> Option<String> {
+        use RoggaError::*;
+        match self {
+            MissingVersion(..) => {
+                Some("Try using `oro view` to see what versions are available".into())
+            }
+            PackageSpecError(err) => err.advice(),
+            ResolverError(err) => err.advice(),
+            IoError(..) => None,
+            OroClientError(err) => err.advice(),
+            SerdeError(..) => None,
+            UrlError(..) => None,
+            MiscError(..) => None,
         }
     }
 }
 
 /// The result type returned by calls to this library
 pub type Result<T> = std::result::Result<T, RoggaError>;
-
-pub type InternalResult<T> = std::result::Result<T, InternalError>;

@@ -7,11 +7,10 @@ use dashmap::DashMap;
 use futures::io::AsyncRead;
 use http_types::Method;
 use oro_client::{self, OroClient};
-use oro_diagnostics::DiagnosticCode;
 use oro_package_spec::PackageSpec;
 use url::Url;
 
-use crate::error::{Internal, Result, RoggaError};
+use crate::error::{Result, RoggaError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Packument, VersionMetadata};
@@ -71,7 +70,7 @@ impl NpmFetcher {
             .join(&name)
             // This... should not fail unless you did some shenanigans like
             // constructing PackageRequests by hand, so no error code.
-            .with_context(|| format!("Invalid package name: {}.", name))?;
+            .map_err(RoggaError::UrlError)?;
         if let Some(packument) = self.packuments.get(&packument_url) {
             return Ok(packument.value().clone());
         }
@@ -86,19 +85,12 @@ impl NpmFetcher {
                 },
             ))
             .await
-            .with_context(|| format!("Failed to get packument for {}.", name))?
+            .map_err(RoggaError::OroClientError)?
             .body_string()
             .await
             .map_err(|e| RoggaError::MiscError(e.to_string()))?;
         let packument: Arc<Packument> =
-            Arc::new(serde_json::from_str(&packument_data).map_err(|err| {
-                RoggaError::SerdeError {
-                    code: DiagnosticCode::OR1006,
-                    name: name.into(),
-                    data: packument_data,
-                    serde_error: err,
-                }
-            })?);
+            Arc::new(serde_json::from_str(&packument_data).map_err(RoggaError::SerdeError)?);
         self.packuments.insert(packument_url, packument.clone());
         Ok(packument)
     }
@@ -121,16 +113,11 @@ impl PackageFetcher for NpmFetcher {
             _ => unreachable!(),
         };
         let packument = self.packument(&pkg.from(), &Path::new("")).await?;
-        packument.versions.get(&wanted).cloned().ok_or_else(|| {
-            RoggaError::PackageFetcherError(
-                DiagnosticCode::OR1023,
-                format!(
-                    "Requested version `{}` for `{}` does not exist.",
-                    wanted,
-                    pkg.from()
-                ),
-            )
-        })
+        packument
+            .versions
+            .get(&wanted)
+            .cloned()
+            .ok_or_else(|| RoggaError::MissingVersion(pkg.from().clone(), wanted.clone()))
     }
 
     async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {
@@ -166,7 +153,7 @@ impl PackageFetcher for NpmFetcher {
             client
                 .send(client.opts(Method::Get, url.clone()))
                 .await
-                .with_context(|| format!("Failed to get tarball for {:#?}.", pkg.resolved()))?,
+                .map_err(RoggaError::OroClientError)?,
         ))
     }
 }

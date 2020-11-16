@@ -1,4 +1,3 @@
-use anyhow::Result;
 use async_trait::async_trait;
 use clap::Clap;
 use colored::*;
@@ -6,6 +5,7 @@ use humansize::{file_size_opts, FileSize};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
+use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 use oro_manifest::{Bin, OroManifest, PersonField};
 use rogga::{Human, RoggaOpts, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
@@ -32,7 +32,10 @@ impl OroCommand for ViewCmd {
             .add_registry("", self.registry)
             .use_corgi(false)
             .build()
-            .arg_request(&self.pkg, std::env::current_dir()?)
+            .arg_request(
+                &self.pkg,
+                std::env::current_dir().as_diagnostic("view::nocwd")?,
+            )
             .await?;
         let packument = pkgreq.packument().await?;
         let pkg = pkgreq.resolve_with(&ClassicResolver::new()).await?;
@@ -44,7 +47,10 @@ impl OroCommand for ViewCmd {
         if self.json {
             // TODO: What should this be? NPM is actually a weird mishmash of
             // the packument and the manifest?
-            println!("{}", serde_json::to_string_pretty(&metadata)?);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&metadata).as_diagnostic("view::json_serialize")?
+            );
         } else {
             let VersionMetadata {
                 ref npm_user,
@@ -218,7 +224,8 @@ impl OroCommand for ViewCmd {
             ) {
                 if let Some(Human { name, email }) = npm_user {
                     let human = chrono_humanize::HumanTime::from(
-                        chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())?,
+                        chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())
+                            .as_diagnostic("view::bad_date")?,
                     );
                     print!(
                         "published {} by {}",

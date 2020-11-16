@@ -1,7 +1,6 @@
-use oro_diagnostics::DiagnosticCode;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
 
-use crate::error::PackageSpecError;
+use crate::error::{SpecErrorKind, SpecParseError};
 
 const JS_ENCODED: &AsciiSet = {
     &NON_ALPHANUMERIC
@@ -16,13 +15,14 @@ const JS_ENCODED: &AsciiSet = {
         .remove(b')')
 };
 
-pub fn no_url_encode(tag: &str) -> Result<&str, PackageSpecError> {
+pub(crate) fn no_url_encode(tag: &str) -> Result<&str, SpecParseError<&str>> {
     if format!("{}", utf8_percent_encode(tag, JS_ENCODED)) == tag {
         Ok(tag)
     } else {
-        Err(PackageSpecError::InvalidCharacters(
-            DiagnosticCode::OR1003,
-            tag.into(),
-        ))
+        Err(SpecParseError {
+            input: tag,
+            context: None,
+            kind: Some(SpecErrorKind::InvalidCharacters(tag.into())),
+        })
     }
 }

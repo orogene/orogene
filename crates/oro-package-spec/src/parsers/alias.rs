@@ -1,18 +1,18 @@
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case as tag, take_till1};
 use nom::combinator::{map, map_res, opt};
-use nom::error::{context, ParseError};
+use nom::error::context;
 use nom::sequence::{preceded, tuple};
 use nom::IResult;
 
+use crate::error::SpecParseError;
 use crate::parsers::{git, npm, path, util};
 use crate::PackageSpec;
 
 // alias_spec := [ [ '@' ], not('/')+ '/' ] not('@/')+ '@' prefixed-package-arg
-pub fn alias_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+pub(crate) fn alias_spec<'a>(
+    input: &'a str,
+) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
     context(
         "alias",
         map(
@@ -39,10 +39,9 @@ where
 }
 
 /// prefixed_package-arg := ( "npm:" npm-pkg ) | ( [ "file:" ] path )
-fn prefixed_package_spec<'a, E>(input: &'a str) -> IResult<&'a str, PackageSpec, E>
-where
-    E: ParseError<&'a str>,
-{
+fn prefixed_package_spec<'a>(
+    input: &'a str,
+) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
     context(
         "package spec",
         alt((
@@ -54,10 +53,7 @@ where
     )(input)
 }
 
-fn scope<'a, E>(input: &'a str) -> IResult<&'a str, String, E>
-where
-    E: ParseError<&'a str>,
-{
+fn scope<'a>(input: &'a str) -> IResult<&'a str, String, SpecParseError<&'a str>> {
     context(
         "scope",
         map(

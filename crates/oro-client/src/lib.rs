@@ -1,4 +1,4 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCode};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory};
 use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;
@@ -15,35 +15,42 @@ mod http_client;
 #[derive(Debug, Error)]
 pub enum OroClientError {
     // TODO: add registry URL here?
-    #[error("{0:#?}: Registry request failed: {1}")]
-    RequestError(DiagnosticCode, SurfError),
-    #[error("{code:#?}: Registry returned failed status code {status_code} for a request to {url}: {}", context.join("\n  "))]
+    #[error("Registry request failed:\n\t{surf_err}")]
+    RequestError { surf_err: SurfError, url: Url },
+    #[error("Registry returned failed status code {status_code} for a request.")]
     ResponseError {
-        code: DiagnosticCode,
         url: Url,
         status_code: StatusCode,
-        context: Vec<String>,
+        message: Option<String>,
     },
 }
 
 impl Diagnostic for OroClientError {
-    fn code(&self) -> DiagnosticCode {
+    fn category(&self) -> DiagnosticCategory {
+        use DiagnosticCategory::*;
         use OroClientError::*;
         match self {
-            RequestError(code, ..) => *code,
-            ResponseError { code, .. } => *code,
+            RequestError { ref url, .. } => Net {
+                url: Some(url.clone()),
+                host: url.host().expect("this should have a host").to_owned(),
+            },
+            ResponseError { ref url, .. } => Net {
+                url: Some(url.clone()),
+                host: url.host().expect("this should have a host").to_owned(),
+            },
         }
     }
-}
 
-impl OroClientError {
-    fn res_err(url: Url, res: &Response, ctx: Vec<String>) -> Self {
-        Self::ResponseError {
-            code: DiagnosticCode::OR1015,
-            status_code: res.status(),
-            context: ctx,
-            url,
+    fn subpath(&self) -> String {
+        use OroClientError::*;
+        match self {
+            RequestError { .. } => "http::bad_request".into(),
+            ResponseError { .. } => "http::response_failure".into(),
         }
+    }
+
+    fn advice(&self) -> Option<String> {
+        None
     }
 }
 
@@ -81,22 +88,29 @@ impl OroClient {
             .client
             .send(req)
             .await
-            .map_err(|e| OroClientError::RequestError(DiagnosticCode::OR1016, e))?;
+            .map_err(|e| OroClientError::RequestError {
+                surf_err: e,
+                url: url.clone(),
+            })?;
         if res.status().is_client_error() || res.status().is_server_error() {
             let msg = match res.body_json::<NpmError>().await {
                 Ok(err) => err.message,
-                parse_err @ Err(_) => match res.body_string().await {
+                Err(_) => match res.body_string().await {
                     Ok(msg) => msg,
-                    body_err @ Err(_) => {
-                        return Err(OroClientError::res_err(
+                    Err(_) => {
+                        return Err(OroClientError::ResponseError {
                             url,
-                            &res,
-                            vec![format!("{:?}", parse_err), format!("{:?}", body_err)],
-                        ));
+                            status_code: res.status(),
+                            message: None,
+                        });
                     }
                 },
             };
-            Err(OroClientError::res_err(url, &res, vec![msg]))
+            Err(OroClientError::ResponseError {
+                status_code: res.status(),
+                url,
+                message: Some(msg),
+            })
         } else {
             Ok(res)
         }

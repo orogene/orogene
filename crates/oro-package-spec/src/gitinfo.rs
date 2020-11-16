@@ -1,11 +1,10 @@
 use std::fmt;
 use std::str::FromStr;
 
-use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::VersionReq as Range;
 use url::Url;
 
-use crate::error::PackageSpecError;
+use crate::error::{PackageSpecError, SpecErrorKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GitHost {
@@ -25,10 +24,11 @@ impl FromStr for GitHost {
             "gitlab" => GitHost::GitLab,
             "bitbucket" => GitHost::Bitbucket,
             _ => {
-                return Err(PackageSpecError::InvalidGitHost(
-                    DiagnosticCode::OR1024,
-                    s.into(),
-                ))
+                return Err(PackageSpecError {
+                    input: s.into(),
+                    offset: 0,
+                    kind: SpecErrorKind::InvalidGitHost(s.into()),
+                })
             }
         })
     }

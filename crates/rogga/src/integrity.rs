@@ -2,13 +2,14 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use futures::prelude::*;
-use ssri::{Algorithm, IntegrityOpts};
+use ssri::IntegrityOpts;
 
 pub struct AsyncIntegrity<R: AsyncBufRead> {
     pub opts: IntegrityOpts,
     pub reader: R,
 }
 
+/*
 impl<R: AsyncBufRead + Unpin> AsyncIntegrity<R> {
     pub fn new(reader: R) -> Self {
         Self {
@@ -25,6 +26,7 @@ impl<R: AsyncBufRead + Unpin> AsyncIntegrity<R> {
         (self.opts.result(), self.reader)
     }
 }
+*/
 
 impl<R: AsyncBufRead + Unpin> AsyncRead for AsyncIntegrity<R> {
     fn poll_read(

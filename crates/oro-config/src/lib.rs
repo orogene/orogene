@@ -1,15 +1,38 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticResult as Result};
+use thiserror::Error;
 
 pub use oro_config_derive::*;
 
 pub trait OroConfigLayer {
     fn layer_config(&mut self, _matches: &ArgMatches, _config: &OroConfig) -> Result<()> {
         Ok(())
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum OroConfigError {
+    #[error(transparent)]
+    ConfigError(#[from] ConfigError),
+    #[error(transparent)]
+    ConfigParseError(#[from] Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl Diagnostic for OroConfigError {
+    fn category(&self) -> DiagnosticCategory {
+        DiagnosticCategory::Misc
+    }
+
+    fn subpath(&self) -> String {
+        "config::error".into()
+    }
+
+    fn advice(&self) -> Option<String> {
+        None
     }
 }
 
@@ -56,26 +79,32 @@ impl OroConfigOptions {
         self
     }
 
-    pub fn load(self) -> Result<OroConfig, ConfigError> {
+    pub fn load(self) -> Result<OroConfig> {
         let mut c = OroConfig::new();
         if self.global {
             if let Some(config_file) = self.global_config_file {
                 let path = config_file.display().to_string();
-                c.merge(File::with_name(&path[..]).required(false))?;
+                c.merge(File::with_name(&path[..]).required(false))
+                    .map_err(OroConfigError::ConfigError)?;
             }
         }
         if self.env {
-            c.merge(Environment::with_prefix("oro_config"))?;
+            c.merge(Environment::with_prefix("oro_config"))
+                .map_err(OroConfigError::ConfigError)?;
         }
         if let Some(root) = self.pkg_root {
-            c.merge(File::with_name(&root.join("ororc").display().to_string()).required(false))?;
-            c.merge(File::with_name(&root.join(".ororc").display().to_string()).required(false))?;
+            c.merge(File::with_name(&root.join("ororc").display().to_string()).required(false))
+                .map_err(OroConfigError::ConfigError)?;
+            c.merge(File::with_name(&root.join(".ororc").display().to_string()).required(false))
+                .map_err(OroConfigError::ConfigError)?;
             c.merge(
                 File::with_name(&root.join("ororc.toml").display().to_string()).required(false),
-            )?;
+            )
+            .map_err(OroConfigError::ConfigError)?;
             c.merge(
                 File::with_name(&root.join(".ororc.toml").display().to_string()).required(false),
-            )?;
+            )
+            .map_err(OroConfigError::ConfigError)?;
         }
         Ok(c)
     }

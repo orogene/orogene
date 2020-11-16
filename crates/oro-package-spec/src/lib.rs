@@ -3,12 +3,10 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use nom::combinator::all_consuming;
-use nom::error::{convert_error, VerboseError};
 use nom::Err;
-use oro_diagnostics::DiagnosticCode;
 use oro_node_semver::{Version, VersionReq as Range};
 
-pub use crate::error::PackageSpecError;
+pub use crate::error::{PackageSpecError, SpecErrorKind};
 pub use crate::gitinfo::{GitHost, GitInfo};
 use crate::parsers::package;
 
@@ -114,15 +112,24 @@ where
     I: AsRef<str>,
 {
     let input = &input.as_ref()[..];
-    match all_consuming(package::package_spec::<VerboseError<&str>>)(input) {
+    match all_consuming(package::package_spec)(input) {
         Ok((_, arg)) => Ok(arg),
-        Err(err) => Err(PackageSpecError::ParseError {
-            code: DiagnosticCode::OR1001,
-            input: input.into(),
-            msg: match err {
-                Err::Error(e) => convert_error(input, e),
-                Err::Failure(e) => convert_error(input, e),
-                Err::Incomplete(_) => "More data was needed".into(),
+        Err(err) => Err(match err {
+            Err::Error(e) | Err::Failure(e) => PackageSpecError {
+                input: input.into(),
+                offset: e.input.as_ptr() as usize - input.as_ptr() as usize,
+                kind: if let Some(kind) = e.kind {
+                    kind
+                } else if let Some(ctx) = e.context {
+                    SpecErrorKind::Context(ctx)
+                } else {
+                    SpecErrorKind::Other
+                },
+            },
+            Err::Incomplete(_) => PackageSpecError {
+                input: input.into(),
+                offset: input.len() - 1,
+                kind: SpecErrorKind::IncompleteInput,
             },
         }),
     }

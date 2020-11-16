@@ -1,12 +1,12 @@
 use std::env;
 use std::path::PathBuf;
 
-use anyhow::Result;
 use async_trait::async_trait;
 use clap::{ArgMatches, Clap, FromArgMatches, IntoApp};
 use directories::ProjectDirs;
 use oro_command::OroCommand;
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
+use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 
 use cmd_ping::PingCmd;
 use cmd_prime::PrimeCmd;
@@ -44,7 +44,7 @@ pub struct Syenite {
 }
 
 impl Syenite {
-    fn setup_logging(&self) -> Result<(), fern::InitError> {
+    fn setup_logging(&self) -> std::result::Result<(), fern::InitError> {
         let fern = fern::Dispatch::new()
             .format(|out, message, record| {
                 out.finish(format_args!(
@@ -96,7 +96,8 @@ impl Syenite {
                 .load()?
         };
         oro.layer_config(&matches, &cfg)?;
-        oro.setup_logging()?;
+        oro.setup_logging()
+            .as_diagnostic("syenite::load::logging")?;
         oro.execute().await?;
         log::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())

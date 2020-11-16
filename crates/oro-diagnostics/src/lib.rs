@@ -1,67 +1,119 @@
-/// Adds diagnostic code support to a given error. All errors defined in
-/// orogene include diagnostics this way.
-pub trait Diagnostic: std::error::Error + Send + Sync {
-    fn code(&self) -> DiagnosticCode;
+use std::fmt;
+use std::path::PathBuf;
+
+use colored::Colorize;
+use thiserror::Error;
+use url::{Host, Url};
+
+#[derive(Error)]
+#[error("{:?}", self)]
+pub struct DiagnosticError {
+    pub error: Box<dyn std::error::Error + Send + Sync>,
+    pub category: DiagnosticCategory,
+    pub subpath: String,
+    pub advice: Option<String>,
+}
+
+impl fmt::Debug for DiagnosticError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            return fmt::Debug::fmt(&self.error, f);
+        } else {
+            use DiagnosticCategory::*;
+            write!(f, "{}", self.diagnostic_path().red())?;
+            if let Net { ref host, ref url } = &self.category {
+                if let Some(url) = url {
+                    write!(f, " @ {}", format!("{}", url).cyan().underline())?;
+                } else {
+                    write!(f, " @ {}", format!("{}", host).cyan().underline())?;
+                }
+            }
+            write!(f, "\n\n")?;
+            write!(f, "{}", self.error)?;
+            if let Some(advice) = &self.advice {
+                write!(f, "\n\n{}", "help".yellow())?;
+                write!(f, ": {}", advice)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl DiagnosticError {
+    fn diagnostic_path(&self) -> String {
+        format!("{}::{}", self.category.prefix(), self.subpath)
+    }
+}
+
+pub type DiagnosticResult<T> = Result<T, DiagnosticError>;
+
+impl<E> From<E> for DiagnosticError
+where
+    E: Diagnostic + Send + Sync,
+{
+    fn from(error: E) -> Self {
+        Self {
+            category: error.category(),
+            subpath: error.subpath(),
+            advice: error.advice(),
+            error: Box::new(error),
+        }
+    }
+}
+
+pub trait Diagnostic: std::error::Error + Send + Sync + 'static {
+    fn category(&self) -> DiagnosticCategory;
+    fn subpath(&self) -> String;
+    fn advice(&self) -> Option<String>;
+    fn diagnostic_path(&self) -> String {
+        format!("{}::{}", self.category().prefix(), self.subpath())
+    }
 }
 
 // This is needed so Box<dyn Diagnostic> is correctly treated as an Error.
 impl std::error::Error for Box<dyn Diagnostic> {}
 
-/// All known orogene-related diagnostic codes. These codes are used to
-/// provide easily-searchable diagnostics for users, as well as document them
-/// and any advice for addressing them.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[non_exhaustive]
-pub enum DiagnosticCode {
-    /// An internal error has occurred. Please refer to the error message for
-    /// more details.
-    OR1000,
-    /// Failed to parse a package spec.
-    OR1001,
-    /// Package spec contains invalid characters.
-    OR1002,
-    /// Package spec contains invalid drive letter.
-    OR1003,
-    /// Resolver name mismatch.
-    OR1004,
-    /// dist-tag not found.
-    OR1005,
-    /// An error occurred deserializing package metadata.
-    OR1006,
-    /// Tried to resolve an unsupported package type.
-    OR1007,
-    /// No compatible version was found while resolving a package request.
-    OR1008,
-    /// Package metadata contains no versions.
-    OR1009,
-    /// Failure parsing Semver VersionReq.
-    OR1010,
-    /// Semver version string was too long.
-    OR1011,
-    /// Failure parsing Semver Version.
-    OR1012,
-    /// Error parsing digit. This is probably an issue with the Semver parser itself.
-    OR1013,
-    /// Semver number component is larger than the allowed limit (JavaScript's Number.MAX_SAFE_INTEGER).
-    OR1014,
-    /// Registry returned error-level response status code.
-    OR1015,
-    /// Registry request failed.
-    OR1016,
-    /// Failed to run node executable.
-    OR1017,
-    /// Failed to get current executable path while setting $ORO_BIN.
-    OR1018,
-    /// Couldn't find home directory while getting data dir for `oro shell`.
-    OR1019,
-    /// Failed to create data dir used by `oro shell` to store alabaster data.
-    OR1020,
-    /// Failed to write alabaster patches to data dir for `oro shell`.
-    OR1021,
-    /// Failed to deserialize ping response details.
-    OR1022,
-    /// Package found, but specific requested version could not be not found.
-    OR1023,
-    /// Found invalid git host while parsing. Only GitHub, GitLab, Gist, and Bitbucket are supported.
-    OR1024,
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum DiagnosticCategory {
+    /// oro::misc
+    Misc,
+    /// oro::net
+    Net { host: Host, url: Option<Url> },
+    /// oro::fs
+    Fs { path: PathBuf },
+    /// oro::parse
+    Parse {
+        input: String,
+        row: usize,
+        col: usize,
+        path: Option<PathBuf>,
+    },
+}
+
+impl DiagnosticCategory {
+    pub fn prefix(&self) -> String {
+        use DiagnosticCategory::*;
+        match self {
+            Misc => "oro::misc",
+            Net { .. } => "oro::net",
+            Fs { .. } => "oro::fs",
+            Parse { .. } => "oro::parse",
+        }
+        .into()
+    }
+}
+
+pub trait AsDiagnostic<T, E> {
+    fn as_diagnostic(self, subpath: impl AsRef<str>) -> std::result::Result<T, DiagnosticError>;
+}
+
+impl<T, E: std::error::Error + Send + Sync + 'static> AsDiagnostic<T, E> for Result<T, E> {
+    fn as_diagnostic(self, subpath: impl AsRef<str>) -> Result<T, DiagnosticError> {
+        self.map_err(|e| DiagnosticError {
+            category: DiagnosticCategory::Misc,
+            error: Box::new(e),
+            subpath: subpath.as_ref().into(),
+            advice: None,
+        })
+    }
 }
