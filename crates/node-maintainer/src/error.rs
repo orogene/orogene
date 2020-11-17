@@ -28,13 +28,13 @@ impl Diagnostic for NodeMaintainerError {
         }
     }
 
-    fn subpath(&self) -> String {
+    fn label(&self) -> String {
         use NodeMaintainerError::*;
         match self {
             NameMismatch(_, _) => "node_maintainer::name_mismatch".into(),
             TagNotFound(_) => "node_maintainer::tag_not_found".into(),
             NoCwd(_) => "node_maintainer::no_cwd".into(),
-            RoggaError(source) => source.subpath(),
+            RoggaError(source) => source.label(),
         }
     }
 

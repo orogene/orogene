@@ -41,11 +41,11 @@ impl Diagnostic for OroClientError {
         }
     }
 
-    fn subpath(&self) -> String {
+    fn label(&self) -> String {
         use OroClientError::*;
         match self {
-            RequestError { .. } => "http::bad_request".into(),
-            ResponseError { .. } => "http::response_failure".into(),
+            RequestError { .. } => "client::bad_request".into(),
+            ResponseError { .. } => "client::response_failure".into(),
         }
     }
 

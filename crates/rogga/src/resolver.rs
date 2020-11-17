@@ -27,11 +27,11 @@ impl Diagnostic for ResolverError {
         DiagnosticCategory::Misc
     }
 
-    fn subpath(&self) -> String {
+    fn label(&self) -> String {
         use ResolverError::*;
         match self {
-            NoVersion { .. } => "resolver::no_matching_version".into(),
-            OtherError(err) => err.subpath(),
+            NoVersion { .. } => "classic_resolver::no_matching_version".into(),
+            OtherError(err) => err.label(),
         }
     }
 

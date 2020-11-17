@@ -27,7 +27,7 @@ impl Diagnostic for OroConfigError {
         DiagnosticCategory::Misc
     }
 
-    fn subpath(&self) -> String {
+    fn label(&self) -> String {
         "config::error".into()
     }
 

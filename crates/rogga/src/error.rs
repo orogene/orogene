@@ -56,14 +56,14 @@ impl Diagnostic for RoggaError {
         }
     }
 
-    fn subpath(&self) -> String {
+    fn label(&self) -> String {
         use RoggaError::*;
         match self {
             MissingVersion(..) => "rogga::missing_version".into(),
-            PackageSpecError(err) => err.subpath(),
-            ResolverError(err) => err.subpath(),
+            PackageSpecError(err) => err.label(),
+            ResolverError(err) => err.label(),
             IoError(_, _) => "rogga::dir::read".into(),
-            OroClientError(err) => err.subpath(),
+            OroClientError(err) => err.label(),
             SerdeError(_) => "rogga::serde".into(),
             UrlError(_) => "rogga::bad_url".into(),
             MiscError(_) => "rogga::misc".into(),

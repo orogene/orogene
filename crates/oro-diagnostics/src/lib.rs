@@ -10,7 +10,7 @@ use url::{Host, Url};
 pub struct DiagnosticError {
     pub error: Box<dyn std::error::Error + Send + Sync>,
     pub category: DiagnosticCategory,
-    pub subpath: String,
+    pub label: String,
     pub advice: Option<String>,
 }
 
@@ -20,7 +20,7 @@ impl fmt::Debug for DiagnosticError {
             return fmt::Debug::fmt(&self.error, f);
         } else {
             use DiagnosticCategory::*;
-            write!(f, "{}", self.diagnostic_path().red())?;
+            write!(f, "{}", self.label.red())?;
             if let Net { ref host, ref url } = &self.category {
                 if let Some(url) = url {
                     write!(f, " @ {}", format!("{}", url).cyan().underline())?;
@@ -39,12 +39,6 @@ impl fmt::Debug for DiagnosticError {
     }
 }
 
-impl DiagnosticError {
-    fn diagnostic_path(&self) -> String {
-        format!("{}::{}", self.category.prefix(), self.subpath)
-    }
-}
-
 pub type DiagnosticResult<T> = Result<T, DiagnosticError>;
 
 impl<E> From<E> for DiagnosticError
@@ -54,7 +48,7 @@ where
     fn from(error: E) -> Self {
         Self {
             category: error.category(),
-            subpath: error.subpath(),
+            label: error.label(),
             advice: error.advice(),
             error: Box::new(error),
         }
@@ -63,11 +57,8 @@ where
 
 pub trait Diagnostic: std::error::Error + Send + Sync + 'static {
     fn category(&self) -> DiagnosticCategory;
-    fn subpath(&self) -> String;
+    fn label(&self) -> String;
     fn advice(&self) -> Option<String>;
-    fn diagnostic_path(&self) -> String {
-        format!("{}::{}", self.category().prefix(), self.subpath())
-    }
 }
 
 // This is needed so Box<dyn Diagnostic> is correctly treated as an Error.
@@ -90,29 +81,16 @@ pub enum DiagnosticCategory {
     },
 }
 
-impl DiagnosticCategory {
-    pub fn prefix(&self) -> String {
-        use DiagnosticCategory::*;
-        match self {
-            Misc => "oro::misc",
-            Net { .. } => "oro::net",
-            Fs { .. } => "oro::fs",
-            Parse { .. } => "oro::parse",
-        }
-        .into()
-    }
-}
-
 pub trait AsDiagnostic<T, E> {
     fn as_diagnostic(self, subpath: impl AsRef<str>) -> std::result::Result<T, DiagnosticError>;
 }
 
 impl<T, E: std::error::Error + Send + Sync + 'static> AsDiagnostic<T, E> for Result<T, E> {
-    fn as_diagnostic(self, subpath: impl AsRef<str>) -> Result<T, DiagnosticError> {
+    fn as_diagnostic(self, label: impl AsRef<str>) -> Result<T, DiagnosticError> {
         self.map_err(|e| DiagnosticError {
             category: DiagnosticCategory::Misc,
             error: Box::new(e),
-            subpath: subpath.as_ref().into(),
+            label: label.as_ref().into(),
             advice: None,
         })
     }

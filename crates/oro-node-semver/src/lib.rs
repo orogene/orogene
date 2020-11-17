@@ -98,8 +98,8 @@ impl Diagnostic for SemverError {
         }
     }
 
-    fn subpath(&self) -> String {
-        "semver".into()
+    fn label(&self) -> String {
+        "semver::no_parse".into()
     }
 
     fn advice(&self) -> Option<String> {

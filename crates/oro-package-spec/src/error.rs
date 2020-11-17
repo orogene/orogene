@@ -76,9 +76,9 @@ impl Diagnostic for PackageSpecError {
         }
     }
 
-    fn subpath(&self) -> String {
+    fn label(&self) -> String {
         // TODO: add more detail
-        "package_spec".into()
+        "package_spec::no_parse".into()
     }
 
     fn advice(&self) -> Option<String> {
