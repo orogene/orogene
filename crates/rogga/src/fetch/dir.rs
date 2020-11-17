@@ -29,7 +29,7 @@ impl DirFetcher {
         let pkg_path = path.join("package.json");
         let json = async_std::fs::read(&pkg_path)
             .await
-            .map_err(|err| RoggaError::IoError(err, pkg_path))?;
+            .map_err(|err| RoggaError::DirReadError(err, pkg_path))?;
         let pkgjson: OroManifest =
             serde_json::from_slice(&json[..]).map_err(RoggaError::SerdeError)?;
         Ok(Manifest(pkgjson))

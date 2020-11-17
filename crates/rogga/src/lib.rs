@@ -1,7 +1,8 @@
 pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 
-pub mod cache;
+mod cache;
 mod error;
+mod extract;
 mod fetch;
 mod integrity;
 mod package;
