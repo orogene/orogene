@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use colored::Colorize;
 use thiserror::Error;
-use url::{Host, Url};
+use url::Url;
 
 #[derive(Error)]
 #[error("{:?}", self)]
@@ -12,6 +12,7 @@ pub struct DiagnosticError {
     pub category: DiagnosticCategory,
     pub label: String,
     pub advice: Option<String>,
+    pub meta: Option<Meta>,
 }
 
 impl fmt::Debug for DiagnosticError {
@@ -21,11 +22,11 @@ impl fmt::Debug for DiagnosticError {
         } else {
             use DiagnosticCategory::*;
             write!(f, "{}", self.label.red())?;
-            if let Net { ref host, ref url } = &self.category {
-                if let Some(url) = url {
-                    write!(f, " @ {}", format!("{}", url).cyan().underline())?;
-                } else {
-                    write!(f, " @ {}", format!("{}", host).cyan().underline())?;
+            if let Net = &self.category {
+                if let Some(Meta::Net { url }) = &self.meta {
+                    if let Some(ref url) = url {
+                        write!(f, " @ {}", format!("{}", url).cyan().underline())?;
+                    }
                 }
             }
             write!(f, "\n\n")?;
@@ -48,6 +49,7 @@ where
     fn from(error: E) -> Self {
         Self {
             category: error.category(),
+            meta: error.meta(),
             label: error.label(),
             advice: error.advice(),
             error: Box::new(error),
@@ -55,7 +57,28 @@ where
     }
 }
 
-pub trait Diagnostic: std::error::Error + Send + Sync + 'static {
+pub enum Meta {
+    Net {
+        url: Option<Url>,
+    },
+    Fs {
+        path: PathBuf,
+    },
+    Parse {
+        input: String,
+        row: usize,
+        col: usize,
+        path: Option<PathBuf>,
+    },
+}
+
+pub trait Explain {
+    fn meta(&self) -> Option<Meta> {
+        None
+    }
+}
+
+pub trait Diagnostic: std::error::Error + Send + Sync + Explain + 'static {
     fn category(&self) -> DiagnosticCategory;
     fn label(&self) -> String;
     fn advice(&self) -> Option<String>;
@@ -69,16 +92,11 @@ pub enum DiagnosticCategory {
     /// oro::misc
     Misc,
     /// oro::net
-    Net { host: Host, url: Option<Url> },
+    Net,
     /// oro::fs
-    Fs { path: PathBuf },
+    Fs,
     /// oro::parse
-    Parse {
-        input: String,
-        row: usize,
-        col: usize,
-        path: Option<PathBuf>,
-    },
+    Parse,
 }
 
 pub trait AsDiagnostic<T, E> {
@@ -92,6 +110,7 @@ impl<T, E: std::error::Error + Send + Sync + 'static> AsDiagnostic<T, E> for Res
             error: Box::new(e),
             label: label.as_ref().into(),
             advice: None,
+            meta: None,
         })
     }
 }

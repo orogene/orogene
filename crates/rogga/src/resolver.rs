@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use http_types::Url;
-use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
 use oro_node_semver::Version;
 use oro_package_spec::{GitInfo, PackageSpec};
 use thiserror::Error;
@@ -20,6 +20,8 @@ pub enum ResolverError {
     #[error(transparent)]
     OtherError(#[from] Box<dyn Diagnostic>),
 }
+
+impl Explain for ResolverError {}
 
 impl Diagnostic for ResolverError {
     fn category(&self) -> DiagnosticCategory {

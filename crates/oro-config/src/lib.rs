@@ -3,6 +3,7 @@ use std::path::PathBuf;
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
+use oro_diagnostics::Explain;
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticResult as Result};
 use thiserror::Error;
 
@@ -21,6 +22,8 @@ pub enum OroConfigError {
     #[error(transparent)]
     ConfigParseError(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
+
+impl Explain for OroConfigError {}
 
 impl Diagnostic for OroConfigError {
     fn category(&self) -> DiagnosticCategory {

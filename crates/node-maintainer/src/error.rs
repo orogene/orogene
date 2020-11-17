@@ -1,4 +1,4 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -15,6 +15,8 @@ pub enum NodeMaintainerError {
     #[error(transparent)]
     RoggaError(#[from] rogga::RoggaError),
 }
+
+impl Explain for NodeMaintainerError {}
 
 impl Diagnostic for NodeMaintainerError {
     fn category(&self) -> DiagnosticCategory {

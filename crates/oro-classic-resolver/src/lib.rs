@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use oro_package_spec::{PackageSpec, VersionSpec};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
@@ -24,6 +24,8 @@ pub enum ClassicResolverError {
     #[error(transparent)]
     IoError(#[from] std::io::Error),
 }
+
+impl Explain for ClassicResolverError {}
 
 impl Diagnostic for ClassicResolverError {
     fn category(&self) -> DiagnosticCategory {

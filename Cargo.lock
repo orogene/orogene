@@ -2218,6 +2218,7 @@ dependencies = [
  "http-types",
  "log",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "serde 1.0.117",
  "surf",
  "thiserror",
@@ -2261,8 +2262,17 @@ name = "oro-diagnostics"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "oro-diagnostics-derive",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "oro-diagnostics-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2315,6 +2325,7 @@ dependencies = [
  "bytecount",
  "nom 6.0.0",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "pretty_assertions",
  "serde 1.0.117",
  "serde_derive",
@@ -2787,6 +2798,7 @@ dependencies = [
  "mkdirp",
  "oro-client",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "oro-manifest",
  "oro-node-semver",
  "oro-package-spec",
