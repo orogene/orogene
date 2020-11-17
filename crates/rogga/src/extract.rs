@@ -1,3 +1,6 @@
+use std::mem;
+use std::path::{Path, PathBuf};
+
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::io::{self, BufReader};
 use async_std::prelude::*;
@@ -8,10 +11,10 @@ use crate::error::{Result, RoggaError};
 
 pub async fn extract_to_dir<P, R>(tarball: R, dir: P) -> Result<()>
 where
-    P: AsRef<std::path::Path>,
+    P: AsRef<Path>,
     R: AsyncRead + Unpin + Send + Sync,
 {
-    let dir = std::path::PathBuf::from(dir.as_ref());
+    let dir = PathBuf::from(dir.as_ref());
     let takeme = dir.clone();
     async_std::task::spawn_blocking(move || {
         mkdirp::mkdirp(&takeme).map_err(|e| RoggaError::ExtractIoError(e, Some(takeme.clone())))
@@ -56,7 +59,7 @@ where
         }
     }
 
-    std::mem::drop(entries);
+    mem::drop(entries);
     let mut reader = ar
         .into_inner()
         .map_err(|_| RoggaError::MiscError("Failed to get inner Read".into()))?

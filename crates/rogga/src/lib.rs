@@ -17,3 +17,6 @@ pub use package::*;
 pub use packument::*;
 pub use request::*;
 pub use resolver::*;
+
+// temporary just to silence warning
+pub use extract::*;
