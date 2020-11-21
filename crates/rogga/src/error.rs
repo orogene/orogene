@@ -24,6 +24,15 @@ pub enum RoggaError {
     #[error("{0}")]
     DirReadError(#[source] std::io::Error, PathBuf),
 
+    #[error("Failed to execute git subprocess. {0}")]
+    GitIoError(#[source] std::io::Error),
+
+    #[error("Failed to clone repository at `{0}`")]
+    GitCloneError(String),
+
+    #[error("Failed to check out `{0}#{1}`")]
+    GitCheckoutError(String, String),
+
     #[error("Failed to extract tarball to disk. {0}")]
     ExtractIoError(#[source] std::io::Error, Option<PathBuf>),
 
@@ -52,6 +61,9 @@ impl Diagnostic for RoggaError {
             PackageSpecError(err) => err.category(),
             ResolverError(err) => err.category(),
             DirReadError(_, ref path) => Fs { path: path.clone() },
+            GitIoError(_) => Misc,
+            GitCloneError(_) => Misc,
+            GitCheckoutError(..) => Misc,
             ExtractIoError(_, None) => Misc,
             ExtractIoError(_, Some(path)) => Fs { path: path.clone() },
             OroClientError(err) => err.category(),
@@ -68,6 +80,9 @@ impl Diagnostic for RoggaError {
             PackageSpecError(err) => err.label(),
             ResolverError(err) => err.label(),
             DirReadError(_, _) => "rogga::dir::read".into(),
+            GitIoError(..) => "rogga::git::clone::io".into(),
+            GitCloneError(..) => "rogga::git::clone::repo".into(),
+            GitCheckoutError(..) => "rogga::git::checkout::repo".into(),
             ExtractIoError(_, _) => "rogga::io::extract".into(),
             OroClientError(err) => err.label(),
             SerdeError(_) => "rogga::serde".into(),
@@ -85,6 +100,9 @@ impl Diagnostic for RoggaError {
             PackageSpecError(err) => err.advice(),
             ResolverError(err) => err.advice(),
             DirReadError(..) => None,
+            GitIoError(..) => None,
+            GitCloneError(..) => None,
+            GitCheckoutError(..) => None,
             ExtractIoError(..) => None,
             OroClientError(err) => err.advice(),
             SerdeError(..) => None,

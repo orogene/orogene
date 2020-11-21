@@ -75,66 +75,78 @@ pub enum GitInfo {
 }
 
 impl GitInfo {
+    pub fn ssh(&self) -> Option<String> {
+        use GitHost::*;
+        use GitInfo::*;
+        match self {
+            GitInfo::Url { .. } | Ssh { .. } => None,
+            Hosted {
+                ref host,
+                ref owner,
+                ref repo,
+                ..
+            } => Some(match host {
+                GitHub => format!("git@github.com:{}/{}.git", owner, repo),
+                Gist => format!("git@gist.github.com:/{}", repo),
+                GitLab => format!("git@gitlab.com:{}/{}.git", owner, repo),
+                Bitbucket => format!("git@bitbucket.com:{}/{}", owner, repo),
+            })
+            .map(|url| url.parse().expect("URL failed to parse")),
+        }
+    }
+
+    pub fn https(&self) -> Option<Url> {
+        use GitHost::*;
+        use GitInfo::*;
+        match self {
+            GitInfo::Url { .. } | Ssh { .. } => None,
+            Hosted {
+                ref host,
+                ref owner,
+                ref repo,
+                ..
+            } => Some(match host {
+                GitHub => format!("https://github.com/{}/{}.git", owner, repo),
+                Gist => format!("https://gist.github.com/{}.git", repo),
+                GitLab => format!("https://gitlab.com/{}/{}.git", owner, repo),
+                Bitbucket => format!("https://bitbucket.com/{}/{}.git", owner, repo),
+            })
+            .map(|url| url.parse().expect("URL failed to parse")),
+        }
+    }
+
     pub fn tarball(&self) -> Option<Url> {
         use GitHost::*;
         use GitInfo::*;
         match self {
             GitInfo::Url { .. } | Ssh { .. } => None,
             Hosted {
-                host: GitHub,
+                ref host,
                 ref owner,
                 ref repo,
                 ref committish,
                 ..
-            } => committish.as_ref().map(|commit| {
-                format!(
-                    "https://codeload.github.com/{}/{}/tar.gz/{}",
-                    owner, repo, commit
-                )
-                .parse()
-                .expect("Failed to parse URL?")
-            }),
-            Hosted {
-                host: Gist,
-                ref repo,
-                ref committish,
-                ..
-            } => committish.as_ref().map(|commit| {
-                format!(
-                    "https://codeload.github.com/gist/{}/tar.gz/{}",
-                    repo, commit
-                )
-                .parse()
-                .expect("Failed to parse URL?")
-            }),
-            Hosted {
-                host: GitLab,
-                ref owner,
-                ref repo,
-                ref committish,
-                ..
-            } => committish.as_ref().map(|commit| {
-                format!(
-                    "https://gitlab.com/{}/{}/repository/archive.tar.gz?ref={}",
-                    owner, repo, commit
-                )
-                .parse()
-                .expect("Failed to parse URL?")
-            }),
-            Hosted {
-                host: Bitbucket,
-                ref owner,
-                ref repo,
-                ref committish,
-                ..
-            } => committish.as_ref().map(|commit| {
-                format!(
-                    "https://bitbucket.org/{}/{}/get/{}.tar.gz",
-                    owner, repo, commit
-                )
-                .parse()
-                .expect("Failed to parse URL?")
-            }),
+            } => committish
+                .as_ref()
+                .map(|commit| match host {
+                    GitHub => format!(
+                        "https://codeload.github.com/{}/{}/tag.gz/{}",
+                        owner, repo, commit
+                    ),
+                    Gist => format!(
+                        "https://codeload.github.com/gist/{}/tar.gz/{}",
+                        repo, commit
+                    ),
+                    GitLab => format!(
+                        "https://gitlan.com/{}/{}/repository/archive.tar.gz?ref={}",
+                        owner, repo, commit
+                    ),
+                    Bitbucket => format!(
+                        "https://bitbucket.org/{}/{}/get/{}.tar.gz",
+                        owner, repo, commit
+                    ),
+                })
+                .map(|url| url.parse().expect("Failed to parse URL.")),
         }
     }
 }

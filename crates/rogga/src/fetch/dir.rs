@@ -25,7 +25,7 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    async fn manifest(&self, path: &Path) -> Result<Manifest> {
+    pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
         let json = async_std::fs::read(&pkg_path)
             .await
@@ -35,9 +35,9 @@ impl DirFetcher {
         Ok(Manifest(pkgjson))
     }
 
-    async fn name_from_path(&self, path: &Path, base_dir: &Path) -> Result<String> {
+    pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String> {
         Ok(self
-            .packument_from_path(&base_dir.join(path))
+            .packument_from_path(&path)
             .await?
             .versions
             .iter()
@@ -48,7 +48,7 @@ impl DirFetcher {
             .clone()
             .name
             .unwrap_or_else(|| {
-                let canon = base_dir.join(path).canonicalize();
+                let canon = path.canonicalize();
                 let path = canon.as_ref().map(|p| p.file_name());
                 if let Ok(Some(name)) = path {
                     name.to_string_lossy().into()
@@ -58,11 +58,11 @@ impl DirFetcher {
             }))
     }
 
-    async fn metadata_from_path(&self, path: &Path) -> Result<VersionMetadata> {
+    pub(crate) async fn metadata_from_path(&self, path: &Path) -> Result<VersionMetadata> {
         Ok(self.manifest(&path).await?.into_metadata(&path)?)
     }
 
-    async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
+    pub(crate) async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
         Ok(Arc::new(self.manifest(&path).await?.into_packument(&path)?))
     }
 }
@@ -70,11 +70,11 @@ impl DirFetcher {
 #[async_trait]
 impl PackageFetcher for DirFetcher {
     async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
-        if let PackageSpec::Dir { ref path } = spec {
-            self.name_from_path(path, base_dir).await
-        } else {
-            unreachable!()
-        }
+        let path = match spec {
+            PackageSpec::Dir { path } => path,
+            _ => panic!("There shouldn't be anything but Dirs here"),
+        };
+        self.name_from_path(&base_dir.join(path)).await
     }
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
@@ -100,7 +100,7 @@ impl PackageFetcher for DirFetcher {
 }
 
 #[derive(Serialize, Deserialize)]
-struct Manifest(OroManifest);
+pub(crate) struct Manifest(OroManifest);
 
 impl Manifest {
     pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {
