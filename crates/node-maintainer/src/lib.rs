@@ -10,16 +10,10 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use rogga::{Package, PackageSpec, Rogga, RoggaOpts};
 use url::Url;
 
-use crate::error::NodeMaintainerError;
+pub use crate::error::NodeMaintainerError;
 
 // Public so I don't get warnings about unused stuff right now
-pub mod assignment;
-pub mod error;
-pub mod incompat;
-pub mod partial_solution;
-pub mod set_relation;
-pub mod solver;
-pub mod term;
+mod error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DepType {

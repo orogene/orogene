@@ -27,6 +27,3 @@ pub enum NodeMaintainerError {
 }
 
 impl Explain for NodeMaintainerError {}
-
-/// The result type returned by calls to this library
-pub type Result<T> = std::result::Result<T, NodeMaintainerError>;
