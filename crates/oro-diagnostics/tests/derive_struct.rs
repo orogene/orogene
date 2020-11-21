@@ -1,7 +1,6 @@
 use oro_diagnostics::Diagnostic;
 use oro_diagnostics::DiagnosticCategory;
 use oro_diagnostics::Explain;
-use oro_diagnostics_derive::Diagnostic;
 use thiserror::Error;
 
 #[derive(Diagnostic, Debug, Eq, PartialEq, Error)]

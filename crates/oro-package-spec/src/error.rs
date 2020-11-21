@@ -1,6 +1,5 @@
 use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError};
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
-use oro_diagnostics_derive::Diagnostic;
 use oro_node_semver::SemverError;
 use thiserror::Error;
 use url::ParseError as UrlParseError;

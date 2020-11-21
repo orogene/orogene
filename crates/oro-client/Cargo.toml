@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 oro-diagnostics = { path = "../oro-diagnostics" }
-oro-diagnostics-derive = { path = "../oro-diagnostics/oro-diagnostics-derive" }
 
 surf = { version = "2.1.0", default-features = false, features = ["h1-client"] }
 thiserror = "1.0.21"

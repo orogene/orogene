@@ -5,6 +5,8 @@ use colored::Colorize;
 use thiserror::Error;
 use url::Url;
 
+pub use oro_diagnostics_derive::Diagnostic;
+
 #[derive(Error)]
 #[error("{:?}", self)]
 pub struct DiagnosticError {

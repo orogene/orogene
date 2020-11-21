@@ -1,5 +1,4 @@
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
-use oro_diagnostics_derive::Diagnostic;
 use thiserror::Error;
 
 #[derive(Debug, Error, Diagnostic)]

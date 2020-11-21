@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use http_types::Url;
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
-use oro_diagnostics_derive::Diagnostic;
 use oro_node_semver::Version;
 use oro_package_spec::{GitInfo, PackageSpec};
 use thiserror::Error;

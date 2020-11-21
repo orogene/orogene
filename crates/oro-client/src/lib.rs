@@ -1,5 +1,4 @@
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
-use oro_diagnostics_derive::Diagnostic;
 use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;

@@ -13,7 +13,6 @@ use nom::multi::separated_list1;
 use nom::sequence::{preceded, tuple};
 use nom::{Err, IResult};
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
-use oro_diagnostics_derive::Diagnostic;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 use thiserror::Error;

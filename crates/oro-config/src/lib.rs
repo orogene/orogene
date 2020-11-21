@@ -3,9 +3,7 @@ use std::path::PathBuf;
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
-use oro_diagnostics::Explain;
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticResult as Result};
-use oro_diagnostics_derive::Diagnostic;
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticResult as Result, Explain};
 use thiserror::Error;
 
 pub use oro_config_derive::*;
