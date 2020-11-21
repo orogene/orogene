@@ -15,6 +15,7 @@ use crate::fetch::dir::DirFetcher;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Packument, VersionMetadata};
+use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
 pub struct GitFetcher {
@@ -32,24 +33,19 @@ impl GitFetcher {
         }
     }
 
-    async fn fetch_to_temp_dir(&self, spec: &PackageSpec, dir: &Path) -> Result<()> {
-        use PackageSpec::*;
-        let spec = match spec {
-            Alias { spec, .. } => spec,
-            otherwise => otherwise,
-        };
-        match spec {
-            Git(GitInfo::Url {
+    async fn fetch_to_temp_dir(&self, info: &GitInfo, dir: &Path) -> Result<()> {
+        match info {
+            GitInfo::Url {
                 url, committish, ..
-            }) => {
+            } => {
                 self.fetch_clone(dir, url.to_string(), committish).await?;
             }
-            Git(GitInfo::Ssh {
+            GitInfo::Ssh {
                 ssh, committish, ..
-            }) => {
+            } => {
                 self.fetch_clone(dir, ssh, committish).await?;
             }
-            Git(hosted @ GitInfo::Hosted { .. }) => match &hosted {
+            hosted @ GitInfo::Hosted { .. } => match &hosted {
                 GitInfo::Hosted {
                     requested,
                     committish,
@@ -77,7 +73,6 @@ impl GitFetcher {
                 }
                 _ => unreachable!(),
             },
-            wtf => panic!("This method should only receive git specs. Got {:#?}", wtf),
         }
         Ok(())
     }
@@ -155,25 +150,47 @@ impl GitFetcher {
 #[async_trait]
 impl PackageFetcher for GitFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
+        use PackageSpec::*;
+        let spec = match spec {
+            Alias { spec, .. } => spec,
+            spec => spec,
+        };
+        let info = match spec {
+            Git(info) => info,
+            _ => panic!("Only git specs allowed."),
+        };
         let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
-        self.fetch_to_temp_dir(spec, dir.path()).await?;
+        self.fetch_to_temp_dir(&info, dir.path()).await?;
         self.dir_fetcher
             .name_from_path(&dir.path().join("package"))
             .await
     }
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
-        // TODO: this needs to use the resolved version, I think. But that's after we get semver support.
+        use PackageResolution::*;
+        let info = match pkg.resolved() {
+            Git(info) => info,
+            _ => panic!("Only git specs allowed."),
+        };
         let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
-        self.fetch_to_temp_dir(&pkg.from, dir.path()).await?;
+        self.fetch_to_temp_dir(&info, dir.path()).await?;
         self.dir_fetcher
             .metadata_from_path(&dir.path().join("package"))
             .await
     }
 
     async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {
+        use PackageSpec::*;
+        let spec = match spec {
+            Alias { spec, .. } => spec,
+            spec => spec,
+        };
+        let info = match spec {
+            Git(info) => info,
+            _ => panic!("Only git specs allowed."),
+        };
         let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
-        self.fetch_to_temp_dir(spec, dir.path()).await?;
+        self.fetch_to_temp_dir(&info, dir.path()).await?;
         self.dir_fetcher
             .packument_from_path(&dir.path().join("package"))
             .await
