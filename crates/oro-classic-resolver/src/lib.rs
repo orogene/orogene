@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
+use oro_diagnostics_derive::Diagnostic;
 use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use oro_package_spec::{PackageSpec, VersionSpec};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
@@ -17,29 +18,18 @@ impl Default for ClassicResolver {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Diagnostic)]
 pub enum ClassicResolverError {
     #[error("Only Version, Tag, Range, and Alias package args are supported, but got `{0}`.")]
+    #[label("classic_resolver::error")]
     InvalidPackageSpec(PackageSpec),
+
     #[error(transparent)]
+    #[label("classic_resolver::error")]
     IoError(#[from] std::io::Error),
 }
 
 impl Explain for ClassicResolverError {}
-
-impl Diagnostic for ClassicResolverError {
-    fn category(&self) -> DiagnosticCategory {
-        DiagnosticCategory::Misc
-    }
-
-    fn label(&self) -> String {
-        "classic_resolver::error".into()
-    }
-
-    fn advice(&self) -> Option<String> {
-        None
-    }
-}
 
 impl ClassicResolver {
     pub fn new() -> Self {

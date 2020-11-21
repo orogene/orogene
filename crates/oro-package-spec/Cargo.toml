@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 oro-diagnostics = { path = "../oro-diagnostics" }
+oro-diagnostics-derive = { path = "../oro-diagnostics/oro-diagnostics-derive" }
 oro-node-semver = { path = "../oro-node-semver" }
 
 url = "2.1.0"

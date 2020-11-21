@@ -5,6 +5,7 @@ pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
 use oro_diagnostics::Explain;
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticResult as Result};
+use oro_diagnostics_derive::Diagnostic;
 use thiserror::Error;
 
 pub use oro_config_derive::*;
@@ -15,29 +16,18 @@ pub trait OroConfigLayer {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Diagnostic)]
 pub enum OroConfigError {
     #[error(transparent)]
+    #[label("config::error")]
     ConfigError(#[from] ConfigError),
+
     #[error(transparent)]
+    #[label("config::error")]
     ConfigParseError(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl Explain for OroConfigError {}
-
-impl Diagnostic for OroConfigError {
-    fn category(&self) -> DiagnosticCategory {
-        DiagnosticCategory::Misc
-    }
-
-    fn label(&self) -> String {
-        "config::error".into()
-    }
-
-    fn advice(&self) -> Option<String> {
-        None
-    }
-}
 
 pub struct OroConfigOptions {
     global: bool,

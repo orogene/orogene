@@ -3,50 +3,34 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use http_types::Url;
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
+use oro_diagnostics_derive::Diagnostic;
 use oro_node_semver::Version;
 use oro_package_spec::{GitInfo, PackageSpec};
 use thiserror::Error;
 
 use crate::request::PackageRequest;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Diagnostic)]
 pub enum ResolverError {
     #[error("No matching `{name}` version found for spec `{spec}`.")]
+    #[label("classic_resolver::no_matching_version")]
+    // TODO: format advice string using variables?
+    #[advice("Try using `oro view` to see what versions are available")]
     NoVersion {
         name: String,
         spec: PackageSpec,
         versions: Vec<String>,
     },
+
     #[error(transparent)]
-    OtherError(#[from] Box<dyn Diagnostic>),
+    OtherError(
+        #[from]
+        #[ask]
+        Box<dyn Diagnostic>,
+    ),
 }
 
 impl Explain for ResolverError {}
-
-impl Diagnostic for ResolverError {
-    fn category(&self) -> DiagnosticCategory {
-        DiagnosticCategory::Misc
-    }
-
-    fn label(&self) -> String {
-        use ResolverError::*;
-        match self {
-            NoVersion { .. } => "classic_resolver::no_matching_version".into(),
-            OtherError(err) => err.label(),
-        }
-    }
-
-    fn advice(&self) -> Option<String> {
-        use ResolverError::*;
-        match self {
-            NoVersion { ref name, .. } => Some(format!(
-                "Try using `oro view {}` to see what versions are available",
-                name
-            )),
-            OtherError(err) => err.advice(),
-        }
-    }
-}
 
 #[async_trait]
 pub trait PackageResolver {
