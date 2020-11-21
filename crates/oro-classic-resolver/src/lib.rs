@@ -68,7 +68,7 @@ impl PackageResolver for ClassicResolver {
         }
 
         if let Git(info) = spec {
-            return Ok(PackageResolution::Git(info.clone()))
+            return Ok(PackageResolution::Git(info.clone()));
         }
 
         // TODO, move a lot of this out into a generic "PackumentResolver"
