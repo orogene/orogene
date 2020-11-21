@@ -113,7 +113,14 @@ impl NodeMaintainer {
                 .iter()
                 .map(|x| (x, DepType::Opt))
                 .chain(manifest.dependencies.iter().map(|x| (x, DepType::Prod)))
-                .chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev)))
+                .chain(
+                    manifest
+                        .dev_dependencies
+                        .iter()
+                        // Only process devDeps if we're looking at the root package's deps.
+                        .filter(|_| package_idx == self.root)
+                        .map(|x| (x, DepType::Dev)),
+                )
                 .chain(
                     manifest
                         .peer_dependencies
@@ -121,9 +128,7 @@ impl NodeMaintainer {
                         .map(|x| (x, DepType::Peer)),
                 )
             {
-                if !names.contains(&name[..])
-                    && (dep_type != DepType::Dev || package_idx != self.root)
-                {
+                if !names.contains(&name[..]) {
                     names.insert(&name[..]);
                     let request = self.rogga.dep_request(&name[..], &spec[..], &self.cwd)?;
                     packages.push(
