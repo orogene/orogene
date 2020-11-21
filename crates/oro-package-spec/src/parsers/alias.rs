@@ -26,7 +26,7 @@ pub(crate) fn alias_spec<'a>(
                 let mut fullname = String::new();
                 if let Some(scope) = scope {
                     fullname.push_str(&scope);
-                    fullname.push_str("/");
+                    fullname.push('/');
                 }
                 fullname.push_str(name);
                 PackageSpec::Alias {
