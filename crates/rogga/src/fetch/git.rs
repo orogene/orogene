@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use async_process::{Command, Stdio};
 use async_std::sync::{Arc, Mutex};
@@ -20,6 +20,7 @@ use crate::packument::{Packument, VersionMetadata};
 pub struct GitFetcher {
     client: Arc<Mutex<OroClient>>,
     dir_fetcher: DirFetcher,
+    git: Arc<Mutex<Option<PathBuf>>>,
 }
 
 impl GitFetcher {
@@ -27,6 +28,7 @@ impl GitFetcher {
         Self {
             client,
             dir_fetcher: DirFetcher::new(),
+            git: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -98,7 +100,15 @@ impl GitFetcher {
         committish: &Option<String>,
     ) -> Result<()> {
         let repo = repo.as_ref();
-        Command::new("git")
+        let git = if let Some(git) = self.git.lock().await.as_ref() {
+            git.clone()
+        } else {
+            let git = which::which("git").map_err(RoggaError::WhichGit)?;
+            let mut selfgit = self.git.lock().await;
+            *selfgit = Some(git.clone());
+            git
+        };
+        Command::new(&git)
             .arg("clone")
             .arg(repo)
             .arg("package")
@@ -117,7 +127,7 @@ impl GitFetcher {
                 }
             })?;
         if let Some(committish) = committish {
-            Command::new("git")
+            Command::new(&git)
                 .arg("checkout")
                 .arg(committish)
                 .current_dir(dir.join("package"))

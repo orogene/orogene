@@ -45,6 +45,9 @@ pub enum RoggaError {
     #[error(transparent)]
     UrlError(#[from] url::ParseError),
 
+    #[error(transparent)]
+    WhichGit(#[from] which::Error),
+
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
     /// don't implement std::error::Error.
@@ -67,8 +70,9 @@ impl Diagnostic for RoggaError {
             ExtractIoError(_, None) => Misc,
             ExtractIoError(_, Some(path)) => Fs { path: path.clone() },
             OroClientError(err) => err.category(),
-            SerdeError(_) => todo!(),
-            UrlError(_) => todo!(),
+            SerdeError(_) => Misc,
+            UrlError(_) => Misc,
+            WhichGit(_) => Misc,
             MiscError(_) => Misc,
         }
     }
@@ -87,6 +91,7 @@ impl Diagnostic for RoggaError {
             OroClientError(err) => err.label(),
             SerdeError(_) => "rogga::serde".into(),
             UrlError(_) => "rogga::bad_url".into(),
+            WhichGit(..) => "rogga::which_git_failure".into(),
             MiscError(_) => "rogga::misc".into(),
         }
     }
@@ -107,6 +112,9 @@ impl Diagnostic for RoggaError {
             OroClientError(err) => err.advice(),
             SerdeError(..) => None,
             UrlError(..) => None,
+            WhichGit(..) => {
+                Some("Are you sure git is installed and available in your $PATH?".into())
+            }
             MiscError(..) => None,
         }
     }
