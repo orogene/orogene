@@ -5,6 +5,7 @@ use async_std::sync::Arc;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use oro_manifest::OroManifest;
+use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +14,6 @@ use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
 use crate::resolver::PackageResolution;
-
-use oro_node_semver::Version;
 
 #[derive(Debug)]
 pub struct DirFetcher;
@@ -26,34 +25,44 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    async fn manifest(&self, path: &Path) -> Result<Manifest> {
-        // TODO: Orogene.toml?
+    pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
-        let json = async_std::fs::read(&path.join("package.json"))
+        let json = async_std::fs::read(&pkg_path)
             .await
-            .map_err(|err| RoggaError::IoError(err, pkg_path))?;
+            .map_err(|err| RoggaError::DirReadError(err, pkg_path))?;
         let pkgjson: OroManifest =
             serde_json::from_slice(&json[..]).map_err(RoggaError::SerdeError)?;
         Ok(Manifest(pkgjson))
     }
 
-    async fn metadata_from_resolved(&self, res: &PackageResolution) -> Result<VersionMetadata> {
-        let path = match res {
-            PackageResolution::Dir { path } => path,
-            _ => panic!("There shouldn't be anything but Dirs here"),
-        };
-        Ok(self.manifest(path).await?.into_metadata(&path)?)
+    pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String> {
+        Ok(self
+            .packument_from_path(&path)
+            .await?
+            .versions
+            .iter()
+            .next()
+            .unwrap()
+            .1
+            .manifest
+            .clone()
+            .name
+            .unwrap_or_else(|| {
+                let canon = path.canonicalize();
+                let path = canon.as_ref().map(|p| p.file_name());
+                if let Ok(Some(name)) = path {
+                    name.to_string_lossy().into()
+                } else {
+                    "".into()
+                }
+            }))
     }
 
-    async fn packument_from_spec(
-        &self,
-        spec: &PackageSpec,
-        base_dir: &Path,
-    ) -> Result<Arc<Packument>> {
-        let path = match spec {
-            PackageSpec::Dir { path } => base_dir.join(path),
-            _ => panic!("There shouldn't be anything but Dirs here"),
-        };
+    pub(crate) async fn metadata_from_path(&self, path: &Path) -> Result<VersionMetadata> {
+        Ok(self.manifest(&path).await?.into_metadata(&path)?)
+    }
+
+    pub(crate) async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
         Ok(Arc::new(self.manifest(&path).await?.into_packument(&path)?))
     }
 }
@@ -61,38 +70,27 @@ impl DirFetcher {
 #[async_trait]
 impl PackageFetcher for DirFetcher {
     async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
-        if let PackageSpec::Dir { ref path } = spec {
-            Ok(self
-                .packument_from_spec(spec, base_dir)
-                .await?
-                .versions
-                .iter()
-                .next()
-                .unwrap()
-                .1
-                .manifest
-                .clone()
-                .name
-                .unwrap_or_else(|| {
-                    let canon = base_dir.join(path).canonicalize();
-                    let path = canon.as_ref().map(|p| p.file_name());
-                    if let Ok(Some(name)) = path {
-                        name.to_string_lossy().into()
-                    } else {
-                        "".into()
-                    }
-                }))
-        } else {
-            unreachable!()
-        }
+        let path = match spec {
+            PackageSpec::Dir { path } => path,
+            _ => panic!("There shouldn't be anything but Dirs here"),
+        };
+        self.name_from_path(&base_dir.join(path)).await
     }
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
-        self.metadata_from_resolved(pkg.resolved()).await
+        let path = match pkg.resolved() {
+            PackageResolution::Dir { path } => path,
+            _ => panic!("There shouldn't be anything but Dirs here"),
+        };
+        self.metadata_from_path(path).await
     }
 
     async fn packument(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>> {
-        self.packument_from_spec(spec, base_dir).await
+        let path = match spec {
+            PackageSpec::Dir { path } => base_dir.join(path),
+            _ => panic!("There shouldn't be anything but Dirs here"),
+        };
+        self.packument_from_path(&path).await
     }
 
     async fn tarball(&self, _pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
@@ -102,7 +100,7 @@ impl PackageFetcher for DirFetcher {
 }
 
 #[derive(Serialize, Deserialize)]
-struct Manifest(OroManifest);
+pub(crate) struct Manifest(OroManifest);
 
 impl Manifest {
     pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {

@@ -30,7 +30,7 @@ fn git_shorthand<'a>(input: &'a str) -> IResult<&'a str, GitInfo, SpecParseError
     Ok((
         input,
         GitInfo::Hosted {
-            host: maybe_host.unwrap_or_else(|| GitHost::GitHub),
+            host: maybe_host.unwrap_or(GitHost::GitHub),
             owner: owner.into(),
             repo: repo.into(),
             committish: committish.map(String::from),

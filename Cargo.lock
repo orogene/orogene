@@ -285,6 +285,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-process"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c8cea09c1fb10a317d1b5af8024eeba256d6554763e85ecd90ff8df31c7bbda"
+dependencies = [
+ "async-io 1.1.0",
+ "blocking 1.0.2",
+ "cfg-if",
+ "event-listener",
+ "futures-lite 1.11.1",
+ "once_cell",
+ "signal-hook",
+ "winapi",
+]
+
+[[package]]
 name = "async-std"
 version = "1.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2757,6 +2773,7 @@ name = "rogga"
 version = "0.1.0"
 dependencies = [
  "async-compression",
+ "async-process",
  "async-std",
  "async-tar 0.2.0",
  "async-trait",
@@ -2776,8 +2793,10 @@ dependencies = [
  "serde 1.0.117",
  "serde_json",
  "ssri",
+ "tempfile",
  "thiserror",
  "url",
+ "which 4.0.2",
 ]
 
 [[package]]
@@ -2787,7 +2806,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a620b0994a180cdfa25c0439e6d58c0628272571501880d626ffff58e96a0799"
 dependencies = [
  "cc",
- "which",
+ "which 3.1.1",
 ]
 
 [[package]]
@@ -3065,6 +3084,25 @@ dependencies = [
  "cpuid-bool",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "signal-hook"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "604508c1418b99dfe1925ca9224829bb2a8a9a04dda655cc01fcad46f4ab05ed"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
+name = "signal-hook-registry"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce32ea0c6c56d5eacaeb814fbed9960547021d3edd010ded1425f180536b20ab"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -3955,6 +3993,16 @@ checksum = "d011071ae14a2f6671d0b74080ae0cd8ebf3a6f8c9589a2cd45f23126fe29724"
 dependencies = [
  "failure",
  "libc",
+]
+
+[[package]]
+name = "which"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87c14ef7e1b8b8ecfc75d5eca37949410046e66f15d185c01d70824f1f8111ef"
+dependencies = [
+ "libc",
+ "thiserror",
 ]
 
 [[package]]

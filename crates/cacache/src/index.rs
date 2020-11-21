@@ -74,7 +74,7 @@ pub fn insert(cache: &Path, key: &str, opts: WriteOpts) -> Result<Integrity> {
         integrity: opts.sri.clone().map(|x| x.to_string()),
         time: opts.time.unwrap_or_else(now),
         size: opts.size.unwrap_or(0),
-        metadata: opts.metadata.unwrap_or_else(|| json!(null)),
+        metadata: opts.metadata.unwrap_or(json!(null)),
     })
     .with_context(|| format!("Failed to serialize entry with key `{}`", key))?;
 
@@ -110,7 +110,7 @@ pub async fn insert_async<'a>(cache: &'a Path, key: &'a str, opts: WriteOpts) ->
         integrity: opts.sri.clone().map(|x| x.to_string()),
         time: opts.time.unwrap_or_else(now),
         size: opts.size.unwrap_or(0),
-        metadata: opts.metadata.unwrap_or_else(|| json!(null)),
+        metadata: opts.metadata.unwrap_or(json!(null)),
     })
     .with_context(|| format!("Failed to serialize entry with key `{}`", key))?;
 

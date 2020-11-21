@@ -68,61 +68,6 @@ where
     .to_internal()?)
 }
 
-pub async fn to_node_modules<P, R>(cache: P, tarball: R) -> Result<()>
-where
-    P: AsRef<std::path::Path>,
-    R: AsyncRead + Unpin + Send + Sync,
-{
-    use async_std::io::{self, BufReader};
-    let cache = std::path::PathBuf::from(cache.as_ref());
-    let takeme = cache.clone();
-    async_std::task::spawn_blocking(move || mkdirp::mkdirp(&takeme).to_internal()).await?;
-
-    let decoder = GzipDecoder::new(BufReader::new(tarball));
-    let ar = Archive::new(decoder);
-    let mut entries = ar.clone().entries().to_internal()?;
-
-    while let Some(file) = entries.next().await {
-        let f = file.to_internal()?;
-        let header = f.header();
-        let path = cache.join(header.path().to_internal()?.as_ref());
-        if let async_tar::EntryType::Regular = header.entry_type() {
-            let takeme = path.clone();
-
-            async_std::task::spawn_blocking(move || {
-                mkdirp::mkdirp(&takeme.parent().unwrap())
-                    .to_internal()
-                    .with_context(|| String::from("Trying to create a file's parent dir"))
-            })
-            .await?;
-            let mut writer = async_std::fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open(&path)
-                .await
-                .to_internal()
-                .with_context(|| format!("Trying to write {}", path.display()))?;
-
-            io::copy(f, async_std::io::BufWriter::new(&mut writer))
-                .await
-                .to_internal()?;
-        }
-    }
-
-    std::mem::drop(entries);
-    let mut reader = ar
-        .into_inner()
-        .map_err(|_| RoggaError::MiscError("Failed to get inner Read".into()))
-        .to_internal()?
-        .into_inner()
-        .into_inner();
-    let mut buf = Vec::new();
-    reader.read_to_end(&mut buf).await.to_internal()?;
-
-    log::trace!("Finished caching tarball contents from stream");
-    Ok(())
-}
-
 pub async fn tarball_itself<P, R>(cache: P, tarball: R) -> Result<Integrity>
 where
     P: AsRef<std::path::Path>,

@@ -67,6 +67,10 @@ impl PackageResolver for ClassicResolver {
             });
         }
 
+        if let Git(info) = spec {
+            return Ok(PackageResolution::Git(info.clone()));
+        }
+
         // TODO, move a lot of this out into a generic "PackumentResolver"
         // that takes an oro_package_spec::VersionReq and an existing packument,
         // since it's going to apply to a set of resolvers, but not to all of
