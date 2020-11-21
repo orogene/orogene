@@ -1,11 +1,15 @@
 use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError};
-use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
+use oro_diagnostics_derive::Diagnostic;
 use oro_node_semver::SemverError;
 use thiserror::Error;
 use url::ParseError as UrlParseError;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Diagnostic)]
 #[error("Error parsing package spec. {kind}")]
+#[category(Parse)]
+#[label("package_spec::no_parse")]
+#[advice("Please fix your spec. Go look up wherever they're documented idk.")]
 pub struct PackageSpecError {
     pub input: String,
     pub offset: usize,
@@ -65,25 +69,15 @@ pub enum SpecErrorKind {
     Other,
 }
 
-impl Diagnostic for PackageSpecError {
-    fn category(&self) -> DiagnosticCategory {
+impl Explain for PackageSpecError {
+    fn meta(&self) -> Option<Meta> {
         let (row, col) = self.location();
-        DiagnosticCategory::Parse {
+        Some(Meta::Parse {
             input: self.input.clone(),
             path: None,
             row,
             col,
-        }
-    }
-
-    fn label(&self) -> String {
-        // TODO: add more detail
-        "package_spec::no_parse".into()
-    }
-
-    fn advice(&self) -> Option<String> {
-        // TODO: please fix this
-        Some("Please fix your spec. Go look up wherever they're documented idk.".into())
+        })
     }
 }
 

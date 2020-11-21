@@ -1,4 +1,5 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCategory};
+use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
+use oro_diagnostics_derive::Diagnostic;
 use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;
@@ -12,12 +13,17 @@ use crate::http_client::PoolingClient;
 
 mod http_client;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Diagnostic)]
 pub enum OroClientError {
     // TODO: add registry URL here?
     #[error("Registry request failed:\n\t{surf_err}")]
+    #[category(Net)]
+    #[label("client::bad_request")]
     RequestError { surf_err: SurfError, url: Url },
+
     #[error("Registry returned failed status code {status_code} for a request.")]
+    #[category(Net)]
+    #[label("client::response_failure")]
     ResponseError {
         url: Url,
         status_code: StatusCode,
@@ -25,32 +31,17 @@ pub enum OroClientError {
     },
 }
 
-impl Diagnostic for OroClientError {
-    fn category(&self) -> DiagnosticCategory {
-        use DiagnosticCategory::*;
+impl Explain for OroClientError {
+    fn meta(&self) -> Option<Meta> {
         use OroClientError::*;
         match self {
-            RequestError { ref url, .. } => Net {
+            RequestError { ref url, .. } => Some(Meta::Net {
                 url: Some(url.clone()),
-                host: url.host().expect("this should have a host").to_owned(),
-            },
-            ResponseError { ref url, .. } => Net {
+            }),
+            ResponseError { ref url, .. } => Some(Meta::Net {
                 url: Some(url.clone()),
-                host: url.host().expect("this should have a host").to_owned(),
-            },
+            }),
         }
-    }
-
-    fn label(&self) -> String {
-        use OroClientError::*;
-        match self {
-            RequestError { .. } => "client::bad_request".into(),
-            ResponseError { .. } => "client::response_failure".into(),
-        }
-    }
-
-    fn advice(&self) -> Option<String> {
-        None
     }
 }
 

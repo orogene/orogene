@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 oro-diagnostics = { path = "../oro-diagnostics" }
+oro-diagnostics-derive = { path = "../oro-diagnostics/oro-diagnostics-derive" }
 
 nom = "6.0.0"
 thiserror = "1.0.9"

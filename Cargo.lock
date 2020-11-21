@@ -2034,6 +2034,7 @@ dependencies = [
  "futures",
  "oro-classic-resolver",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "oro-node-semver",
  "petgraph",
  "rogga",
@@ -2198,6 +2199,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "oro-node-semver",
  "oro-package-spec",
  "rogga",
@@ -2218,6 +2220,7 @@ dependencies = [
  "http-types",
  "log",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "serde 1.0.117",
  "surf",
  "thiserror",
@@ -2240,6 +2243,7 @@ dependencies = [
  "config 0.9.3",
  "oro-config-derive",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "pretty_assertions",
  "serde 1.0.117",
  "tempfile",
@@ -2261,8 +2265,17 @@ name = "oro-diagnostics"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "oro-diagnostics-derive",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "oro-diagnostics-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2315,6 +2328,7 @@ dependencies = [
  "bytecount",
  "nom 6.0.0",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "pretty_assertions",
  "serde 1.0.117",
  "serde_derive",
@@ -2342,6 +2356,7 @@ dependencies = [
  "bytecount",
  "nom 6.0.0",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "oro-node-semver",
  "percent-encoding",
  "thiserror",
@@ -2787,6 +2802,7 @@ dependencies = [
  "mkdirp",
  "oro-client",
  "oro-diagnostics",
+ "oro-diagnostics-derive",
  "oro-manifest",
  "oro-node-semver",
  "oro-package-spec",

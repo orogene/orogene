@@ -16,6 +16,7 @@ exclude = [
 members = [
     ".",
     "crates/*",
+    "crates/oro-diagnostics/oro-diagnostics-derive",
     "syenite",
     "syenite/commands/*",
     "antimony/src-tauri",
