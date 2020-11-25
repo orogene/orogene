@@ -8,7 +8,7 @@ fn main() -> std::io::Result<()> {
     let ci = is_ci();
 
     if !ci {
-        let mut search_dir = std::env::current_dir()?;
+        /*         let mut search_dir = std::env::current_dir()?;
 
         search_dir.push("vendor/node/out/Release");
 
@@ -61,7 +61,7 @@ fn main() -> std::io::Result<()> {
             .arg("rcs")
             .arg(snapshot_lib)
             .arg(snapshot_stub)
-            .output()?;
+            .output()?; */
 
         cc::Build::new()
             .cpp(true)
