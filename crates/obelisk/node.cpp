@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 extern "C"
 {
   int execute_node(char *code);

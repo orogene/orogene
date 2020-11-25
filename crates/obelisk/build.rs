@@ -7,7 +7,7 @@ fn main() {
     let ci = is_ci();
 
     if !ci {
-        /* let mut search_dir = std::env::current_dir().unwrap();
+        let mut search_dir = std::env::current_dir().unwrap();
 
         search_dir.push("vendor/node/out/Release");
 
@@ -42,7 +42,7 @@ fn main() {
         println!("cargo:rustc-link-lib=static=llhttp");
         println!("cargo:rustc-link-lib=static=nghttp2");
         println!("cargo:rustc-link-lib=static=openssl");
-        println!("cargo:rustc-link-lib=static=torque_base"); */
+        println!("cargo:rustc-link-lib=static=torque_base");
 
         cc::Build::new()
             .cpp(true)
