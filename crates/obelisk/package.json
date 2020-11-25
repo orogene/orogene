@@ -1,0 +1,16 @@
+{
+  "name": "obelisk",
+  "version": "1.0.0",
+  "description": "Uses [Node.js C++ API](https://nodejs.org/docs/latest-v14.x/api/embedding.html) to embed Node in Orogene.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Kirill Vasiltsov",
+  "license": "ISC",
+  "dependencies": {
+    "gyp-parser": "^1.0.2"
+  }
+}

@@ -3,11 +3,15 @@
 use cc;
 use ci_info::is_ci;
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let ci = is_ci();
 
     if !ci {
-        /* let mut search_dir = std::env::current_dir().unwrap();
+        /*
+
+        use std::{path::Path, process::Command};
+
+        let mut search_dir = std::env::current_dir()?;
 
         search_dir.push("vendor/node/out/Release");
 
@@ -42,11 +46,31 @@ fn main() {
         println!("cargo:rustc-link-lib=static=llhttp");
         println!("cargo:rustc-link-lib=static=nghttp2");
         println!("cargo:rustc-link-lib=static=openssl");
-        println!("cargo:rustc-link-lib=static=torque_base"); */
+        println!("cargo:rustc-link-lib=static=torque_base");
+
+        let stub_dir = Path::new(search_dir.as_os_str()).join("/obj.target/cctest/src/");
+        let code_cache_stub = Path::new(stub_dir.as_os_str()).join("node_code_cache_stub.o");
+        let snapshot_stub = Path::new(stub_dir.as_os_str()).join("node_snapshot_stub.o");
+        let code_cache_lib = Path::new(search_dir.as_os_str()).join("lib_stub_code_cache.a");
+        let snapshot_lib = Path::new(search_dir.as_os_str()).join("lib_stub_snapshot.a");
+
+        Command::new("ar")
+            .arg("rcs")
+            .arg(code_cache_lib)
+            .arg(code_cache_stub)
+            .output()?;
+
+        Command::new("ar")
+            .arg("rcs")
+            .arg(snapshot_lib)
+            .arg(snapshot_stub)
+            .output()?; */
 
         cc::Build::new()
             .cpp(true)
             .file("node.cpp")
             .compile("liboronode.a");
     }
+
+    Ok(())
 }

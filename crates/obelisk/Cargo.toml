@@ -13,3 +13,7 @@ ci_info = "0.11.0"
 cc = "1.0"
 ci_info = "0.11.0"
 
+[[bin]]
+name = "obelisk"
+path = "src/bin.rs"
+

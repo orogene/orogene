@@ -1,4 +1,4 @@
-#include "node_ext_api.h"
+#include "node_c_api.h"
 #include <assert.h>
 #include "node.h"
 #include "uv.h"
@@ -97,13 +97,11 @@ int RunNodeInstance(MultiIsolatePlatform *platform,
         node::CreateEnvironment(isolate_data.get(), context, args, exec_args),
         node::FreeEnvironment);
 
-    MaybeLocal<Value> loadenv_ret = node::LoadEnvironment(
-        env.get(),
-        "const publicRequire ="
-        "  require('module').createRequire(process.cwd() + '/');"
-        "globalThis.require = publicRequire;"
-        "globalThis.embedVars = { nön_ascıı: '🏳️‍🌈' };"
-        "require('vm').runInThisContext(process.argv[1]);");
+    MaybeLocal<Value> loadenv_ret =
+        node::LoadEnvironment(env.get(),
+                              "const path = require('path');"
+                              "const Module = require('module');"
+                              "Module.runMain(path.resolve(process.argv[1]));");
 
     if (loadenv_ret.IsEmpty()) // There has been a JS exception.
       return 1;
@@ -151,7 +149,7 @@ extern "C"
 {
   int execute_node(char *code)
   {
-    char *args[] = {code, NULL};
-    return node_main(1, args);
+    char *args[] = {"obelisk", code};
+    return node_main(2, args);
   }
 }
