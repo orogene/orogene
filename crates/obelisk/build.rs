@@ -2,6 +2,7 @@
 
 use cc;
 use ci_info::is_ci;
+use std::process::Command;
 
 fn main() {
     let ci = is_ci();

@@ -1,4 +1,4 @@
-#include "node_ext_api.h"
+#include "node_c_api.h"
 #include <assert.h>
 #include "node.h"
 #include "uv.h"
