@@ -144,3 +144,12 @@ int RunNodeInstance(MultiIsolatePlatform *platform,
 
   return exit_code;
 }
+
+extern "C"
+{
+  int execute_node(char *code)
+  {
+    char *args[] = {"obelisk", code};
+    return node_main(2, args);
+  }
+}
