@@ -4,8 +4,18 @@ Uses [Node.js C++ API](https://nodejs.org/docs/latest-v14.x/api/embedding.html) 
 
 ## Build
 
-- Copy files from `node_c_api` (which are needed to turn C++ API into C API and prevent function name mangling) to `vendor/node/src`
-- Run the following:
+_Currently only works on Mac OS_
+
+First, run the JS script that copies the embedder API wrapper to Node's source and modifies build configuration:
+
+```
+npm install
+node prepare.js
+```
+
+Hint: make sure you fetch `node` repository files first!
+
+Then build Node:
 
 ```sh
 cd vendor/node
@@ -13,13 +23,6 @@ cd vendor/node
 make -j4
 ```
 
-After the build succeeds you need to manually put two stubs in the output folder (see [this issue](https://github.com/nodejs/node/issues/27431#issuecomment-487288275)):
+## Test
 
-```
-REL=out/Release
-STUBS=$REL/obj.target/cctest/src
-ar rcs $REL/lib_stub_code_cache.a $STUBS/node_code_cache_stub.o
-ar rcs $REL/lib_stub_snapshot.a $STUBS/node_snapshot_stub.o
-```
-
-Finally, build `obelisk` itself with `cargo build` and test with `cargo test`.
+Build `obelisk` itself with `cargo build` and run `cargo run fixtures/test.js`.

@@ -2,13 +2,16 @@
 
 use cc;
 use ci_info::is_ci;
-use std::{path::Path, process::Command};
 
 fn main() -> std::io::Result<()> {
     let ci = is_ci();
 
     if !ci {
-        /*         let mut search_dir = std::env::current_dir()?;
+        /*
+
+        use std::{path::Path, process::Command};
+
+        let mut search_dir = std::env::current_dir()?;
 
         search_dir.push("vendor/node/out/Release");
 
