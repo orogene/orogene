@@ -8,11 +8,11 @@ edition = "2018"
 
 [dependencies]
 oro-common = { path = "../oro-common" }
-serde = { version = "1.0.115", features = ["derive"] }
-serde_json = { version = "1.0.57", features = ["preserve_order"] }
-nom = "5.0.1"
-thiserror = "1.0.20"
-derive_builder = "0.9.0"
+serde_json = { version = "1.0.73", features = ["preserve_order"] }
+nom = "7.1.0"
+derive_builder = "0.10.2"
+
+serde = "1.0.126"
 
 [dev-dependencies]
 anyhow = "1.0.32"

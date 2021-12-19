@@ -4,12 +4,11 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use derive_builder::Builder;
-use error::{Internal, Result};
-use oro_node_semver::{Version, VersionReq};
+use oro_common::node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-pub use error::Error;
+pub use error::ManifestError;
 
 mod error;
 
@@ -90,7 +89,7 @@ pub struct OroManifest {
     // whack-a-mole here.
     #[serde(default, deserialize_with = "object_or_bust")]
     #[builder(default)]
-    pub engines: HashMap<String, VersionReq>,
+    pub engines: HashMap<String, Range>,
 
     #[serde(default)]
     #[builder(default)]
@@ -139,16 +138,16 @@ pub struct OroManifest {
 }
 
 impl OroManifest {
-    pub fn from_file<F: AsRef<Path>>(file: F) -> Result<OroManifest> {
-        let data = fs::read(file.as_ref()).to_internal()?;
-        Ok(serde_json::from_slice::<OroManifest>(&data[..]).to_internal()?)
+    pub fn from_file<F: AsRef<Path>>(file: F) -> Result<OroManifest, ManifestError> {
+        let data = fs::read(file.as_ref())?;
+        Ok(serde_json::from_slice::<OroManifest>(&data[..])?)
     }
 
-    pub fn update_file<F: AsRef<Path>>(&self, file: F) -> Result<()> {
+    pub fn update_file<F: AsRef<Path>>(&self, file: F) -> Result<(), ManifestError> {
         let file = file.as_ref();
-        let manifest = serde_json::to_value(&self).to_internal()?;
-        let data = fs::read(file).to_internal()?;
-        let mut pkg_json = serde_json::from_slice::<Value>(&data[..]).to_internal()?;
+        let manifest = serde_json::to_value(&self)?;
+        let data = fs::read(file)?;
+        let mut pkg_json = serde_json::from_slice::<Value>(&data[..])?;
         match (manifest, &mut pkg_json) {
             (Value::Object(ref mani_map), Value::Object(ref mut pkg_map)) => {
                 for (key, val) in mani_map.iter() {
@@ -160,9 +159,9 @@ impl OroManifest {
                     };
                 }
             }
-            _ => return Err(Error::InvalidPackageFile(PathBuf::from(file))),
+            _ => return Err(ManifestError::InvalidPackageFile(PathBuf::from(file))),
         };
-        fs::write(file, serde_json::to_vec_pretty(&pkg_json).to_internal()?).to_internal()?;
+        fs::write(file, serde_json::to_vec_pretty(&pkg_json)?)?;
         Ok(())
     }
 }
@@ -214,7 +213,7 @@ pub enum PersonField {
 }
 
 impl PersonField {
-    pub fn parse(&self) -> Result<Person> {
+    pub fn parse(&self) -> Result<Person, ManifestError> {
         match self {
             PersonField::Obj { name, email, url } => Ok(Person {
                 name: name.clone(),
@@ -234,7 +233,7 @@ pub struct Person {
 }
 
 impl FromStr for Person {
-    type Err = Error;
+    type Err = ManifestError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         parser::parse_person(s.trim())
@@ -297,15 +296,15 @@ mod parser {
     use nom::bytes::complete::{take_till, take_till1};
     use nom::character::complete::char;
     use nom::combinator::{all_consuming, map, opt};
-    use nom::error::{context, convert_error, ParseError, VerboseError};
+    use nom::error::{convert_error, ParseError, VerboseError};
     use nom::sequence::{delimited, preceded, tuple};
     use nom::{Err, IResult};
 
-    pub fn parse_person<I: AsRef<str>>(input: I) -> Result<Person> {
-        let input = &input.as_ref()[..];
+    pub fn parse_person<I: AsRef<str>>(input: I) -> Result<Person, ManifestError> {
+        let input = input.as_ref();
         match all_consuming(person::<VerboseError<&str>>)(input) {
             Ok((_, arg)) => Ok(arg),
-            Err(err) => Err(Error::ParsePersonError {
+            Err(err) => Err(ManifestError::ParsePersonError {
                 input: input.into(),
                 msg: match err {
                     Err::Error(e) => convert_error(input, e),
@@ -320,23 +319,20 @@ mod parser {
     where
         E: ParseError<&'a str>,
     {
-        context(
-            "person",
-            map(
-                tuple((
-                    opt(take_till1(|c| c == '<')),
-                    opt(delimited(char('<'), take_till1(|c| c == '>'), char('>'))),
-                    opt(preceded(
-                        take_till(|c| c == '('),
-                        delimited(char('('), take_till1(|c| c == ')'), char(')')),
-                    )),
+        map(
+            tuple((
+                opt(take_till1(|c| c == '<')),
+                opt(delimited(char('<'), take_till1(|c| c == '>'), char('>'))),
+                opt(preceded(
+                    take_till(|c| c == '('),
+                    delimited(char('('), take_till1(|c| c == ')'), char(')')),
                 )),
-                |(name, email, url): (Option<&str>, Option<&str>, Option<&str>)| Person {
-                    name: name.map(|n| n.trim().into()),
-                    email: email.map(|e| e.trim().into()),
-                    url: url.map(|u| u.trim().into()),
-                },
-            ),
+            )),
+            |(name, email, url): (Option<&str>, Option<&str>, Option<&str>)| Person {
+                name: name.map(|n| n.trim().into()),
+                email: email.map(|e| e.trim().into()),
+                url: url.map(|u| u.trim().into()),
+            },
         )(input)
     }
 }
@@ -366,7 +362,7 @@ mod tests {
         "#;
         let mut deps = HashMap::new();
         deps.insert(String::from("foo"), String::from("^3.2.1"));
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -384,7 +380,7 @@ mod tests {
     #[test]
     fn empty() -> Result<()> {
         let string = "{}";
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(parsed, OroManifestBuilder::default().build().unwrap());
         Ok(())
     }
@@ -410,7 +406,7 @@ mod tests {
     ]
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -438,7 +434,7 @@ mod tests {
     "engines": []
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -456,7 +452,7 @@ mod tests {
     "licence": "Parity-7.0"
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -474,7 +470,7 @@ mod tests {
     "version": "1.2.3"
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -488,7 +484,7 @@ mod tests {
     "version": "invalid"
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string);
+        let parsed = serde_json::from_str::<OroManifest>(string);
         assert!(parsed.is_err());
         Ok(())
     }
@@ -500,7 +496,7 @@ mod tests {
     "private": true
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default().private(true).build().unwrap()
@@ -516,7 +512,7 @@ mod tests {
     "contributors": ["Eddy the Cat"]
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
