@@ -1,4 +1,4 @@
-use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
+use oro_common::node_semver::{Version, Range};
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case as tag, take_till1};
@@ -13,9 +13,9 @@ use crate::parsers::util;
 use crate::{PackageSpec, VersionSpec};
 
 /// npm-spec := [ '@' not('/')+ '/' ] not('@/')+ [ '@' version-req ]
-pub(crate) fn npm_spec<'a>(
-    input: &'a str,
-) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
+pub(crate) fn npm_spec(
+    input: &str,
+) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "npm package spec",
         map(
@@ -44,24 +44,24 @@ pub(crate) fn npm_spec<'a>(
     )(input)
 }
 
-fn version_req<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
+fn version_req(input: &str) -> IResult<&str, VersionSpec, SpecParseError<&str>> {
     context(
         "version requirement",
         alt((semver_version, semver_range, version_tag)),
     )(input)
 }
 
-fn semver_version<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
-    let (input, version) = map_res(take_till1(|_| false), SemVerVersion::parse)(input)?;
+fn semver_version(input: &str) -> IResult<&str, VersionSpec, SpecParseError<&str>> {
+    let (input, version) = map_res(take_till1(|_| false), Version::parse)(input)?;
     Ok((input, VersionSpec::Version(version)))
 }
 
-fn semver_range<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
-    let (input, range) = map_res(take_till1(|_| false), SemVerVersionReq::parse)(input)?;
+fn semver_range(input: &str) -> IResult<&str, VersionSpec, SpecParseError<&str>> {
+    let (input, range) = map_res(take_till1(|_| false), Range::parse)(input)?;
     Ok((input, VersionSpec::Range(range)))
 }
 
-fn version_tag<'a>(input: &'a str) -> IResult<&'a str, VersionSpec, SpecParseError<&'a str>> {
+fn version_tag(input: &str) -> IResult<&str, VersionSpec, SpecParseError<&str>> {
     context(
         "dist tag",
         map(map_res(take_till1(|_| false), util::no_url_encode), |t| {

@@ -1,4 +1,4 @@
-use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
+use oro_common::node_semver::{Range, Version};
 use oro_package_spec::{PackageSpec, PackageSpecError, VersionSpec};
 
 type Result<T> = std::result::Result<T, PackageSpecError>;
@@ -8,7 +8,7 @@ fn parse(input: &str) -> Result<PackageSpec> {
 }
 
 fn version_req(input: &str) -> Option<VersionSpec> {
-    Some(VersionSpec::Range(SemVerVersionReq::parse(input).unwrap()))
+    Some(VersionSpec::Range(Range::parse(input).unwrap()))
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn npm_pkg_with_req() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "hello-world".into(),
-            requested: Some(VersionSpec::Version(SemVerVersion::parse("1.2.3").unwrap()))
+            requested: Some(VersionSpec::Version(Version::parse("1.2.3").unwrap()))
         }
     );
     Ok(())
@@ -127,7 +127,7 @@ fn npm_pkg_scoped_with_req() -> Result<()> {
         PackageSpec::Npm {
             scope: Some("hello".into()),
             name: "@hello/world".into(),
-            requested: Some(VersionSpec::Version(SemVerVersion::parse("1.2.3").unwrap()))
+            requested: Some(VersionSpec::Version(Version::parse("1.2.3").unwrap()))
         }
     );
     Ok(())
@@ -141,7 +141,7 @@ fn npm_pkg_prefixed_with_req() -> Result<()> {
         PackageSpec::Npm {
             scope: Some("hello".into()),
             name: "@hello/world".into(),
-            requested: Some(VersionSpec::Version(SemVerVersion::parse("1.2.3").unwrap()))
+            requested: Some(VersionSpec::Version(Version::parse("1.2.3").unwrap()))
         }
     );
     Ok(())

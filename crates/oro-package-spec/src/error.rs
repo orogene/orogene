@@ -1,14 +1,17 @@
 use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError};
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
-use oro_node_semver::SemverError;
-use thiserror::Error;
+use oro_common::{
+    miette::{self, Diagnostic},
+    node_semver::SemverError,
+    thiserror::{self, Error},
+};
 use url::ParseError as UrlParseError;
 
 #[derive(Debug, Error, Diagnostic)]
 #[error("Error parsing package spec. {kind}")]
-#[category(Parse)]
-#[label("package_spec::no_parse")]
-#[advice("Please fix your spec. Go look up wherever they're documented idk.")]
+#[diagnostic(
+    code(package_spec::no_parse),
+    help("Please fix your spec. Go look up wherever they're documented idk.")
+)]
 pub struct PackageSpecError {
     pub input: String,
     pub offset: usize,
@@ -66,18 +69,6 @@ pub enum SpecErrorKind {
     IncompleteInput,
     #[error("An unspecified error occurred.")]
     Other,
-}
-
-impl Explain for PackageSpecError {
-    fn meta(&self) -> Option<Meta> {
-        let (row, col) = self.location();
-        Some(Meta::Parse {
-            input: self.input.clone(),
-            path: None,
-            row,
-            col,
-        })
-    }
 }
 
 #[derive(Debug)]

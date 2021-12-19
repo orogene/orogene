@@ -2106,10 +2106,9 @@ name = "oro-package-spec"
 version = "0.1.0"
 dependencies = [
  "bytecount",
- "node-semver",
  "nom 6.1.2",
+ "oro-common",
  "percent-encoding",
- "thiserror",
  "url",
 ]
 

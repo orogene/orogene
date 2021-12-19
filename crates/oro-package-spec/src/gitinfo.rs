@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use oro_node_semver::VersionReq as Range;
+use oro_common::node_semver::Range;
 use url::Url;
 
 use crate::error::{PackageSpecError, SpecErrorKind};

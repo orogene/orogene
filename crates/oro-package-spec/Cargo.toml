@@ -5,10 +5,9 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-node-semver = "2.0.0"
+oro-common = { path = "../oro-common" }
 
 url = "2.1.0"
 nom = "6.0.0"
-thiserror = "1.0.9"
 percent-encoding = "2.1.0"
 bytecount = "0.6.0"
