@@ -5,13 +5,16 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
+oro-common = { path = "../oro-common" }
 oro-config-derive = { path = "../oro-config-derive" }
-oro-diagnostics = { path = "../oro-diagnostics" }
 
+# False deps
 clap = { git = "https://github.com/zkat/clap" }
-config = { version = "0.9.3", features = ["toml"] }
 serde = { version = "1.0.103", features = ["derive"] }
-thiserror = "1.0.22"
+
+# True deps
+config = { version = "0.9.3", features = ["toml"] }
+kdl = "3.0.0"
 
 [dev-dependencies]
 anyhow = "1.0.24"

@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-oro-node-semver = { path = "../oro-node-semver" }
+oro-common = { path = "../oro-common" }
 serde = { version = "1.0.115", features = ["derive"] }
 serde_json = { version = "1.0.57", features = ["preserve_order"] }
 nom = "5.0.1"

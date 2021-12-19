@@ -5,7 +5,7 @@ name = "oro-tree"
 version = "0.1.0"
 
 [dependencies]
-oro-node-semver = { path = "../oro-node-semver" }
+node-semver = "2.0.0"
 
 memmap = "0.7.0"
 serde_json = "1.0.56"

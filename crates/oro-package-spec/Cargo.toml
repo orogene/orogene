@@ -5,8 +5,7 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-oro-diagnostics = { path = "../oro-diagnostics" }
-oro-node-semver = { path = "../oro-node-semver" }
+node-semver = "2.0.0"
 
 url = "2.1.0"
 nom = "6.0.0"

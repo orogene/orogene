@@ -5,6 +5,13 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-oro-diagnostics = { path = "../oro-diagnostics" }
+oro-common = { path = "../oro-common" }
 
+# Re-exports, a la "turron-common", but stuff that commands use a lot.
 async-trait = "0.1.19"
+clap = { git = "https://github.com/zkat/clap" }
+oro-config = { path = "../../crates/oro-config" }
+owo-colors = "2.0.0"
+indicatif = "0.16.2"
+dialoguer = "0.8.0"
+directories = "4.0.1"

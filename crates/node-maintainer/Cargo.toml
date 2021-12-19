@@ -5,10 +5,9 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-oro-diagnostics = { path = "../oro-diagnostics" }
-oro-node-semver = { path = "../oro-node-semver" }
+node-semver = "2.0.0"
 oro-classic-resolver = { path = "../oro-classic-resolver" }
-rogga = { path = "../rogga" }
+sessapinae = { path = "../sessapinae" }
 
 thiserror = "1.0.20"
 petgraph = "0.5.1"

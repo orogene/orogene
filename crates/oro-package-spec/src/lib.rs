@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use nom::combinator::all_consuming;
 use nom::Err;
-use oro_node_semver::{Version, VersionReq as Range};
+use oro_common::node_semver::{Version, VersionReq as Range};
 
 pub use crate::error::{PackageSpecError, SpecErrorKind};
 pub use crate::gitinfo::{GitHost, GitInfo};

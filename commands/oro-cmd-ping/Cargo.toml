@@ -1,0 +1,10 @@
+[package]
+name = "oro-cmd-ping"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+[dependencies]
+sessapinae = { path = "../../crates/sessapinae" }
+oro-command = { path = "../../crates/oro-command" }
+oro-common = { path = "../../crates/oro-common" }
