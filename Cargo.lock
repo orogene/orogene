@@ -1993,10 +1993,9 @@ name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "node-semver",
+ "oro-common",
  "oro-package-spec",
  "sessapinae",
- "thiserror",
 ]
 
 [[package]]
@@ -2034,7 +2033,6 @@ dependencies = [
 name = "oro-command"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "clap",
  "dialoguer",
  "directories 4.0.1",
@@ -2049,6 +2047,7 @@ name = "oro-common"
 version = "0.1.0"
 dependencies = [
  "async-compat",
+ "async-trait",
  "chrono",
  "chrono-humanize 0.2.1",
  "futures",

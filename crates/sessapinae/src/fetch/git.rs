@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_process::{Command, Stdio};
-use async_trait::async_trait;
 use oro_common::{
     async_compat::CompatExt,
+    async_trait::async_trait,
     futures::{io, AsyncRead, TryStreamExt},
     reqwest::Client,
     smol::lock::Mutex,

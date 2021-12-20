@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use async_trait::async_trait;
 use http_types::Url;
 
 use oro_common::{
+    async_trait::async_trait,
     miette::{self, Diagnostic},
     node_semver::Version,
     thiserror::{self, Error},

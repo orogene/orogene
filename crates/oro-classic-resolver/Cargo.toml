@@ -7,9 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+oro-common = { path = "../oro-common" }
 oro-package-spec = { path = "../oro-package-spec" }
 sessapinae = { path = "../sessapinae" }
-node-semver = "2.0.0"
-
-thiserror = "1.0.20"
-async-trait = "0.1.36"
+async-trait = "0.1.52"

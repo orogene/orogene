@@ -1,4 +1,5 @@
 pub use async_compat;
+pub use async_trait;
 pub use chrono;
 pub use chrono_humanize;
 pub use futures;

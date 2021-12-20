@@ -10,6 +10,7 @@ miette = { version = "3.0.0", features = ["fancy"] }
 # miette = { path = "../../../miette", features = ["fancy"] }
 thiserror = "1.0.26"
 
+async-trait = "0.1.52"
 chrono = { version = "0.4.19", features = ["serde"] }
 chrono-humanize = "0.2.1"
 quick-xml = { version = "0.23.0-alpha2", features = ["serialize"] }

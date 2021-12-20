@@ -8,7 +8,6 @@ edition = "2018"
 oro-common = { path = "../oro-common" }
 
 # Re-exports, a la "turron-common", but stuff that commands use a lot.
-async-trait = "0.1.19"
 clap = { git = "https://github.com/zkat/clap" }
 oro-config = { path = "../../crates/oro-config" }
 owo-colors = "2.0.0"

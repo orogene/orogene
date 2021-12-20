@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use oro_common::{futures::io::AsyncRead, node_semver::Version, serde_json, smol::fs};
+use oro_common::{
+    async_trait::async_trait, futures::io::AsyncRead, node_semver::Version, serde_json, smol::fs,
+};
 use oro_manifest::OroManifest;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};

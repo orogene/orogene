@@ -1,9 +1,9 @@
-use async_trait::async_trait;
 use clap::Clap;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
+use oro_common::async_trait::async_trait;
 use oro_config::OroConfigLayer;
 use oro_manifest::{Bin, OroManifest, PersonField};
 use oro_npm_api::{Human, OroNpmApiOpts, VersionMetadata};

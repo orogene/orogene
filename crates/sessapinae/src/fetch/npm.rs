@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use dashmap::DashMap;
 use oro_common::{
     async_compat::CompatExt,
+    async_trait::async_trait,
     futures::{
         io::{self, AsyncRead},
         TryStreamExt,
