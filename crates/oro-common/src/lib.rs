@@ -1,13 +1,12 @@
-pub use async_compat;
 pub use async_trait;
 pub use chrono;
 pub use chrono_humanize;
 pub use futures;
+pub use http;
 pub use miette;
 pub use node_semver;
 pub use quick_xml;
 pub use regex;
-pub use reqwest;
 pub use serde;
 pub use serde_json;
 pub use serde_with;

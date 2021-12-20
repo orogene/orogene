@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+use oro_api_client::{ApiClient, AsyncReadResponseExt, Request};
 use oro_command::{
     clap::{self, Clap},
     indicatif::ProgressBar,
@@ -7,10 +8,8 @@ use oro_command::{
     OroCommand,
 };
 use oro_common::{
-    async_compat::CompatExt,
     async_trait::async_trait,
     miette::{Context, IntoDiagnostic, Result},
-    reqwest::Client,
     serde_json::{self, Value},
     smol::{self, Timer},
     url::Url,
@@ -47,11 +46,12 @@ impl OroCommand for PingCmd {
                 Timer::after(Duration::from_millis(20)).await;
             }
         });
-        let client = Client::new();
-        let res = client
-            .get(self.registry.join("-/ping?write=true").unwrap().to_string())
-            .send()
-            .compat()
+        let client = ApiClient::new();
+        let req = Request::get(self.registry.join("-/ping?write=true").unwrap().to_string())
+            .body(())
+            .expect("Failed to create request");
+        let mut res = client
+            .send(req)
             .await
             .into_diagnostic()
             .context("Ping failed")?;
@@ -62,7 +62,7 @@ impl OroCommand for PingCmd {
         spinner.finish();
         if self.json {
             let details: Value =
-                serde_json::from_slice(&res.bytes().compat().await.unwrap_or_else(|_| "{}".into()))
+                serde_json::from_slice(&res.bytes().await.unwrap_or_else(|_| "{}".into()))
                     .into_diagnostic()
                     .context("Failed to deserialize JSON from registry")?;
             let output = serde_json::to_string_pretty(&serde_json::json!({

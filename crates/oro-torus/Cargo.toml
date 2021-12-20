@@ -7,6 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+oro-api-client = { path = "../oro-api-client" }
 oro-common = { path = "../oro-common" }
 oro-package-spec = { path = "../oro-package-spec" }
 oro-manifest = { path = "../oro-manifest" }

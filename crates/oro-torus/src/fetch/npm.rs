@@ -3,16 +3,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use oro_common::{
-    async_compat::CompatExt,
-    async_trait::async_trait,
-    futures::{
-        io::{self, AsyncRead},
-        TryStreamExt,
-    },
-    reqwest::Client,
-    serde_json,
-};
+use oro_api_client::{ApiClient, AsyncReadResponseExt, Request};
+use oro_common::{async_trait::async_trait, futures::io::AsyncRead, serde_json};
 use oro_package_spec::PackageSpec;
 use url::Url;
 
@@ -25,7 +17,7 @@ use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
 pub struct NpmFetcher {
-    client: Client,
+    client: ApiClient,
     /// Corgis are a compressed kind of packument that omits some
     /// "unnecessary" fields (for some common operations during package
     /// management). This can significantly speed up installs, and is done
@@ -36,7 +28,7 @@ pub struct NpmFetcher {
 }
 
 impl NpmFetcher {
-    pub fn new(client: Client, use_corgi: bool, registries: HashMap<String, Registry>) -> Self {
+    pub fn new(client: ApiClient, use_corgi: bool, registries: HashMap<String, Registry>) -> Self {
         Self {
             client,
             use_corgi,
@@ -78,9 +70,8 @@ impl NpmFetcher {
         if let Some(packument) = self.packuments.get(&packument_url) {
             return Ok(packument.value().clone());
         }
-        let packument_data = self
-            .client
-            .get(packument_url.clone())
+        let start = std::time::Instant::now();
+        let req = Request::get(packument_url.clone().to_string())
             .header(
                 "Accept",
                 if self.use_corgi {
@@ -89,17 +80,12 @@ impl NpmFetcher {
                     "application/json"
                 },
             )
-            .send()
-            .compat()
-            .await
-            .map_err(TorusError::ClientError)?
-            .bytes()
-            .compat()
-            .await
-            .map_err(TorusError::ClientError)?;
+            .body(())?;
+        let packument_data = self.client.send(req).await.unwrap().bytes().await.unwrap();
         let packument: Arc<Packument> =
             Arc::new(serde_json::from_slice(&packument_data[..]).map_err(TorusError::SerdeError)?);
         self.packuments.insert(packument_url, packument.clone());
+        println!("got packument for {} in {:?}", name, start.elapsed());
         Ok(packument)
     }
 }
@@ -163,16 +149,7 @@ impl PackageFetcher for NpmFetcher {
             PackageResolution::Npm { ref tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
-        let stream = Box::pin(
-            self.client
-                .get(url.to_string())
-                .send()
-                .compat()
-                .await
-                .map_err(TorusError::ClientError)?
-                .bytes_stream()
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e)),
-        );
-        Ok(Box::new(stream.into_async_read()))
+        let req = Request::get(url.to_string()).body(())?;
+        Ok(Box::new(self.client.send(req).await?.into_body()))
     }
 }

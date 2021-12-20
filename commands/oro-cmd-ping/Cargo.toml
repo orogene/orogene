@@ -5,6 +5,7 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 
 [dependencies]
+oro-api-client = { path = "../../crates/oro-api-client" }
 oro-torus = { path = "../../crates/oro-torus" }
 oro-command = { path = "../../crates/oro-command" }
 oro-common = { path = "../../crates/oro-common" }

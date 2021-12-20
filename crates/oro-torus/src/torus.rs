@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use oro_common::reqwest::Client as HttpClient;
-
+use oro_api_client::ApiClient;
 use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
@@ -62,7 +61,7 @@ impl TorusOpts {
     }
 
     pub fn build(self) -> Torus {
-        let client = HttpClient::new();
+        let client = ApiClient::new();
         let use_corgi = self.use_corgi.unwrap_or(false);
         Torus {
             // cache: self.cache,
@@ -94,7 +93,7 @@ impl Torus {
         Default::default()
     }
 
-    /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3`.
+    /// Creates a [PackageRequest] from a plain string spec, i.e. `foo@1.2.3`.
     pub async fn arg_request(
         &self,
         arg: impl AsRef<str>,
@@ -111,7 +110,7 @@ impl Torus {
         })
     }
 
-    /// Creates a PackageRequest from a two-part dependency declaration, such
+    /// Creates a [PackageRequest] from a two-part dependency declaration, such
     /// as `dependencies` entries in a `package.json`.
     pub fn dep_request(
         &self,

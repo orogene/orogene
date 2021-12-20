@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use oro_common::{
+    http,
     miette::{self, Diagnostic},
     node_semver::Version,
     serde_json,
@@ -62,7 +63,11 @@ pub enum TorusError {
 
     #[error(transparent)]
     #[diagnostic(code(oro_torus::client_error))]
-    ClientError(#[from] oro_common::reqwest::Error),
+    ClientError(#[from] oro_api_client::Error),
+
+    #[error(transparent)]
+    #[diagnostic(code(oro_torus::http_error))]
+    HttpError(#[from] http::Error),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that

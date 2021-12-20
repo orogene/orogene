@@ -2,13 +2,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_process::{Command, Stdio};
-use oro_common::{
-    async_compat::CompatExt,
-    async_trait::async_trait,
-    futures::{io, AsyncRead, TryStreamExt},
-    reqwest::Client,
-    smol::lock::Mutex,
-};
+use oro_api_client::{ApiClient, Request};
+use oro_common::{async_trait::async_trait, futures::AsyncRead, smol::lock::Mutex};
 use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
@@ -22,13 +17,13 @@ use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
 pub struct GitFetcher {
-    client: Client,
+    client: ApiClient,
     dir_fetcher: DirFetcher,
     git: Arc<Mutex<Option<PathBuf>>>,
 }
 
 impl GitFetcher {
-    pub fn new(client: Client) -> Self {
+    pub fn new(client: ApiClient) -> Self {
         Self {
             client,
             dir_fetcher: DirFetcher::new(),
@@ -81,17 +76,8 @@ impl GitFetcher {
     }
 
     async fn fetch_tarball(&self, dir: &Path, tarball: &Url) -> Result<(), TorusError> {
-        let tarball = Box::pin(
-            self.client
-                .get(tarball.to_string())
-                .send()
-                .compat()
-                .await
-                .map_err(TorusError::ClientError)?
-                .bytes_stream()
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e)),
-        )
-        .into_async_read();
+        let req = Request::get(tarball.to_string()).body(())?;
+        let tarball = self.client.send(req).await?.into_body();
         extract::extract_to_dir(tarball, dir).await?;
         Ok(())
     }

@@ -1,0 +1,12 @@
+[package]
+name = "oro-api-client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+oro-common = { path = "../oro-common" }
+isahc = {version = "1.6.0", features = ["json"]}
+
+serde = "1.0.126"
