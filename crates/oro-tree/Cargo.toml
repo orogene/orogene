@@ -1,6 +1,6 @@
 [package]
 authors = ["Felipe Sere <felipesere@gmail.com>"]
-edition = "2018"
+edition = "2021"
 name = "oro-tree"
 version = "0.1.0"
 

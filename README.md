@@ -1,6 +1,6 @@
 # orogene ![CI](https://github.com/orogene/orogene/workflows/CI/badge.svg)
 
-Yet another JavaScript package manager, I guess.
+Just a JavaScript swiss army knife.
 
 ## License
 
@@ -13,6 +13,4 @@ License](LICENSE-PARITY.md). Non-member contributions are licensed under
 
 ## Development
 
-For gui development, see [antimony/README.md](/antimony/README.md).
-
-For development of the main project: TBD :)
+I'm just flying solo for now but you can look if you want.

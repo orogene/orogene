@@ -2,7 +2,7 @@
 name = "orogene"
 version = "0.1.0"
 authors = ["Orogene Collaborative Members", "Orogene Public Contributors"]
-edition = "2018"
+edition = "2021"
 description = "wip"
 license-file = "LICENSE.md"
 repository = "https://github.com/orogene/orogene"

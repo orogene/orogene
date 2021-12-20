@@ -2,7 +2,7 @@
 name = "oro-config"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 oro-common = { path = "../oro-common" }
