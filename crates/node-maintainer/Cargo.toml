@@ -5,11 +5,3 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-node-semver = "2.0.0"
-oro-classic-resolver = { path = "../oro-classic-resolver" }
-sessapinae = { path = "../sessapinae" }
-
-thiserror = "1.0.20"
-petgraph = "0.5.1"
-url = "2.1.1"
-futures = "0.3.7"
