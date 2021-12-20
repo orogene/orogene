@@ -5,7 +5,7 @@ use oro_common::{
     thiserror::{self, Error},
 };
 use oro_package_spec::{PackageSpec, VersionSpec};
-use sessapinae::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
+use oro_torus::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 
 pub struct ClassicResolver {
     pub default_tag: String,

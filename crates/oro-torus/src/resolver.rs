@@ -15,7 +15,7 @@ use crate::request::PackageRequest;
 #[derive(Debug, Error, Diagnostic)]
 pub enum ResolverError {
     #[error("No matching `{name}` version found for spec `{spec}`.")]
-    #[diagnostic(code(sessapinae::resolver::no_matching_version))]
+    #[diagnostic(code(oro_torus::resolver::no_matching_version))]
     NoVersion {
         name: String,
         spec: PackageSpec,

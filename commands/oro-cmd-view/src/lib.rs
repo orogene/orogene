@@ -13,7 +13,7 @@ use oro_common::{
 };
 use oro_config::OroConfigLayer;
 use oro_manifest::{Bin, OroManifest, PersonField};
-use sessapinae::{Human, SessOpts, VersionMetadata};
+use oro_torus::{Human, TorusOpts, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 
 #[derive(Debug, Clap, OroConfigLayer)]
@@ -34,8 +34,8 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkgreq = SessOpts::new()
-            .add_registry("", self.registry)
+        let pkgreq = TorusOpts::new()
+            .registry_url(self.registry)
             .use_corgi(false)
             .build()
             .arg_request(

@@ -10,7 +10,7 @@ oro-common = { path = "../../crates/oro-common" }
 oro-config = { path = "../../crates/oro-config" }
 oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 oro-manifest = { path = "../../crates/oro-manifest" }
-sessapinae = { path = "../../crates/sessapinae" }
+oro-torus = { path = "../../crates/oro-torus" }
 
 colored = "2.0.0"
 term_grid = "0.1.7"

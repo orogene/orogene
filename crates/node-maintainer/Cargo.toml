@@ -5,3 +5,10 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 
 [dependencies]
+oro-common = { path = "../oro-common" }
+oro-manifest = { path = "../oro-manifest" }
+oro-pkg-root = { path = "../oro-pkg-root" }
+oro-package-spec = { path = "../oro-package-spec" }
+oro-torus = { path = "../oro-torus" }
+
+petgraph = "0.6.0"

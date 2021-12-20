@@ -4,7 +4,7 @@ use std::sync::Arc;
 use oro_common::futures::io::AsyncRead;
 use oro_package_spec::PackageSpec;
 
-use crate::error::SessError;
+use crate::error::TorusError;
 use crate::fetch::PackageFetcher;
 use crate::packument::VersionMetadata;
 use crate::resolver::PackageResolution;
@@ -31,11 +31,11 @@ impl Package {
         &self.resolved
     }
 
-    pub async fn metadata(&self) -> Result<VersionMetadata, SessError> {
+    pub async fn metadata(&self) -> Result<VersionMetadata, TorusError> {
         self.fetcher.metadata(self).await
     }
 
-    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, SessError> {
+    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, TorusError> {
         self.fetcher.tarball(self).await
     }
 }

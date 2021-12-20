@@ -9,7 +9,7 @@ use oro_manifest::OroManifest;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
-use crate::error::SessError;
+use crate::error::TorusError;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
@@ -25,17 +25,17 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest, SessError> {
+    pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest, TorusError> {
         let pkg_path = path.join("package.json");
         let json = fs::read(&pkg_path)
             .await
-            .map_err(|err| SessError::DirReadError(err, pkg_path))?;
+            .map_err(|err| TorusError::DirReadError(err, pkg_path))?;
         let pkgjson: OroManifest =
-            serde_json::from_slice(&json[..]).map_err(SessError::SerdeError)?;
+            serde_json::from_slice(&json[..]).map_err(TorusError::SerdeError)?;
         Ok(Manifest(pkgjson))
     }
 
-    pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String, SessError> {
+    pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String, TorusError> {
         Ok(self
             .packument_from_path(path)
             .await?
@@ -61,21 +61,21 @@ impl DirFetcher {
     pub(crate) async fn metadata_from_path(
         &self,
         path: &Path,
-    ) -> Result<VersionMetadata, SessError> {
+    ) -> Result<VersionMetadata, TorusError> {
         Ok(self.manifest(path).await?.into_metadata(&path)?)
     }
 
     pub(crate) async fn packument_from_path(
         &self,
         path: &Path,
-    ) -> Result<Arc<Packument>, SessError> {
+    ) -> Result<Arc<Packument>, TorusError> {
         Ok(Arc::new(self.manifest(path).await?.into_packument(&path)?))
     }
 }
 
 #[async_trait]
 impl PackageFetcher for DirFetcher {
-    async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String, SessError> {
+    async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String, TorusError> {
         let path = match spec {
             PackageSpec::Dir { path } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -83,7 +83,7 @@ impl PackageFetcher for DirFetcher {
         self.name_from_path(&base_dir.join(path)).await
     }
 
-    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata, SessError> {
+    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata, TorusError> {
         let path = match pkg.resolved() {
             PackageResolution::Dir { path } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -95,7 +95,7 @@ impl PackageFetcher for DirFetcher {
         &self,
         spec: &PackageSpec,
         base_dir: &Path,
-    ) -> Result<Arc<Packument>, SessError> {
+    ) -> Result<Arc<Packument>, TorusError> {
         let path = match spec {
             PackageSpec::Dir { path } => base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -106,7 +106,7 @@ impl PackageFetcher for DirFetcher {
     async fn tarball(
         &self,
         _pkg: &Package,
-    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, SessError> {
+    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, TorusError> {
         // TODO: need to implement pack before this can be implemented :(
         unimplemented!()
     }
@@ -116,7 +116,7 @@ impl PackageFetcher for DirFetcher {
 pub(crate) struct Manifest(OroManifest);
 
 impl Manifest {
-    pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata, SessError> {
+    pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata, TorusError> {
         let Manifest(OroManifest {
             ref name,
             ref version,
@@ -124,7 +124,7 @@ impl Manifest {
         }) = self;
         let name = name.clone().or_else(|| {
             path.as_ref().file_name().map(|name| name.to_string_lossy().into())
-        }).ok_or_else(|| SessError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
+        }).ok_or_else(|| TorusError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
         let version = version
             .clone()
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
@@ -150,7 +150,7 @@ impl Manifest {
         })
     }
 
-    pub fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument, SessError> {
+    pub fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument, TorusError> {
         let metadata = self.into_metadata(path)?;
         let mut packument = Packument {
             versions: HashMap::new(),

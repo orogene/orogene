@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use oro_package_spec::PackageSpec;
 
-use crate::error::SessError;
+use crate::error::TorusError;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::Packument;
@@ -33,16 +33,16 @@ impl PackageRequest {
 
     /// Returns the packument with general metadata about the package and its
     /// various versions.
-    pub async fn packument(&self) -> Result<Arc<Packument>, SessError> {
+    pub async fn packument(&self) -> Result<Arc<Packument>, TorusError> {
         self.fetcher.packument(&self.spec, &self.base_dir).await
     }
 
-    pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package, SessError> {
+    pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package, TorusError> {
         let resolution = resolver.resolve(&self).await?;
         self.resolve_to(resolution)
     }
 
-    pub fn resolve_to(self, resolved: PackageResolution) -> Result<Package, SessError> {
+    pub fn resolve_to(self, resolved: PackageResolution) -> Result<Package, TorusError> {
         Ok(Package {
             from: self.spec,
             name: self.name,

@@ -5,6 +5,6 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 
 [dependencies]
-sessapinae = { path = "../../crates/sessapinae" }
+oro-torus = { path = "../../crates/oro-torus" }
 oro-command = { path = "../../crates/oro-command" }
 oro-common = { path = "../../crates/oro-common" }

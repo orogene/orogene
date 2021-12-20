@@ -9,5 +9,4 @@ edition = "2021"
 [dependencies]
 oro-common = { path = "../oro-common" }
 oro-package-spec = { path = "../oro-package-spec" }
-sessapinae = { path = "../sessapinae" }
-async-trait = "0.1.52"
+oro-torus = { path = "../oro-torus" }

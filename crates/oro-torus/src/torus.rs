@@ -2,25 +2,26 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use oro_common::reqwest::Client;
+use oro_common::reqwest::Client as HttpClient;
 
 use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
-use crate::error::SessError;
+use crate::error::TorusError;
 use crate::fetch::{DirFetcher, GitFetcher, NpmFetcher, PackageFetcher};
+use crate::registry::Registry;
 use crate::request::PackageRequest;
 
-/// Build a new Sess instance with specified options.
+/// Build a new Torus instance with specified options.
 #[derive(Default)]
-pub struct SessOpts {
+pub struct TorusOpts {
     cache: Option<PathBuf>,
-    registries: HashMap<String, Url>,
+    registries: HashMap<String, Registry>,
     use_corgi: Option<bool>,
 }
 
-impl SessOpts {
+impl TorusOpts {
     pub fn new() -> Self {
         Default::default()
     }
@@ -30,8 +31,28 @@ impl SessOpts {
         self
     }
 
-    pub fn add_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
-        self.registries.insert(scope.as_ref().into(), registry);
+    pub fn registry_url(mut self, url: Url) -> Self {
+        self.registries.insert(
+            "".to_string(),
+            Registry {
+                scope: None,
+                url,
+                auth: None,
+            },
+        );
+        self
+    }
+
+    pub fn registry(mut self, registry_config: Registry) -> Self {
+        let scope = if let Some(mut scope) = registry_config.scope.clone() {
+            if scope.get(0..1) != Some("@") {
+                scope.insert(0, '@');
+            }
+            scope
+        } else {
+            "".to_string()
+        };
+        self.registries.insert(scope, registry_config);
         self
     }
 
@@ -40,10 +61,10 @@ impl SessOpts {
         self
     }
 
-    pub fn build(self) -> Sess {
-        let client = Client::new();
+    pub fn build(self) -> Torus {
+        let client = HttpClient::new();
         let use_corgi = self.use_corgi.unwrap_or(false);
-        Sess {
+        Torus {
             // cache: self.cache,
             npm_fetcher: Arc::new(NpmFetcher::new(client.clone(), use_corgi, self.registries)),
             dir_fetcher: Arc::new(DirFetcher::new()),
@@ -53,21 +74,22 @@ impl SessOpts {
 }
 
 /// Toplevel client for making package requests.
-pub struct Sess {
+#[derive(Debug, Clone)]
+pub struct Torus {
     // cache: Option<PathBuf>,
     npm_fetcher: Arc<dyn PackageFetcher>,
     dir_fetcher: Arc<dyn PackageFetcher>,
     git_fetcher: Arc<dyn PackageFetcher>,
 }
 
-impl Default for Sess {
+impl Default for Torus {
     fn default() -> Self {
-        SessOpts::new().build()
+        TorusOpts::new().build()
     }
 }
 
-impl Sess {
-    /// Creates a new Sess instance.
+impl Torus {
+    /// Creates a new Torus instance.
     pub fn new() -> Self {
         Default::default()
     }
@@ -77,7 +99,7 @@ impl Sess {
         &self,
         arg: impl AsRef<str>,
         base_dir: impl AsRef<Path>,
-    ) -> Result<PackageRequest, SessError> {
+    ) -> Result<PackageRequest, TorusError> {
         let spec = arg.as_ref().parse()?;
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, base_dir.as_ref()).await?;
@@ -96,7 +118,7 @@ impl Sess {
         name: impl AsRef<str>,
         spec: impl AsRef<str>,
         base_dir: impl AsRef<Path>,
-    ) -> Result<PackageRequest, SessError> {
+    ) -> Result<PackageRequest, TorusError> {
         let spec = format!("{}@{}", name.as_ref(), spec.as_ref()).parse()?;
         let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {

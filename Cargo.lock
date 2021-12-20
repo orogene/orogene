@@ -512,7 +512,7 @@ dependencies = [
  "serde_json",
  "sha-1 0.9.8",
  "sha2 0.9.8",
- "ssri 7.0.0",
+ "ssri",
  "tempfile",
  "thiserror",
  "walkdir",
@@ -1034,6 +1034,12 @@ dependencies = [
  "redox_syscall 0.2.10",
  "winapi",
 ]
+
+[[package]]
+name = "fixedbitset"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "398ea4fabe40b9b0d885340a2a991a44c8a645624075ad966d21f88688e2b69e"
 
 [[package]]
 name = "flate2"
@@ -1749,6 +1755,14 @@ dependencies = [
 [[package]]
 name = "node-maintainer"
 version = "0.1.0"
+dependencies = [
+ "oro-common",
+ "oro-manifest",
+ "oro-package-spec",
+ "oro-pkg-root",
+ "oro-torus",
+ "petgraph",
+]
 
 [[package]]
 name = "node-semver"
@@ -1922,10 +1936,9 @@ dependencies = [
 name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "oro-common",
  "oro-package-spec",
- "sessapinae",
+ "oro-torus",
 ]
 
 [[package]]
@@ -1934,7 +1947,7 @@ version = "0.1.0"
 dependencies = [
  "oro-command",
  "oro-common",
- "sessapinae",
+ "oro-torus",
 ]
 
 [[package]]
@@ -1950,7 +1963,7 @@ dependencies = [
  "oro-common",
  "oro-config",
  "oro-manifest",
- "sessapinae",
+ "oro-torus",
  "term_grid",
  "term_size",
 ]
@@ -2058,14 +2071,26 @@ name = "oro-pkg-root"
 version = "0.1.0"
 
 [[package]]
-name = "oro-tree"
+name = "oro-torus"
 version = "0.1.0"
 dependencies = [
- "memmap",
+ "async-compression",
+ "async-process",
+ "async-tar 0.2.0",
+ "async-trait",
+ "bincode",
+ "cacache",
+ "dashmap",
+ "http-types",
+ "mkdirp",
  "oro-common",
+ "oro-manifest",
+ "oro-package-spec",
  "serde 1.0.132",
- "ssri 6.0.0",
+ "ssri",
+ "tempfile",
  "url",
+ "which",
 ]
 
 [[package]]
@@ -2113,6 +2138,16 @@ name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
+
+[[package]]
+name = "petgraph"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a13a2fa9d0b63e5f22328828741e523766fff0ee9e779316902290dff3f824f"
+dependencies = [
+ "fixedbitset",
+ "indexmap",
+]
 
 [[package]]
 name = "phf"
@@ -2678,29 +2713,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sessapinae"
-version = "0.1.0"
-dependencies = [
- "async-compression",
- "async-process",
- "async-tar 0.2.0",
- "async-trait",
- "bincode",
- "cacache",
- "dashmap",
- "http-types",
- "mkdirp",
- "oro-common",
- "oro-manifest",
- "oro-package-spec",
- "serde 1.0.132",
- "ssri 7.0.0",
- "tempfile",
- "url",
- "which",
-]
-
-[[package]]
 name = "sha-1"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2834,21 +2846,6 @@ checksum = "765f090f0e423d2b55843402a07915add955e7d60657db13707a159727326cad"
 dependencies = [
  "libc",
  "winapi",
-]
-
-[[package]]
-name = "ssri"
-version = "6.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4f8005e5f8b04b5bb0dbf97d3ef4869395d70039ce61479d5ea401ba53dd597"
-dependencies = [
- "base64 0.10.1",
- "digest 0.8.1",
- "hex 0.3.2",
- "serde 1.0.132",
- "sha-1 0.8.2",
- "sha2 0.8.2",
- "thiserror",
 ]
 
 [[package]]

@@ -12,7 +12,7 @@ use oro_common::{
 use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
-use crate::error::SessError;
+use crate::error::TorusError;
 use crate::extract;
 use crate::fetch::dir::DirFetcher;
 use crate::fetch::PackageFetcher;
@@ -36,7 +36,7 @@ impl GitFetcher {
         }
     }
 
-    async fn fetch_to_temp_dir(&self, info: &GitInfo, dir: &Path) -> Result<(), SessError> {
+    async fn fetch_to_temp_dir(&self, info: &GitInfo, dir: &Path) -> Result<(), TorusError> {
         match info {
             GitInfo::Url {
                 url, committish, ..
@@ -80,14 +80,14 @@ impl GitFetcher {
         Ok(())
     }
 
-    async fn fetch_tarball(&self, dir: &Path, tarball: &Url) -> Result<(), SessError> {
+    async fn fetch_tarball(&self, dir: &Path, tarball: &Url) -> Result<(), TorusError> {
         let tarball = Box::pin(
             self.client
                 .get(tarball.to_string())
                 .send()
                 .compat()
                 .await
-                .map_err(SessError::ClientError)?
+                .map_err(TorusError::ClientError)?
                 .bytes_stream()
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, e)),
         )
@@ -101,12 +101,12 @@ impl GitFetcher {
         dir: &Path,
         repo: impl AsRef<str>,
         committish: &Option<String>,
-    ) -> Result<(), SessError> {
+    ) -> Result<(), TorusError> {
         let repo = repo.as_ref();
         let git = if let Some(git) = self.git.lock().await.as_ref() {
             git.clone()
         } else {
-            let git = which::which("git").map_err(SessError::WhichGit)?;
+            let git = which::which("git").map_err(TorusError::WhichGit)?;
             let mut selfgit = self.git.lock().await;
             *selfgit = Some(git.clone());
             git
@@ -121,12 +121,12 @@ impl GitFetcher {
             .stderr(Stdio::null())
             .status()
             .await
-            .map_err(SessError::GitIoError)
+            .map_err(TorusError::GitIoError)
             .and_then(|status| {
                 if status.success() {
                     Ok(())
                 } else {
-                    Err(SessError::GitCloneError(String::from(repo)))
+                    Err(TorusError::GitCloneError(String::from(repo)))
                 }
             })?;
         if let Some(committish) = committish {
@@ -139,12 +139,12 @@ impl GitFetcher {
                 .stderr(Stdio::null())
                 .status()
                 .await
-                .map_err(SessError::GitIoError)
+                .map_err(TorusError::GitIoError)
                 .and_then(|status| {
                     if status.success() {
                         Ok(())
                     } else {
-                        Err(SessError::GitCheckoutError(
+                        Err(TorusError::GitCheckoutError(
                             String::from(repo),
                             committish.clone(),
                         ))
@@ -157,7 +157,7 @@ impl GitFetcher {
 
 #[async_trait]
 impl PackageFetcher for GitFetcher {
-    async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String, SessError> {
+    async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String, TorusError> {
         use PackageSpec::*;
         let spec = match spec {
             Alias { spec, .. } => spec,
@@ -167,20 +167,20 @@ impl PackageFetcher for GitFetcher {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
-        let dir = tempfile::tempdir().map_err(SessError::GitIoError)?;
+        let dir = tempfile::tempdir().map_err(TorusError::GitIoError)?;
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .name_from_path(&dir.path().join("package"))
             .await
     }
 
-    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata, SessError> {
+    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata, TorusError> {
         use PackageResolution::*;
         let info = match pkg.resolved() {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
-        let dir = tempfile::tempdir().map_err(SessError::GitIoError)?;
+        let dir = tempfile::tempdir().map_err(TorusError::GitIoError)?;
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .metadata_from_path(&dir.path().join("package"))
@@ -191,7 +191,7 @@ impl PackageFetcher for GitFetcher {
         &self,
         spec: &PackageSpec,
         _base_dir: &Path,
-    ) -> Result<Arc<Packument>, SessError> {
+    ) -> Result<Arc<Packument>, TorusError> {
         use PackageSpec::*;
         let spec = match spec {
             Alias { spec, .. } => spec,
@@ -201,7 +201,7 @@ impl PackageFetcher for GitFetcher {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
-        let dir = tempfile::tempdir().map_err(SessError::GitIoError)?;
+        let dir = tempfile::tempdir().map_err(TorusError::GitIoError)?;
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .packument_from_path(&dir.path().join("package"))
@@ -211,7 +211,7 @@ impl PackageFetcher for GitFetcher {
     async fn tarball(
         &self,
         _pkg: &crate::Package,
-    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, SessError> {
+    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, TorusError> {
         todo!()
     }
 }
