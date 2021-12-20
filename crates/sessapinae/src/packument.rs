@@ -1,11 +1,14 @@
-use chrono::{DateTime, Utc};
-use http_types::Url;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
 
+use http_types::Url;
+use oro_common::{
+    chrono::{DateTime, Utc},
+    node_semver::Version,
+    serde::{Deserialize, Serialize},
+    serde_json::Value,
+};
+
 use oro_manifest::{OroManifest, PersonField};
-use oro_node_semver::Version;
 
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.

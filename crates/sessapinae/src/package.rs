@@ -1,10 +1,10 @@
 use std::fmt;
+use std::sync::Arc;
 
-use async_std::sync::Arc;
-use futures::io::AsyncRead;
+use oro_common::futures::io::AsyncRead;
 use oro_package_spec::PackageSpec;
 
-use crate::error::Result;
+use crate::error::SessError;
 use crate::fetch::PackageFetcher;
 use crate::packument::VersionMetadata;
 use crate::resolver::PackageResolution;
@@ -31,12 +31,12 @@ impl Package {
         &self.resolved
     }
 
-    pub async fn metadata(&self) -> Result<VersionMetadata> {
-        self.fetcher.metadata(&self).await
+    pub async fn metadata(&self) -> Result<VersionMetadata, SessError> {
+        self.fetcher.metadata(self).await
     }
 
-    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
-        self.fetcher.tarball(&self).await
+    pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, SessError> {
+        self.fetcher.tarball(self).await
     }
 }
 

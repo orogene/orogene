@@ -1,13 +1,17 @@
+use std::fs::File;
+use std::{collections::HashMap, path::Path};
+
 use memmap::MmapOptions;
-use oro_node_semver::Version;
+use oro_common::{
+    node_semver::Version,
+    serde_json,
+    thiserror::{self, Error},
+};
 use serde::{
     de::{Deserializer, Error as SerdeError},
     Deserialize,
 };
 use ssri::Integrity;
-use std::fs::File;
-use std::{collections::HashMap, path::Path};
-use thiserror::Error;
 use url::Url;
 
 fn parse_integrity<'de, D>(deserializer: D) -> Result<Option<Integrity>, D::Error>

@@ -1,7 +1,7 @@
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use futures::prelude::*;
+use oro_common::futures::{self, prelude::*};
 use ssri::IntegrityOpts;
 
 pub struct AsyncIntegrity<R: AsyncBufRead> {

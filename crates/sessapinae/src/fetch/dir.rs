@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
-use async_std::sync::Arc;
 use async_trait::async_trait;
-use futures::io::AsyncRead;
+use oro_common::{futures::io::AsyncRead, node_semver::Version, serde_json, smol::fs};
 use oro_manifest::OroManifest;
-use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Result, RoggaError};
+use crate::error::SessError;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Dist, Packument, VersionMetadata};
@@ -25,19 +24,19 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
+    pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest, SessError> {
         let pkg_path = path.join("package.json");
-        let json = async_std::fs::read(&pkg_path)
+        let json = fs::read(&pkg_path)
             .await
-            .map_err(|err| RoggaError::DirReadError(err, pkg_path))?;
+            .map_err(|err| SessError::DirReadError(err, pkg_path))?;
         let pkgjson: OroManifest =
-            serde_json::from_slice(&json[..]).map_err(RoggaError::SerdeError)?;
+            serde_json::from_slice(&json[..]).map_err(SessError::SerdeError)?;
         Ok(Manifest(pkgjson))
     }
 
-    pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String> {
+    pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String, SessError> {
         Ok(self
-            .packument_from_path(&path)
+            .packument_from_path(path)
             .await?
             .versions
             .iter()
@@ -58,18 +57,24 @@ impl DirFetcher {
             }))
     }
 
-    pub(crate) async fn metadata_from_path(&self, path: &Path) -> Result<VersionMetadata> {
-        Ok(self.manifest(&path).await?.into_metadata(&path)?)
+    pub(crate) async fn metadata_from_path(
+        &self,
+        path: &Path,
+    ) -> Result<VersionMetadata, SessError> {
+        Ok(self.manifest(path).await?.into_metadata(&path)?)
     }
 
-    pub(crate) async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
-        Ok(Arc::new(self.manifest(&path).await?.into_packument(&path)?))
+    pub(crate) async fn packument_from_path(
+        &self,
+        path: &Path,
+    ) -> Result<Arc<Packument>, SessError> {
+        Ok(Arc::new(self.manifest(path).await?.into_packument(&path)?))
     }
 }
 
 #[async_trait]
 impl PackageFetcher for DirFetcher {
-    async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
+    async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String, SessError> {
         let path = match spec {
             PackageSpec::Dir { path } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -77,7 +82,7 @@ impl PackageFetcher for DirFetcher {
         self.name_from_path(&base_dir.join(path)).await
     }
 
-    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
+    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata, SessError> {
         let path = match pkg.resolved() {
             PackageResolution::Dir { path } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -85,7 +90,11 @@ impl PackageFetcher for DirFetcher {
         self.metadata_from_path(path).await
     }
 
-    async fn packument(&self, spec: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>> {
+    async fn packument(
+        &self,
+        spec: &PackageSpec,
+        base_dir: &Path,
+    ) -> Result<Arc<Packument>, SessError> {
         let path = match spec {
             PackageSpec::Dir { path } => base_dir.join(path),
             _ => panic!("There shouldn't be anything but Dirs here"),
@@ -93,7 +102,10 @@ impl PackageFetcher for DirFetcher {
         self.packument_from_path(&path).await
     }
 
-    async fn tarball(&self, _pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+    async fn tarball(
+        &self,
+        _pkg: &Package,
+    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, SessError> {
         // TODO: need to implement pack before this can be implemented :(
         unimplemented!()
     }
@@ -103,19 +115,15 @@ impl PackageFetcher for DirFetcher {
 pub(crate) struct Manifest(OroManifest);
 
 impl Manifest {
-    pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {
+    pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata, SessError> {
         let Manifest(OroManifest {
             ref name,
             ref version,
             ..
         }) = self;
         let name = name.clone().or_else(|| {
-            if let Some(name) = path.as_ref().file_name() {
-                Some(name.to_string_lossy().into())
-            } else {
-                None
-            }
-        }).ok_or_else(|| RoggaError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
+            path.as_ref().file_name().map(|name| name.to_string_lossy().into())
+        }).ok_or_else(|| SessError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
         let version = version
             .clone()
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
@@ -141,7 +149,7 @@ impl Manifest {
         })
     }
 
-    pub fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument> {
+    pub fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument, SessError> {
         let metadata = self.into_metadata(path)?;
         let mut packument = Packument {
             versions: HashMap::new(),

@@ -2,19 +2,20 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use http_types::Url;
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
-use oro_node_semver::Version;
+
+use oro_common::{
+    miette::{self, Diagnostic},
+    node_semver::Version,
+    thiserror::{self, Error},
+};
 use oro_package_spec::{GitInfo, PackageSpec};
-use thiserror::Error;
 
 use crate::request::PackageRequest;
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum ResolverError {
     #[error("No matching `{name}` version found for spec `{spec}`.")]
-    #[label("classic_resolver::no_matching_version")]
-    // TODO: format advice string using variables?
-    #[advice("Try using `oro view` to see what versions are available")]
+    #[diagnostic(code(sessapinae::resolver::no_matching_version))]
     NoVersion {
         name: String,
         spec: PackageSpec,
@@ -22,14 +23,8 @@ pub enum ResolverError {
     },
 
     #[error(transparent)]
-    OtherError(
-        #[from]
-        #[ask]
-        Box<dyn Diagnostic>,
-    ),
+    OtherError(Box<dyn std::error::Error + Send + Sync + 'static>),
 }
-
-impl Explain for ResolverError {}
 
 #[async_trait]
 pub trait PackageResolver {
@@ -42,7 +37,7 @@ pub trait PackageResolver {
 #[async_trait]
 impl<F> PackageResolver for F
 where
-    F: Fn(&PackageRequest) -> std::result::Result<PackageResolution, ResolverError> + Sync + Send,
+    F: Fn(&PackageRequest) -> Result<PackageResolution, ResolverError> + Send + Sync,
 {
     async fn resolve(
         &self,

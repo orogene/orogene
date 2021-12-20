@@ -123,6 +123,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-compat"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b48b4ff0c2026db683dea961cd8ea874737f56cffca86fa84415eaddc51c00d"
+dependencies = [
+ "futures-core",
+ "futures-io",
+ "once_cell",
+ "pin-project-lite 0.2.7",
+ "tokio",
+]
+
+[[package]]
 name = "async-compression"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -312,9 +325,9 @@ checksum = "e91831deabf0d6d7ec49552e489aed63b7456a7a3c46cff62adad428110b0af0"
 
 [[package]]
 name = "async-trait"
-version = "0.1.51"
+version = "0.1.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44318e776df68115a881de9a8fd1b9e53368d7a4a5ce4cc48517da3393233a5e"
+checksum = "061a7acccaa286c011ddc30970520b98fa40e00c9d644633fb26b5fc63a265e3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2035,8 +2048,10 @@ dependencies = [
 name = "oro-common"
 version = "0.1.0"
 dependencies = [
+ "async-compat",
  "chrono",
  "chrono-humanize 0.2.1",
+ "futures",
  "miette",
  "node-semver",
  "quick-xml",
@@ -2121,11 +2136,9 @@ name = "oro-tree"
 version = "0.1.0"
 dependencies = [
  "memmap",
- "node-semver",
+ "oro-common",
  "serde 1.0.132",
- "serde_json",
  "ssri 6.0.0",
- "thiserror",
  "url",
 ]
 
@@ -2561,6 +2574,7 @@ dependencies = [
  "serde_urlencoded",
  "tokio",
  "tokio-native-tls",
+ "tokio-util",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -2777,24 +2791,19 @@ version = "0.1.0"
 dependencies = [
  "async-compression",
  "async-process",
- "async-std",
  "async-tar 0.2.0",
  "async-trait",
  "bincode",
  "cacache",
- "chrono",
  "dashmap",
- "futures",
  "http-types",
- "log",
  "mkdirp",
+ "oro-common",
  "oro-manifest",
  "oro-package-spec",
  "serde 1.0.132",
- "serde_json",
- "ssri 6.0.0",
+ "ssri 7.0.0",
  "tempfile",
- "thiserror",
  "url",
  "which",
 ]

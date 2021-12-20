@@ -9,10 +9,10 @@ mod package;
 mod packument;
 mod request;
 mod resolver;
-mod rogga;
+mod sessapinae;
 
-pub use crate::rogga::*;
-pub use error::RoggaError;
+pub use crate::sessapinae::*;
+pub use error::SessError;
 pub use package::*;
 pub use packument::*;
 pub use request::*;

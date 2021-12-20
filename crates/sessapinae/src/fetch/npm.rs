@@ -1,16 +1,22 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
-use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use dashmap::DashMap;
-use futures::io::AsyncRead;
-use http_types::Method;
-use oro_client::{self, OroClient};
+use oro_common::{
+    async_compat::CompatExt,
+    futures::{
+        io::{self, AsyncRead},
+        TryStreamExt,
+    },
+    reqwest::Client,
+    serde_json,
+};
 use oro_package_spec::PackageSpec;
 use url::Url;
 
-use crate::error::{Result, RoggaError};
+use crate::error::SessError;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::packument::{Packument, VersionMetadata};
@@ -18,7 +24,7 @@ use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
 pub struct NpmFetcher {
-    client: Arc<Mutex<OroClient>>,
+    client: Client,
     /// Corgis are a compressed kind of packument that omits some
     /// "unnecessary" fields (for some common operations during package
     /// management). This can significantly speed up installs, and is done
@@ -29,11 +35,7 @@ pub struct NpmFetcher {
 }
 
 impl NpmFetcher {
-    pub fn new(
-        client: Arc<Mutex<OroClient>>,
-        use_corgi: bool,
-        registries: HashMap<String, Url>,
-    ) -> Self {
+    pub fn new(client: Client, use_corgi: bool, registries: HashMap<String, Url>) -> Self {
         Self {
             client,
             use_corgi,
@@ -63,34 +65,37 @@ impl NpmFetcher {
         &self,
         scope: &Option<String>,
         name: &str,
-    ) -> Result<Arc<Packument>> {
-        let client = self.client.lock().await.clone();
+    ) -> Result<Arc<Packument>, SessError> {
         let packument_url = self
             .pick_registry(scope)
-            .join(&name)
+            .join(name)
             // This... should not fail unless you did some shenanigans like
             // constructing PackageRequests by hand, so no error code.
-            .map_err(RoggaError::UrlError)?;
+            .map_err(SessError::UrlError)?;
         if let Some(packument) = self.packuments.get(&packument_url) {
             return Ok(packument.value().clone());
         }
-        let opts = client.opts(Method::Get, packument_url.clone());
-        let packument_data = client
-            .send(opts.header(
+        let packument_data = self
+            .client
+            .get(packument_url.clone())
+            .header(
                 "Accept",
                 if self.use_corgi {
                     "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*"
                 } else {
                     "application/json"
                 },
-            ))
+            )
+            .send()
+            .compat()
             .await
-            .map_err(RoggaError::OroClientError)?
-            .body_string()
+            .map_err(SessError::ClientError)?
+            .bytes()
+            .compat()
             .await
-            .map_err(|e| RoggaError::MiscError(e.to_string()))?;
+            .map_err(SessError::ClientError)?;
         let packument: Arc<Packument> =
-            Arc::new(serde_json::from_str(&packument_data).map_err(RoggaError::SerdeError)?);
+            Arc::new(serde_json::from_slice(&packument_data[..]).map_err(SessError::SerdeError)?);
         self.packuments.insert(packument_url, packument.clone());
         Ok(packument)
     }
@@ -98,7 +103,7 @@ impl NpmFetcher {
 
 #[async_trait]
 impl PackageFetcher for NpmFetcher {
-    async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
+    async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String, SessError> {
         match spec {
             PackageSpec::Npm { ref name, .. } | PackageSpec::Alias { ref name, .. } => {
                 Ok(name.clone())
@@ -107,20 +112,24 @@ impl PackageFetcher for NpmFetcher {
         }
     }
 
-    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
+    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata, SessError> {
         let wanted = match pkg.resolved() {
             PackageResolution::Npm { ref version, .. } => version,
             _ => unreachable!(),
         };
-        let packument = self.packument(&pkg.from(), &Path::new("")).await?;
+        let packument = self.packument(pkg.from(), Path::new("")).await?;
         packument
             .versions
-            .get(&wanted)
+            .get(wanted)
             .cloned()
-            .ok_or_else(|| RoggaError::MissingVersion(pkg.from().clone(), wanted.clone()))
+            .ok_or_else(|| SessError::MissingVersion(pkg.from().clone(), wanted.clone()))
     }
 
-    async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {
+    async fn packument(
+        &self,
+        spec: &PackageSpec,
+        _base_dir: &Path,
+    ) -> Result<Arc<Packument>, SessError> {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
         let pkg = match spec {
@@ -140,20 +149,27 @@ impl PackageFetcher for NpmFetcher {
         }
     }
 
-    async fn tarball(&self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+    async fn tarball(
+        &self,
+        pkg: &Package,
+    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, SessError> {
         // NOTE: This .clone() is so we can free up the client lock, which
         // would otherwise, you know, make it so we can only make one request
         // at a time :(
-        let client = self.client.lock().await.clone();
         let url = match pkg.resolved() {
             PackageResolution::Npm { ref tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
-        Ok(Box::new(
-            client
-                .send(client.opts(Method::Get, url.clone()))
+        let stream = Box::pin(
+            self.client
+                .get(url.to_string())
+                .send()
+                .compat()
                 .await
-                .map_err(RoggaError::OroClientError)?,
-        ))
+                .map_err(SessError::ClientError)?
+                .bytes_stream()
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e)),
+        );
+        Ok(Box::new(stream.into_async_read()))
     }
 }

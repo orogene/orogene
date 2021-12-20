@@ -1,5 +1,7 @@
+pub use async_compat;
 pub use chrono;
 pub use chrono_humanize;
+pub use futures;
 pub use miette;
 pub use node_semver;
 pub use quick_xml;

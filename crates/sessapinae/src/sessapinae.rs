@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use async_std::sync::{Arc, Mutex};
-use oro_client::OroClient;
+use oro_common::reqwest::Client;
+
 use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
-use crate::error::Result;
+use crate::error::SessError;
 use crate::fetch::{DirFetcher, GitFetcher, NpmFetcher, PackageFetcher};
 use crate::request::PackageRequest;
 
@@ -40,7 +41,7 @@ impl SessOpts {
     }
 
     pub fn build(self) -> Sess {
-        let client = Arc::new(Mutex::new(OroClient::new()));
+        let client = Client::new();
         let use_corgi = self.use_corgi.unwrap_or(false);
         Sess {
             // cache: self.cache,
@@ -76,7 +77,7 @@ impl Sess {
         &self,
         arg: impl AsRef<str>,
         base_dir: impl AsRef<Path>,
-    ) -> Result<PackageRequest> {
+    ) -> Result<PackageRequest, SessError> {
         let spec = arg.as_ref().parse()?;
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, base_dir.as_ref()).await?;
@@ -95,7 +96,7 @@ impl Sess {
         name: impl AsRef<str>,
         spec: impl AsRef<str>,
         base_dir: impl AsRef<Path>,
-    ) -> Result<PackageRequest> {
+    ) -> Result<PackageRequest, SessError> {
         let spec = format!("{}@{}", name.as_ref(), spec.as_ref()).parse()?;
         let fetcher = self.pick_fetcher(&spec);
         Ok(PackageRequest {
