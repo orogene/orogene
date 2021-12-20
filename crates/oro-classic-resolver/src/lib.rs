@@ -78,7 +78,7 @@ impl PackageResolver for ClassicResolver {
             });
         }
 
-        let mut target: Option<&SemVerVersion> = match spec {
+        let mut target: Option<&Version> = match spec {
             Npm {
                 requested: Some(VersionSpec::Version(version)),
                 ..
@@ -139,14 +139,14 @@ impl PackageResolver for ClassicResolver {
                 ..
             } = spec
             {
-                if range == &SemVerRange::any() || range == &SemVerRange::parse("*").unwrap() {
+                if range == &Range::any() || range == &Range::parse("*").unwrap() {
                     target = tag_version;
                 }
             }
         }
 
         target
-            .and_then(|v| packument.versions.get(&v))
+            .and_then(|v| packument.versions.get(v))
             .and_then(|v| {
                 Some(PackageResolution::Npm {
                     version: v
@@ -170,8 +170,8 @@ impl PackageResolver for ClassicResolver {
 }
 
 fn max_satisfying<'a>(
-    versions: impl Iterator<Item = &'a SemVerVersion>,
-    range: &SemVerRange,
-) -> Option<&'a SemVerVersion> {
+    versions: impl Iterator<Item = &'a Version>,
+    range: &Range,
+) -> Option<&'a Version> {
     versions.filter(|v| range.satisfies(*v)).max()
 }
