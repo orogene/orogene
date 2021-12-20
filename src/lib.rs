@@ -3,12 +3,12 @@ use std::path::PathBuf;
 
 use oro_command::OroCommand;
 use oro_command::{
-    async_trait::async_trait,
     clap::{self, ArgMatches, Clap, FromArgMatches, IntoApp},
     directories::ProjectDirs,
     oro_config::{OroConfig, OroConfigLayer, OroConfigOptions},
 };
 use oro_common::{
+    async_trait::async_trait,
     miette::{Context, Result},
     tracing,
 };
@@ -91,7 +91,7 @@ impl Orogene {
 }
 
 #[derive(Debug, Clap)]
-pub enum OrogeneCmd {
+pub enum OroCmd {
     #[clap(
         about = "Ping the NPM registry.",
         setting = clap::AppSettings::ColoredHelp,
@@ -99,6 +99,13 @@ pub enum OrogeneCmd {
         setting = clap::AppSettings::DeriveDisplayOrder,
     )]
     Ping(oro_cmd_ping::PingCmd),
+    #[clap(
+        about = "View package information.",
+        setting = clap::AppSettings::ColoredHelp,
+        setting = clap::AppSettings::DisableHelpSubcommand,
+        setting = clap::AppSettings::DeriveDisplayOrder,
+    )]
+    View(oro_cmd_view::ViewCmd),
 }
 
 #[async_trait]
@@ -108,6 +115,7 @@ impl OroCommand for Orogene {
         use OroCmd::*;
         match self.subcommand {
             Ping(cmd) => cmd.execute().await,
+            View(cmd) => cmd.execute().await,
         }
     }
 }
@@ -117,6 +125,7 @@ impl OroConfigLayer for Orogene {
         use OroCmd::*;
         let (cmd, match_name): (&mut dyn OroConfigLayer, &str) = match self.subcommand {
             Ping(ref mut cmd) => (cmd, "ping"),
+            View(ref mut cmd) => (cmd, "view"),
         };
         cmd.layer_config(args.subcommand_matches(match_name).unwrap(), conf)
     }

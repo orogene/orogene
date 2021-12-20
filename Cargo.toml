@@ -30,13 +30,7 @@ oro-command = { path = "./crates/oro-command" }
 oro-config = { path = "./crates/oro-config" }
 
 # Regular deps
-async-std = { version = "1.6.2", features = ["attributes", "unstable"] }
-async-trait = "0.1.36"
-clap = { git = "https://github.com/zkat/clap" }
-fern = "0.6.0"
-log = "0.4.11"
-smol = "0.1.18"
-directories = "3.0.1"
+tracing-subscriber = { version = "0.3.3", features = ["json"] }
 
 [build-dependencies]
 embed-resource = "1.3.3"
