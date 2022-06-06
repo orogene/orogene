@@ -14,7 +14,7 @@ async-trait = "0.1.52"
 chrono = { version = "0.4.19", features = ["serde"] }
 chrono-humanize = "0.2.1"
 quick-xml = { version = "0.23.0-alpha2", features = ["serialize"] }
-regex = "^1.4"
+regex = "^1.5"
 smol = "1.2.5"
 serde_json = "1.0.66"
 serde_with = "1.10.0"
