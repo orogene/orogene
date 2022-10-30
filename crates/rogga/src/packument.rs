@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
+use node_semver::Version;
 use oro_manifest::{OroManifest, PersonField};
-use oro_node_semver::Version;
 
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.

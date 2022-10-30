@@ -2,9 +2,9 @@ use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use node_semver::{Range, Version};
 use nom::combinator::all_consuming;
 use nom::Err;
-use oro_node_semver::{Version, VersionReq as Range};
 
 pub use crate::error::{PackageSpecError, SpecErrorKind};
 pub use crate::gitinfo::{GitHost, GitInfo};

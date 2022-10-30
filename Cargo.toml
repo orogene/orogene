@@ -13,7 +13,6 @@ build = "build.rs"
 [dependencies]
 # Commands
 cmd-ping = { path = "./commands/cmd-ping" }
-cmd-restore = { path = "./commands/cmd-restore" }
 cmd-view = { path = "./commands/cmd-view" }
 cmd-prime = { path = "./commands/cmd-prime" }
 

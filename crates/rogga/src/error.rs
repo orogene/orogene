@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use node_semver::Version;
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
-use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use thiserror::Error;
 

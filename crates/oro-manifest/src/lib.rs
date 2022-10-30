@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use derive_builder::Builder;
 use error::{Internal, Result};
-use oro_node_semver::{Version, VersionReq};
+use node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
@@ -90,7 +90,7 @@ pub struct OroManifest {
     // whack-a-mole here.
     #[serde(default, deserialize_with = "object_or_bust")]
     #[builder(default)]
-    pub engines: HashMap<String, VersionReq>,
+    pub engines: HashMap<String, Range>,
 
     #[serde(default)]
     #[builder(default)]

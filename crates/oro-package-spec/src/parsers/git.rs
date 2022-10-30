@@ -1,10 +1,10 @@
+use node_semver::Range;
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case as tag, take_till1, take_while};
 use nom::combinator::{cut, map, map_res, opt, peek, rest};
 use nom::error::context;
 use nom::sequence::{preceded, terminated};
 use nom::IResult;
-use oro_node_semver::VersionReq;
 use url::Url;
 
 use crate::error::SpecParseError;
@@ -12,9 +12,7 @@ use crate::parsers::util;
 use crate::{GitHost, GitInfo, PackageSpec};
 
 /// `git-spec := git-shorthand | git-scp | git-url`
-pub(crate) fn git_spec(
-    input: &str,
-) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
+pub(crate) fn git_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "git package",
         map(alt((git_shorthand, git_url, git_scp)), PackageSpec::Git),
@@ -51,9 +49,7 @@ fn hosted_git_prefix(input: &str) -> IResult<&str, GitHost, SpecParseError<&str>
     )(input)
 }
 
-fn committish(
-    input: &str,
-) -> IResult<&str, (Option<String>, Option<VersionReq>), SpecParseError<&str>> {
+fn committish(input: &str) -> IResult<&str, (Option<String>, Option<Range>), SpecParseError<&str>> {
     let (input, hash) = opt(preceded(
         tag("#"),
         alt((
@@ -73,8 +69,8 @@ fn committish(
     ))
 }
 
-fn semver_range(input: &str) -> IResult<&str, VersionReq, SpecParseError<&str>> {
-    let (input, range) = map_res(take_till1(|_| false), VersionReq::parse)(input)?;
+fn semver_range(input: &str) -> IResult<&str, Range, SpecParseError<&str>> {
+    let (input, range) = map_res(take_till1(|_| false), Range::parse)(input)?;
     Ok((input, range))
 }
 

@@ -240,9 +240,7 @@ where
 
 /// Returns true if the given hash exists in the cache.
 pub async fn exists<P: AsRef<Path>>(cache: P, sri: &Integrity) -> bool {
-    read::has_content_async(cache.as_ref(), sri)
-        .await
-        .is_some()
+    read::has_content_async(cache.as_ref(), sri).await.is_some()
 }
 
 // ---------------

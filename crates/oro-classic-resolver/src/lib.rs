@@ -1,6 +1,6 @@
 use async_trait::async_trait;
+use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
-use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerRange};
 use oro_package_spec::{PackageSpec, VersionSpec};
 use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 use thiserror::Error;

@@ -10,7 +10,7 @@ edition = "2018"
 oro-diagnostics = { path = "../oro-diagnostics" }
 oro-package-spec = { path = "../oro-package-spec" }
 rogga = { path = "../rogga" }
-oro-node-semver = { path = "../oro-node-semver" }
 
 thiserror = "1.0.20"
 async-trait = "0.1.36"
+node-semver = "2.1.0"

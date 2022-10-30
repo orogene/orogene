@@ -10,9 +10,7 @@ use crate::parsers::{git, npm, path, util};
 use crate::PackageSpec;
 
 // alias_spec := [ [ '@' ], not('/')+ '/' ] not('@/')+ '@' prefixed-package-arg
-pub(crate) fn alias_spec(
-    input: &str,
-) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
+pub(crate) fn alias_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "alias",
         map(
@@ -39,9 +37,7 @@ pub(crate) fn alias_spec(
 }
 
 /// prefixed_package-arg := ( "npm:" npm-pkg ) | ( [ "file:" ] path )
-fn prefixed_package_spec(
-    input: &str,
-) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
+fn prefixed_package_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "package spec",
         alt((

@@ -13,9 +13,7 @@ use crate::error::{SpecErrorKind, SpecParseError};
 use crate::PackageSpec;
 
 /// path := ( relative-dir | absolute-dir )
-pub(crate) fn path_spec(
-    input: &str,
-) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
+pub(crate) fn path_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "path spec",
         map(alt((relative_path, absolute_path)), |p| PackageSpec::Dir {

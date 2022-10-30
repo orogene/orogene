@@ -6,10 +6,10 @@ edition = "2018"
 
 [dependencies]
 oro-diagnostics = { path = "../oro-diagnostics" }
-oro-node-semver = { path = "../oro-node-semver" }
 
 url = "2.1.0"
 nom = "6.0.0"
 thiserror = "1.0.9"
 percent-encoding = "2.1.0"
 bytecount = "0.6.0"
+node-semver = "2.1.0"

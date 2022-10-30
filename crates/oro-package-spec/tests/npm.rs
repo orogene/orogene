@@ -1,4 +1,4 @@
-use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
+use node_semver::{Version as SemVerVersion, Range as SemVerRange};
 use oro_package_spec::{PackageSpec, PackageSpecError, VersionSpec};
 
 type Result<T> = std::result::Result<T, PackageSpecError>;
@@ -7,8 +7,8 @@ fn parse(input: &str) -> Result<PackageSpec> {
     input.parse()
 }
 
-fn version_req(input: &str) -> Option<VersionSpec> {
-    Some(VersionSpec::Range(SemVerVersionReq::parse(input).unwrap()))
+fn range(input: &str) -> Option<VersionSpec> {
+    Some(VersionSpec::Range(SemVerRange::parse(input).unwrap()))
 }
 
 #[test]
@@ -155,7 +155,7 @@ fn odd_npm_example_with_prerelease() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "world".into(),
-            requested: version_req(">1.1.0-beta-10"),
+            requested: range(">1.1.0-beta-10"),
         }
     );
     Ok(())
@@ -169,7 +169,7 @@ fn approximately_equivalent_version() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "world".into(),
-            requested: version_req("~1.1.0"),
+            requested: range("~1.1.0"),
         }
     );
     Ok(())
@@ -183,7 +183,7 @@ fn compatible_equivalent_version() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "world".into(),
-            requested: version_req("^1.1.0"),
+            requested: range("^1.1.0"),
         }
     );
     Ok(())
@@ -197,7 +197,7 @@ fn x_version() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "world".into(),
-            requested: version_req("1.1.x"),
+            requested: range("1.1.x"),
         }
     );
     Ok(())
@@ -211,7 +211,7 @@ fn hyphen_version_range() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "world".into(),
-            requested: version_req("1.5.0 - 2.1.0"),
+            requested: range("1.5.0 - 2.1.0"),
         }
     );
     Ok(())
@@ -225,7 +225,7 @@ fn alternate_version_ranges() -> Result<()> {
         PackageSpec::Npm {
             scope: None,
             name: "world".into(),
-            requested: version_req("1.5.0 - 2.1.0 || 2.3.x"),
+            requested: range("1.5.0 - 2.1.0 || 2.3.x"),
         }
     );
     Ok(())

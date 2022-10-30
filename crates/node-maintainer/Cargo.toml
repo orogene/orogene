@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 oro-diagnostics = { path = "../oro-diagnostics" }
-oro-node-semver = { path = "../oro-node-semver" }
 oro-classic-resolver = { path = "../oro-classic-resolver" }
 rogga = { path = "../rogga" }
 
@@ -14,3 +13,4 @@ thiserror = "1.0.20"
 petgraph = "0.5.1"
 url = "2.1.1"
 futures = "0.3.7"
+node-semver = "2.1.0"

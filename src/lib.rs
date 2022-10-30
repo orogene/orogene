@@ -10,7 +10,6 @@ use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 
 use cmd_ping::PingCmd;
 use cmd_prime::PrimeCmd;
-use cmd_restore::RestoreCmd;
 use cmd_view::ViewCmd;
 
 #[derive(Debug, Clap)]
@@ -120,13 +119,6 @@ pub enum OroCmd {
     )]
     Prime(PrimeCmd),
     #[clap(
-        about = "Restore required packages into the global cache",
-        setting = clap::AppSettings::ColoredHelp,
-        setting = clap::AppSettings::DisableHelpSubcommand,
-        setting = clap::AppSettings::DeriveDisplayOrder,
-    )]
-    Restore(RestoreCmd),
-    #[clap(
         about = "Get information about a package",
         setting = clap::AppSettings::ColoredHelp,
         setting = clap::AppSettings::DisableHelpSubcommand,
@@ -142,7 +134,6 @@ impl OroCommand for Orogene {
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
             OroCmd::Prime(prime) => prime.execute().await,
-            OroCmd::Restore(restore) => restore.execute().await,
             OroCmd::View(view) => view.execute().await,
         }
     }
@@ -156,9 +147,6 @@ impl OroConfigLayer for Orogene {
             }
             OroCmd::Prime(ref mut prime) => {
                 prime.layer_config(args.subcommand_matches("prime").unwrap(), conf)
-            }
-            OroCmd::Restore(ref mut restore) => {
-                restore.layer_config(args.subcommand_matches("restore").unwrap(), conf)
             }
             OroCmd::View(ref mut view) => {
                 view.layer_config(args.subcommand_matches("view").unwrap(), conf)

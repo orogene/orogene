@@ -723,25 +723,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmd-restore"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "clap 3.0.0-beta.2",
- "futures",
- "log",
- "oro-command",
- "oro-config",
- "oro-diagnostics",
- "oro-tree",
- "rogga",
- "serde_json",
- "ssri",
- "url",
-]
-
-[[package]]
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
@@ -1808,6 +1789,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "miette"
+version = "5.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a24c4b4063c21e037dffb4de388ee85e400bff299803aba9513d9c52de8116b"
+dependencies = [
+ "miette-derive",
+ "once_cell",
+ "thiserror",
+ "unicode-width",
+]
+
+[[package]]
+name = "miette-derive"
+version = "5.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "827d18edee5d43dc309eb0ac565f2b8e2fdc89b986b2d929e924a0f6e7f23835"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1822,6 +1826,12 @@ dependencies = [
  "mime",
  "unicase",
 ]
+
+[[package]]
+name = "minimal-lexical"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "miniz_oxide"
@@ -1873,13 +1883,26 @@ name = "node-maintainer"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "node-semver",
  "oro-classic-resolver",
  "oro-diagnostics",
- "oro-node-semver",
  "petgraph",
  "rogga",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "node-semver"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84f390c1756333538f2aed01cf280a56bc683e199b9804a504df6e7320d40116"
+dependencies = [
+ "bytecount",
+ "miette",
+ "nom 7.1.1",
+ "serde 1.0.127",
+ "thiserror",
 ]
 
 [[package]]
@@ -1914,6 +1937,16 @@ dependencies = [
  "lexical-core",
  "memchr",
  "version_check 0.9.3",
+]
+
+[[package]]
+name = "nom"
+version = "7.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8903e5a29a317527874d0402f867152a3d21c908bb0b933e416c65e301d4c36"
+dependencies = [
+ "memchr",
+ "minimal-lexical",
 ]
 
 [[package]]
@@ -2016,8 +2049,8 @@ name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "node-semver",
  "oro-diagnostics",
- "oro-node-semver",
  "oro-package-spec",
  "rogga",
  "thiserror",
@@ -2099,26 +2132,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "derive_builder",
+ "node-semver",
  "nom 5.1.2",
- "oro-node-semver",
  "pretty_assertions",
  "serde 1.0.127",
  "serde_json",
  "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "oro-node-semver"
-version = "0.1.0"
-dependencies = [
- "bytecount",
- "nom 6.1.2",
- "oro-diagnostics",
- "pretty_assertions",
- "serde 1.0.127",
- "serde_derive",
- "serde_json",
  "thiserror",
 ]
 
@@ -2140,9 +2159,9 @@ name = "oro-package-spec"
 version = "0.1.0"
 dependencies = [
  "bytecount",
+ "node-semver",
  "nom 6.1.2",
  "oro-diagnostics",
- "oro-node-semver",
  "percent-encoding",
  "thiserror",
  "url",
@@ -2157,7 +2176,7 @@ name = "oro-tree"
 version = "0.1.0"
 dependencies = [
  "memmap",
- "oro-node-semver",
+ "node-semver",
  "serde 1.0.127",
  "serde_json",
  "ssri",
@@ -2174,7 +2193,6 @@ dependencies = [
  "clap 3.0.0-beta.2",
  "cmd-ping",
  "cmd-prime",
- "cmd-restore",
  "cmd-view",
  "directories",
  "embed-resource",
@@ -2616,10 +2634,10 @@ dependencies = [
  "http-types",
  "log",
  "mkdirp",
+ "node-semver",
  "oro-client",
  "oro-diagnostics",
  "oro-manifest",
- "oro-node-semver",
  "oro-package-spec",
  "serde 1.0.127",
  "serde_json",
@@ -3171,18 +3189,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.26"
+version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93119e4feac1cbe6c798c34d3a53ea0026b0b1de6a120deef895137c0529bfe2"
+checksum = "10deb33631e3c9018b9baf9dcbbc4f737320d2b576bac10f6aefa048fa407e3e"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.26"
+version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "060d69a0afe7796bf42e9e2ff91f5ee691fb15c53d38b4b62a9a53eb23164745"
+checksum = "982d17546b47146b28f7c22e3d08465f6b8903d0ea13c1660d9d84a6e7adcdbb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3334,9 +3352,9 @@ checksum = "8895849a949e7845e06bd6dc1aa51731a103c42707010a5b591c0038fb73385b"
 
 [[package]]
 name = "unicode-width"
-version = "0.1.8"
+version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9337591893a19b88d8d87f2cec1e73fad5cdfd10e5a6f349f498ad6ea2ffb1e3"
+checksum = "c0edd1e5b14653f783770bce4a4dabb4a5108a5370a5f5d8cfe8710c361f6c8b"
 
 [[package]]
 name = "unicode-xid"

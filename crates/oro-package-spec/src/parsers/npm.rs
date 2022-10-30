@@ -1,4 +1,4 @@
-use oro_node_semver::{Version as SemVerVersion, VersionReq as SemVerVersionReq};
+use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag_no_case as tag, take_till1};
@@ -13,9 +13,7 @@ use crate::parsers::util;
 use crate::{PackageSpec, VersionSpec};
 
 /// npm-spec := [ '@' not('/')+ '/' ] not('@/')+ [ '@' version-req ]
-pub(crate) fn npm_spec(
-    input: &str,
-) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
+pub(crate) fn npm_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "npm package spec",
         map(
@@ -57,7 +55,7 @@ fn semver_version(input: &str) -> IResult<&str, VersionSpec, SpecParseError<&str
 }
 
 fn semver_range(input: &str) -> IResult<&str, VersionSpec, SpecParseError<&str>> {
-    let (input, range) = map_res(take_till1(|_| false), SemVerVersionReq::parse)(input)?;
+    let (input, range) = map_res(take_till1(|_| false), SemVerRange::parse)(input)?;
     Ok((input, VersionSpec::Range(range)))
 }
 

@@ -4,8 +4,8 @@ use std::path::Path;
 use async_std::sync::Arc;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
+use node_semver::Version;
 use oro_manifest::OroManifest;
-use oro_node_semver::Version;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 

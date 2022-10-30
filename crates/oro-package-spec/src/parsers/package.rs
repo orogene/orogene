@@ -10,9 +10,7 @@ use crate::parsers::{alias, git, npm, path};
 use crate::PackageSpec;
 
 /// package-spec := alias | ( [ "npm:" ] npm-pkg ) | ( [ "file:" ] path ) | git-pkg
-pub(crate) fn package_spec(
-    input: &str,
-) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
+pub(crate) fn package_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "package arg",
         alt((
