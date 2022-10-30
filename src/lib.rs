@@ -1,8 +1,7 @@
-use std::env;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use clap::{ArgMatches, Clap, FromArgMatches, IntoApp};
+use clap::{ArgMatches, FromArgMatches as _, Parser, Subcommand, CommandFactory};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_command::OroCommand;
@@ -12,32 +11,35 @@ use cmd_ping::PingCmd;
 use cmd_prime::PrimeCmd;
 use cmd_view::ViewCmd;
 
-#[derive(Debug, Clap)]
-#[clap(
-    author = "Kat Marchán <kzm@zkat.tech>",
-    about = "Manage your NPM packages.",
-    version = clap::crate_version!(),
-    setting = clap::AppSettings::ColoredHelp,
-    setting = clap::AppSettings::DisableHelpSubcommand,
-    setting = clap::AppSettings::DeriveDisplayOrder,
-)]
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+#[command(propagate_version = true)]
 pub struct Orogene {
-    #[clap(global = true, long = "root", about = "Package path to operate on.")]
+    /// Package path to operate on
+    #[arg(global = true, long = "root")]
     root: Option<PathBuf>,
-    #[clap(global = true, about = "File to read configuration values from.", long)]
+
+    /// File to read configuration values from.
+    #[arg(global = true, long)]
     config: Option<PathBuf>,
+
+    /// Log output level (off, error, warn, info, debug, trace)
     #[clap(
         global = true,
-        about = "Log output level (off, error, warn, info, debug, trace)",
         long,
         default_value = "warn"
     )]
     loglevel: log::LevelFilter,
-    #[clap(global = true, about = "Disable all output", long, short = 'q')]
+
+    /// Disable all output
+    #[arg(global = true, long, short)]
     quiet: bool,
-    #[clap(global = true, long, about = "Format output as JSON.")]
+
+    /// Format output as JSON.
+    #[arg(global = true, long)]
     json: bool,
-    #[clap(subcommand)]
+
+    #[command(subcommand)]
     subcommand: OroCmd,
 }
 
@@ -77,9 +79,8 @@ impl Orogene {
 
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
-        let clp = Orogene::into_app();
-        let matches = clp.get_matches();
-        let mut oro = Orogene::from_arg_matches(&matches);
+        let matches = Orogene::command().get_matches();
+        let mut oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
         let cfg = if let Some(file) = &oro.config {
             OroConfigOptions::new()
                 .global_config_file(Some(file.clone()))
@@ -103,28 +104,15 @@ impl Orogene {
     }
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Subcommand)]
 pub enum OroCmd {
-    #[clap(
-        about = "Ping the registry",
-        setting = clap::AppSettings::ColoredHelp,
-        setting = clap::AppSettings::DisableHelpSubcommand,
-        setting = clap::AppSettings::DeriveDisplayOrder,
-    )]
+    /// Ping the registry.
     Ping(PingCmd),
-    #[clap(
-        about = "Prime the current project for execution",
-        setting = clap::AppSettings::ColoredHelp,
-        setting = clap::AppSettings::DisableHelpSubcommand,
-        setting = clap::AppSettings::DeriveDisplayOrder,
-    )]
+
+    /// Prime the current project for execution
     Prime(PrimeCmd),
-    #[clap(
-        about = "Get information about a package",
-        setting = clap::AppSettings::ColoredHelp,
-        setting = clap::AppSettings::DisableHelpSubcommand,
-        setting = clap::AppSettings::DeriveDisplayOrder,
-    )]
+
+    /// Get information about a package
     View(ViewCmd),
 }
 

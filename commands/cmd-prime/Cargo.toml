@@ -12,7 +12,7 @@ oro-pkg-root = { path = "../../crates/oro-pkg-root" }
 oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 node-maintainer = { path = "../../crates/node-maintainer" }
 
-clap = { git = "https://github.com/zkat/clap" }
+clap = { version = "4.0.18", features = ["derive"] }
 async-trait = "0.1.19"
 log = "0.4.11"
 url = "2.1.1"

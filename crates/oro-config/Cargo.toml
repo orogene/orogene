@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 oro-config-derive = { path = "../oro-config-derive" }
 
-clap = { git = "https://github.com/zkat/clap" }
+clap = { version = "4.0.18", features = ["derive"] }
 config = { version = "0.9.3", features = ["toml"] }
 serde = { version = "1.0.103", features = ["derive"] }
 thiserror = "1.0.22"

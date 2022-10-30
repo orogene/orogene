@@ -2,25 +2,28 @@ use std::env;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use clap::Clap;
+use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use node_maintainer::NodeMaintainerOptions;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
 use url::Url;
 
-#[derive(Debug, Clap, OroConfigLayer)]
+#[derive(Debug, Args, OroConfigLayer)]
 pub struct PrimeCmd {
-    #[clap(from_global)]
-    root: Option<PathBuf>,
-    #[clap(
-        about = "Registry to install from.",
+    /// Registry to install from.
+    #[arg(
         default_value = "https://registry.npmjs.org",
         long
     )]
     registry: Url,
+
+    #[clap(from_global)]
+    root: Option<PathBuf>,
+
     #[clap(from_global)]
     json: bool,
+
     #[clap(from_global)]
     quiet: bool,
 }

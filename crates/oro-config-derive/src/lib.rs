@@ -83,7 +83,7 @@ impl ToTokens for OroConfigLayer {
 
                 if let Some(inner) = inner_type_of_option(ty) {
                     quote! {
-                        if args.occurrences_of(#lit_str) == 0 {
+                        if args.value_source(#lit_str).is_some() {
                             if let Ok(val) = config.get_str(#lit_str) {
                                 self.#ident = #inner::from_str(&val).ok();
                             }
@@ -91,7 +91,7 @@ impl ToTokens for OroConfigLayer {
                     }
                 } else {
                     quote! {
-                        if args.occurrences_of(#lit_str) == 0 {
+                        if args.value_source(#lit_str).is_some() {
                             if let Ok(val) = config.get_str(#lit_str) {
                                 self.#ident = #ty::from_str(&val).map_err(|e| ::oro_config::OroConfigError::ConfigParseError(Box::new(e)))?;
                             }

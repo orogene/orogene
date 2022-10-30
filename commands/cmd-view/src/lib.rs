@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use clap::Clap;
+use clap::Args;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
@@ -11,18 +11,21 @@ use rogga::{Human, RoggaOpts, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
-#[derive(Debug, Clap, OroConfigLayer)]
+#[derive(Debug, Args, OroConfigLayer)]
 pub struct ViewCmd {
-    #[clap(
-        about = "Registry to get package data from.",
+    /// Registry to get package data from.
+    #[arg(
         default_value = "https://registry.npmjs.org",
         long
     )]
     registry: Url,
-    #[clap(from_global)]
-    json: bool,
-    #[clap(about = "Package spec to look up")]
+
+    /// Package spec to look up.
+    #[arg()]
     pkg: String,
+
+    #[arg(from_global)]
+    json: bool,
 }
 
 #[async_trait]

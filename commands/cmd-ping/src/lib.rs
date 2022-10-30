@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use async_trait::async_trait;
-use clap::Clap;
+use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_client::{self, Method, OroClient};
 use oro_command::OroCommand;
@@ -9,18 +9,21 @@ use oro_config::OroConfigLayer;
 use serde_json::Value;
 use url::Url;
 
-#[derive(Debug, Clap, OroConfigLayer)]
+#[derive(Debug, Args, OroConfigLayer)]
 pub struct PingCmd {
-    #[clap(
-        about = "Registry to ping.",
+    /// Registry to ping.
+    #[arg(
         default_value = "https://registry.npmjs.org",
         long
     )]
     registry: Url,
-    #[clap(from_global)]
+
+    #[arg(from_global)]
     loglevel: log::LevelFilter,
+
     #[clap(from_global)]
     json: bool,
+
     #[clap(from_global)]
     quiet: bool,
 }

@@ -9,7 +9,7 @@ oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
 oro-config = { path = "../../crates/oro-config" }
 
-clap = { git = "https://github.com/zkat/clap" }
+clap = { version = "4.0.18", features = ["derive"] }
 url = "2.1.0"
 async-trait = "0.1.19"
 serde = { version = "1.0.103", features = ["derive"] }
