@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 oro-client = { path = "../oro-client" }
 oro-package-spec = { path = "../oro-package-spec" }
-cacache = { path = "../cacache", version = "8.0.0" }
 oro-manifest = { path = "../oro-manifest" }
 
 async-tar = "0.2.0"
@@ -33,3 +32,4 @@ async-process = "1.0.1"
 which = "4.0.2"
 node-semver = "2.1.0"
 miette = "5.4.1"
+cacache = "10.0.1"
