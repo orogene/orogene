@@ -93,7 +93,7 @@ impl ToTokens for OroConfigLayer {
                     quote! {
                         if args.occurrences_of(#lit_str) == 0 {
                             if let Ok(val) = config.get_str(#lit_str) {
-                                self.#ident = #ty::from_str(&val).map_err(|e| OroConfigError::ConfigParseError(Box::new(e)))?;
+                                self.#ident = #ty::from_str(&val).map_err(|e| ::oro_config::OroConfigError::ConfigParseError(Box::new(e)))?;
                             }
                         }
                     }
@@ -106,12 +106,8 @@ impl ToTokens for OroConfigLayer {
 
                 use std::str::FromStr;
 
-                use oro_diagnostics::{DiagnosticError, DiagnosticResult as Result};
-                use clap::ArgMatches;
-                use oro_config::{OroConfig, OroConfigError, OroConfigLayer};
-
-                impl OroConfigLayer for #ident {
-                    fn layer_config(&mut self, args: &ArgMatches, config: &OroConfig) -> Result<()> {
+                impl ::oro_config::OroConfigLayer for #ident {
+                    fn layer_config(&mut self, args: &::clap::ArgMatches, config: &::oro_config::OroConfig) -> ::miette::Result<()> {
                         #(#field_defs)*
                         Ok(())
                     }

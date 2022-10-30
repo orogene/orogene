@@ -1,4 +1,4 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain, Meta};
+use miette::Diagnostic;
 use serde::Deserialize;
 use surf::Client;
 use thiserror::Error;
@@ -16,34 +16,17 @@ mod http_client;
 pub enum OroClientError {
     // TODO: add registry URL here?
     #[error("Registry request failed:\n\t{surf_err}")]
-    #[category(Net)]
-    #[label("client::bad_request")]
+    #[diagnostic(code(client::bad_request))]
     RequestError { surf_err: SurfError, url: Url },
 
     #[error("Registry returned failed status code {status_code} for a request.")]
-    #[category(Net)]
-    #[label("client::response_failure")]
+    #[diagnostic(code(client::response_failure))]
     ResponseError {
         url: Url,
         status_code: StatusCode,
         message: Option<String>,
     },
 }
-
-impl Explain for OroClientError {
-    fn meta(&self) -> Option<Meta> {
-        use OroClientError::*;
-        match self {
-            RequestError { ref url, .. } => Some(Meta::Net {
-                url: Some(url.clone()),
-            }),
-            ResponseError { ref url, .. } => Some(Meta::Net {
-                url: Some(url.clone()),
-            }),
-        }
-    }
-}
-
 #[derive(Debug, Deserialize)]
 struct NpmError {
     message: String,

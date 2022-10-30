@@ -1,4 +1,4 @@
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
+use miette::Diagnostic;
 use thiserror::Error;
 
 #[derive(Debug, Error, Diagnostic)]
@@ -6,24 +6,18 @@ pub enum NodeMaintainerError {
     /// Should probably be an internal error. Signals that we tried to match
     /// two packages with different names.
     #[error("`{0}` and `{1}` do not match.")]
-    #[label("node_maintainer::name_mismatch")]
+    #[diagnostic(code(node_maintainer::name_mismatch))]
     NameMismatch(String, String),
 
     #[error("Tag `{0}` does not exist in registry.")]
-    #[label("node_maintainer::tag_not_found")]
+    #[diagnostic(code(node_maintainer::tag_not_found))]
     TagNotFound(String),
 
     #[error("Current directory could not be detected.")]
-    #[label("node_maintainer::no_cwd")]
+    #[diagnostic(code(node_maintainer::no_cwd))]
     NoCwd(#[from] std::io::Error),
 
     /// Error returned from Rogga
     #[error(transparent)]
-    RoggaError(
-        #[from]
-        #[ask]
-        rogga::RoggaError,
-    ),
+    RoggaError(#[from] rogga::RoggaError),
 }
-
-impl Explain for NodeMaintainerError {}

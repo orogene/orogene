@@ -1,7 +1,7 @@
-use oro_diagnostics::DiagnosticResult;
+use miette::Result;
 use orogene::Orogene;
 
 #[async_std::main]
-async fn main() -> DiagnosticResult<()> {
+async fn main() -> Result<()> {
     Ok(Orogene::load().await?)
 }

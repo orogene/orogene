@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use http_types::Url;
+use miette::Diagnostic;
 use node_semver::Version;
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, Explain};
 use oro_package_spec::{GitInfo, PackageSpec};
 use thiserror::Error;
 
@@ -12,24 +12,20 @@ use crate::request::PackageRequest;
 #[derive(Debug, Error, Diagnostic)]
 pub enum ResolverError {
     #[error("No matching `{name}` version found for spec `{spec}`.")]
-    #[label("classic_resolver::no_matching_version")]
-    // TODO: format advice string using variables?
-    #[advice("Try using `oro view` to see what versions are available")]
+    #[diagnostic(
+        code(classic_resolver::no_matching_version),
+        // TODO: format help string using variables?
+        help("Try using `oro view` to see what versions are available")
+    )]
     NoVersion {
         name: String,
         spec: PackageSpec,
         versions: Vec<String>,
     },
 
-    #[error(transparent)]
-    OtherError(
-        #[from]
-        #[ask]
-        Box<dyn Diagnostic>,
-    ),
+    #[error("{0}")]
+    OtherError(Box<dyn Diagnostic + Send + Sync + 'static>),
 }
-
-impl Explain for ResolverError {}
 
 #[async_trait]
 pub trait PackageResolver {

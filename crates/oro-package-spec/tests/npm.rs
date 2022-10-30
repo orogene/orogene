@@ -1,4 +1,4 @@
-use node_semver::{Version as SemVerVersion, Range as SemVerRange};
+use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_package_spec::{PackageSpec, PackageSpecError, VersionSpec};
 
 type Result<T> = std::result::Result<T, PackageSpecError>;

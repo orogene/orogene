@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use clap::Clap;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
+use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
-use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 use oro_manifest::{Bin, OroManifest, PersonField};
 use rogga::{Human, RoggaOpts, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
@@ -34,7 +34,9 @@ impl OroCommand for ViewCmd {
             .build()
             .arg_request(
                 &self.pkg,
-                std::env::current_dir().as_diagnostic("view::nocwd")?,
+                std::env::current_dir()
+                    .into_diagnostic()
+                    .wrap_err("view::nocwd")?,
             )
             .await?;
         let packument = pkgreq.packument().await?;
@@ -49,7 +51,9 @@ impl OroCommand for ViewCmd {
             // the packument and the manifest?
             println!(
                 "{}",
-                serde_json::to_string_pretty(&metadata).as_diagnostic("view::json_serialize")?
+                serde_json::to_string_pretty(&metadata)
+                    .into_diagnostic()
+                    .wrap_err("view::json_serialize")?
             );
         } else {
             let VersionMetadata {
@@ -225,7 +229,8 @@ impl OroCommand for ViewCmd {
                 if let Some(Human { name, email }) = npm_user {
                     let human = chrono_humanize::HumanTime::from(
                         chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())
-                            .as_diagnostic("view::bad_date")?,
+                            .into_diagnostic()
+                            .wrap_err("view::bad_date")?,
                     );
                     print!(
                         "published {} by {}",

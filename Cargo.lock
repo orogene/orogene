@@ -3,6 +3,15 @@
 version = 3
 
 [[package]]
+name = "addr2line"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e61f2b7f93d2c7d2b08263acaa4a363b3e276806c68af6134c44f523bf1aacd"
+dependencies = [
+ "gimli",
+]
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -60,6 +69,17 @@ checksum = "ea2e11f5e94c2f7d386164cc2aa1f97823fed6f259e486940a71c174dd01b0ce"
 dependencies = [
  "cipher",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "ahash"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
+dependencies = [
+ "getrandom 0.2.3",
+ "once_cell",
+ "version_check 0.9.3",
 ]
 
 [[package]]
@@ -285,9 +305,9 @@ dependencies = [
 
 [[package]]
 name = "async-std"
-version = "1.9.0"
+version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9f06685bad74e0570f5213741bea82158279a4103d988e57bfada11ad230341"
+checksum = "62565bb4402e926b29953c785397c6dc0391b7b446e45008b0049eb43cec6f5d"
 dependencies = [
  "async-attributes",
  "async-channel",
@@ -304,7 +324,6 @@ dependencies = [
  "kv-log-macro",
  "log",
  "memchr",
- "num_cpus",
  "once_cell",
  "pin-project-lite 0.2.7",
  "pin-utils",
@@ -385,6 +404,21 @@ name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
+
+[[package]]
+name = "backtrace"
+version = "0.3.61"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7a905d892734eea339e896738c14b9afce22b5318f64b951e70bf3844419b01"
+dependencies = [
+ "addr2line",
+ "cc",
+ "cfg-if 1.0.0",
+ "libc",
+ "miniz_oxide",
+ "object",
+ "rustc-demangle",
+]
 
 [[package]]
 name = "base-x"
@@ -695,10 +729,10 @@ dependencies = [
  "async-trait",
  "clap 3.0.0-beta.2",
  "log",
+ "miette",
  "oro-client",
  "oro-command",
  "oro-config",
- "oro-diagnostics",
  "serde 1.0.127",
  "serde_json",
  "url",
@@ -712,11 +746,11 @@ dependencies = [
  "async-trait",
  "clap 3.0.0-beta.2",
  "log",
+ "miette",
  "node-maintainer",
  "oro-classic-resolver",
  "oro-command",
  "oro-config",
- "oro-diagnostics",
  "oro-pkg-root",
  "rogga",
  "url",
@@ -733,11 +767,11 @@ dependencies = [
  "colored",
  "humansize",
  "log",
+ "miette",
  "oro-classic-resolver",
  "oro-client",
  "oro-command",
  "oro-config",
- "oro-diagnostics",
  "oro-manifest",
  "rogga",
  "serde_json",
@@ -1469,6 +1503,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "gimli"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0a01e0497841a3b2db4f8afa483cce65f7e96a3498bd6c541734792aeac8fe7"
+
+[[package]]
 name = "gitignored"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1516,6 +1556,15 @@ name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+
+[[package]]
+name = "hashbrown"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash",
+]
 
 [[package]]
 name = "heck"
@@ -1643,7 +1692,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc633605454125dec4b66843673f01c7df2b89479b32e0ed634e43a91cff62a5"
 dependencies = [
  "autocfg",
- "hashbrown",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -1660,6 +1709,12 @@ checksum = "bee0328b1209d157ef001c94dd85b4f8f64139adb0eac2659f4b08382b2f474d"
 dependencies = [
  "cfg-if 1.0.0",
 ]
+
+[[package]]
+name = "is_ci"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "616cde7c720bb2bb5824a224687d8f77bfd38922027f01d825cd7453be5099fb"
 
 [[package]]
 name = "itertools"
@@ -1794,8 +1849,16 @@ version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a24c4b4063c21e037dffb4de388ee85e400bff299803aba9513d9c52de8116b"
 dependencies = [
+ "atty",
+ "backtrace",
  "miette-derive",
  "once_cell",
+ "owo-colors",
+ "supports-color",
+ "supports-hyperlinks",
+ "supports-unicode",
+ "terminal_size",
+ "textwrap 0.15.2",
  "thiserror",
  "unicode-width",
 ]
@@ -1883,9 +1946,9 @@ name = "node-maintainer"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "miette",
  "node-semver",
  "oro-classic-resolver",
- "oro-diagnostics",
  "petgraph",
  "rogga",
  "thiserror",
@@ -1988,6 +2051,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "object"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c55827317fb4c08822499848a14237d2874d6f139828893017237e7ab93eb386"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2049,8 +2121,8 @@ name = "oro-classic-resolver"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "miette",
  "node-semver",
- "oro-diagnostics",
  "oro-package-spec",
  "rogga",
  "thiserror",
@@ -2069,7 +2141,7 @@ dependencies = [
  "http-client",
  "http-types",
  "log",
- "oro-diagnostics",
+ "miette",
  "serde 1.0.127",
  "surf",
  "thiserror",
@@ -2080,18 +2152,17 @@ name = "oro-command"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "oro-diagnostics",
+ "miette",
 ]
 
 [[package]]
 name = "oro-config"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "clap 3.0.0-beta.2",
  "config 0.9.3",
+ "miette",
  "oro-config-derive",
- "oro-diagnostics",
  "pretty_assertions",
  "serde 1.0.127",
  "tempfile",
@@ -2104,24 +2175,6 @@ version = "0.1.0"
 dependencies = [
  "darling",
  "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "oro-diagnostics"
-version = "0.1.0"
-dependencies = [
- "colored",
- "oro-diagnostics-derive",
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "oro-diagnostics-derive"
-version = "0.1.0"
-dependencies = [
  "quote",
  "syn",
 ]
@@ -2159,9 +2212,9 @@ name = "oro-package-spec"
 version = "0.1.0"
 dependencies = [
  "bytecount",
+ "miette",
  "node-semver",
  "nom 6.1.2",
- "oro-diagnostics",
  "percent-encoding",
  "thiserror",
  "url",
@@ -2198,9 +2251,9 @@ dependencies = [
  "embed-resource",
  "fern",
  "log",
+ "miette",
  "oro-command",
  "oro-config",
- "oro-diagnostics",
  "smol 0.1.18",
 ]
 
@@ -2218,6 +2271,12 @@ checksum = "53cdc5b785b7a58c5aad8216b3dfa114df64b0b06ae6e1501cef91df2fbdf8f9"
 dependencies = [
  "winapi",
 ]
+
+[[package]]
+name = "owo-colors"
+version = "3.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
 name = "parking"
@@ -2633,10 +2692,10 @@ dependencies = [
  "futures",
  "http-types",
  "log",
+ "miette",
  "mkdirp",
  "node-semver",
  "oro-client",
- "oro-diagnostics",
  "oro-manifest",
  "oro-package-spec",
  "serde 1.0.127",
@@ -2653,6 +2712,12 @@ name = "rust-ini"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e52c148ef37f8c375d49d5a73aa70713125b7f19095948a923f80afdeb22ec2"
+
+[[package]]
+name = "rustc-demangle"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ef03e0a2b150c7a90d01faf6254c9c48a41e95fb2a8c2ac1c6f0d2b9aefc342"
 
 [[package]]
 name = "rustc_version"
@@ -2925,6 +2990,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c307a32c1c5c437f38c7fd45d753050587732ba8628319fbdf12a7e289ccc590"
 
 [[package]]
+name = "smawk"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f67ad224767faa3c7d8b6d91985b78e70a1324408abcb1cfcc2be4c06bc06043"
+
+[[package]]
 name = "smol"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3092,6 +3163,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
+name = "supports-color"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4872ced36b91d47bae8a214a683fe54e7078875b399dfa251df346c9b547d1f9"
+dependencies = [
+ "atty",
+ "is_ci",
+]
+
+[[package]]
+name = "supports-hyperlinks"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "590b34f7c5f01ecc9d78dba4b3f445f31df750a67621cf31626f3b7441ce6406"
+dependencies = [
+ "atty",
+]
+
+[[package]]
+name = "supports-unicode"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8b945e45b417b125a8ec51f1b7df2f8df7920367700d1f98aedd21e5735f8b2"
+dependencies = [
+ "atty",
+]
+
+[[package]]
 name = "surf"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3170,6 +3269,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal_size"
+version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "633c1a546cee861a1a6d0dc69ebeca693bf4296661ba7852b9d21d159e0506df"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "textwrap"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3184,6 +3293,17 @@ version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd05616119e612a8041ef58f2b578906cc2531a6069047ae092cfb86a325d835"
 dependencies = [
+ "unicode-width",
+]
+
+[[package]]
+name = "textwrap"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7b3e525a49ec206798b40326a44121291b530c963cfb01018f63e135bac543d"
+dependencies = [
+ "smawk",
+ "unicode-linebreak",
  "unicode-width",
 ]
 
@@ -3333,6 +3453,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eeb8be209bb1c96b7c177c7420d26e04eccacb0eeae6b980e35fcb74678107e0"
 dependencies = [
  "matches",
+]
+
+[[package]]
+name = "unicode-linebreak"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5faade31a542b8b35855fff6e8def199853b2da8da256da52f52f1316ee3137"
+dependencies = [
+ "hashbrown 0.12.3",
+ "regex",
 ]
 
 [[package]]

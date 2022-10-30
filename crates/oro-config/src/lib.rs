@@ -3,7 +3,7 @@ use std::path::PathBuf;
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
 use config::{ConfigError, Environment, File};
-use oro_diagnostics::{Diagnostic, DiagnosticCategory, DiagnosticResult as Result, Explain};
+use miette::{Diagnostic, Result};
 use thiserror::Error;
 
 pub use oro_config_derive::*;
@@ -17,15 +17,13 @@ pub trait OroConfigLayer {
 #[derive(Debug, Error, Diagnostic)]
 pub enum OroConfigError {
     #[error(transparent)]
-    #[label("config::error")]
+    #[diagnostic(code(config::error))]
     ConfigError(#[from] ConfigError),
 
     #[error(transparent)]
-    #[label("config::error")]
+    #[diagnostic(code(config::error))]
     ConfigParseError(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
-
-impl Explain for OroConfigError {}
 
 pub struct OroConfigOptions {
     global: bool,
@@ -108,30 +106,36 @@ mod tests {
     use std::env;
     use std::fs;
 
-    use anyhow::Result;
+    use miette::{IntoDiagnostic, Result};
     use pretty_assertions::assert_eq;
     use tempfile::tempdir;
 
     #[test]
     fn env_configs() -> Result<()> {
-        let dir = tempdir()?;
+        let dir = tempdir().into_diagnostic()?;
         env::set_var("ORO_CONFIG_STORE", dir.path().display().to_string());
         let config = OroConfigOptions::new().global(false).load()?;
         env::remove_var("ORO_CONFIG_STORE");
-        assert_eq!(config.get_str("store")?, dir.path().display().to_string());
+        assert_eq!(
+            config.get_str("store").into_diagnostic()?,
+            dir.path().display().to_string()
+        );
         Ok(())
     }
 
     #[test]
     fn global_config() -> Result<()> {
-        let dir = tempdir()?;
+        let dir = tempdir().into_diagnostic()?;
         let file = dir.path().join("ororc.toml");
-        fs::write(&file, "store = \"hello world\"")?;
+        fs::write(&file, "store = \"hello world\"").into_diagnostic()?;
         let config = OroConfigOptions::new()
             .env(false)
             .global_config_file(Some(file))
             .load()?;
-        assert_eq!(config.get_str("store")?, String::from("hello world"));
+        assert_eq!(
+            config.get_str("store").into_diagnostic()?,
+            String::from("hello world")
+        );
         Ok(())
     }
 

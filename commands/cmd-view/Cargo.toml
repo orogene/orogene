@@ -9,7 +9,6 @@ oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
 oro-config = { path = "../../crates/oro-config" }
 oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
-oro-diagnostics = { path = "../../crates/oro-diagnostics" }
 oro-manifest = { path = "../../crates/oro-manifest" }
 rogga = { path = "../../crates/rogga" }
 
@@ -24,3 +23,4 @@ term_size = "0.3.2"
 chrono = "0.4.13"
 chrono-humanize = "0.0.11"
 humansize = "1.1.0"
+miette = "5.4.1"

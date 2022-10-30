@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use clap::{ArgMatches, Clap, FromArgMatches, IntoApp};
 use directories::ProjectDirs;
+use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_command::OroCommand;
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
-use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 
 use cmd_ping::PingCmd;
 use cmd_prime::PrimeCmd;
@@ -95,7 +95,8 @@ impl Orogene {
         };
         oro.layer_config(&matches, &cfg)?;
         oro.setup_logging()
-            .as_diagnostic("orogene::load::logging")?;
+            .into_diagnostic()
+            .wrap_err("orogene::load::logging")?;
         oro.execute().await?;
         log::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())

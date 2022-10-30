@@ -5,6 +5,5 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-oro-diagnostics = { path = "../oro-diagnostics" }
-
 async-trait = "0.1.19"
+miette = "5.4.1"
