@@ -160,7 +160,7 @@ impl PackageFetcher for GitFetcher {
             _ => panic!("Only git specs allowed."),
         };
         let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
-        self.fetch_to_temp_dir(&info, dir.path()).await?;
+        self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .name_from_path(&dir.path().join("package"))
             .await
@@ -173,7 +173,7 @@ impl PackageFetcher for GitFetcher {
             _ => panic!("Only git specs allowed."),
         };
         let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
-        self.fetch_to_temp_dir(&info, dir.path()).await?;
+        self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .metadata_from_path(&dir.path().join("package"))
             .await
@@ -190,7 +190,7 @@ impl PackageFetcher for GitFetcher {
             _ => panic!("Only git specs allowed."),
         };
         let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
-        self.fetch_to_temp_dir(&info, dir.path()).await?;
+        self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .packument_from_path(&dir.path().join("package"))
             .await

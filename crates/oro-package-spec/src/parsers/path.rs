@@ -13,9 +13,9 @@ use crate::error::{SpecErrorKind, SpecParseError};
 use crate::PackageSpec;
 
 /// path := ( relative-dir | absolute-dir )
-pub(crate) fn path_spec<'a>(
-    input: &'a str,
-) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
+pub(crate) fn path_spec(
+    input: &str,
+) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "path spec",
         map(alt((relative_path, absolute_path)), |p| PackageSpec::Dir {
@@ -25,7 +25,7 @@ pub(crate) fn path_spec<'a>(
 }
 
 /// relative-path := [ '.' ] '.' [path-sep] .*
-fn relative_path<'a>(input: &'a str) -> IResult<&'a str, PathBuf, SpecParseError<&'a str>> {
+fn relative_path(input: &str) -> IResult<&str, PathBuf, SpecParseError<&str>> {
     context(
         "relative path",
         map(
@@ -36,7 +36,7 @@ fn relative_path<'a>(input: &'a str) -> IResult<&'a str, PathBuf, SpecParseError
 }
 
 /// absolute-path := [ alpha ':' ] path-sep+ [ '?' path-sep+ ] .*
-fn absolute_path<'a>(input: &'a str) -> IResult<&'a str, PathBuf, SpecParseError<&'a str>> {
+fn absolute_path(input: &str) -> IResult<&str, PathBuf, SpecParseError<&str>> {
     context(
         "absolute path",
         map(
@@ -67,6 +67,6 @@ fn absolute_path<'a>(input: &'a str) -> IResult<&'a str, PathBuf, SpecParseError
 }
 
 /// path-sep := ( '/' | '\' )
-fn path_sep<'a>(input: &'a str) -> IResult<&'a str, char, SpecParseError<&'a str>> {
+fn path_sep(input: &str) -> IResult<&str, char, SpecParseError<&str>> {
     one_of("/\\")(input)
 }

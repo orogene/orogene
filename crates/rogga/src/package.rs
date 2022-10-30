@@ -32,11 +32,11 @@ impl Package {
     }
 
     pub async fn metadata(&self) -> Result<VersionMetadata> {
-        self.fetcher.metadata(&self).await
+        self.fetcher.metadata(self).await
     }
 
     pub async fn tarball(&self) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
-        self.fetcher.tarball(&self).await
+        self.fetcher.tarball(self).await
     }
 }
 

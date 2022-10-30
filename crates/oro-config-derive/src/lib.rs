@@ -10,11 +10,10 @@ pub fn derive_oro_command(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     quote!(#cmd).into()
 }
 
-#[derive(Debug, FromDeriveInput)]
+#[derive(FromDeriveInput)]
 #[darling(supports(struct_named))]
 struct OroConfigLayer {
     ident: syn::Ident,
-    generics: syn::Generics,
     data: ast::Data<(), OroCommandField>,
 }
 
@@ -56,7 +55,7 @@ fn oro_ignored(attr: &syn::Attribute) -> bool {
 }
 
 fn should_be_ignored(field: &OroCommandField) -> bool {
-    field.attrs.iter().any(|attr| oro_ignored(attr))
+    field.attrs.iter().any(oro_ignored)
 }
 
 impl ToTokens for OroConfigLayer {

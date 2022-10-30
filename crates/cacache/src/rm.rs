@@ -66,7 +66,7 @@ where
 /// }
 /// ```
 pub async fn remove_hash<P: AsRef<Path>>(cache: P, sri: &Integrity) -> Result<()> {
-    Ok(rm::rm_async(cache.as_ref(), &sri).await?)
+    rm::rm_async(cache.as_ref(), sri).await
 }
 
 /// Removes entire contents of the cache, including temporary files, the entry
@@ -92,10 +92,8 @@ pub async fn remove_hash<P: AsRef<Path>>(cache: P, sri: &Integrity) -> Result<()
 /// }
 /// ```
 pub async fn clear<P: AsRef<Path>>(cache: P) -> Result<()> {
-    for entry in cache.as_ref().read_dir().to_internal()? {
-        if let Ok(entry) = entry {
-            afs::remove_dir_all(entry.path()).await.to_internal()?;
-        }
+    for entry in (cache.as_ref().read_dir().to_internal()?).flatten() {
+        afs::remove_dir_all(entry.path()).await.to_internal()?;
     }
     Ok(())
 }
@@ -152,7 +150,7 @@ where
 /// }
 /// ```
 pub fn remove_hash_sync<P: AsRef<Path>>(cache: P, sri: &Integrity) -> Result<()> {
-    Ok(rm::rm(cache.as_ref(), &sri)?)
+    rm::rm(cache.as_ref(), sri)
 }
 
 /// Removes entire contents of the cache synchronously, including temporary
@@ -176,10 +174,8 @@ pub fn remove_hash_sync<P: AsRef<Path>>(cache: P, sri: &Integrity) -> Result<()>
 /// }
 /// ```
 pub fn clear_sync<P: AsRef<Path>>(cache: P) -> Result<()> {
-    for entry in cache.as_ref().read_dir().to_internal()? {
-        if let Ok(entry) = entry {
-            fs::remove_dir_all(entry.path()).to_internal()?;
-        }
+    for entry in (cache.as_ref().read_dir().to_internal()?).flatten() {
+        fs::remove_dir_all(entry.path()).to_internal()?;
     }
     Ok(())
 }
@@ -202,7 +198,7 @@ mod tests {
             assert_eq!(entry, None);
 
             let data_exists = crate::exists(&dir, &sri).await;
-            assert_eq!(data_exists, true);
+            assert!(data_exists);
         });
     }
 
@@ -216,10 +212,10 @@ mod tests {
             crate::remove_hash(&dir, &sri).await.unwrap();
 
             let entry = crate::metadata(&dir, "key").await.unwrap();
-            assert_eq!(entry.is_some(), true);
+            assert!(entry.is_some());
 
             let data_exists = crate::exists(&dir, &sri).await;
-            assert_eq!(data_exists, false);
+            assert!(data_exists);
         });
     }
 
@@ -233,10 +229,10 @@ mod tests {
             crate::clear(&dir).await.unwrap();
 
             let entry = crate::metadata(&dir, "key").await.unwrap();
-            assert_eq!(entry.is_some(), false);
+            assert!(entry.is_some());
 
             let data_exists = crate::exists(&dir, &sri).await;
-            assert_eq!(data_exists, false);
+            assert!(data_exists);
         });
     }
 
@@ -252,7 +248,7 @@ mod tests {
         assert_eq!(new_entry, None);
 
         let data_exists = crate::exists_sync(&dir, &sri);
-        assert_eq!(data_exists, true);
+        assert!(data_exists);
     }
 
     #[test]
@@ -264,10 +260,10 @@ mod tests {
         crate::remove_hash_sync(&dir, &sri).unwrap();
 
         let entry = crate::metadata_sync(&dir, "key").unwrap();
-        assert_eq!(entry.is_some(), true);
+        assert!(entry.is_some());
 
         let data_exists = crate::exists_sync(&dir, &sri);
-        assert_eq!(data_exists, false);
+        assert!(data_exists);
     }
 
     #[test]
@@ -282,6 +278,6 @@ mod tests {
         assert_eq!(entry, None);
 
         let data_exists = crate::exists_sync(&dir, &sri);
-        assert_eq!(data_exists, false);
+        assert!(data_exists);
     }
 }

@@ -45,9 +45,9 @@ impl Write for MaybeCursed {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         if let Some(cursor) = self.cursor.as_mut() {
-            cursor.write(&buf)
+            cursor.write(buf)
         } else if let Some(tmpfile) = self.tmpfile.as_mut() {
-            tmpfile.write(&buf)
+            tmpfile.write(buf)
         } else {
             unreachable!()
         }
@@ -68,7 +68,7 @@ impl Writer {
         let cache_path = cache;
 
         let cursor = size.and_then(|size| {
-            if size >= MIN_MMAP_WRITE_SIZE && size <= MAX_MMAP_WRITE_SIZE {
+            if (MIN_MMAP_WRITE_SIZE..=MAX_MMAP_WRITE_SIZE).contains(&size) {
                 Some(Cursor::new(Vec::with_capacity(size)))
             } else {
                 None
@@ -175,7 +175,7 @@ impl Write for Writer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.written += buf.len();
         self.builder.input(&buf);
-        self.target.write(&buf)
+        self.target.write(buf)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {

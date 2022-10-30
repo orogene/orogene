@@ -28,12 +28,11 @@ fn impl_diagnostics_macro(ast: syn::DeriveInput) -> TokenStream {
                     }
                 });
 
-                let has_ask_attr: Vec<bool> = variant
+                let should_ask = variant
                     .fields
                     .iter()
                     .map(|field| field.attrs.iter().any(|attr| attr.path.is_ident("ask")))
-                    .collect();
-                let should_ask = has_ask_attr.contains(&true);
+                    .any(|x| x);
 
                 match variant.fields {
                     syn::Fields::Unit => cat.map(|c| {
@@ -74,12 +73,11 @@ fn impl_diagnostics_macro(ast: syn::DeriveInput) -> TokenStream {
                     }
                 });
 
-                let has_ask_attr: Vec<bool> = variant
+                let should_ask = variant
                     .fields
                     .iter()
                     .map(|field| field.attrs.iter().any(|attr| attr.path.is_ident("ask")))
-                    .collect();
-                let should_ask = has_ask_attr.contains(&true);
+                    .any(|x| x);
 
                 match variant.fields {
                     syn::Fields::Unit => labels.map(|l| {
@@ -120,12 +118,11 @@ fn impl_diagnostics_macro(ast: syn::DeriveInput) -> TokenStream {
                     }
                 });
 
-                let has_ask_attr: Vec<bool> = variant
+                let should_ask = variant
                     .fields
                     .iter()
                     .map(|field| field.attrs.iter().any(|attr| attr.path.is_ident("ask")))
-                    .collect();
-                let should_ask = has_ask_attr.contains(&true);
+                    .any(|x| x);
 
                 match variant.fields {
                     syn::Fields::Unit => advices.map(|a| {

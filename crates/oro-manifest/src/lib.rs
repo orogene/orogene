@@ -302,7 +302,7 @@ mod parser {
     use nom::{Err, IResult};
 
     pub fn parse_person<I: AsRef<str>>(input: I) -> Result<Person> {
-        let input = &input.as_ref()[..];
+        let input = input.as_ref();
         match all_consuming(person::<VerboseError<&str>>)(input) {
             Ok((_, arg)) => Ok(arg),
             Err(err) => Err(Error::ParsePersonError {
@@ -366,7 +366,7 @@ mod tests {
         "#;
         let mut deps = HashMap::new();
         deps.insert(String::from("foo"), String::from("^3.2.1"));
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -384,7 +384,7 @@ mod tests {
     #[test]
     fn empty() -> Result<()> {
         let string = "{}";
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(parsed, OroManifestBuilder::default().build().unwrap());
         Ok(())
     }
@@ -410,7 +410,7 @@ mod tests {
     ]
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -438,7 +438,7 @@ mod tests {
     "engines": []
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -456,7 +456,7 @@ mod tests {
     "licence": "Parity-7.0"
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -474,7 +474,7 @@ mod tests {
     "version": "1.2.3"
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()
@@ -488,7 +488,7 @@ mod tests {
     "version": "invalid"
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string);
+        let parsed = serde_json::from_str::<OroManifest>(string);
         assert!(parsed.is_err());
         Ok(())
     }
@@ -500,7 +500,7 @@ mod tests {
     "private": true
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default().private(true).build().unwrap()
@@ -516,7 +516,7 @@ mod tests {
     "contributors": ["Eddy the Cat"]
 }
         "#;
-        let parsed = serde_json::from_str::<OroManifest>(&string)?;
+        let parsed = serde_json::from_str::<OroManifest>(string)?;
         assert_eq!(
             parsed,
             OroManifestBuilder::default()

@@ -109,7 +109,7 @@ impl Range {
     fn difference(&self, other: &Self) -> Option<Vec<Self>> {
         use Bound::*;
 
-        if let Some(overlap) = self.intersect(&other) {
+        if let Some(overlap) = self.intersect(other) {
             if &overlap == self {
                 return None;
             }
@@ -290,7 +290,7 @@ impl fmt::Display for Operation {
 
 impl VersionReq {
     pub fn parse<S: AsRef<str>>(input: S) -> Result<Self, SemverError> {
-        let input = &input.as_ref()[..];
+        let input = input.as_ref();
 
         match all_consuming(many_predicates)(input) {
             Ok((_, predicates)) => Ok(VersionReq { predicates }),
@@ -334,7 +334,7 @@ impl VersionReq {
     pub fn allows_all(&self, other: &VersionReq) -> bool {
         for this in &self.predicates {
             for that in &other.predicates {
-                if this.allows_all(&that) {
+                if this.allows_all(that) {
                     return true;
                 }
             }
@@ -346,7 +346,7 @@ impl VersionReq {
     pub fn allows_any(&self, other: &VersionReq) -> bool {
         for this in &self.predicates {
             for that in &other.predicates {
-                if this.allows_any(&that) {
+                if this.allows_any(that) {
                     return true;
                 }
             }

@@ -12,9 +12,9 @@ use crate::parsers::util;
 use crate::{GitHost, GitInfo, PackageSpec};
 
 /// `git-spec := git-shorthand | git-scp | git-url`
-pub(crate) fn git_spec<'a>(
-    input: &'a str,
-) -> IResult<&'a str, PackageSpec, SpecParseError<&'a str>> {
+pub(crate) fn git_spec(
+    input: &str,
+) -> IResult<&str, PackageSpec, SpecParseError<&str>> {
     context(
         "git package",
         map(alt((git_shorthand, git_url, git_scp)), PackageSpec::Git),
@@ -22,7 +22,7 @@ pub(crate) fn git_spec<'a>(
 }
 
 /// `git-shorthand := [ hosted-git-prefix ] not('/')+ '/' repo`
-fn git_shorthand<'a>(input: &'a str) -> IResult<&'a str, GitInfo, SpecParseError<&'a str>> {
+fn git_shorthand(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
     let (input, maybe_host) = opt(hosted_git_prefix)(input)?;
     let (input, owner) = map_res(take_till1(|c| c == '/'), util::no_url_encode)(input)?;
     let (input, repo) = preceded(tag("/"), take_while(|c| c != '#'))(input)?;
@@ -41,7 +41,7 @@ fn git_shorthand<'a>(input: &'a str) -> IResult<&'a str, GitInfo, SpecParseError
 }
 
 /// `hosted-git-prefix := 'github:' | 'bitbucket:' | 'gist:' | 'gitlab:'`
-fn hosted_git_prefix<'a>(input: &'a str) -> IResult<&'a str, GitHost, SpecParseError<&'a str>> {
+fn hosted_git_prefix(input: &str) -> IResult<&str, GitHost, SpecParseError<&str>> {
     map_res(
         terminated(
             alt((tag("github"), tag("gist"), tag("gitlab"), tag("bitbucket"))),
@@ -51,9 +51,9 @@ fn hosted_git_prefix<'a>(input: &'a str) -> IResult<&'a str, GitHost, SpecParseE
     )(input)
 }
 
-fn committish<'a>(
-    input: &'a str,
-) -> IResult<&'a str, (Option<String>, Option<VersionReq>), SpecParseError<&'a str>> {
+fn committish(
+    input: &str,
+) -> IResult<&str, (Option<String>, Option<VersionReq>), SpecParseError<&str>> {
     let (input, hash) = opt(preceded(
         tag("#"),
         alt((
@@ -73,12 +73,12 @@ fn committish<'a>(
     ))
 }
 
-fn semver_range<'a>(input: &'a str) -> IResult<&'a str, VersionReq, SpecParseError<&'a str>> {
+fn semver_range(input: &str) -> IResult<&str, VersionReq, SpecParseError<&str>> {
     let (input, range) = map_res(take_till1(|_| false), VersionReq::parse)(input)?;
     Ok((input, range))
 }
 
-fn git_url<'a>(input: &'a str) -> IResult<&'a str, GitInfo, SpecParseError<&'a str>> {
+fn git_url(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
     let (input, url) = preceded(
         alt((tag("git+"), peek(tag("git://")))),
         map_res(take_till1(|c| c == '#'), Url::parse),
@@ -137,7 +137,7 @@ fn git_url<'a>(input: &'a str) -> IResult<&'a str, GitInfo, SpecParseError<&'a s
     }
 }
 
-fn git_scp<'a>(input: &'a str) -> IResult<&'a str, GitInfo, SpecParseError<&'a str>> {
+fn git_scp(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
     let (input, _) = preceded(opt(tag("git+")), tag("ssh://"))(input)?;
     let (input, username) = opt(terminated(take_till1(|c| c == '@'), tag("@")))(input)?;
     let (input, host) = take_till1(|c| c == ':' || c == '#')(input)?;

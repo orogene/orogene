@@ -21,9 +21,9 @@ struct MaybeMmap {
 
 impl std::io::Read for MaybeMmap {
     #[inline]
-    fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if let Some((mmap, pos)) = self.mmap.as_mut() {
-            match (&mmap[*pos..]).read(&mut buf) {
+            match (&mmap[*pos..]).read(buf) {
                 Ok(read) => {
                     *pos += read;
                     Ok(read)
@@ -31,7 +31,7 @@ impl std::io::Read for MaybeMmap {
                 Err(e) => Err(e),
             }
         } else {
-            self.file.read(&mut buf)
+            self.file.read(buf)
         }
     }
 }
@@ -63,7 +63,7 @@ impl Reader {
         let expected_size = u64::from_be_bytes(bytes) as usize;
 
         let fd = MaybeMmap {
-            mmap: if expected_size >= MIN_MMAP_READ_SIZE && expected_size <= MAX_MMAP_READ_SIZE {
+            mmap: if (MIN_MMAP_READ_SIZE..=MAX_MMAP_READ_SIZE).contains(&expected_size) {
                 unsafe { Mmap::map(&reader) }.ok().map(|mmap| (mmap, 8))
             } else {
                 None
@@ -79,19 +79,19 @@ impl Reader {
     }
 
     pub fn new(cache: &Path, sri: &Integrity) -> Result<Self> {
-        let cpath = path::content_path(&cache, &sri);
+        let cpath = path::content_path(cache, sri);
         let sri = sri.clone();
         Self::instantiate(cpath, sri)
     }
 
     pub async fn new_async(cache: &Path, sri: &Integrity) -> Result<Self> {
-        let cpath = path::content_path(&cache, &sri);
+        let cpath = path::content_path(cache, sri);
         let sri = sri.clone();
         smol::unblock!(Self::instantiate(cpath, sri))
     }
 
     pub fn consume(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-        let cpath = path::content_path(&cache, &sri);
+        let cpath = path::content_path(cache, sri);
         let sri = sri.clone();
         let mut reader = Self::instantiate(cpath, sri)?;
 
@@ -103,7 +103,7 @@ impl Reader {
 
     #[inline]
     pub async fn consume_async(cache: &Path, sri: &Integrity) -> Result<Vec<u8>> {
-        let cpath = path::content_path(&cache, &sri);
+        let cpath = path::content_path(cache, sri);
         let sri = sri.clone();
         async_std::task::spawn_blocking(|| {
             let mut reader = Self::instantiate(cpath, sri)?;
@@ -158,7 +158,7 @@ pub async fn copy_async<'a>(cache: &'a Path, sri: &'a Integrity, to: &'a Path) -
 }
 
 pub fn has_content(cache: &Path, sri: &Integrity) -> Option<Integrity> {
-    if path::content_path(&cache, &sri).exists() {
+    if path::content_path(cache, sri).exists() {
         Some(sri.clone())
     } else {
         None
@@ -166,7 +166,7 @@ pub fn has_content(cache: &Path, sri: &Integrity) -> Option<Integrity> {
 }
 
 pub async fn has_content_async(cache: &Path, sri: &Integrity) -> Option<Integrity> {
-    if async_std::fs::metadata(path::content_path(&cache, &sri))
+    if async_std::fs::metadata(path::content_path(cache, sri))
         .await
         .is_ok()
     {

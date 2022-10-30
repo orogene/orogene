@@ -67,7 +67,7 @@ impl NpmFetcher {
         let client = self.client.lock().await.clone();
         let packument_url = self
             .pick_registry(scope)
-            .join(&name)
+            .join(name)
             // This... should not fail unless you did some shenanigans like
             // constructing PackageRequests by hand, so no error code.
             .map_err(RoggaError::UrlError)?;
@@ -112,10 +112,10 @@ impl PackageFetcher for NpmFetcher {
             PackageResolution::Npm { ref version, .. } => version,
             _ => unreachable!(),
         };
-        let packument = self.packument(&pkg.from(), &Path::new("")).await?;
+        let packument = self.packument(pkg.from(), Path::new("")).await?;
         packument
             .versions
-            .get(&wanted)
+            .get(wanted)
             .cloned()
             .ok_or_else(|| RoggaError::MissingVersion(pkg.from().clone(), wanted.clone()))
     }

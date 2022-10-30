@@ -62,7 +62,7 @@ impl Hash for SerializableMetadata {
 }
 
 pub fn insert(cache: &Path, key: &str, opts: WriteOpts) -> Result<Integrity> {
-    let bucket = bucket_path(&cache, &key);
+    let bucket = bucket_path(cache, key);
     fs::create_dir_all(bucket.parent().unwrap()).with_context(|| {
         format!(
             "Failed to create index bucket directory: {:?}",
@@ -96,7 +96,7 @@ pub fn insert(cache: &Path, key: &str, opts: WriteOpts) -> Result<Integrity> {
 }
 
 pub async fn insert_async<'a>(cache: &'a Path, key: &'a str, opts: WriteOpts) -> Result<Integrity> {
-    let bucket = bucket_path(&cache, &key);
+    let bucket = bucket_path(cache, key);
     afs::create_dir_all(bucket.parent().unwrap())
         .await
         .with_context(|| {
@@ -135,7 +135,7 @@ pub async fn insert_async<'a>(cache: &'a Path, key: &'a str, opts: WriteOpts) ->
 }
 
 pub fn find(cache: &Path, key: &str) -> Result<Option<Metadata>> {
-    let bucket = bucket_path(cache, &key);
+    let bucket = bucket_path(cache, key);
     Ok(bucket_entries(&bucket)
         .with_context(|| format!("Failed to read index bucket entries from {:?}", bucket))?
         .into_iter()
@@ -163,7 +163,7 @@ pub fn find(cache: &Path, key: &str) -> Result<Option<Metadata>> {
 }
 
 pub async fn find_async(cache: &Path, key: &str) -> Result<Option<Metadata>> {
-    let bucket = bucket_path(cache, &key);
+    let bucket = bucket_path(cache, key);
     Ok(bucket_entries_async(&bucket)
         .await
         .with_context(|| format!("Failed to read index bucket entries from {:?}", bucket))?
@@ -257,7 +257,7 @@ pub fn ls(cache: &Path) -> impl Iterator<Item = Result<Metadata>> {
 }
 
 fn bucket_path(cache: &Path, key: &str) -> PathBuf {
-    let hashed = hash_key(&key);
+    let hashed = hash_key(key);
     cache
         .join(format!("index-v{}", INDEX_VERSION))
         .join(&hashed[0..2])

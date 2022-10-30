@@ -169,7 +169,7 @@ pub async fn read_hash<P>(cache: P, sri: &Integrity) -> Result<Vec<u8>>
 where
     P: AsRef<Path>,
 {
-    Ok(read::Reader::consume_async(cache.as_ref(), sri).await?)
+    read::Reader::consume_async(cache.as_ref(), sri).await
 }
 
 /// Copies cache data to a specified location. Returns the number of bytes
@@ -235,12 +235,12 @@ where
     P: AsRef<Path>,
     K: AsRef<str>,
 {
-    Ok(index::find_async(cache.as_ref(), key.as_ref()).await?)
+    index::find_async(cache.as_ref(), key.as_ref()).await
 }
 
 /// Returns true if the given hash exists in the cache.
 pub async fn exists<P: AsRef<Path>>(cache: P, sri: &Integrity) -> bool {
-    read::has_content_async(cache.as_ref(), &sri)
+    read::has_content_async(cache.as_ref(), sri)
         .await
         .is_some()
 }
@@ -387,7 +387,7 @@ pub fn read_hash_sync<P>(cache: P, sri: &Integrity) -> Result<Vec<u8>>
 where
     P: AsRef<Path>,
 {
-    Ok(read::Reader::consume(cache.as_ref(), sri)?)
+    read::Reader::consume(cache.as_ref(), sri)
 }
 
 /// Copies a cache entry by key to a specified location. Returns the number of
@@ -449,12 +449,12 @@ where
     P: AsRef<Path>,
     K: AsRef<str>,
 {
-    Ok(index::find(cache.as_ref(), key.as_ref())?)
+    index::find(cache.as_ref(), key.as_ref())
 }
 
 /// Returns true if the given hash exists in the cache.
 pub fn exists_sync<P: AsRef<Path>>(cache: P, sri: &Integrity) -> bool {
-    read::has_content(cache.as_ref(), &sri).is_some()
+    read::has_content(cache.as_ref(), sri).is_some()
 }
 
 #[cfg(test)]

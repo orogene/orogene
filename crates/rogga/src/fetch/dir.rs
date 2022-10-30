@@ -37,7 +37,7 @@ impl DirFetcher {
 
     pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String> {
         Ok(self
-            .packument_from_path(&path)
+            .packument_from_path(path)
             .await?
             .versions
             .iter()
@@ -59,11 +59,11 @@ impl DirFetcher {
     }
 
     pub(crate) async fn metadata_from_path(&self, path: &Path) -> Result<VersionMetadata> {
-        Ok(self.manifest(&path).await?.into_metadata(&path)?)
+        self.manifest(path).await?.into_metadata(&path)
     }
 
     pub(crate) async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
-        Ok(Arc::new(self.manifest(&path).await?.into_packument(&path)?))
+        Ok(Arc::new(self.manifest(path).await?.into_packument(&path)?))
     }
 }
 
@@ -110,11 +110,7 @@ impl Manifest {
             ..
         }) = self;
         let name = name.clone().or_else(|| {
-            if let Some(name) = path.as_ref().file_name() {
-                Some(name.to_string_lossy().into())
-            } else {
-                None
-            }
+            path.as_ref().file_name().map(|name| name.to_string_lossy().into())
         }).ok_or_else(|| RoggaError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
         let version = version
             .clone()

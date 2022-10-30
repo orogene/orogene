@@ -25,10 +25,8 @@ impl fmt::Debug for DiagnosticError {
             use DiagnosticCategory::*;
             write!(f, "{}", self.label.red())?;
             if let Net = &self.category {
-                if let Some(Meta::Net { url }) = &self.meta {
-                    if let Some(ref url) = url {
-                        write!(f, " @ {}", format!("{}", url).cyan().underline())?;
-                    }
+                if let Some(Meta::Net { url: Some(ref url) }) = &self.meta {
+                    write!(f, " @ {}", format!("{}", url).cyan().underline())?;
                 }
             }
             write!(f, "\n\n")?;

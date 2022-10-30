@@ -146,7 +146,7 @@ impl PackageResolver for ClassicResolver {
         }
 
         target
-            .and_then(|v| packument.versions.get(&v))
+            .and_then(|v| packument.versions.get(v))
             .and_then(|v| {
                 Some(PackageResolution::Npm {
                     version: v

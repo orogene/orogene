@@ -111,7 +111,7 @@ pub fn parse_package_spec<I>(input: I) -> Result<PackageSpec, PackageSpecError>
 where
     I: AsRef<str>,
 {
-    let input = &input.as_ref()[..];
+    let input = input.as_ref();
     match all_consuming(package::package_spec)(input) {
         Ok((_, arg)) => Ok(arg),
         Err(err) => Err(match err {
