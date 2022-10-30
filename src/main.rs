@@ -1,7 +1,7 @@
 use oro_diagnostics::DiagnosticResult;
-use syenite::Syenite;
+use orogene::Orogene;
 
 #[async_std::main]
 async fn main() -> DiagnosticResult<()> {
-    Ok(Syenite::load().await?)
+    Ok(Orogene::load().await?)
 }

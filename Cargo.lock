@@ -2168,6 +2168,23 @@ dependencies = [
 [[package]]
 name = "orogene"
 version = "0.1.0"
+dependencies = [
+ "async-std",
+ "async-trait",
+ "clap 3.0.0-beta.2",
+ "cmd-ping",
+ "cmd-prime",
+ "cmd-restore",
+ "cmd-view",
+ "directories",
+ "embed-resource",
+ "fern",
+ "log",
+ "oro-command",
+ "oro-config",
+ "oro-diagnostics",
+ "smol 0.1.18",
+]
 
 [[package]]
 name = "os_str_bytes"
@@ -3073,27 +3090,6 @@ dependencies = [
  "pin-project-lite 0.2.7",
  "serde 1.0.127",
  "serde_json",
-]
-
-[[package]]
-name = "syenite"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "clap 3.0.0-beta.2",
- "cmd-ping",
- "cmd-prime",
- "cmd-restore",
- "cmd-view",
- "directories",
- "embed-resource",
- "fern",
- "log",
- "oro-command",
- "oro-config",
- "oro-diagnostics",
- "smol 0.1.18",
 ]
 
 [[package]]

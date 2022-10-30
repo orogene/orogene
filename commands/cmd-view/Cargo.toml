@@ -1,0 +1,26 @@
+[package]
+name = "cmd-view"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2018"
+
+[dependencies]
+oro-client = { path = "../../crates/oro-client" }
+oro-command = { path = "../../crates/oro-command" }
+oro-config = { path = "../../crates/oro-config" }
+oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
+oro-diagnostics = { path = "../../crates/oro-diagnostics" }
+oro-manifest = { path = "../../crates/oro-manifest" }
+rogga = { path = "../../crates/rogga" }
+
+clap = { git = "https://github.com/zkat/clap" }
+url = "2.1.0"
+async-trait = "0.1.19"
+serde_json = "1.0.56"
+log = "0.4.11"
+colored = "2.0.0"
+term_grid = "0.1.7"
+term_size = "0.3.2"
+chrono = "0.4.13"
+chrono-humanize = "0.0.11"
+humansize = "1.1.0"

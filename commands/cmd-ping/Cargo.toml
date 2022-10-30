@@ -5,10 +5,10 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 
 [dependencies]
-oro-client = { path = "../../../crates/oro-client" }
-oro-command = { path = "../../../crates/oro-command" }
-oro-config = { path = "../../../crates/oro-config" }
-oro-diagnostics  = { path = "../../../crates/oro-diagnostics" }
+oro-client = { path = "../../crates/oro-client" }
+oro-command = { path = "../../crates/oro-command" }
+oro-config = { path = "../../crates/oro-config" }
+oro-diagnostics  = { path = "../../crates/oro-diagnostics" }
 
 clap = { git = "https://github.com/zkat/clap" }
 url = "2.1.0"
