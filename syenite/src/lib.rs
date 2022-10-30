@@ -11,7 +11,6 @@ use oro_diagnostics::{AsDiagnostic, DiagnosticResult as Result};
 use cmd_ping::PingCmd;
 use cmd_prime::PrimeCmd;
 use cmd_restore::RestoreCmd;
-use cmd_shell::ShellCmd;
 use cmd_view::ViewCmd;
 
 #[derive(Debug, Clap)]
@@ -134,14 +133,6 @@ pub enum OroCmd {
         setting = clap::AppSettings::DeriveDisplayOrder,
     )]
     View(ViewCmd),
-    #[clap(
-        about = "Execute a new wrapped `node` shell.",
-        alias = "sh",
-        setting = clap::AppSettings::ColoredHelp,
-        setting = clap::AppSettings::DisableHelpSubcommand,
-        setting = clap::AppSettings::DeriveDisplayOrder,
-    )]
-    Shell(ShellCmd),
 }
 
 #[async_trait]
@@ -153,7 +144,6 @@ impl OroCommand for Syenite {
             OroCmd::Prime(prime) => prime.execute().await,
             OroCmd::Restore(restore) => restore.execute().await,
             OroCmd::View(view) => view.execute().await,
-            OroCmd::Shell(shell) => shell.execute().await,
         }
     }
 }
@@ -162,19 +152,16 @@ impl OroConfigLayer for Syenite {
     fn layer_config(&mut self, args: &ArgMatches, conf: &OroConfig) -> Result<()> {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
-                ping.layer_config(&args.subcommand_matches("ping").unwrap(), conf)
+                ping.layer_config(args.subcommand_matches("ping").unwrap(), conf)
             }
             OroCmd::Prime(ref mut prime) => {
-                prime.layer_config(&args.subcommand_matches("prime").unwrap(), conf)
+                prime.layer_config(args.subcommand_matches("prime").unwrap(), conf)
             }
             OroCmd::Restore(ref mut restore) => {
-                restore.layer_config(&args.subcommand_matches("restore").unwrap(), conf)
+                restore.layer_config(args.subcommand_matches("restore").unwrap(), conf)
             }
             OroCmd::View(ref mut view) => {
-                view.layer_config(&args.subcommand_matches("view").unwrap(), conf)
-            }
-            OroCmd::Shell(ref mut shell) => {
-                shell.layer_config(&args.subcommand_matches("shell").unwrap(), conf)
+                view.layer_config(args.subcommand_matches("view").unwrap(), conf)
             }
         }
     }

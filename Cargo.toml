@@ -18,6 +18,4 @@ members = [
     "crates/*",
     "syenite",
     "syenite/commands/*",
-    "antimony/src-tauri",
-    "antimony/handlers/*"
 ]
