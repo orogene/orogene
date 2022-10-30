@@ -61,7 +61,7 @@ impl AsyncWrite for TlsConnWrapper {
 #[async_trait]
 impl Manager<TlsStream<TcpStream>, Error> for TlsConnection {
     async fn create(&self) -> Result<TlsStream<TcpStream>, Error> {
-        log::trace!("Creating new socket to {:?}", self.addr);
+        tracing::trace!("Creating new socket to {:?}", self.addr);
         let raw_stream = async_std::net::TcpStream::connect(self.addr).await?;
         let stream = async_native_tls::connect(&self.host, raw_stream).await?;
         Ok(stream)

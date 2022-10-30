@@ -71,6 +71,6 @@ where
         .await
         .map_err(|e| RoggaError::ExtractIoError(e, None))?;
 
-    log::trace!("Finished caching tarball contents from stream");
+    tracing::trace!("Finished caching tarball contents from stream");
     Ok(())
 }

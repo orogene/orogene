@@ -14,7 +14,6 @@ node-maintainer = { path = "../../crates/node-maintainer" }
 
 clap = { version = "4.0.18", features = ["derive"] }
 async-trait = "0.1.19"
-log = "0.4.11"
 url = "2.1.1"
 async-std = "1.12.0"
 miette = "5.4.1"

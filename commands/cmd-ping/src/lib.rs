@@ -18,9 +18,6 @@ pub struct PingCmd {
     )]
     registry: Url,
 
-    #[arg(from_global)]
-    loglevel: log::LevelFilter,
-
     #[clap(from_global)]
     json: bool,
 

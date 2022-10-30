@@ -87,7 +87,7 @@ impl HttpClient for PoolingClient {
             .next()
             .ok_or_else(|| Error::from_str(StatusCode::BadRequest, "missing valid address"))?;
 
-        log::trace!("> Scheme: {}", scheme);
+        tracing::trace!("> Scheme: {}", scheme);
 
         match scheme {
             "http" => {

@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
 use async_trait::async_trait;
-use clap::{ArgMatches, FromArgMatches as _, Parser, Subcommand, CommandFactory};
+use clap::{ArgMatches, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
-use miette::{IntoDiagnostic, Result, WrapErr};
+use miette::{IntoDiagnostic, Result};
 use oro_command::OroCommand;
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
+use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use cmd_ping::PingCmd;
 use cmd_prime::PrimeCmd;
@@ -23,13 +24,11 @@ pub struct Orogene {
     #[arg(global = true, long)]
     config: Option<PathBuf>,
 
-    /// Log output level (off, error, warn, info, debug, trace)
-    #[clap(
-        global = true,
-        long,
-        default_value = "warn"
-    )]
-    loglevel: log::LevelFilter,
+    /// Log output level/directive. Supports plain loglevels (off, error,
+    /// warn, info, debug, trace) as well as more advanced directives in the
+    /// format `target[span{field=value}]=level`.
+    #[clap(global = true, long, default_value = "warn")]
+    loglevel: String,
 
     /// Disable all output
     #[arg(global = true, long, short)]
@@ -44,36 +43,19 @@ pub struct Orogene {
 }
 
 impl Orogene {
-    fn setup_logging(&self) -> std::result::Result<(), fern::InitError> {
-        let fern = fern::Dispatch::new()
-            .format(|out, message, record| {
-                out.finish(format_args!(
-                    "oro [{}][{}] {}",
-                    record.level(),
-                    record.target(),
-                    message,
-                ))
-            })
-            .chain(
-                fern::Dispatch::new()
-                    .level(if self.quiet {
-                        log::LevelFilter::Off
+    fn setup_logging(&self) -> Result<()> {
+        tracing_subscriber::registry()
+            .with(fmt::layer())
+            .with(
+                EnvFilter::builder()
+                    .with_default_directive(if self.quiet {
+                        LevelFilter::OFF.into()
                     } else {
-                        self.loglevel
+                        self.loglevel.parse().into_diagnostic()?
                     })
-                    .chain(std::io::stderr()),
-            );
-        // TODO: later
-        // if let Some(logfile) = ProjectDirs::from("", "", "orogene")
-        //     .map(|d| d.data_dir().to_owned().join(format!("orogene-debug-{}.log", chrono::Local::now().to_rfc3339())))
-        // {
-        //     fern = fern.chain(
-        //         fern::Dispatch::new()
-        //         .level(log::LevelFilter::Trace)
-        //         .chain(fern::log_file(logfile)?)
-        //     )
-        // }
-        fern.apply()?;
+                    .from_env_lossy(),
+            )
+            .init();
         Ok(())
     }
 
@@ -95,11 +77,9 @@ impl Orogene {
                 .load()?
         };
         oro.layer_config(&matches, &cfg)?;
-        oro.setup_logging()
-            .into_diagnostic()
-            .wrap_err("orogene::load::logging")?;
+        oro.setup_logging()?;
         oro.execute().await?;
-        log::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
+        tracing::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())
     }
 }
@@ -109,17 +89,17 @@ pub enum OroCmd {
     /// Ping the registry.
     Ping(PingCmd),
 
-    /// Prime the current project for execution
+    /// Prime the current project for execution.
     Prime(PrimeCmd),
 
-    /// Get information about a package
+    /// Get information about a package.
     View(ViewCmd),
 }
 
 #[async_trait]
 impl OroCommand for Orogene {
     async fn execute(self) -> Result<()> {
-        log::info!("Running command: {:#?}", self.subcommand);
+        tracing::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
             OroCmd::Prime(prime) => prime.execute().await,
