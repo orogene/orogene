@@ -5,19 +5,16 @@ use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
+use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use oro_config::OroConfigLayer;
-use oro_manifest::{Bin, OroManifest, PersonField};
-use rogga::{Human, RoggaOpts, VersionMetadata};
+use rogga::RoggaOpts;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct ViewCmd {
     /// Registry to get package data from.
-    #[arg(
-        default_value = "https://registry.npmjs.org",
-        long
-    )]
+    #[arg(default_value = "https://registry.npmjs.org", long)]
     registry: Url,
 
     /// Package spec to look up.
@@ -65,7 +62,7 @@ impl OroCommand for ViewCmd {
                 ref deprecated,
                 ref maintainers,
                 manifest:
-                    OroManifest {
+                    Manifest {
                         ref name,
                         ref description,
                         ref version,
@@ -200,11 +197,11 @@ impl OroCommand for ViewCmd {
                         PersonField::Str(string) => {
                             println!("- {}", string.yellow());
                         }
-                        PersonField::Obj {
+                        PersonField::Obj(Person {
                             ref name,
                             ref email,
                             ref url,
-                        } => {
+                        }) => {
                             print!("-");
                             if let Some(name) = name {
                                 print!(" {}", name);
@@ -229,7 +226,7 @@ impl OroCommand for ViewCmd {
                     .unwrap_or_else(|| "0.0.0".parse().unwrap())
                     .to_string(),
             ) {
-                if let Some(Human { name, email }) = npm_user {
+                if let Some(NpmUser { name, email }) = npm_user {
                     let human = chrono_humanize::HumanTime::from(
                         chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())
                             .into_diagnostic()

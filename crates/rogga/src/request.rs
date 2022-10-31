@@ -2,12 +2,12 @@ use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use async_std::sync::Arc;
+use oro_common::Packument;
 use oro_package_spec::PackageSpec;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
-use crate::packument::Packument;
 use crate::resolver::{PackageResolution, PackageResolver};
 
 /// A package request from which more information can be derived. PackageRequest objects can be resolved into a `Package` by using a `PackageResolver`

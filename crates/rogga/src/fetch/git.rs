@@ -4,8 +4,8 @@ use async_process::{Command, Stdio};
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use futures::AsyncRead;
-use http_types::Method;
 use oro_client::{self, OroClient};
+use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
@@ -14,18 +14,17 @@ use crate::extract;
 use crate::fetch::dir::DirFetcher;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
-use crate::packument::{Packument, VersionMetadata};
 use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
 pub struct GitFetcher {
-    client: Arc<Mutex<OroClient>>,
+    client: OroClient,
     dir_fetcher: DirFetcher,
     git: Arc<Mutex<Option<PathBuf>>>,
 }
 
 impl GitFetcher {
-    pub fn new(client: Arc<Mutex<OroClient>>) -> Self {
+    pub fn new(client: OroClient) -> Self {
         Self {
             client,
             dir_fetcher: DirFetcher::new(),
@@ -78,12 +77,7 @@ impl GitFetcher {
     }
 
     async fn fetch_tarball(&self, dir: &Path, tarball: &Url) -> Result<()> {
-        let client = self.client.lock().await.clone();
-        let opts = client.opts(Method::Get, tarball.clone());
-        let tarball = client
-            .send(opts)
-            .await
-            .map_err(RoggaError::OroClientError)?;
+        let tarball = self.client.stream_external(tarball).await?;
         extract::extract_to_dir(tarball, dir).await?;
         Ok(())
     }

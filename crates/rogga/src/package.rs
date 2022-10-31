@@ -2,11 +2,11 @@ use std::fmt;
 
 use async_std::sync::Arc;
 use futures::io::AsyncRead;
+use oro_common::VersionMetadata;
 use oro_package_spec::PackageSpec;
 
 use crate::error::Result;
 use crate::fetch::PackageFetcher;
-use crate::packument::VersionMetadata;
 use crate::resolver::PackageResolution;
 
 /// A resolved package. A concrete version has been determined from its

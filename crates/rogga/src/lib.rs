@@ -6,7 +6,6 @@ mod extract;
 mod fetch;
 mod integrity;
 mod package;
-mod packument;
 mod request;
 mod resolver;
 mod rogga;
@@ -14,7 +13,6 @@ mod rogga;
 pub use crate::rogga::*;
 pub use error::RoggaError;
 pub use package::*;
-pub use packument::*;
 pub use request::*;
 pub use resolver::*;
 

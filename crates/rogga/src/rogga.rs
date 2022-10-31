@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use async_std::sync::{Arc, Mutex};
+use async_std::sync::Arc;
 use oro_client::OroClient;
 use url::Url;
 
@@ -40,7 +40,7 @@ impl RoggaOpts {
     }
 
     pub fn build(self) -> Rogga {
-        let client = Arc::new(Mutex::new(OroClient::new()));
+        let client = OroClient::new("https://registry.npmjs.org".parse().unwrap());
         let use_corgi = self.use_corgi.unwrap_or(false);
         Rogga {
             // cache: self.cache,

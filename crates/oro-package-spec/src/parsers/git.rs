@@ -85,7 +85,7 @@ fn git_url(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
         | Some(host @ "gitlab.com")
         | Some(host @ "gist.github.com")
         | Some(host @ "bitbucket.org") => {
-            let path = (&url.path()[1..])
+            let path = (url.path()[1..])
                 .split('/')
                 .map(String::from)
                 .collect::<Vec<String>>();

@@ -1,39 +1,34 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use async_std::sync::{Arc, Mutex};
+use async_std::sync::Arc;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use futures::io::AsyncRead;
-use http_types::Method;
 use oro_client::{self, OroClient};
+use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use url::Url;
 
 use crate::error::{Result, RoggaError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
-use crate::packument::{Packument, VersionMetadata};
 use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
 pub struct NpmFetcher {
-    client: Arc<Mutex<OroClient>>,
+    client: OroClient,
     /// Corgis are a compressed kind of packument that omits some
     /// "unnecessary" fields (for some common operations during package
     /// management). This can significantly speed up installs, and is done
     /// through a special Accept header on request.
     use_corgi: bool,
     registries: HashMap<String, Url>,
-    packuments: DashMap<Url, Arc<Packument>>,
+    packuments: DashMap<String, Arc<Packument>>,
 }
 
 impl NpmFetcher {
-    pub fn new(
-        client: Arc<Mutex<OroClient>>,
-        use_corgi: bool,
-        registries: HashMap<String, Url>,
-    ) -> Self {
+    pub fn new(client: OroClient, use_corgi: bool, registries: HashMap<String, Url>) -> Self {
         Self {
             client,
             use_corgi,
@@ -57,42 +52,6 @@ impl NpmFetcher {
                 .cloned()
                 .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap())
         }
-    }
-
-    async fn packument_from_name(
-        &self,
-        scope: &Option<String>,
-        name: &str,
-    ) -> Result<Arc<Packument>> {
-        let client = self.client.lock().await.clone();
-        let packument_url = self
-            .pick_registry(scope)
-            .join(name)
-            // This... should not fail unless you did some shenanigans like
-            // constructing PackageRequests by hand, so no error code.
-            .map_err(RoggaError::UrlError)?;
-        if let Some(packument) = self.packuments.get(&packument_url) {
-            return Ok(packument.value().clone());
-        }
-        let opts = client.opts(Method::Get, packument_url.clone());
-        let packument_data = client
-            .send(opts.header(
-                "Accept",
-                if self.use_corgi {
-                    "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*"
-                } else {
-                    "application/json"
-                },
-            ))
-            .await
-            .map_err(RoggaError::OroClientError)?
-            .body_string()
-            .await
-            .map_err(|e| RoggaError::MiscError(e.to_string()))?;
-        let packument: Arc<Packument> =
-            Arc::new(serde_json::from_str(&packument_data).map_err(RoggaError::SerdeError)?);
-        self.packuments.insert(packument_url, packument.clone());
-        Ok(packument)
     }
 }
 
@@ -130,30 +89,27 @@ impl PackageFetcher for NpmFetcher {
         };
         if let PackageSpec::Npm {
             ref scope,
-            ref name,
             ..
         } = pkg
         {
-            Ok(self.packument_from_name(scope, name).await?)
+            let spec_str = format!("{}", pkg);
+            if let Some(packument) = self.packuments.get(&spec_str) {
+                return Ok(packument.value().clone());
+            }
+            let client = self.client.with_registry(self.pick_registry(scope));
+            let packument = Arc::new(client.packument(&spec_str, self.use_corgi).await?);
+            self.packuments.insert(spec_str, packument.clone());
+            Ok(packument)
         } else {
             unreachable!()
         }
     }
 
     async fn tarball(&self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
-        // NOTE: This .clone() is so we can free up the client lock, which
-        // would otherwise, you know, make it so we can only make one request
-        // at a time :(
-        let client = self.client.lock().await.clone();
         let url = match pkg.resolved() {
             PackageResolution::Npm { ref tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
-        Ok(Box::new(
-            client
-                .send(client.opts(Method::Get, url.clone()))
-                .await
-                .map_err(RoggaError::OroClientError)?,
-        ))
+        Ok(self.client.stream_external(url).await?)
     }
 }

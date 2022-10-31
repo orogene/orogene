@@ -3,11 +3,11 @@ use std::path::Path;
 use async_std::sync::Arc;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
+use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 
 use crate::error::Result;
 use crate::package::Package;
-use crate::packument::{Packument, VersionMetadata};
 
 pub use dir::DirFetcher;
 pub use git::GitFetcher;

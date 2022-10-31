@@ -3,7 +3,7 @@ use std::time::Instant;
 use async_trait::async_trait;
 use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
-use oro_client::{self, Method, OroClient};
+use oro_client::{self, OroClient};
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
 use serde_json::Value;
@@ -32,19 +32,15 @@ impl OroCommand for PingCmd {
         if !self.quiet && !self.json {
             eprintln!("ping: {}", self.registry);
         }
-        let client = OroClient::new();
-        let req = client.opts(
-            Method::Get,
-            self.registry.join("-/ping?write=true").unwrap(),
-        );
-        let mut res = client.send(req).await?;
+        let client = OroClient::new(self.registry.clone());
+        let payload = client.ping().await?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
         if !self.quiet && !self.json {
             eprintln!("pong: {}ms", time);
         }
         if self.json {
             let details: Value =
-                serde_json::from_str(&res.body_string().await.unwrap_or_else(|_| "{}".into()))
+                serde_json::from_str(&payload)
                     .into_diagnostic()
                     .wrap_err("ping::deserialize")?;
             let output = serde_json::to_string_pretty(&serde_json::json!({
@@ -58,10 +54,7 @@ impl OroCommand for PingCmd {
                 println!("{}", output);
             }
         } else if !self.quiet {
-            eprintln!(
-                "payload: {}",
-                res.body_string().await.unwrap_or_else(|_| "".into())
-            );
+            eprintln!("payload: {}", payload);
         }
         Ok(())
     }

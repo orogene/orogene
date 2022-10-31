@@ -7,9 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+oro-common = { path = "../oro-common" }
 oro-client = { path = "../oro-client" }
 oro-package-spec = { path = "../oro-package-spec" }
-oro-manifest = { path = "../oro-manifest" }
 
 async-tar = "0.2.0"
 async-std = { version = "1.6.2", features = ["attributes", "unstable"] }

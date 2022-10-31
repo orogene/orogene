@@ -1,15 +1,16 @@
 use chrono::{DateTime, Utc};
-use http_types::Url;
+use derive_builder::Builder;
+use node_semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use url::Url;
 
-use node_semver::Version;
-use oro_manifest::{OroManifest, PersonField};
+use crate::{Manifest, PersonField};
 
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Builder, Clone, Debug, Serialize, Deserialize)]
 pub struct Packument {
     #[serde(default)]
     pub versions: HashMap<Version, VersionMetadata>,
@@ -29,7 +30,7 @@ pub struct VersionMetadata {
     #[serde(default)]
     pub maintainers: Vec<PersonField>,
     #[serde(rename = "_npmUser")]
-    pub npm_user: Option<Human>,
+    pub npm_user: Option<NpmUser>,
     #[serde(default)]
     pub dist: Dist,
     #[serde(rename = "_hasShrinkwrap")]
@@ -37,7 +38,7 @@ pub struct VersionMetadata {
     pub deprecated: Option<String>,
 
     #[serde(flatten)]
-    pub manifest: OroManifest,
+    pub manifest: Manifest,
 }
 
 /// Representation for the `bin` field in package manifests.
@@ -50,7 +51,7 @@ pub enum Bin {
 
 /// Represents a human!
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Human {
+pub struct NpmUser {
     pub name: String,
     pub email: Option<String>,
 }

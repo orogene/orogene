@@ -44,7 +44,7 @@ impl PackageResolver for ClassicResolver {
     async fn resolve(&self, wanted: &PackageRequest) -> Result<PackageResolution, ResolverError> {
         use PackageSpec::*;
         let spec = match wanted.spec() {
-            Alias { spec, .. } => &*spec,
+            Alias { spec, .. } => spec,
             spec => spec,
         };
 
