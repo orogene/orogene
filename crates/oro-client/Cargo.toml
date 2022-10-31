@@ -2,19 +2,20 @@
 name = "oro-client"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 oro-common = { path = "../oro-common" }
-thiserror = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-miette = { workspace = true }
-tracing = { workspace = true }
-reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
-url = { workspace = true }
-node-semver = { workspace = true }
+
 chrono = { workspace = true }
 futures = { workspace = true, features = ["io-compat"] }
+miette = { workspace = true }
+node-semver = { workspace = true }
+reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }

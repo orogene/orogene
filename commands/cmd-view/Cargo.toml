@@ -2,24 +2,24 @@
 name = "cmd-view"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
+oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
-oro-config = { path = "../../crates/oro-config" }
 oro-common = { path = "../../crates/oro-common" }
-oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
+oro-config = { path = "../../crates/oro-config" }
 rogga = { path = "../../crates/rogga" }
 
-clap = { workspace = true, features = ["derive"] }
-url = { workspace = true }
-async-trait = "0.1.19"
-serde_json = { workspace = true }
-colored = "2.0.0"
-term_grid = "0.1.7"
-term_size = "0.3.2"
+async-trait = { workspace = true }
 chrono = { workspace = true }
 chrono-humanize = "0.0.11"
+clap = { workspace = true, features = ["derive"] }
+colored = "2.0.0"
 humansize = "1.1.0"
 miette = { workspace = true }
+serde_json = { workspace = true }
+term_grid = "0.1.7"
+term_size = "0.3.2"
+url = { workspace = true }

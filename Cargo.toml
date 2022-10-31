@@ -2,7 +2,7 @@
 name = "orogene"
 version = "0.1.0"
 authors = ["Orogene Collaborative Members", "Orogene Public Contributors"]
-edition = "2018"
+edition = "2021"
 description = "wip"
 license-file = "LICENSE.md"
 repository = "https://github.com/orogene/orogene"
@@ -13,8 +13,8 @@ build = "build.rs"
 [dependencies]
 # Commands
 cmd-ping = { path = "./commands/cmd-ping" }
-cmd-view = { path = "./commands/cmd-view" }
 cmd-prime = { path = "./commands/cmd-prime" }
+cmd-view = { path = "./commands/cmd-view" }
 
 # Workspace Deps
 oro-command = { path = "./crates/oro-command" }
@@ -23,8 +23,8 @@ oro-config = { path = "./crates/oro-config" }
 # Regular deps
 async-std = { workspace = true, features = ["attributes", "tokio1", "unstable"] }
 async-trait = { workspace = true }
-directories = "3.0.1"
 clap = { workspace = true, features = ["derive"] }
+directories = "3.0.1"
 miette = { workspace = true, features = ["fancy"] }
 tracing = { workspace = true}
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
@@ -38,20 +38,21 @@ members = [
 
 [workspace.dependencies]
 async-std = "1.12.0"
-async-trait = "0.1.36"
-clap = "4.0.18"
-thiserror = "1.0.37"
-miette = "5.4.1"
-tracing = "0.1.37"
-serde = "1.0.147"
-serde_json = "1.0.87"
+async-trait = "0.1.58"
 chrono = "0.4.22"
-url = "2.2.2"
-node-semver = "2.1.0"
+clap = "4.0.18"
 futures = "0.3.25"
+miette = "5.4.1"
+node-semver = "2.1.0"
 nom = "7.1.1"
 pretty_assertions = "1.3.0"
+serde = "1.0.147"
+serde_json = "1.0.87"
+ssri = "7.0.0"
 tempfile = "3.3.0"
+thiserror = "1.0.37"
+tracing = "0.1.37"
+url = "2.2.2"
 
 [build-dependencies]
 embed-resource = "1.3.3"

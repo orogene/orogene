@@ -2,18 +2,18 @@
 name = "cmd-prime"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-rogga = { path = "../../crates/rogga" }
+node-maintainer = { path = "../../crates/node-maintainer" }
+oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 oro-command = { path = "../../crates/oro-command" }
 oro-config = { path = "../../crates/oro-config" }
 oro-pkg-root = { path = "../../crates/oro-pkg-root" }
-oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
-node-maintainer = { path = "../../crates/node-maintainer" }
+rogga = { path = "../../crates/rogga" }
 
-clap = { version = "4.0.18", features = ["derive"] }
-async-trait = "0.1.19"
-url = "2.1.1"
-async-std = "1.12.0"
-miette = "5.4.1"
+async-std = { workspace = true }
+async-trait = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+miette = { workspace = true }
+url = { workspace = true }

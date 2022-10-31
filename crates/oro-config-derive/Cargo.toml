@@ -2,13 +2,13 @@
 name = "oro-config-derive"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-syn = "1.0.33"
-quote = "1.0.7"
-proc-macro2 = "1.0.18"
 darling = "0.10.2"
+proc-macro2 = "1.0.18"
+quote = "1.0.7"
+syn = "1.0.33"

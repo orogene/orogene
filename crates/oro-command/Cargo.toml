@@ -2,8 +2,8 @@
 name = "oro-command"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-async-trait = "0.1.19"
-miette = "5.4.1"
+async-trait = { workspace = true }
+miette = { workspace = true }
