@@ -41,7 +41,7 @@ impl RoggaOpts {
 
     pub fn build(self) -> Rogga {
         let client = OroClient::new("https://registry.npmjs.org".parse().unwrap());
-        let use_corgi = self.use_corgi.unwrap_or(false);
+        let use_corgi = self.use_corgi.unwrap_or(true);
         Rogga {
             // cache: self.cache,
             npm_fetcher: Arc::new(NpmFetcher::new(client.clone(), use_corgi, self.registries)),
