@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use derive_builder::Builder;
 use node_semver::Version;
 use serde::{Deserialize, Serialize};
@@ -10,14 +9,12 @@ use crate::{Manifest, PersonField};
 
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.
-#[derive(Builder, Clone, Debug, Serialize, Deserialize)]
+#[derive(Builder, Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Packument {
     #[serde(default)]
     pub versions: HashMap<Version, VersionMetadata>,
-    // Note: This one seems to choke on full packument data sometimes, and I
-    // don't know why?
     #[serde(default)]
-    pub time: HashMap<String, DateTime<Utc>>,
+    pub time: HashMap<String, String>,
     #[serde(default, rename = "dist-tags")]
     pub tags: HashMap<String, Version>,
     #[serde(flatten)]
@@ -25,7 +22,7 @@ pub struct Packument {
 }
 
 /// A manifest for an individual package version.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionMetadata {
     #[serde(default)]
     pub maintainers: Vec<PersonField>,
@@ -42,7 +39,7 @@ pub struct VersionMetadata {
 }
 
 /// Representation for the `bin` field in package manifests.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Bin {
     Str(String),
@@ -50,14 +47,14 @@ pub enum Bin {
 }
 
 /// Represents a human!
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpmUser {
     pub name: String,
     pub email: Option<String>,
 }
 
 /// Distribution information for a particular package version.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dist {
     pub shasum: Option<String>,
     pub tarball: Option<Url>,

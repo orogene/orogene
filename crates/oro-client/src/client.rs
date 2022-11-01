@@ -25,3 +25,11 @@ impl OroClient {
     }
 }
 
+impl Default for OroClient {
+    fn default() -> Self {
+        Self {
+            registry: Arc::new(Url::parse("https://registry.npmjs.org").unwrap()),
+            client: Client::new(),
+        }
+    }
+}

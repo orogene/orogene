@@ -19,3 +19,9 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
+
+[dev-dependencies]
+async-std = { workspace = true, features = ["attributes", "tokio1"] }
+maplit = { workspace = true }
+pretty_assertions = { workspace = true }
+wiremock = { workspace = true }

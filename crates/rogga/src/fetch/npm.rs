@@ -87,11 +87,7 @@ impl PackageFetcher for NpmFetcher {
             pkg @ PackageSpec::Npm { .. } => pkg,
             _ => unreachable!(),
         };
-        if let PackageSpec::Npm {
-            ref scope,
-            ..
-        } = pkg
-        {
+        if let PackageSpec::Npm { ref scope, .. } = pkg {
             let spec_str = format!("{}", pkg);
             if let Some(packument) = self.packuments.get(&spec_str) {
                 return Ok(packument.value().clone());

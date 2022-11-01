@@ -12,10 +12,7 @@ use url::Url;
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct PingCmd {
     /// Registry to ping.
-    #[arg(
-        default_value = "https://registry.npmjs.org",
-        long
-    )]
+    #[arg(default_value = "https://registry.npmjs.org", long)]
     registry: Url,
 
     #[clap(from_global)]
@@ -39,10 +36,9 @@ impl OroCommand for PingCmd {
             eprintln!("pong: {}ms", time);
         }
         if self.json {
-            let details: Value =
-                serde_json::from_str(&payload)
-                    .into_diagnostic()
-                    .wrap_err("ping::deserialize")?;
+            let details: Value = serde_json::from_str(&payload)
+                .into_diagnostic()
+                .wrap_err("ping::deserialize")?;
             let output = serde_json::to_string_pretty(&serde_json::json!({
                 "registry": self.registry.to_string(),
                 "time": time,

@@ -7,7 +7,11 @@ pub enum OroClientError {
     #[diagnostic(code(oro_client::url_parse_error))]
     UrlParseError(#[from] url::ParseError),
 
+    #[error("Package was not found in registry.")]
+    #[diagnostic(code(oro_client::package_not_found))]
+    PackageNotFound(String),
+
     #[error(transparent)]
-    #[diagnostic(code(oro_client::generic_error))]
-    GenericError(#[from] reqwest::Error),
+    #[diagnostic(code(oro_client::request_error))]
+    RequestError(#[from] reqwest::Error),
 }

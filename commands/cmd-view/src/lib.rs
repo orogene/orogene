@@ -228,7 +228,7 @@ impl OroCommand for ViewCmd {
             ) {
                 if let Some(NpmUser { name, email }) = npm_user {
                     let human = chrono_humanize::HumanTime::from(
-                        chrono::DateTime::parse_from_rfc3339(&time.to_rfc3339())
+                        chrono::DateTime::parse_from_rfc3339(time)
                             .into_diagnostic()
                             .wrap_err("view::bad_date")?,
                     );

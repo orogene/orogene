@@ -12,10 +12,7 @@ use url::Url;
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct PrimeCmd {
     /// Registry to install from.
-    #[arg(
-        default_value = "https://registry.npmjs.org",
-        long
-    )]
+    #[arg(default_value = "https://registry.npmjs.org", long)]
     registry: Url,
 
     #[clap(from_global)]

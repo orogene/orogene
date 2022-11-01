@@ -130,7 +130,6 @@ pub struct Manifest {
     pub _rest: HashMap<String, Value>,
 }
 
-
 fn object_or_bust<'de, D, K, V>(deserializer: D) -> std::result::Result<HashMap<K, V>, D::Error>
 where
     D: Deserializer<'de>,
@@ -394,4 +393,3 @@ mod tests {
         Ok(())
     }
 }
-
