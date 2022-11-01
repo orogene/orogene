@@ -23,12 +23,16 @@ pub struct NpmFetcher {
     /// management). This can significantly speed up installs, and is done
     /// through a special Accept header on request.
     use_corgi: bool,
-    registries: HashMap<String, Url>,
+    registries: HashMap<Option<String>, Url>,
     packuments: DashMap<String, Arc<Packument>>,
 }
 
 impl NpmFetcher {
-    pub fn new(client: OroClient, use_corgi: bool, registries: HashMap<String, Url>) -> Self {
+    pub fn new(
+        client: OroClient,
+        use_corgi: bool,
+        registries: HashMap<Option<String>, Url>,
+    ) -> Self {
         Self {
             client,
             use_corgi,
@@ -40,18 +44,11 @@ impl NpmFetcher {
 
 impl NpmFetcher {
     fn pick_registry(&self, scope: &Option<String>) -> Url {
-        if let Some(scope) = scope {
-            self.registries
-                .get(scope)
-                .or_else(|| self.registries.get(""))
-                .cloned()
-                .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap())
-        } else {
-            self.registries
-                .get("")
-                .cloned()
-                .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap())
-        }
+        self.registries
+            .get(scope)
+            .or_else(|| self.registries.get(&None))
+            .cloned()
+            .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap())
     }
 }
 

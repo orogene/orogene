@@ -15,7 +15,7 @@ use crate::request::PackageRequest;
 #[derive(Default)]
 pub struct RoggaOpts {
     cache: Option<PathBuf>,
-    registries: HashMap<String, Url>,
+    registries: HashMap<Option<String>, Url>,
     use_corgi: Option<bool>,
 }
 
@@ -29,8 +29,14 @@ impl RoggaOpts {
         self
     }
 
-    pub fn add_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
-        self.registries.insert(scope.as_ref().into(), registry);
+    pub fn registry(mut self, registry: Url) -> Self {
+        self.registries.insert(None, registry);
+        self
+    }
+
+    pub fn scope_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
+        self.registries
+            .insert(Some(scope.as_ref().into()), registry);
         self
     }
 
@@ -40,7 +46,12 @@ impl RoggaOpts {
     }
 
     pub fn build(self) -> Rogga {
-        let client = OroClient::new("https://registry.npmjs.org".parse().unwrap());
+        let registry = self
+            .registries
+            .get(&None)
+            .cloned()
+            .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
+        let client = OroClient::new(registry);
         let use_corgi = self.use_corgi.unwrap_or(true);
         Rogga {
             // cache: self.cache,
