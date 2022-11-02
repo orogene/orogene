@@ -15,10 +15,10 @@ use crate::package::Package;
 use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
-pub struct DirFetcher;
+pub(crate) struct DirFetcher;
 
 impl DirFetcher {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self
     }
 }
@@ -102,7 +102,7 @@ impl PackageFetcher for DirFetcher {
 pub(crate) struct Manifest(OroManifest);
 
 impl Manifest {
-    pub fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {
+    pub(crate) fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {
         let Manifest(OroManifest {
             ref name,
             ref version,
@@ -136,7 +136,7 @@ impl Manifest {
         })
     }
 
-    pub fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument> {
+    pub(crate) fn into_packument(self, path: impl AsRef<Path>) -> Result<Packument> {
         let metadata = self.into_metadata(path)?;
         let mut packument = Packument {
             versions: HashMap::new(),

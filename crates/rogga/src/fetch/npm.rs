@@ -16,7 +16,7 @@ use crate::package::Package;
 use crate::resolver::PackageResolution;
 
 #[derive(Debug)]
-pub struct NpmFetcher {
+pub(crate) struct NpmFetcher {
     client: OroClient,
     /// Corgis are a compressed kind of packument that omits some
     /// "unnecessary" fields (for some common operations during package
@@ -28,7 +28,7 @@ pub struct NpmFetcher {
 }
 
 impl NpmFetcher {
-    pub fn new(
+    pub(crate) fn new(
         client: OroClient,
         use_corgi: bool,
         registries: HashMap<Option<String>, Url>,

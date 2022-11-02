@@ -15,6 +15,7 @@ use crate::request::PackageRequest;
 #[derive(Default)]
 pub struct RoggaOpts {
     cache: Option<PathBuf>,
+    base_dir: Option<PathBuf>,
     registries: HashMap<Option<String>, Url>,
     use_corgi: Option<bool>,
 }
@@ -40,6 +41,11 @@ impl RoggaOpts {
         self
     }
 
+    pub fn base_dir(mut self, base_dir: impl AsRef<Path>) -> Self {
+        self.base_dir = Some(PathBuf::from(base_dir.as_ref()));
+        self
+    }
+
     pub fn use_corgi(mut self, use_corgi: bool) -> Self {
         self.use_corgi = Some(use_corgi);
         self
@@ -55,6 +61,9 @@ impl RoggaOpts {
         let use_corgi = self.use_corgi.unwrap_or(true);
         Rogga {
             // cache: self.cache,
+            base_dir: self
+                .base_dir
+                .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
             npm_fetcher: Arc::new(NpmFetcher::new(client.clone(), use_corgi, self.registries)),
             dir_fetcher: Arc::new(DirFetcher::new()),
             git_fetcher: Arc::new(GitFetcher::new(client)),
@@ -63,8 +72,10 @@ impl RoggaOpts {
 }
 
 /// Toplevel client for making package requests.
+#[derive(Clone)]
 pub struct Rogga {
     // cache: Option<PathBuf>,
+    base_dir: PathBuf,
     npm_fetcher: Arc<dyn PackageFetcher>,
     dir_fetcher: Arc<dyn PackageFetcher>,
     git_fetcher: Arc<dyn PackageFetcher>,
@@ -83,19 +94,15 @@ impl Rogga {
     }
 
     /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3`.
-    pub async fn arg_request(
-        &self,
-        arg: impl AsRef<str>,
-        base_dir: impl AsRef<Path>,
-    ) -> Result<PackageRequest> {
+    pub async fn arg_request(&self, arg: impl AsRef<str>) -> Result<PackageRequest> {
         let spec = arg.as_ref().parse()?;
         let fetcher = self.pick_fetcher(&spec);
-        let name = fetcher.name(&spec, base_dir.as_ref()).await?;
+        let name = fetcher.name(&spec, &self.base_dir).await?;
         Ok(PackageRequest {
             name,
             spec,
             fetcher,
-            base_dir: base_dir.as_ref().into(),
+            base_dir: self.base_dir.clone(),
         })
     }
 
@@ -105,7 +112,6 @@ impl Rogga {
         &self,
         name: impl AsRef<str>,
         spec: impl AsRef<str>,
-        base_dir: impl AsRef<Path>,
     ) -> Result<PackageRequest> {
         let spec = format!("{}@{}", name.as_ref(), spec.as_ref()).parse()?;
         let fetcher = self.pick_fetcher(&spec);
@@ -113,7 +119,7 @@ impl Rogga {
             name: name.as_ref().into(),
             spec,
             fetcher,
-            base_dir: base_dir.as_ref().into(),
+            base_dir: self.base_dir.clone(),
         })
     }
 

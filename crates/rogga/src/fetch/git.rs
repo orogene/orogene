@@ -10,21 +10,21 @@ use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
 use crate::error::{Result, RoggaError};
-use crate::extract;
 use crate::fetch::dir::DirFetcher;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::resolver::PackageResolution;
+use crate::tarball::Tarball;
 
 #[derive(Debug)]
-pub struct GitFetcher {
+pub(crate) struct GitFetcher {
     client: OroClient,
     dir_fetcher: DirFetcher,
     git: Arc<Mutex<Option<PathBuf>>>,
 }
 
 impl GitFetcher {
-    pub fn new(client: OroClient) -> Self {
+    pub(crate) fn new(client: OroClient) -> Self {
         Self {
             client,
             dir_fetcher: DirFetcher::new(),
@@ -78,7 +78,7 @@ impl GitFetcher {
 
     async fn fetch_tarball(&self, dir: &Path, tarball: &Url) -> Result<()> {
         let tarball = self.client.stream_external(tarball).await?;
-        extract::extract_to_dir(tarball, dir).await?;
+        Tarball::new_unchecked(tarball).extract_to_dir(dir).await?;
         Ok(())
     }
 

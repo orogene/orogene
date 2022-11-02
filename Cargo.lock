@@ -2210,6 +2210,7 @@ dependencies = [
  "miette",
  "mkdirp",
  "node-semver",
+ "oro-classic-resolver",
  "oro-client",
  "oro-common",
  "oro-package-spec",

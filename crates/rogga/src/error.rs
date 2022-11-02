@@ -41,9 +41,13 @@ pub enum RoggaError {
     #[diagnostic(code(rogga::git::checkout::repo))]
     GitCheckoutError(String, String),
 
-    #[error("Failed to extract tarball to disk. {0}")]
+    #[error("Failed to extract tarball. {0}")]
     #[diagnostic(code(rogga::io::extract))]
     ExtractIoError(#[source] std::io::Error, Option<PathBuf>),
+
+    #[error(transparent)]
+    #[diagnostic(code(rogga::io::generic))]
+    IoError(#[from] std::io::Error),
 
     #[error(transparent)]
     OroClientError(#[from] oro_client::OroClientError),

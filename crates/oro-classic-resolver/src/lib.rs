@@ -70,7 +70,7 @@ impl PackageResolver for ClassicResolver {
             .map_err(|e| ResolverError::OtherError(Box::new(e)))?;
         if packument.versions.is_empty() {
             return Err(ResolverError::NoVersion {
-                name: wanted.name().clone(),
+                name: wanted.name().into(),
                 spec: wanted.spec().clone(),
                 versions: Vec::new(),
             });
@@ -160,7 +160,7 @@ impl PackageResolver for ClassicResolver {
                 })
             })
             .ok_or_else(|| ResolverError::NoVersion {
-                name: wanted.name().clone(),
+                name: wanted.name().into(),
                 spec: wanted.spec().clone(),
                 versions: packument.versions.keys().map(|k| k.to_string()).collect(),
             })

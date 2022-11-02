@@ -29,15 +29,15 @@ pub struct ViewCmd {
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
         let pkgreq = RoggaOpts::new()
-            .add_registry("", self.registry)
+            .registry(self.registry)
             .use_corgi(false)
-            .build()
-            .arg_request(
-                &self.pkg,
+            .base_dir(
                 std::env::current_dir()
                     .into_diagnostic()
                     .wrap_err("view::nocwd")?,
             )
+            .build()
+            .arg_request(&self.pkg)
             .await?;
         let packument = pkgreq.packument().await?;
         let pkg = pkgreq.resolve_with(&ClassicResolver::new()).await?;

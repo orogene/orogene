@@ -1,5 +1,5 @@
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
 use oro_common::Packument;
@@ -10,7 +10,9 @@ use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::resolver::{PackageResolution, PackageResolver};
 
-/// A package request from which more information can be derived. PackageRequest objects can be resolved into a `Package` by using a `PackageResolver`
+/// A package request from which more information can be derived.
+/// `PackageRequest` objects can be resolved into a [`Package`] by using a
+/// [`PackageResolver`], or directly by using a [`PackageResolution`].
 pub struct PackageRequest {
     pub(crate) name: String,
     pub(crate) spec: PackageSpec,
@@ -19,15 +21,19 @@ pub struct PackageRequest {
 }
 
 impl PackageRequest {
+    /// [`PackageSpec`] that this request was created for.
     pub fn spec(&self) -> &PackageSpec {
         &self.spec
     }
 
-    pub fn name(&self) -> &String {
+    /// The name of the package, as it should be used in the dependency graph.
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn base_dir(&self) -> &PathBuf {
+    /// The base directory that this request will use for resolving relative
+    /// paths for directory dependencies.
+    pub fn base_dir(&self) -> &Path {
         &self.base_dir
     }
 
@@ -37,11 +43,37 @@ impl PackageRequest {
         self.fetcher.packument(&self.spec, &self.base_dir).await
     }
 
+    /// Resolve to a [`Package`] using the given [`PackageResolver`].
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[async_std::main]
+    /// # async fn main() -> miette::Result<()> {
+    /// use oro_classic_resolver::ClassicResolver;
+    /// use rogga::Rogga;
+    ///
+    /// let pkg = Rogga::new()
+    ///     .arg_request("debug@^4.1.1")
+    ///     .await?
+    ///     .resolve_with(&ClassicResolver::new())
+    ///     .await?
+    ///     .metadata()
+    ///     .await?
+    ///     .manifest;
+    ///
+    /// assert_eq!(pkg.name, Some("debug".into()));
+    /// assert_eq!(pkg.version, Some("4.1.1".parse()?));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn resolve_with<T: PackageResolver>(self, resolver: &T) -> Result<Package> {
         let resolution = resolver.resolve(&self).await?;
         self.resolve_to(resolution)
     }
 
+    /// Resolve to a [`Package`] using the given an already-calculated
+    /// [`PackageResolution`].
     pub fn resolve_to(self, resolved: PackageResolution) -> Result<Package> {
         Ok(Package {
             from: self.spec,

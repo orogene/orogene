@@ -9,9 +9,9 @@ use oro_package_spec::PackageSpec;
 use crate::error::Result;
 use crate::package::Package;
 
-pub use dir::DirFetcher;
-pub use git::GitFetcher;
-pub use npm::NpmFetcher;
+pub(crate) use dir::DirFetcher;
+pub(crate) use git::GitFetcher;
+pub(crate) use npm::NpmFetcher;
 
 mod dir;
 mod git;

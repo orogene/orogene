@@ -54,20 +54,13 @@ impl NodeMaintainerOptions {
         self,
         request: impl AsRef<str>,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
-        let rogga = RoggaOpts::new()
-            .use_corgi(true)
-            .add_registry(
-                "",
-                self.registry
-                    .unwrap_or_else(|| Url::parse("https://registry.npmjs.org").unwrap()),
-            )
-            .build();
-        let mut graph = StableGraph::new();
         let current_dir = env::current_dir().map_err(NodeMaintainerError::NoCwd)?;
         let cwd = self.path.unwrap_or(current_dir);
+        let rogga = RoggaOpts::new().base_dir(cwd.clone()).build();
+        let mut graph = StableGraph::new();
         let resolver = ClassicResolver::new();
         let root_dep = rogga
-            .arg_request(request.as_ref(), &cwd)
+            .arg_request(request.as_ref())
             .await?
             .resolve_with(&resolver)
             .await?;
@@ -130,7 +123,7 @@ impl NodeMaintainer {
             {
                 if !names.contains(&name[..]) {
                     names.insert(&name[..]);
-                    let request = self.rogga.dep_request(&name[..], &spec[..], &self.cwd)?;
+                    let request = self.rogga.dep_request(&name[..], &spec[..])?;
                     packages.push(
                         request
                             .resolve_with(&self.resolver)
