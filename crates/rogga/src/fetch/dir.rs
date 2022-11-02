@@ -70,6 +70,7 @@ impl DirFetcher {
 impl PackageFetcher for DirFetcher {
     async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
         let path = match spec {
+            PackageSpec::Alias { name, .. } => return Ok(name.clone()),
             PackageSpec::Dir { path } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
         };

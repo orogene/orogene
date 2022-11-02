@@ -145,11 +145,8 @@ impl GitFetcher {
 impl PackageFetcher for GitFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         use PackageSpec::*;
-        let spec = match spec {
-            Alias { spec, .. } => spec,
-            spec => spec,
-        };
         let info = match spec {
+            Alias { name, .. } => return Ok(name.clone()),
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
