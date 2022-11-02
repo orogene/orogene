@@ -56,9 +56,7 @@ impl NpmFetcher {
 impl PackageFetcher for NpmFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         match spec {
-            PackageSpec::Npm { name, .. } | PackageSpec::Alias { name, .. } => {
-                Ok(name.clone())
-            }
+            PackageSpec::Npm { name, .. } | PackageSpec::Alias { name, .. } => Ok(name.clone()),
             _ => unreachable!(),
         }
     }

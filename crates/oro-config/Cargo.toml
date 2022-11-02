@@ -8,7 +8,7 @@ edition = "2021"
 oro-config-derive = { path = "../oro-config-derive" }
 
 clap = { workspace = true, features = ["derive"] }
-config = { version = "0.9.3", features = ["toml"] }
+config = { version = "0.13.2", features = ["toml"] }
 miette = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }

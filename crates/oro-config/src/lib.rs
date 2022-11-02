@@ -69,33 +69,33 @@ impl OroConfigOptions {
     }
 
     pub fn load(self) -> Result<OroConfig> {
-        let mut c = OroConfig::new();
+        let mut builder = OroConfig::builder();
         if self.global {
             if let Some(config_file) = self.global_config_file {
                 let path = config_file.display().to_string();
-                c.merge(File::with_name(&path[..]).required(false))
-                    .map_err(OroConfigError::ConfigError)?;
+                builder = builder.add_source(File::with_name(&path[..]).required(false));
             }
         }
         if self.env {
-            c.merge(Environment::with_prefix("oro_config"))
-                .map_err(OroConfigError::ConfigError)?;
+            builder = builder.add_source(Environment::with_prefix("oro_config"));
         }
         if let Some(root) = self.pkg_root {
-            c.merge(File::with_name(&root.join("ororc").display().to_string()).required(false))
-                .map_err(OroConfigError::ConfigError)?;
-            c.merge(File::with_name(&root.join(".ororc").display().to_string()).required(false))
-                .map_err(OroConfigError::ConfigError)?;
-            c.merge(
-                File::with_name(&root.join("ororc.toml").display().to_string()).required(false),
-            )
-            .map_err(OroConfigError::ConfigError)?;
-            c.merge(
-                File::with_name(&root.join(".ororc.toml").display().to_string()).required(false),
-            )
-            .map_err(OroConfigError::ConfigError)?;
+            builder = builder
+                .add_source(
+                    File::with_name(&root.join("ororc").display().to_string()).required(false),
+                )
+                .add_source(
+                    File::with_name(&root.join(".ororc").display().to_string()).required(false),
+                )
+                .add_source(
+                    File::with_name(&root.join("ororc.toml").display().to_string()).required(false),
+                )
+                .add_source(
+                    File::with_name(&root.join(".ororc.toml").display().to_string())
+                        .required(false),
+                );
         }
-        Ok(c)
+        Ok(builder.build().map_err(OroConfigError::ConfigError)?)
     }
 }
 
@@ -117,7 +117,7 @@ mod tests {
         let config = OroConfigOptions::new().global(false).load()?;
         env::remove_var("ORO_CONFIG_STORE");
         assert_eq!(
-            config.get_str("store").into_diagnostic()?,
+            config.get_string("store").into_diagnostic()?,
             dir.path().display().to_string()
         );
         Ok(())
@@ -133,7 +133,7 @@ mod tests {
             .global_config_file(Some(file))
             .load()?;
         assert_eq!(
-            config.get_str("store").into_diagnostic()?,
+            config.get_string("store").into_diagnostic()?,
             String::from("hello world")
         );
         Ok(())
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn missing_config() -> Result<()> {
         let config = OroConfigOptions::new().global(false).env(false).load()?;
-        assert!(config.get_str("store").is_err());
+        assert!(config.get_string("store").is_err());
         Ok(())
     }
 }
