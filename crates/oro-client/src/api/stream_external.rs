@@ -1,7 +1,4 @@
-use futures::{
-    stream::{StreamExt, TryStreamExt},
-    AsyncRead,
-};
+use futures::AsyncRead;
 use url::Url;
 
 use crate::{OroClient, OroClientError};
@@ -13,19 +10,20 @@ impl OroClient {
     ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, OroClientError> {
         Ok(Box::new(
             self.client
-                .get(url.to_string())
+                .get(url)
                 .send()
-                .await?
-                .error_for_status()?
-                .bytes_stream()
-                .map(|r| match r {
-                    Ok(bytes) => Ok(bytes),
-                    Err(_) => Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Error reading bytes",
-                    )),
-                })
-                .into_async_read(),
+                .await
+                .map_err(OroClientError::RequestError)
+                .and_then(|res| {
+                    if res.status().is_success() {
+                        Ok(res)
+                    } else {
+                        Err(OroClientError::RequestError(surf::Error::from_str(
+                            res.status(),
+                            "Unexpected response.",
+                        )))
+                    }
+                })?,
         ))
     }
 }

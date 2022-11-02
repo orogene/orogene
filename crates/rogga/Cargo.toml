@@ -11,7 +11,7 @@ oro-package-spec = { path = "../oro-package-spec" }
 
 async-compression = { version = "0.3.5", features = ["gzip", "futures-io"] }
 async-process = "1.0.1"
-async-std = { workspace = true, features = ["attributes", "unstable", "tokio1"] }
+async-std = { workspace = true, features = ["attributes", "unstable"] }
 async-tar = "0.2.0"
 async-trait = { workspace = true }
 bincode = "1.3.1"

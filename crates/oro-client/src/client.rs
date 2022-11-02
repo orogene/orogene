@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use reqwest::Client;
+use surf::Client;
 use url::Url;
 
 #[derive(Clone, Debug)]

@@ -13,15 +13,15 @@ chrono = { workspace = true }
 futures = { workspace = true, features = ["io-compat"] }
 miette = { workspace = true }
 node-semver = { workspace = true }
-reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
+surf = "2.3.2"
 thiserror = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 
 [dev-dependencies]
-async-std = { workspace = true, features = ["attributes", "tokio1"] }
+async-std = { workspace = true, features = ["attributes"] }
 maplit = { workspace = true }
 pretty_assertions = { workspace = true }
 wiremock = { workspace = true }
