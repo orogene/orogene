@@ -77,25 +77,25 @@ impl Package {
         Ok(Tarball::new(data, integrity))
     }
 
-    /// A `Stream` of extracted files from the `Package`'s tarball. The
+    /// A `Stream` of extracted entries from the `Package`'s tarball. The
     /// tarball stream will have its integrity validated based on package
     /// metadata. See [`Package::tarball`] for more information.
-    pub async fn files(&self) -> Result<Entries> {
-        self.tarball().await?.files()
+    pub async fn entries(&self) -> Result<Entries> {
+        self.tarball().await?.entries()
     }
 
-    /// A `Stream` of extracted files from the `Package`'s tarball. The
+    /// A `Stream` of extracted entries from the `Package`'s tarball. The
     /// tarball stream will NOT have its integrity validated. See
     /// [`Package::tarball_unchecked`] for more information.
-    pub async fn files_unchecked(&self) -> Result<Entries> {
-        self.tarball_unchecked().await?.files()
+    pub async fn entries_unchecked(&self) -> Result<Entries> {
+        self.tarball_unchecked().await?.entries()
     }
 
-    /// A `Stream` of extracted files from the `Package`'s tarball. The
+    /// A `Stream` of extracted entries from the `Package`'s tarball. The
     /// tarball stream will have its integrity validated based on
     /// [`Integrity`]. See [`Package::tarball_checked`] for more information.
-    pub async fn files_checked(&self, integrity: Integrity) -> Result<Entries> {
-        self.tarball_checked(integrity).await?.files()
+    pub async fn entries_checked(&self, integrity: Integrity) -> Result<Entries> {
+        self.tarball_checked(integrity).await?.entries()
     }
 }
 
