@@ -1,9 +1,12 @@
+#[cfg(feature = "fs")]
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use async_compression::futures::bufread::GzipDecoder;
-use async_std::io::{self, BufReader};
+#[cfg(feature = "fs")]
+use async_std::io;
+use async_std::io::BufReader;
 use async_tar::Archive;
 use futures::prelude::*;
 use ssri::{Integrity, IntegrityChecker};
@@ -56,6 +59,7 @@ impl Tarball {
     }
 
     /// Extract this tarball to the given directory.
+    #[cfg(feature = "fs")]
     pub async fn extract_to_dir(self, dir: impl AsRef<Path>) -> Result<()> {
         let mut files = self.entries()?;
 

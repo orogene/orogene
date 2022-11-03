@@ -60,6 +60,7 @@ pub enum NassunError {
     #[diagnostic(code(nassun::bad_url))]
     UrlError(#[from] url::ParseError),
 
+    #[cfg(feature = "git")]
     #[error(transparent)]
     #[diagnostic(
         code(nassun::which_git_failure),

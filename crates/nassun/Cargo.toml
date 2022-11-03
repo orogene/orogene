@@ -6,30 +6,37 @@ edition = "2021"
 
 [dependencies]
 oro-common = { path = "../oro-common" }
-oro-client = { path = "../oro-client" }
+oro-client = { path = "../oro-client", default-features = false }
 oro-package-spec = { path = "../oro-package-spec" }
 
 async-compression = { version = "0.3.5", features = ["gzip", "futures-io"] }
-async-process = "1.0.1"
-async-std = { workspace = true, features = ["attributes", "unstable"] }
-async-tar = "0.2.0"
+async-process = { version = "1.0.1", optional = true }
+async-std = { workspace = true, features = ["attributes"] }
+# async-tar = "0.2.0"
+async-tar = { git = "https://github.com/zkat/async-tar", branch = "master", default-features = false }
 async-trait = { workspace = true }
 bincode = "1.3.1"
-cacache = "10.0.1"
 chrono = { workspace = true, features = ["serde"] }
 dashmap = "4.0.0-rc6"
 futures = { workspace = true }
 miette = { workspace = true }
-mkdirp = "1.0.0"
+mkdirp = { version = "1.0.0", optional = true }
 node-semver = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 ssri = { workspace = true }
-tempfile = { workspace = true }
+tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
-which = "4.0.2"
+which = { version = "4.0.2", optional = true }
 
 [dev-dependencies]
 oro-classic-resolver = { path = "../oro-classic-resolver" }
+
+[features]
+default = ["oro-client/curl", "dir", "git", "fs", "async-std/std", "async-tar/xattr"]
+git = ["mkdirp", "tempfile", "which", "async-process"]
+wasm = ["oro-client/wasm"]
+fs = ["async-tar/fs", "async-tar/xattr"]
+dir = []

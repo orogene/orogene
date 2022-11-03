@@ -68,6 +68,7 @@ impl Entry {
     /// This function will create a file at the path dst, and it is required
     /// that the intermediate directories are created. Any existing file at
     /// the location dst will be overwritten.
+    #[cfg(feature = "fs")]
     pub async fn unpack(&mut self, dst: impl AsRef<Path>) -> Result<()> {
         self.0.unpack(dst).await?;
         Ok(())
@@ -83,6 +84,7 @@ impl Entry {
     ///
     /// This function carefully avoids writing outside of dst. If the file has
     /// a ‘..’ in its path, this function will skip it and return false.
+    #[cfg(feature = "fs")]
     pub async fn unpack_in(&mut self, dst: impl AsRef<Path>) -> Result<()> {
         self.0.unpack_in(dst).await?;
         Ok(())

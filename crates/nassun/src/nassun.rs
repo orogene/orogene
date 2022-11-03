@@ -8,7 +8,11 @@ use url::Url;
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
 use crate::error::Result;
-use crate::fetch::{DirFetcher, GitFetcher, NpmFetcher, PackageFetcher};
+#[cfg(feature = "dir")]
+use crate::fetch::DirFetcher;
+#[cfg(feature = "git")]
+use crate::fetch::GitFetcher;
+use crate::fetch::{NpmFetcher, PackageFetcher};
 use crate::request::PackageRequest;
 
 /// Build a new Nassun instance with specified options.
@@ -64,8 +68,15 @@ impl NassunOpts {
             base_dir: self
                 .base_dir
                 .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
-            npm_fetcher: Arc::new(NpmFetcher::new(client.clone(), use_corgi, self.registries)),
+            npm_fetcher: Arc::new(NpmFetcher::new(
+                #[allow(clippy::redundant_clone)]
+                client.clone(),
+                use_corgi,
+                self.registries,
+            )),
+            #[cfg(feature = "dir")]
             dir_fetcher: Arc::new(DirFetcher::new()),
+            #[cfg(feature = "git")]
             git_fetcher: Arc::new(GitFetcher::new(client)),
         }
     }
@@ -77,7 +88,9 @@ pub struct Nassun {
     // cache: Option<PathBuf>,
     base_dir: PathBuf,
     npm_fetcher: Arc<dyn PackageFetcher>,
+    #[cfg(feature = "dir")]
     dir_fetcher: Arc<dyn PackageFetcher>,
+    #[cfg(feature = "git")]
     git_fetcher: Arc<dyn PackageFetcher>,
 }
 
@@ -126,10 +139,16 @@ impl Nassun {
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {
         use PackageSpec::*;
         match *arg {
-            Dir { .. } => self.dir_fetcher.clone(),
             Alias { ref spec, .. } => self.pick_fetcher(spec),
             Npm { .. } => self.npm_fetcher.clone(),
+            #[cfg(feature = "dir")]
+            Dir { .. } => self.dir_fetcher.clone(),
+            #[cfg(not(feature = "dir"))]
+            Dir { .. } => panic!("Directory dependencies are not enabled."),
+            #[cfg(feature = "git")]
             Git(..) => self.git_fetcher.clone(),
+            #[cfg(not(feature = "git"))]
+            Git(..) => panic!("Git dependencies are not enabled."),
         }
     }
 }
