@@ -4,10 +4,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use futures::{future, FutureExt};
+use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_classic_resolver::ClassicResolver;
 use petgraph::dot::Dot;
 use petgraph::stable_graph::{NodeIndex, StableGraph};
-use rogga::{Package, PackageSpec, Rogga, RoggaOpts};
 use url::Url;
 
 pub use crate::error::NodeMaintainerError;
@@ -56,10 +56,10 @@ impl NodeMaintainerOptions {
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
         let current_dir = env::current_dir().map_err(NodeMaintainerError::NoCwd)?;
         let cwd = self.path.unwrap_or(current_dir);
-        let rogga = RoggaOpts::new().base_dir(cwd.clone()).build();
+        let nassun = NassunOpts::new().base_dir(cwd.clone()).build();
         let mut graph = StableGraph::new();
         let resolver = ClassicResolver::new();
-        let root_dep = rogga
+        let root_dep = nassun
             .arg_request(request.as_ref())
             .await?
             .resolve_with(&resolver)
@@ -67,7 +67,7 @@ impl NodeMaintainerOptions {
         let root = graph.add_node(root_dep);
         Ok(NodeMaintainer {
             cwd,
-            rogga,
+            nassun,
             resolver,
             root,
             graph,
@@ -77,7 +77,7 @@ impl NodeMaintainerOptions {
 
 pub struct NodeMaintainer {
     cwd: PathBuf,
-    rogga: Rogga,
+    nassun: Nassun,
     resolver: ClassicResolver,
     root: NodeIndex,
     graph: StableGraph<Package, Dependency>,
@@ -123,7 +123,7 @@ impl NodeMaintainer {
             {
                 if !names.contains(&name[..]) {
                     names.insert(&name[..]);
-                    let request = self.rogga.dep_request(&name[..], &spec[..])?;
+                    let request = self.nassun.dep_request(&name[..], &spec[..])?;
                     packages.push(
                         request
                             .resolve_with(&self.resolver)

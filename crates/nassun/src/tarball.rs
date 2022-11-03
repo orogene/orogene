@@ -9,7 +9,7 @@ use futures::prelude::*;
 use ssri::{Integrity, IntegrityChecker};
 
 use crate::entries::{Entries, Entry};
-use crate::error::{Result, RoggaError};
+use crate::error::{NassunError, Result};
 
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
@@ -46,10 +46,10 @@ impl Tarball {
             ar.clone(),
             Box::new(
                 ar.entries()
-                    .map_err(|e| RoggaError::ExtractIoError(e, None))?
+                    .map_err(|e| NassunError::ExtractIoError(e, None))?
                     .map(|res| {
                         res.map(Entry)
-                            .map_err(|e| RoggaError::ExtractIoError(e, None))
+                            .map_err(|e| NassunError::ExtractIoError(e, None))
                     }),
             ),
         ))
@@ -62,7 +62,8 @@ impl Tarball {
         let dir = PathBuf::from(dir.as_ref());
         let takeme = dir.clone();
         async_std::task::spawn_blocking(move || {
-            mkdirp::mkdirp(&takeme).map_err(|e| RoggaError::ExtractIoError(e, Some(takeme.clone())))
+            mkdirp::mkdirp(&takeme)
+                .map_err(|e| NassunError::ExtractIoError(e, Some(takeme.clone())))
         })
         .await?;
 
@@ -72,7 +73,7 @@ impl Tarball {
             let path = dir.join(
                 header
                     .path()
-                    .map_err(|e| RoggaError::ExtractIoError(e, None))?
+                    .map_err(|e| NassunError::ExtractIoError(e, None))?
                     .as_ref(),
             );
             if let async_tar::EntryType::Regular = header.entry_type() {
@@ -80,7 +81,7 @@ impl Tarball {
 
                 async_std::task::spawn_blocking(move || {
                     mkdirp::mkdirp(&takeme.parent().unwrap()).map_err(|e| {
-                        RoggaError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
+                        NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
                     })
                 })
                 .await?;
@@ -89,11 +90,11 @@ impl Tarball {
                     .create(true)
                     .open(&path)
                     .await
-                    .map_err(|e| RoggaError::ExtractIoError(e, Some(path.clone())))?;
+                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
 
                 io::copy(file, async_std::io::BufWriter::new(&mut writer))
                     .await
-                    .map_err(|e| RoggaError::ExtractIoError(e, Some(path.clone())))?;
+                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
             }
         }
 
@@ -109,7 +110,7 @@ impl Tarball {
         // let mut reader = files
         //     .into_inner()
         //     .into_inner()
-        //     .map_err(|_| RoggaError::MiscError("Failed to get inner Read".into()))?
+        //     .map_err(|_| NassunError::MiscError("Failed to get inner Read".into()))?
         //     .into_inner()
         //     .into_inner();
         // let mut buf = [0u8; 1024];
@@ -117,7 +118,7 @@ impl Tarball {
         //     let n = reader
         //         .read(&mut buf)
         //         .await
-        //         .map_err(|e| RoggaError::ExtractIoError(e, None))?;
+        //         .map_err(|e| NassunError::ExtractIoError(e, None))?;
         //     if n > 0 {
         //         continue;
         //     } else {

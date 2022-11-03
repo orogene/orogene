@@ -8,7 +8,7 @@ use cacache::WriteOpts;
 use futures::{self, io::AsyncRead};
 use ssri::Integrity;
 
-use crate::error::{Internal, Result, RoggaError};
+use crate::error::{Internal, Result, NassunError};
 use crate::integrity::AsyncIntegrity;
 
 pub async fn from_tarball<P, R>(cache: P, tarball: R) -> Result<Integrity>
@@ -50,7 +50,7 @@ where
     std::mem::drop(entries);
     let (sri, mut reader) = ar
         .into_inner()
-        .map_err(|_| RoggaError::MiscError("Failed to get inner Read".into()))
+        .map_err(|_| NassunError::MiscError("Failed to get inner Read".into()))
         .to_internal()?
         .into_inner()
         .into_inner()

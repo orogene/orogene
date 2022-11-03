@@ -10,7 +10,7 @@ use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use url::Url;
 
-use crate::error::{Result, RoggaError};
+use crate::error::{NassunError, Result};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::resolver::PackageResolution;
@@ -71,7 +71,7 @@ impl PackageFetcher for NpmFetcher {
             .versions
             .get(wanted)
             .cloned()
-            .ok_or_else(|| RoggaError::MissingVersion(pkg.from().clone(), wanted.clone()))
+            .ok_or_else(|| NassunError::MissingVersion(pkg.from().clone(), wanted.clone()))
     }
 
     async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {

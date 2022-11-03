@@ -9,7 +9,7 @@ use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
-use crate::error::{Result, RoggaError};
+use crate::error::{NassunError, Result};
 use crate::fetch::dir::DirFetcher;
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
@@ -92,7 +92,7 @@ impl GitFetcher {
         let git = if let Some(git) = self.git.lock().await.as_ref() {
             git.clone()
         } else {
-            let git = which::which("git").map_err(RoggaError::WhichGit)?;
+            let git = which::which("git").map_err(NassunError::WhichGit)?;
             let mut selfgit = self.git.lock().await;
             *selfgit = Some(git.clone());
             git
@@ -107,12 +107,12 @@ impl GitFetcher {
             .stderr(Stdio::null())
             .status()
             .await
-            .map_err(RoggaError::GitIoError)
+            .map_err(NassunError::GitIoError)
             .and_then(|status| {
                 if status.success() {
                     Ok(())
                 } else {
-                    Err(RoggaError::GitCloneError(String::from(repo)))
+                    Err(NassunError::GitCloneError(String::from(repo)))
                 }
             })?;
         if let Some(committish) = committish {
@@ -125,12 +125,12 @@ impl GitFetcher {
                 .stderr(Stdio::null())
                 .status()
                 .await
-                .map_err(RoggaError::GitIoError)
+                .map_err(NassunError::GitIoError)
                 .and_then(|status| {
                     if status.success() {
                         Ok(())
                     } else {
-                        Err(RoggaError::GitCheckoutError(
+                        Err(NassunError::GitCheckoutError(
                             String::from(repo),
                             committish.clone(),
                         ))
@@ -150,7 +150,7 @@ impl PackageFetcher for GitFetcher {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
-        let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
+        let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .name_from_path(&dir.path().join("package"))
@@ -163,7 +163,7 @@ impl PackageFetcher for GitFetcher {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
-        let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
+        let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .metadata_from_path(&dir.path().join("package"))
@@ -180,7 +180,7 @@ impl PackageFetcher for GitFetcher {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };
-        let dir = tempfile::tempdir().map_err(RoggaError::GitIoError)?;
+        let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .packument_from_path(&dir.path().join("package"))

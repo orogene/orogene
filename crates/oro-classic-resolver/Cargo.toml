@@ -7,8 +7,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+nassun = { path = "../nassun" }
 oro-package-spec = { path = "../oro-package-spec" }
-rogga = { path = "../rogga" }
 
 async-trait = { workspace = true }
 miette = { workspace = true }

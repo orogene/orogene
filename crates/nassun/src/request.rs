@@ -51,9 +51,9 @@ impl PackageRequest {
     /// # #[async_std::main]
     /// # async fn main() -> miette::Result<()> {
     /// use oro_classic_resolver::ClassicResolver;
-    /// use rogga::Rogga;
+    /// use nassun::Nassun;
     ///
-    /// let pkg = Rogga::new()
+    /// let pkg = Nassun::new()
     ///     .arg_request("debug@^4.1.1")
     ///     .await?
     ///     .resolve_with(&ClassicResolver::new())

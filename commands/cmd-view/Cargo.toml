@@ -5,12 +5,12 @@ authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 
 [dependencies]
+nassun = { path = "../../crates/nassun" }
 oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
 oro-common = { path = "../../crates/oro-common" }
 oro-config = { path = "../../crates/oro-config" }
-rogga = { path = "../../crates/rogga" }
 
 async-trait = { workspace = true }
 chrono = { workspace = true }

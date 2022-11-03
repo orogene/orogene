@@ -11,16 +11,16 @@ use crate::error::Result;
 use crate::fetch::{DirFetcher, GitFetcher, NpmFetcher, PackageFetcher};
 use crate::request::PackageRequest;
 
-/// Build a new Rogga instance with specified options.
+/// Build a new Nassun instance with specified options.
 #[derive(Default)]
-pub struct RoggaOpts {
+pub struct NassunOpts {
     cache: Option<PathBuf>,
     base_dir: Option<PathBuf>,
     registries: HashMap<Option<String>, Url>,
     use_corgi: Option<bool>,
 }
 
-impl RoggaOpts {
+impl NassunOpts {
     pub fn new() -> Self {
         Default::default()
     }
@@ -51,7 +51,7 @@ impl RoggaOpts {
         self
     }
 
-    pub fn build(self) -> Rogga {
+    pub fn build(self) -> Nassun {
         let registry = self
             .registries
             .get(&None)
@@ -59,7 +59,7 @@ impl RoggaOpts {
             .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
         let client = OroClient::new(registry);
         let use_corgi = self.use_corgi.unwrap_or(true);
-        Rogga {
+        Nassun {
             // cache: self.cache,
             base_dir: self
                 .base_dir
@@ -73,7 +73,7 @@ impl RoggaOpts {
 
 /// Toplevel client for making package requests.
 #[derive(Clone)]
-pub struct Rogga {
+pub struct Nassun {
     // cache: Option<PathBuf>,
     base_dir: PathBuf,
     npm_fetcher: Arc<dyn PackageFetcher>,
@@ -81,14 +81,14 @@ pub struct Rogga {
     git_fetcher: Arc<dyn PackageFetcher>,
 }
 
-impl Default for Rogga {
+impl Default for Nassun {
     fn default() -> Self {
-        RoggaOpts::new().build()
+        NassunOpts::new().build()
     }
 }
 
-impl Rogga {
-    /// Creates a new Rogga instance.
+impl Nassun {
+    /// Creates a new Nassun instance.
     pub fn new() -> Self {
         Default::default()
     }

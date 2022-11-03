@@ -3,11 +3,11 @@ use clap::Args;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
+use nassun::NassunOpts;
 use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
 use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use oro_config::OroConfigLayer;
-use rogga::RoggaOpts;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
@@ -28,7 +28,7 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkgreq = RoggaOpts::new()
+        let pkgreq = NassunOpts::new()
             .registry(self.registry)
             .use_corgi(false)
             .base_dir(

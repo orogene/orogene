@@ -17,7 +17,7 @@ pub enum NodeMaintainerError {
     #[diagnostic(code(node_maintainer::no_cwd))]
     NoCwd(#[from] std::io::Error),
 
-    /// Error returned from Rogga
+    /// Error returned from Nassun
     #[error(transparent)]
-    RoggaError(#[from] rogga::RoggaError),
+    NassunError(#[from] nassun::NassunError),
 }

@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use miette::Diagnostic;
+use nassun::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_package_spec::{PackageSpec, VersionSpec};
-use rogga::{PackageRequest, PackageResolution, PackageResolver, ResolverError};
 use thiserror::Error;
 
 pub struct ClassicResolver {
@@ -78,7 +78,7 @@ impl PackageResolver for ClassicResolver {
 
         let mut target: Option<&SemVerVersion> = match spec {
             Npm {
-                requested: Some(VersionSpec::Version(version)),
+                requested: Some(VersionSpec::Version(ref version)),
                 ..
             } => Some(version),
             Npm {
@@ -123,7 +123,7 @@ impl PackageResolver for ClassicResolver {
 
         if target.is_none() {
             if let Npm {
-                requested: Some(VersionSpec::Range(range)),
+                requested: Some(VersionSpec::Range(ref range)),
                 ..
             } = spec
             {
