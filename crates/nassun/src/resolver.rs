@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 use async_trait::async_trait;
 use miette::Diagnostic;
@@ -54,4 +54,15 @@ pub enum PackageResolution {
     Npm { version: Version, tarball: Url },
     Dir { path: PathBuf },
     Git(GitInfo),
+}
+
+impl Display for PackageResolution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use PackageResolution::*;
+        match self {
+            Npm { tarball, .. } => write!(f, "{}", tarball),
+            Dir { path } => write!(f, "{}", path.to_string_lossy()),
+            Git(info) => write!(f, "{}", info),
+        }
+    }
 }
