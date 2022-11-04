@@ -20,7 +20,7 @@ oro-command = { path = "./crates/oro-command" }
 oro-config = { path = "./crates/oro-config" }
 
 # Regular deps
-async-std = { workspace = true, features = ["attributes", "unstable"] }
+async-std = { workspace = true, features = ["attributes", "tokio1", "unstable"] }
 async-trait = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 directories = "3.0.1"

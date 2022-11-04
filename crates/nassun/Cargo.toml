@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 oro-common = { path = "../oro-common" }
-oro-client = { path = "../oro-client", default-features = false }
+oro-client = { path = "../oro-client" }
 oro-package-spec = { path = "../oro-package-spec" }
 
 async-compression = { version = "0.3.5", features = ["gzip", "futures-io"] }
@@ -38,9 +38,9 @@ wasm-bindgen-futures = { workspace = true, optional = true }
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["oro-client/curl", "dir", "git", "fs", "async-std/std", "async-tar/xattr"]
+default = ["dir", "git", "fs", "async-std/std", "async-tar/xattr"]
 git = ["mkdirp", "tempfile", "which", "async-process"]
-wasm = ["oro-client/wasm", "serde-wasm-bindgen", "wasm-bindgen", "wasm-bindgen-futures"]
+wasm = ["serde-wasm-bindgen", "wasm-bindgen", "wasm-bindgen-futures"]
 fs = ["async-tar/fs", "async-tar/xattr"]
 dir = []
 

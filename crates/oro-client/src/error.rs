@@ -11,7 +11,7 @@ pub enum OroClientError {
     #[diagnostic(code(oro_client::package_not_found))]
     PackageNotFound(String),
 
-    #[error("Request failed: {0}")]
+    #[error(transparent)]
     #[diagnostic(code(oro_client::request_error))]
-    RequestError(surf::Error),
+    RequestError(#[from] reqwest::Error),
 }

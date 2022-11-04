@@ -1,5 +1,5 @@
 use oro_common::Packument;
-use surf::StatusCode;
+use reqwest::StatusCode;
 
 use crate::{OroClient, OroClientError};
 
@@ -12,7 +12,7 @@ impl OroClient {
         package_name: impl AsRef<str>,
         use_corgi: bool,
     ) -> Result<Packument, OroClientError> {
-        self
+        Ok(self
             .client
             .get(self.registry.join(package_name.as_ref())?)
             .header(
@@ -24,25 +24,17 @@ impl OroClient {
                 },
             )
             .send()
-            .await
-            .map_err(OroClientError::RequestError)
-            .and_then(|res| {
-                if res.status() == StatusCode::NotFound {
-                    Err(OroClientError::PackageNotFound(
-                        package_name.as_ref().to_string(),
-                    ))
-                } else if res.status().is_success() {
-                    Ok(res)
+            .await?
+            .error_for_status()
+            .map_err(|err| {
+                if err.status() == Some(StatusCode::NOT_FOUND) {
+                    OroClientError::PackageNotFound(package_name.as_ref().to_string())
                 } else {
-                    Err(OroClientError::RequestError(surf::Error::from_str(
-                        res.status(),
-                        "Unexpected response.",
-                    )))
+                    OroClientError::RequestError(err)
                 }
             })?
-            .body_json()
-            .await
-            .map_err(OroClientError::RequestError)
+            .json()
+            .await?)
     }
 }
 

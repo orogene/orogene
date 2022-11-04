@@ -2,25 +2,14 @@ use crate::{OroClient, OroClientError};
 
 impl OroClient {
     pub async fn ping(&self) -> Result<String, OroClientError> {
-        self
+        Ok(self
             .client
             .get(self.registry.join("-/ping?write=true")?)
             .send()
-            .await
-            .map_err(OroClientError::RequestError)
-            .and_then(|res| {
-                if res.status().is_success() {
-                    Ok(res)
-                } else {
-                    Err(OroClientError::RequestError(surf::Error::from_str(
-                        res.status(),
-                        "Unexpected response.",
-                    )))
-                }
-            })?
-            .body_string()
-            .await
-            .map_err(OroClientError::RequestError)
+            .await?
+            .error_for_status()?
+            .text()
+            .await?)
     }
 }
 
