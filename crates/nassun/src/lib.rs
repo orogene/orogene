@@ -8,6 +8,8 @@ mod package;
 mod request;
 mod resolver;
 mod tarball;
+#[cfg(feature = "wasm")]
+mod wasm;
 
 pub use entries::*;
 pub use error::NassunError;
@@ -16,3 +18,5 @@ pub use package::*;
 pub use request::*;
 pub use resolver::*;
 pub use tarball::*;
+#[cfg(feature = "wasm")]
+pub use wasm::*;

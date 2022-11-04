@@ -71,7 +71,7 @@ pub enum NassunError {
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
     /// don't implement std::error::Error.
-    #[error("A miscellaneous error occurred: {0}")]
+    #[error("{0}")]
     #[diagnostic(code(nassun::misc))]
     MiscError(String),
 }
