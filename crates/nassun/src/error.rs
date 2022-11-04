@@ -45,6 +45,7 @@ pub enum NassunError {
     IoError(#[from] std::io::Error),
 
     #[error(transparent)]
+    #[diagnostic(transparent)]
     OroClientError(#[from] oro_client::OroClientError),
 
     #[error(transparent)]
@@ -76,7 +77,7 @@ pub enum NassunError {
     WhichGit(#[from] which::Error),
 
     #[error("Only Version, Tag, Range, and Alias package args are supported, but got `{0}`.")]
-    #[diagnostic(code(classic_resolver::error))]
+    #[diagnostic(code(nassun::invalid_package_spec))]
     InvalidPackageSpec(PackageSpec),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap

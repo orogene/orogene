@@ -73,6 +73,9 @@ impl NassunOpts {
         Nassun {
             // cache: self.cache,
             resolver: PackageResolver {
+                #[cfg(feature = "wasm")]
+                base_dir: PathBuf::from("."),
+                #[cfg(not(feature = "wasm"))]
                 base_dir: self
                     .base_dir
                     .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),

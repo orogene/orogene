@@ -101,9 +101,7 @@ impl PackageResolver {
             | Npm {
                 requested: None, ..
             } => None,
-            _ => {
-                return Err(NassunError::InvalidPackageSpec(spec.clone()))
-            }
+            _ => return Err(NassunError::InvalidPackageSpec(spec.clone())),
         };
 
         let tag_version = packument.tags.get(&self.default_tag);
