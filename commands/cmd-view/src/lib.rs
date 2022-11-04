@@ -37,7 +37,7 @@ impl OroCommand for ViewCmd {
                     .wrap_err("view::nocwd")?,
             )
             .build()
-            .arg_request(&self.pkg)
+            .request(&self.pkg)
             .await?;
         let packument = pkgreq.packument().await?;
         let pkg = pkgreq.resolve_with(&ClassicResolver::new()).await?;

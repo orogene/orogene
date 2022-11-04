@@ -60,7 +60,7 @@ impl NodeMaintainerOptions {
         let mut graph = StableGraph::new();
         let resolver = ClassicResolver::new();
         let root_dep = nassun
-            .arg_request(request.as_ref())
+            .request(request.as_ref())
             .await?
             .resolve_with(&resolver)
             .await?;
@@ -123,7 +123,7 @@ impl NodeMaintainer {
             {
                 if !names.contains(&name[..]) {
                     names.insert(&name[..]);
-                    let request = self.nassun.dep_request(&name[..], &spec[..])?;
+                    let request = self.nassun.request(format!("{name}@{spec}")).await?;
                     packages.push(
                         request
                             .resolve_with(&self.resolver)

@@ -54,7 +54,7 @@ impl PackageRequest {
     /// use nassun::Nassun;
     ///
     /// let pkg = Nassun::new()
-    ///     .arg_request("debug@^4.1.1")
+    ///     .request("debug@^4.1.1")
     ///     .await?
     ///     .resolve_with(&ClassicResolver::new())
     ///     .await?

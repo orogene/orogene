@@ -7,7 +7,9 @@ use thiserror::Error;
 use url::Url;
 use wasm_bindgen::prelude::*;
 
-use crate::{Nassun, NassunError, NassunOpts};
+use crate::{Nassun, NassunError, NassunOpts, PackageRequest};
+
+type Result<T> = std::result::Result<T, JsNassunError>;
 
 #[wasm_bindgen(js_name = NassunError)]
 #[derive(Error, Debug)]
@@ -28,7 +30,7 @@ pub struct JsNassun(Nassun);
 #[wasm_bindgen]
 impl JsNassun {
     #[wasm_bindgen(constructor, variadic)]
-    pub fn new(mut args: Vec<JsValue>) -> Result<JsNassun, JsNassunError> {
+    pub fn new(mut args: Vec<JsValue>) -> Result<JsNassun> {
         if let Some(opts) = args.pop() {
             let mut opts_builder = NassunOpts::new();
             let opts: JsNassunOpts = serde_wasm_bindgen::from_value(opts)
@@ -49,4 +51,11 @@ impl JsNassun {
             Ok(JsNassun(Nassun::new()))
         }
     }
+
+    pub async fn request(&self, spec: &str) -> Result<JsPackageRequest> {
+        Ok(JsPackageRequest(self.0.request(spec).await?))
+    }
 }
+
+#[wasm_bindgen(js_name = PackageRequest)]
+pub struct JsPackageRequest(PackageRequest);

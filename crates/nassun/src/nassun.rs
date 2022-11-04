@@ -106,30 +106,13 @@ impl Nassun {
         Default::default()
     }
 
-    /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3`.
-    pub async fn arg_request(&self, arg: impl AsRef<str>) -> Result<PackageRequest> {
-        let spec = arg.as_ref().parse()?;
+    /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3` or `github:foo/bar`.
+    pub async fn request(&self, spec: impl AsRef<str>) -> Result<PackageRequest> {
+        let spec = spec.as_ref().parse()?;
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, &self.base_dir).await?;
         Ok(PackageRequest {
             name,
-            spec,
-            fetcher,
-            base_dir: self.base_dir.clone(),
-        })
-    }
-
-    /// Creates a PackageRequest from a two-part dependency declaration, such
-    /// as `dependencies` entries in a `package.json`.
-    pub fn dep_request(
-        &self,
-        name: impl AsRef<str>,
-        spec: impl AsRef<str>,
-    ) -> Result<PackageRequest> {
-        let spec = format!("{}@{}", name.as_ref(), spec.as_ref()).parse()?;
-        let fetcher = self.pick_fetcher(&spec);
-        Ok(PackageRequest {
-            name: name.as_ref().into(),
             spec,
             fetcher,
             base_dir: self.base_dir.clone(),
