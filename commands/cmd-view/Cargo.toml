@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 nassun = { path = "../../crates/nassun" }
-oro-classic-resolver = { path = "../../crates/oro-classic-resolver" }
 oro-client = { path = "../../crates/oro-client" }
 oro-command = { path = "../../crates/oro-command" }
 oro-common = { path = "../../crates/oro-common" }

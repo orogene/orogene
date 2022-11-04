@@ -6,7 +6,6 @@ edition = "2021"
 
 [dependencies]
 nassun = { path = "../nassun" }
-oro-classic-resolver = { path = "../oro-classic-resolver" }
 
 futures = { workspace = true }
 miette = { workspace = true }

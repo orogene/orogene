@@ -1,7 +1,7 @@
 use std::fmt;
 
 use async_std::sync::Arc;
-use oro_common::VersionMetadata;
+use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 
@@ -18,6 +18,7 @@ pub struct Package {
     pub(crate) name: String,
     pub(crate) resolved: PackageResolution,
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
+    pub(crate) packument: Arc<Packument>,
 }
 
 impl Package {
@@ -34,6 +35,11 @@ impl Package {
     /// The [`PackageResolution`] that this `Package` was created from.
     pub fn resolved(&self) -> &PackageResolution {
         &self.resolved
+    }
+
+    /// The full [`Packument`] that this `Package` was resolved from.
+    pub fn packument(&self) -> Arc<Packument> {
+        self.packument.clone()
     }
 
     /// The [`VersionMetadata`], aka the manifest, aka roughly the metadata

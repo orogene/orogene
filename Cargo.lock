@@ -563,23 +563,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmd-prime"
-version = "0.1.0"
-dependencies = [
- "async-std",
- "async-trait",
- "clap",
- "miette",
- "nassun",
- "node-maintainer",
- "oro-classic-resolver",
- "oro-command",
- "oro-config",
- "oro-pkg-root",
- "url",
-]
-
-[[package]]
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
@@ -591,7 +574,6 @@ dependencies = [
  "humansize",
  "miette",
  "nassun",
- "oro-classic-resolver",
  "oro-client",
  "oro-command",
  "oro-common",
@@ -1824,7 +1806,6 @@ dependencies = [
  "miette",
  "mkdirp",
  "node-semver",
- "oro-classic-resolver",
  "oro-client",
  "oro-common",
  "oro-package-spec",
@@ -1849,7 +1830,6 @@ dependencies = [
  "miette",
  "nassun",
  "node-semver",
- "oro-classic-resolver",
  "petgraph",
  "thiserror",
  "url",
@@ -1974,18 +1954,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-classic-resolver"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "miette",
- "nassun",
- "node-semver",
- "oro-package-spec",
- "thiserror",
-]
-
-[[package]]
 name = "oro-client"
 version = "0.1.0"
 dependencies = [
@@ -2091,7 +2059,6 @@ dependencies = [
  "async-trait",
  "clap",
  "cmd-ping",
- "cmd-prime",
  "cmd-view",
  "directories",
  "embed-resource",

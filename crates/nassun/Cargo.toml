@@ -34,9 +34,6 @@ which = { version = "4.0.2", optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 wasm-bindgen-futures = { workspace = true, optional = true }
 
-[dev-dependencies]
-oro-classic-resolver = { path = "../oro-classic-resolver" }
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 

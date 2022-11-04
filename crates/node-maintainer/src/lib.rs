@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 
 use futures::{future, FutureExt};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
-use oro_classic_resolver::ClassicResolver;
 use petgraph::dot::Dot;
 use petgraph::stable_graph::{NodeIndex, StableGraph};
 use url::Url;
@@ -58,17 +57,11 @@ impl NodeMaintainerOptions {
         let cwd = self.path.unwrap_or(current_dir);
         let nassun = NassunOpts::new().base_dir(cwd.clone()).build();
         let mut graph = StableGraph::new();
-        let resolver = ClassicResolver::new();
-        let root_dep = nassun
-            .request(request.as_ref())
-            .await?
-            .resolve_with(&resolver)
-            .await?;
+        let root_dep = nassun.resolve(request.as_ref()).await?;
         let root = graph.add_node(root_dep);
         Ok(NodeMaintainer {
             cwd,
             nassun,
-            resolver,
             root,
             graph,
         })
@@ -78,7 +71,6 @@ impl NodeMaintainerOptions {
 pub struct NodeMaintainer {
     cwd: PathBuf,
     nassun: Nassun,
-    resolver: ClassicResolver,
     root: NodeIndex,
     graph: StableGraph<Package, Dependency>,
 }
@@ -123,11 +115,10 @@ impl NodeMaintainer {
             {
                 if !names.contains(&name[..]) {
                     names.insert(&name[..]);
-                    let request = self.nassun.request(format!("{name}@{spec}")).await?;
                     packages.push(
-                        request
-                            .resolve_with(&self.resolver)
-                            .map(|pkg| (pkg, dep_type)),
+                        self.nassun
+                            .resolve(format!("{name}@{spec}"))
+                            .map(|p| (p, dep_type)),
                     );
                 }
             }

@@ -13,13 +13,15 @@ use crate::fetch::DirFetcher;
 #[cfg(feature = "git")]
 use crate::fetch::GitFetcher;
 use crate::fetch::{NpmFetcher, PackageFetcher};
-use crate::request::PackageRequest;
+use crate::package::Package;
+use crate::resolver::PackageResolver;
 
 /// Build a new Nassun instance with specified options.
 #[derive(Default)]
 pub struct NassunOpts {
     cache: Option<PathBuf>,
     base_dir: Option<PathBuf>,
+    default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
     use_corgi: Option<bool>,
 }
@@ -50,6 +52,11 @@ impl NassunOpts {
         self
     }
 
+    pub fn default_tag(mut self, default_tag: impl AsRef<str>) -> Self {
+        self.default_tag = Some(default_tag.as_ref().into());
+        self
+    }
+
     pub fn use_corgi(mut self, use_corgi: bool) -> Self {
         self.use_corgi = Some(use_corgi);
         self
@@ -65,9 +72,12 @@ impl NassunOpts {
         let use_corgi = self.use_corgi.unwrap_or(true);
         Nassun {
             // cache: self.cache,
-            base_dir: self
-                .base_dir
-                .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
+            resolver: PackageResolver {
+                base_dir: self
+                    .base_dir
+                    .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
+                default_tag: self.default_tag.unwrap_or_else(|| "latest".into()),
+            },
             npm_fetcher: Arc::new(NpmFetcher::new(
                 #[allow(clippy::redundant_clone)]
                 client.clone(),
@@ -86,7 +96,7 @@ impl NassunOpts {
 #[derive(Clone)]
 pub struct Nassun {
     // cache: Option<PathBuf>,
-    base_dir: PathBuf,
+    resolver: PackageResolver,
     npm_fetcher: Arc<dyn PackageFetcher>,
     #[cfg(feature = "dir")]
     dir_fetcher: Arc<dyn PackageFetcher>,
@@ -106,17 +116,13 @@ impl Nassun {
         Default::default()
     }
 
-    /// Creates a PackageRequest from a plain string spec, i.e. `foo@1.2.3` or `github:foo/bar`.
-    pub async fn request(&self, spec: impl AsRef<str>) -> Result<PackageRequest> {
+    /// Resolve a spec (e.g. `foo@^1.2.3`, `github:foo/bar`, etc), to a
+    /// [`Package`] that can be used for further operations.
+    pub async fn resolve(&self, spec: impl AsRef<str>) -> Result<Package> {
         let spec = spec.as_ref().parse()?;
         let fetcher = self.pick_fetcher(&spec);
-        let name = fetcher.name(&spec, &self.base_dir).await?;
-        Ok(PackageRequest {
-            name,
-            spec,
-            fetcher,
-            base_dir: self.base_dir.clone(),
-        })
+        let name = fetcher.name(&spec, &self.resolver.base_dir).await?;
+        self.resolver.resolve(name, spec, fetcher).await
     }
 
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {

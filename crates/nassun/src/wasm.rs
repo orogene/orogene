@@ -7,7 +7,7 @@ use thiserror::Error;
 use url::Url;
 use wasm_bindgen::prelude::*;
 
-use crate::{Nassun, NassunError, NassunOpts, PackageRequest};
+use crate::{Nassun, NassunError, NassunOpts};
 
 type Result<T> = std::result::Result<T, JsNassunError>;
 
@@ -51,11 +51,4 @@ impl JsNassun {
             Ok(JsNassun(Nassun::new()))
         }
     }
-
-    pub async fn request(&self, spec: &str) -> Result<JsPackageRequest> {
-        Ok(JsPackageRequest(self.0.request(spec).await?))
-    }
 }
-
-#[wasm_bindgen(js_name = PackageRequest)]
-pub struct JsPackageRequest(PackageRequest);

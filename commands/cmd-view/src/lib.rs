@@ -4,7 +4,6 @@ use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nassun::NassunOpts;
-use oro_classic_resolver::ClassicResolver;
 use oro_command::OroCommand;
 use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use oro_config::OroConfigLayer;
@@ -28,7 +27,7 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkgreq = NassunOpts::new()
+        let pkg = NassunOpts::new()
             .registry(self.registry)
             .use_corgi(false)
             .base_dir(
@@ -37,10 +36,9 @@ impl OroCommand for ViewCmd {
                     .wrap_err("view::nocwd")?,
             )
             .build()
-            .request(&self.pkg)
+            .resolve(&self.pkg)
             .await?;
-        let packument = pkgreq.packument().await?;
-        let pkg = pkgreq.resolve_with(&ClassicResolver::new()).await?;
+        let packument = pkg.packument();
         let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]
         // Probably the best way to do this is to support doing raw

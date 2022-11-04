@@ -5,8 +5,6 @@ use node_semver::Version;
 use oro_package_spec::PackageSpec;
 use thiserror::Error;
 
-use crate::resolver::ResolverError;
-
 /// Error type returned by all API calls.
 #[derive(Error, Debug, Diagnostic)]
 pub enum NassunError {
@@ -21,9 +19,6 @@ pub enum NassunError {
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
     PackageSpecError(#[from] oro_package_spec::PackageSpecError),
-
-    #[error(transparent)]
-    ResolverError(#[from] ResolverError),
 
     #[error("{0}")]
     #[diagnostic(code(nassun::dir::read))]
@@ -60,6 +55,18 @@ pub enum NassunError {
     #[diagnostic(code(nassun::bad_url))]
     UrlError(#[from] url::ParseError),
 
+    #[error("No matching `{name}` version found for spec `{spec}`.")]
+    #[diagnostic(
+        code(resolver::no_matching_version),
+        // TODO: format help string using variables?
+        help("Try using `oro view` to see what versions are available")
+    )]
+    NoVersion {
+        name: String,
+        spec: PackageSpec,
+        versions: Vec<String>,
+    },
+
     #[cfg(feature = "git")]
     #[error(transparent)]
     #[diagnostic(
@@ -67,6 +74,10 @@ pub enum NassunError {
         help("Are you sure git is installed and available in your $PATH?")
     )]
     WhichGit(#[from] which::Error),
+
+    #[error("Only Version, Tag, Range, and Alias package args are supported, but got `{0}`.")]
+    #[diagnostic(code(classic_resolver::error))]
+    InvalidPackageSpec(PackageSpec),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
