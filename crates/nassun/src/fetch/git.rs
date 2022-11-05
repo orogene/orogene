@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use async_process::{Command, Stdio};
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
-use futures::AsyncRead;
 use oro_client::{self, OroClient};
 use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::{GitInfo, PackageSpec};
@@ -141,7 +140,8 @@ impl GitFetcher {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PackageFetcher for GitFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         use PackageSpec::*;
@@ -190,7 +190,7 @@ impl PackageFetcher for GitFetcher {
     async fn tarball(
         &self,
         _pkg: &crate::Package,
-    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+    ) -> Result<crate::TarballStream> {
         todo!()
     }
 }

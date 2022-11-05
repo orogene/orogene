@@ -9,10 +9,14 @@ pub use async_tar::Header;
 
 use crate::{error::Result, Tarball};
 
+#[cfg(not(target_arch = "wasm32"))]
+type EntriesStream = Box<dyn Stream<Item = Result<Entry>> + Unpin + Send + Sync>;
+#[cfg(target_arch = "wasm32")]
+type EntriesStream = Box<dyn Stream<Item = Result<Entry>> + Unpin>;
 /// Stream of tarball entries.
 pub struct Entries(
     pub(crate) Archive<GzipDecoder<BufReader<Tarball>>>,
-    pub(crate) Box<dyn Stream<Item = Result<Entry>> + Unpin + Send + Sync>,
+    pub(crate) EntriesStream,
 );
 
 impl Entries {

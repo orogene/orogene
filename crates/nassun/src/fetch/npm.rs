@@ -4,7 +4,6 @@ use std::path::Path;
 use async_std::sync::Arc;
 use async_trait::async_trait;
 use dashmap::DashMap;
-use futures::io::AsyncRead;
 use oro_client::{self, OroClient};
 use oro_common::{Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
@@ -52,7 +51,8 @@ impl NpmFetcher {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PackageFetcher for NpmFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
         match spec {
@@ -96,7 +96,7 @@ impl PackageFetcher for NpmFetcher {
         }
     }
 
-    async fn tarball(&self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+    async fn tarball(&self, pkg: &Package) -> Result<crate::TarballStream> {
         let url = match pkg.resolved() {
             PackageResolution::Npm { ref tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),

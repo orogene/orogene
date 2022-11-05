@@ -13,7 +13,8 @@ chrono = { workspace = true }
 futures = { workspace = true, features = ["io-compat"] }
 miette = { workspace = true }
 node-semver = { workspace = true }
-reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
+# reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
+reqwest = { git = "https://github.com/tmpfs/reqwest", branch = "wasm-bytes-stream", features = ["json", "gzip", "stream"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

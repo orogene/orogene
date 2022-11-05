@@ -11,17 +11,18 @@ use async_tar::Archive;
 use futures::prelude::*;
 use ssri::{Integrity, IntegrityChecker};
 
+use crate::TarballStream;
 use crate::entries::{Entries, Entry};
 use crate::error::{NassunError, Result};
 
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
-    reader: Box<dyn AsyncRead + Unpin + Send + Sync>,
+    reader: TarballStream,
 }
 
 impl Tarball {
     pub(crate) fn new(
-        reader: Box<dyn AsyncRead + Unpin + Send + Sync>,
+        reader: TarballStream,
         integrity: Integrity,
     ) -> Self {
         Self {
@@ -30,14 +31,14 @@ impl Tarball {
         }
     }
 
-    pub(crate) fn new_unchecked(reader: Box<dyn AsyncRead + Unpin + Send + Sync>) -> Self {
+    pub(crate) fn new_unchecked(reader: TarballStream) -> Self {
         Self {
             reader,
             checker: None,
         }
     }
 
-    pub fn into_inner(self) -> Box<dyn AsyncRead + Unpin + Send + Sync> {
+    pub fn into_inner(self) -> TarballStream {
         self.reader
     }
 

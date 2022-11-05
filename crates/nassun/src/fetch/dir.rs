@@ -66,7 +66,8 @@ impl DirFetcher {
     }
 }
 
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PackageFetcher for DirFetcher {
     async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String> {
         let path = match spec {

@@ -6,11 +6,16 @@ use url::Url;
 
 use crate::{OroClient, OroClientError};
 
+#[cfg(not(target_arch = "wasm32"))]
+type Result = std::result::Result<Box<dyn AsyncRead + Unpin + Send + Sync>, OroClientError>;
+#[cfg(target_arch = "wasm32")]
+type Result = std::result::Result<Box<dyn AsyncRead + Unpin>, OroClientError>;
+
 impl OroClient {
     pub async fn stream_external(
         &self,
         url: &Url,
-    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>, OroClientError> {
+    ) -> Result {
         Ok(Box::new(
             self.client
                 .get(url.to_string())

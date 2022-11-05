@@ -1,3 +1,4 @@
+use futures::AsyncRead;
 pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 
 mod entries;
@@ -18,3 +19,8 @@ pub use resolver::*;
 pub use tarball::*;
 #[cfg(feature = "wasm")]
 pub use wasm::*;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) type TarballStream = Box<dyn AsyncRead + Unpin + Send + Sync>;
+#[cfg(target_arch = "wasm32")]
+pub(crate) type TarballStream = Box<dyn AsyncRead + Unpin>;
