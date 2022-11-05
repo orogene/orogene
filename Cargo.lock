@@ -1542,6 +1542,7 @@ dependencies = [
  "chrono",
  "dashmap",
  "futures 0.3.25",
+ "js-sys",
  "miette",
  "mkdirp",
  "node-semver",
@@ -1558,6 +1559,7 @@ dependencies = [
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "which",
 ]
 

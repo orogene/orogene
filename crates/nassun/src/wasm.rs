@@ -2,11 +2,13 @@
 
 use std::collections::HashMap;
 
+use futures::StreamExt;
 use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 use wasm_bindgen::prelude::*;
+use wasm_streams::ReadableStream;
 
 use crate::{Nassun, NassunError, NassunOpts, Package};
 
@@ -15,6 +17,16 @@ type Result<T> = std::result::Result<T, JsNassunError>;
 #[wasm_bindgen]
 pub async fn metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
     JsNassun::new(opts)?.resolve(spec).await?.metadata().await
+}
+
+#[wasm_bindgen]
+pub async fn tarball(spec: &str, opts: JsValue) -> Result<JsValue> {
+    JsNassun::new(opts)?.resolve(spec).await?.tarball().await
+}
+
+#[wasm_bindgen]
+pub async fn entries(spec: &str, opts: JsValue) -> Result<JsValue> {
+    JsNassun::new(opts)?.resolve(spec).await?.entries().await
 }
 
 #[wasm_bindgen(js_name = NassunError)]
@@ -130,5 +142,75 @@ impl JsPackage {
             .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))?
             .serialize(&self.serializer)
             .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))
+    }
+
+    pub async fn tarball(&self) -> Result<JsValue> {
+        let tarball = self
+            .package
+            .tarball()
+            .await
+            .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))?;
+        Ok(ReadableStream::from_async_read(tarball, 1024)
+            .into_raw()
+            .into())
+    }
+
+    pub async fn entries(&self) -> Result<JsValue> {
+        let entries = self
+            .package
+            .entries()
+            .await
+            .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))?
+            .then(|entry| async move {
+                entry
+                    .map_err(|e| JsValue::from_str(&format!("{e}")))
+                    .and_then(|entry| {
+                        let header = entry.header();
+                        let obj = js_sys::Object::new();
+                        js_sys::Reflect::set(
+                            &obj,
+                            &"type".into(),
+                            &header
+                                .entry_type()
+                                .as_byte()
+                                .into(),
+                        )?;
+                        js_sys::Reflect::set(
+                            &obj,
+                            &"mtime".into(),
+                            &header
+                                .mtime()
+                                .map_err(|e| JsValue::from_str(&format!("{e}")))?
+                                .into(),
+                        )?;
+                        js_sys::Reflect::set(
+                            &obj,
+                            &"size".into(),
+                            &header
+                                .entry_size()
+                                .map_err(|e| JsValue::from_str(&format!("{e}")))?
+                                .into(),
+                        )?;
+                        js_sys::Reflect::set(
+                            &obj,
+                            &"path".into(),
+                            &header
+                                .path()
+                                .map_err(|e| JsValue::from_str(&format!("{e}")))?
+                                .to_string_lossy()
+                                .into_owned()
+                                .into(),
+                        )?;
+                        js_sys::Reflect::set(
+                            &obj,
+                            &"contents".into(),
+                            &ReadableStream::from_async_read(entry, 1024)
+                                .into_raw()
+                                .into(),
+                        )?;
+                        Ok(obj.into())
+                    })
+            });
+        Ok(ReadableStream::from_stream(entries).into_raw().into())
     }
 }
