@@ -24,14 +24,15 @@ pub struct Packument {
 /// A manifest for an individual package version.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VersionMetadata {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub maintainers: Vec<PersonField>,
-    #[serde(rename = "_npmUser")]
+    #[serde(rename = "_npmUser", skip_serializing_if = "Option::is_none")]
     pub npm_user: Option<NpmUser>,
     #[serde(default)]
     pub dist: Dist,
-    #[serde(rename = "_hasShrinkwrap")]
+    #[serde(rename = "_hasShrinkwrap", skip_serializing_if = "Option::is_none")]
     pub has_shrinkwrap: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deprecated: Option<String>,
 
     #[serde(flatten)]

@@ -9,123 +9,134 @@ use serde_json::Value;
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
     #[builder(setter(into, strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<Version>,
 
     #[builder(setter(into, strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
     #[builder(setter(into, strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
 
-    #[serde(default, alias = "licence")]
+    #[serde(default, alias = "licence", skip_serializing_if = "Option::is_none")]
     #[builder(setter(into, strip_option), default)]
     pub license: Option<String>,
 
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(strip_option), default)]
     pub bugs: Option<Bugs>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub keywords: Vec<String>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bin: Option<Bin>,
 
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(strip_option), default)]
     pub author: Option<PersonField>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub contributors: Vec<PersonField>,
 
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
     pub files: Option<Vec<String>>,
 
     #[builder(setter(into, strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub main: Option<String>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub man: Option<Man>,
 
     #[serde(skip, default)]
     #[builder(default)]
     pub directories: Option<Directories>,
 
-    #[serde(rename = "type")]
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     #[builder(setter(into, strip_option), default)]
     pub module_type: Option<String>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub exports: Option<Exports>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub imports: Option<Imports>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<Repository>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub scripts: HashMap<String, String>,
 
     #[builder(setter(strip_option), default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<Value>,
 
     // NOTE: using object_or_bust here because lodash has `"engines": []` in
     // some versions? This is obviously obnoxious, but we're playing
     // whack-a-mole here.
-    #[serde(default, deserialize_with = "object_or_bust")]
+    #[serde(default, deserialize_with = "object_or_bust", skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub engines: HashMap<String, Range>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub os: Vec<String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub cpu: Vec<String>,
 
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(strip_option), default)]
     pub private: Option<bool>,
 
-    #[serde(default, rename = "publishConfig")]
+    #[serde(default, rename = "publishConfig", skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub publish_config: HashMap<String, Value>,
 
     // Deps
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub dependencies: HashMap<String, String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub dev_dependencies: HashMap<String, String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub optional_dependencies: HashMap<String, String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub peer_dependencies: HashMap<String, String>,
 
-    #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies")]
+    #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies", skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub bundled_dependencies: Vec<String>,
 
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub workspaces: Vec<String>,
 
-    #[serde(flatten, default)]
+    #[serde(flatten, default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub _rest: HashMap<String, Value>,
 }
