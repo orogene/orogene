@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use miette::Diagnostic;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 use wasm_bindgen::prelude::*;
@@ -74,11 +74,13 @@ impl JsNassun {
 
     pub async fn resolve(&self, spec: &str) -> Result<JsPackage> {
         let package = self.0.resolve(spec).await?;
+        let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
         Ok(JsPackage {
             from: JsValue::from_str(&package.from().to_string()),
             name: JsValue::from_str(package.name()),
             resolved: JsValue::from_str(&format!("{}", package.resolved())),
             package,
+            serializer,
         })
     }
 }
@@ -89,6 +91,7 @@ pub struct JsPackage {
     name: JsValue,
     resolved: JsValue,
     package: Package,
+    serializer: serde_wasm_bindgen::Serializer,
 }
 
 #[wasm_bindgen(js_class = Package)]
@@ -109,7 +112,9 @@ impl JsPackage {
     }
 
     pub fn packument(&self) -> Result<JsValue> {
-        serde_wasm_bindgen::to_value(&*self.package.packument())
+        self.package
+            .packument()
+            .serialize(&self.serializer)
             .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))
     }
 }
