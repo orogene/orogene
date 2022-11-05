@@ -12,6 +12,11 @@ use crate::{Nassun, NassunError, NassunOpts, Package};
 
 type Result<T> = std::result::Result<T, JsNassunError>;
 
+#[wasm_bindgen]
+pub async fn metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
+    JsNassun::new(opts)?.resolve(spec).await?.metadata().await
+}
+
 #[wasm_bindgen(js_name = NassunError)]
 #[derive(Error, Debug)]
 #[error("{0}")]
@@ -114,6 +119,15 @@ impl JsPackage {
     pub fn packument(&self) -> Result<JsValue> {
         self.package
             .packument()
+            .serialize(&self.serializer)
+            .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))
+    }
+
+    pub async fn metadata(&self) -> Result<JsValue> {
+        self.package
+            .metadata()
+            .await
+            .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))?
             .serialize(&self.serializer)
             .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))
     }
