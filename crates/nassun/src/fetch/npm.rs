@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::path::Path;
 
 use async_std::sync::Arc;
@@ -51,14 +52,20 @@ impl NpmFetcher {
     }
 }
 
+impl NpmFetcher {
+    fn _name<'a>(&'a self, spec: &'a PackageSpec) -> &'a str {
+        match spec {
+            PackageSpec::Npm { ref name, .. } | PackageSpec::Alias { ref name, .. } => name,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 impl PackageFetcher for NpmFetcher {
     async fn name(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<String> {
-        match spec {
-            PackageSpec::Npm { name, .. } | PackageSpec::Alias { name, .. } => Ok(name.clone()),
-            _ => unreachable!(),
-        }
+        Ok(self._name(spec).to_string())
     }
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
@@ -82,14 +89,18 @@ impl PackageFetcher for NpmFetcher {
             pkg @ PackageSpec::Npm { .. } => pkg,
             _ => unreachable!(),
         };
-        if let PackageSpec::Npm { ref scope, .. } = pkg {
-            let spec_str = format!("{}", pkg);
-            if let Some(packument) = self.packuments.get(&spec_str) {
+        if let PackageSpec::Npm { ref name, ref scope, .. } = pkg {
+            let mut name_str = String::new();
+            if let Some(scope) = scope {
+                write!(name_str, "@{}/", scope).expect("Failed to write to internal string. This is a bug.");
+            }
+            write!(name_str, "{}", name).expect("Failed to write to internal string. This is a bug.");
+            if let Some(packument) = self.packuments.get(&name_str) {
                 return Ok(packument.value().clone());
             }
             let client = self.client.with_registry(self.pick_registry(scope));
-            let packument = Arc::new(client.packument(&spec_str, self.use_corgi).await?);
-            self.packuments.insert(spec_str, packument.clone());
+            let packument = Arc::new(client.packument(&name_str, self.use_corgi).await?);
+            self.packuments.insert(name_str, packument.clone());
             Ok(packument)
         } else {
             unreachable!()
