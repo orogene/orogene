@@ -8,15 +8,15 @@ use oro_package_spec::PackageSpec;
 use crate::error::Result;
 use crate::package::Package;
 
-#[cfg(feature = "dir")]
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use dir::DirFetcher;
-#[cfg(feature = "git")]
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use git::GitFetcher;
 pub(crate) use npm::NpmFetcher;
 
-#[cfg(feature = "dir")]
+#[cfg(not(target_arch = "wasm32"))]
 mod dir;
-#[cfg(feature = "git")]
+#[cfg(not(target_arch = "wasm32"))]
 mod git;
 mod npm;
 

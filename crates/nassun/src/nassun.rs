@@ -8,9 +8,9 @@ use url::Url;
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
 use crate::error::Result;
-#[cfg(feature = "dir")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::fetch::DirFetcher;
-#[cfg(feature = "git")]
+#[cfg(not(target_arch = "wasm32"))]
 use crate::fetch::GitFetcher;
 use crate::fetch::{NpmFetcher, PackageFetcher};
 use crate::package::Package;
@@ -73,9 +73,9 @@ impl NassunOpts {
         Nassun {
             // cache: self.cache,
             resolver: PackageResolver {
-                #[cfg(feature = "wasm")]
+                #[cfg(target_arch = "wasm32")]
                 base_dir: PathBuf::from("."),
-                #[cfg(not(feature = "wasm"))]
+                #[cfg(not(target_arch = "wasm32"))]
                 base_dir: self
                     .base_dir
                     .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
@@ -87,9 +87,9 @@ impl NassunOpts {
                 use_corgi,
                 self.registries,
             )),
-            #[cfg(feature = "dir")]
+            #[cfg(not(target_arch = "wasm32"))]
             dir_fetcher: Arc::new(DirFetcher::new()),
-            #[cfg(feature = "git")]
+            #[cfg(not(target_arch = "wasm32"))]
             git_fetcher: Arc::new(GitFetcher::new(client)),
         }
     }
@@ -101,9 +101,9 @@ pub struct Nassun {
     // cache: Option<PathBuf>,
     resolver: PackageResolver,
     npm_fetcher: Arc<dyn PackageFetcher>,
-    #[cfg(feature = "dir")]
+    #[cfg(not(target_arch = "wasm32"))]
     dir_fetcher: Arc<dyn PackageFetcher>,
-    #[cfg(feature = "git")]
+    #[cfg(not(target_arch = "wasm32"))]
     git_fetcher: Arc<dyn PackageFetcher>,
 }
 
@@ -133,13 +133,13 @@ impl Nassun {
         match *arg {
             Alias { ref spec, .. } => self.pick_fetcher(spec),
             Npm { .. } => self.npm_fetcher.clone(),
-            #[cfg(feature = "dir")]
+            #[cfg(not(target_arch = "wasm32"))]
             Dir { .. } => self.dir_fetcher.clone(),
-            #[cfg(not(feature = "dir"))]
+            #[cfg(target_arch = "wasm32")]
             Dir { .. } => panic!("Directory dependencies are not enabled."),
-            #[cfg(feature = "git")]
+            #[cfg(not(target_arch = "wasm32"))]
             Git(..) => self.git_fetcher.clone(),
-            #[cfg(not(feature = "git"))]
+            #[cfg(target_arch = "wasm32")]
             Git(..) => panic!("Git dependencies are not enabled."),
         }
     }

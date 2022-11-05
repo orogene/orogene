@@ -8,7 +8,7 @@ mod nassun;
 mod package;
 mod resolver;
 mod tarball;
-#[cfg(feature = "wasm")]
+#[cfg(target_arch = "wasm32")]
 mod wasm;
 
 pub use entries::*;
@@ -17,7 +17,7 @@ pub use nassun::*;
 pub use package::*;
 pub use resolver::*;
 pub use tarball::*;
-#[cfg(feature = "wasm")]
+#[cfg(target_arch = "wasm32")]
 pub use wasm::*;
 
 #[cfg(not(target_arch = "wasm32"))]

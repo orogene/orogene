@@ -68,7 +68,7 @@ pub enum NassunError {
         versions: Vec<String>,
     },
 
-    #[cfg(feature = "git")]
+    #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     #[diagnostic(
         code(nassun::which_git_failure),

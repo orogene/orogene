@@ -1,10 +1,10 @@
-#[cfg(feature = "fs")]
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use async_compression::futures::bufread::GzipDecoder;
-#[cfg(feature = "fs")]
+#[cfg(not(target_arch = "wasm32"))]
 use async_std::io;
 use async_std::io::BufReader;
 use async_tar::Archive;
@@ -60,7 +60,7 @@ impl Tarball {
     }
 
     /// Extract this tarball to the given directory.
-    #[cfg(feature = "fs")]
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn extract_to_dir(self, dir: impl AsRef<Path>) -> Result<()> {
         let mut files = self.entries()?;
 
