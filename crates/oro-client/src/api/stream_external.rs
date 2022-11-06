@@ -12,10 +12,7 @@ type Result = std::result::Result<Box<dyn AsyncRead + Unpin + Send + Sync>, OroC
 type Result = std::result::Result<Box<dyn AsyncRead + Unpin>, OroClientError>;
 
 impl OroClient {
-    pub async fn stream_external(
-        &self,
-        url: &Url,
-    ) -> Result {
+    pub async fn stream_external(&self, url: &Url) -> Result {
         Ok(Box::new(
             self.client
                 .get(url.to_string())

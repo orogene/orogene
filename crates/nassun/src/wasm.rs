@@ -175,10 +175,7 @@ impl JsPackage {
                         js_sys::Reflect::set(
                             &obj,
                             &"type".into(),
-                            &header
-                                .entry_type()
-                                .as_byte()
-                                .into(),
+                            &header.entry_type().as_byte().into(),
                         )?;
                         js_sys::Reflect::set(
                             &obj,

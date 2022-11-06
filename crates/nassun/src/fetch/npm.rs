@@ -89,12 +89,19 @@ impl PackageFetcher for NpmFetcher {
             pkg @ PackageSpec::Npm { .. } => pkg,
             _ => unreachable!(),
         };
-        if let PackageSpec::Npm { ref name, ref scope, .. } = pkg {
+        if let PackageSpec::Npm {
+            ref name,
+            ref scope,
+            ..
+        } = pkg
+        {
             let mut name_str = String::new();
             if let Some(scope) = scope {
-                write!(name_str, "@{}/", scope).expect("Failed to write to internal string. This is a bug.");
+                write!(name_str, "@{}/", scope)
+                    .expect("Failed to write to internal string. This is a bug.");
             }
-            write!(name_str, "{}", name).expect("Failed to write to internal string. This is a bug.");
+            write!(name_str, "{}", name)
+                .expect("Failed to write to internal string. This is a bug.");
             if let Some(packument) = self.packuments.get(&name_str) {
                 return Ok(packument.value().clone());
             }

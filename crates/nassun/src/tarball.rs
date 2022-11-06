@@ -11,9 +11,9 @@ use async_tar::Archive;
 use futures::prelude::*;
 use ssri::{Integrity, IntegrityChecker};
 
-use crate::TarballStream;
 use crate::entries::{Entries, Entry};
 use crate::error::{NassunError, Result};
+use crate::TarballStream;
 
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
@@ -21,10 +21,7 @@ pub struct Tarball {
 }
 
 impl Tarball {
-    pub(crate) fn new(
-        reader: TarballStream,
-        integrity: Integrity,
-    ) -> Self {
+    pub(crate) fn new(reader: TarballStream, integrity: Integrity) -> Self {
         Self {
             reader,
             checker: Some(IntegrityChecker::new(integrity)),

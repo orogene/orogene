@@ -187,10 +187,7 @@ impl PackageFetcher for GitFetcher {
             .await
     }
 
-    async fn tarball(
-        &self,
-        _pkg: &crate::Package,
-    ) -> Result<crate::TarballStream> {
+    async fn tarball(&self, _pkg: &crate::Package) -> Result<crate::TarballStream> {
         todo!()
     }
 }

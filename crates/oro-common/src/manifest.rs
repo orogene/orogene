@@ -91,7 +91,11 @@ pub struct Manifest {
     // NOTE: using object_or_bust here because lodash has `"engines": []` in
     // some versions? This is obviously obnoxious, but we're playing
     // whack-a-mole here.
-    #[serde(default, deserialize_with = "object_or_bust", skip_serializing_if = "HashMap::is_empty")]
+    #[serde(
+        default,
+        deserialize_with = "object_or_bust",
+        skip_serializing_if = "HashMap::is_empty"
+    )]
     #[builder(default)]
     pub engines: HashMap<String, Range>,
 
@@ -107,7 +111,11 @@ pub struct Manifest {
     #[builder(setter(strip_option), default)]
     pub private: Option<bool>,
 
-    #[serde(default, rename = "publishConfig", skip_serializing_if = "HashMap::is_empty")]
+    #[serde(
+        default,
+        rename = "publishConfig",
+        skip_serializing_if = "HashMap::is_empty"
+    )]
     #[builder(default)]
     pub publish_config: HashMap<String, Value>,
 
@@ -128,7 +136,12 @@ pub struct Manifest {
     #[builder(default)]
     pub peer_dependencies: HashMap<String, String>,
 
-    #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies", skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        alias = "bundleDependencies",
+        alias = "bundledDependencies",
+        skip_serializing_if = "Vec::is_empty"
+    )]
     #[builder(default)]
     pub bundled_dependencies: Vec<String>,
 
