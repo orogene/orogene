@@ -1,10 +1,10 @@
 [package]
 name = "orogene"
 version = "0.1.0"
-authors = ["Orogene Collaborative Members", "Orogene Public Contributors"]
+authors = ["Orogene Maintainers and Contributors"]
 edition = "2021"
 description = "wip"
-license-file = "LICENSE.md"
+license = "Apache-2.0"
 repository = "https://github.com/orogene/orogene"
 homepage = "https://github.com/orogene/orogene"
 readme = "README.md"

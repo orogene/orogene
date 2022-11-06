@@ -1,10 +1,13 @@
-## License
+Copyright 2020 Orogene Maintainers and Contributors
 
-Licensing decisions are controlled by [Cross-License Collaborative
-Members](MEMBERS.md), as defined in the [cross-licensing
-terms](CROSS_LICENSE.md).
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-All contributions by Members are licensed under [the Parity
-License](LICENSE-PARITY.md). Non-member contributions are licensed under
-[Apache 2.0](LICENSE-APACHE.md).
+     http://www.apache.org/licenses/LICENSE-2.0
 
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
