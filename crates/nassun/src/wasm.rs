@@ -15,6 +15,11 @@ use crate::{Nassun, NassunError, NassunOpts, Package};
 type Result<T> = std::result::Result<T, JsNassunError>;
 
 #[wasm_bindgen]
+pub async fn packument(spec: &str, opts: JsValue) -> Result<JsValue> {
+    JsNassun::new(opts)?.resolve(spec).await?.packument()
+}
+
+#[wasm_bindgen]
 pub async fn metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
     JsNassun::new(opts)?.resolve(spec).await?.metadata().await
 }
