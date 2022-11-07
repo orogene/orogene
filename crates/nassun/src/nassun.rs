@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
 use oro_client::OroClient;
+use oro_common::{Packument, VersionMetadata};
 use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
@@ -15,6 +16,7 @@ use crate::fetch::GitFetcher;
 use crate::fetch::{NpmFetcher, PackageFetcher};
 use crate::package::Package;
 use crate::resolver::PackageResolver;
+use crate::{Entries, Tarball, PackageResolution};
 
 /// Build a new Nassun instance with specified options.
 #[derive(Default)]
@@ -114,9 +116,52 @@ impl Default for Nassun {
 }
 
 impl Nassun {
-    /// Creates a new Nassun instance.
+    /// Creates a new `Nassun` instance with default settings. To configure
+    /// `Nassun`, use [`NassunOpts`].
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Resolves a [`Packument`] for the given package `spec`.
+    ///
+    /// This uses default [`Nassun`] settings and does not cache the result.
+    /// To configure `Nassun`, and/or enable more efficient caching/reuse,
+    /// look at [`Package::packument` instead].
+    pub async fn packument(spec: impl AsRef<str>) -> Result<Arc<Packument>> {
+        Self::new().resolve(spec.as_ref()).await?.packument().await
+    }
+
+    /// Resolves a [`VersionMetadata`] from the given package `spec`, using
+    /// the default resolution algorithm.
+    ///
+    /// This uses default [`Nassun`] settings and does not cache the result.
+    /// To configure `Nassun`, and/or enable more efficient caching/reuse,
+    /// look at [`Package::metadata` instead].
+    pub async fn metadata(spec: impl AsRef<str>) -> Result<VersionMetadata> {
+        Self::new().resolve(spec.as_ref()).await?.metadata().await
+    }
+
+    /// Resolves a [`Tarball`] from the given package `spec`, using the
+    /// default resolution algorithm. This tarball will have its data checked
+    /// if the package metadata fetched includes integrity information.
+    ///
+    /// This uses default [`Nassun`] settings and does not cache the result.
+    /// To configure `Nassun`, and/or enable more efficient caching/reuse,
+    /// look at [`Package::tarball` instead].
+    pub async fn tarball(spec: impl AsRef<str>) -> Result<Tarball> {
+        Self::new().resolve(spec.as_ref()).await?.tarball().await
+    }
+
+    /// Resolves [`Entries`] from the given package `spec`, using the
+    /// default resolution algorithm. The source tarball will have its data
+    /// checked if the package metadata fetched includes integrity
+    /// information.
+    ///
+    /// This uses default [`Nassun`] settings and does not cache the result.
+    /// To configure `Nassun`, and/or enable more efficient caching/reuse,
+    /// look at [`Package::entries` instead].
+    pub async fn entries(spec: impl AsRef<str>) -> Result<Entries> {
+        Self::new().resolve(spec.as_ref()).await?.entries().await
     }
 
     /// Resolve a spec (e.g. `foo@^1.2.3`, `github:foo/bar`, etc), to a
@@ -126,6 +171,20 @@ impl Nassun {
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, &self.resolver.base_dir).await?;
         self.resolver.resolve(name, spec, fetcher).await
+    }
+
+    /// Resolves a package directly from a previously-calculated
+    /// [`PackageResolution`]. This is meant to be a lower-level call that
+    /// expects the caller to have already done any necessary parsing work on
+    /// its arguments.
+    pub async fn resolve_from(
+        &self,
+        name: String,
+        from: PackageSpec,
+        resolved: PackageResolution,
+    ) -> Result<Package> {
+        let fetcher = self.pick_fetcher(&from);
+        Ok(self.resolver.resolve_from(name, from, resolved, fetcher).await)
     }
 
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {

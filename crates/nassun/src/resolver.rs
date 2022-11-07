@@ -38,6 +38,22 @@ pub(crate) struct PackageResolver {
 }
 
 impl PackageResolver {
+    pub(crate) async fn resolve_from(
+        &self,
+        name: String,
+        from: PackageSpec,
+        resolved: PackageResolution,
+        fetcher: Arc<dyn PackageFetcher>,
+    ) -> Package {
+        Package {
+            name,
+            from,
+            resolved,
+            fetcher,
+            base_dir: self.base_dir.clone(),
+        }
+    }
+
     pub(crate) async fn resolve(
         &self,
         name: String,
@@ -51,7 +67,7 @@ impl PackageResolver {
             from: wanted,
             resolved,
             fetcher,
-            packument,
+            base_dir: self.base_dir.clone(),
         })
     }
 

@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::PathBuf;
 
 use async_std::sync::Arc;
 use oro_common::{Packument, VersionMetadata};
@@ -18,7 +19,7 @@ pub struct Package {
     pub(crate) name: String,
     pub(crate) resolved: PackageResolution,
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
-    pub(crate) packument: Arc<Packument>,
+    pub(crate) base_dir: PathBuf,
 }
 
 impl Package {
@@ -38,8 +39,8 @@ impl Package {
     }
 
     /// The full [`Packument`] that this `Package` was resolved from.
-    pub fn packument(&self) -> Arc<Packument> {
-        self.packument.clone()
+    pub async fn packument(&self) -> Result<Arc<Packument>> {
+        self.fetcher.packument(&self.from, &self.base_dir).await
     }
 
     /// The [`VersionMetadata`], aka the manifest, aka roughly the metadata

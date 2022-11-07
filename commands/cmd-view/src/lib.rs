@@ -38,7 +38,7 @@ impl OroCommand for ViewCmd {
             .build()
             .resolve(&self.pkg)
             .await?;
-        let packument = pkg.packument();
+        let packument = pkg.packument().await?;
         let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]
         // Probably the best way to do this is to support doing raw
