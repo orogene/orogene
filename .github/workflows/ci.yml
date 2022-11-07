@@ -11,11 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Install webkit2gtk
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y webkit2gtk-4.0
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -33,16 +28,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        rust: [1.46.0, stable]
+        rust: [1.65.0, stable]
         os: [ubuntu-latest, macOS-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v1
-      - name: Install webkit2gtk (Linux Only)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y webkit2gtk-4.0
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -53,19 +43,41 @@ jobs:
       - name: Clippy
         run: cargo clippy --all -- -D warnings
       - name: Run tests
-        run: cargo test --all --verbose
+        run: cargo test --all --verbose --features fancy
 
-  prettier:
+  miri:
+    name: Miri
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
         with:
-          ref: main
+          profile: minimal
+          toolchain: nightly
+          components: miri,rust-src
+          override: true
+      - name: Run tests with miri
+        env:
+          MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-strict-provenance
+        run: cargo miri test --all --verbose --features fancy
 
-      - name: Prettify code
-        uses: creyD/prettier_action@v2.2
+  minimal_versions:
+    name: Minimal versions check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
         with:
-          prettier_options: antimony/src/*.{js,jsx,ts,tsx,vue,html,css}
-          dry: true
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Run minimal version build
+        run: cargo build -Z minimal-versions --all-features
+
