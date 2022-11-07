@@ -16,7 +16,7 @@ use crate::fetch::GitFetcher;
 use crate::fetch::{NpmFetcher, PackageFetcher};
 use crate::package::Package;
 use crate::resolver::PackageResolver;
-use crate::{Entries, Tarball, PackageResolution};
+use crate::{Entries, PackageResolution, Tarball};
 
 /// Build a new Nassun instance with specified options.
 #[derive(Default)]
@@ -184,7 +184,10 @@ impl Nassun {
         resolved: PackageResolution,
     ) -> Result<Package> {
         let fetcher = self.pick_fetcher(&from);
-        Ok(self.resolver.resolve_from(name, from, resolved, fetcher).await)
+        Ok(self
+            .resolver
+            .resolve_from(name, from, resolved, fetcher)
+            .await)
     }
 
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {

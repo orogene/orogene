@@ -1,19 +1,19 @@
 use futures::AsyncRead;
 pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 
+mod client;
 mod entries;
 mod error;
 mod fetch;
-mod client;
 mod package;
 mod resolver;
 mod tarball;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
+pub use client::*;
 pub use entries::*;
 pub use error::NassunError;
-pub use client::*;
 pub use package::*;
 pub use resolver::*;
 pub use tarball::*;
