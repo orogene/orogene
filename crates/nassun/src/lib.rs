@@ -4,7 +4,7 @@ pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 mod entries;
 mod error;
 mod fetch;
-mod nassun;
+mod client;
 mod package;
 mod resolver;
 mod tarball;
@@ -13,7 +13,7 @@ mod wasm;
 
 pub use entries::*;
 pub use error::NassunError;
-pub use nassun::*;
+pub use client::*;
 pub use package::*;
 pub use resolver::*;
 pub use tarball::*;
