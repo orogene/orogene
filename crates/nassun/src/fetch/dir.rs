@@ -58,11 +58,11 @@ impl DirFetcher {
     }
 
     pub(crate) async fn metadata_from_path(&self, path: &Path) -> Result<VersionMetadata> {
-        self.manifest(path).await?.into_metadata(&path)
+        self.manifest(path).await?.into_metadata(path)
     }
 
     pub(crate) async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
-        Ok(Arc::new(self.manifest(path).await?.into_packument(&path)?))
+        Ok(Arc::new(self.manifest(path).await?.into_packument(path)?))
     }
 }
 
