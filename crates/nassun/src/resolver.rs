@@ -31,6 +31,29 @@ impl Display for PackageResolution {
     }
 }
 
+impl PackageResolution {
+    pub fn satisfies(&self, spec: &PackageSpec) -> Result<bool, NassunError> {
+        use PackageResolution as PR;
+        use PackageSpec as PS;
+        Ok(match (self, spec) {
+            (PR::Npm { version, .. }, PS::Npm { requested, .. }) => {
+                match requested {
+                    Some(VersionSpec::Version(v)) => version == v,
+                    Some(VersionSpec::Range(r)) => r.satisfies(version),
+                    // It's expected that `spec` has previously been resolved at least down to a range.
+                    Some(VersionSpec::Tag(_)) => false,
+                    None => false,
+                }
+            }
+            (PR::Dir { path: pr_path }, PS::Dir { path: ps_path }) => {
+                pr_path == &ps_path.canonicalize()?
+            }
+            (PR::Git(..), PS::Git(..)) => true,
+            _ => false,
+        })
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct PackageResolver {
     pub(crate) default_tag: String,

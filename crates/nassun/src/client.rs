@@ -19,7 +19,7 @@ use crate::resolver::PackageResolver;
 use crate::{Entries, PackageResolution, Tarball};
 
 /// Build a new Nassun instance with specified options.
-#[derive(Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct NassunOpts {
     cache: Option<PathBuf>,
     base_dir: Option<PathBuf>,

@@ -6,10 +6,22 @@ edition = "2021"
 
 [dependencies]
 nassun = { path = "../nassun" }
+oro-common = { path = "../oro-common" }
+oro-package-spec = { path = "../oro-package-spec" }
 
+async-std = { workspace = true }
 futures = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
-petgraph = "0.5.1"
+petgraph = { version = "0.6.2", default-features = false, features = ["stable_graph"] }
 thiserror = { workspace = true }
+unicase = "2.6.0"
 url = { workspace = true }
+
+[dev-dependencies]
+async-std = { workspace = true, features = ["attributes", "tokio1"] }
+maplit = { workspace = true }
+miette = { workspace = true, features = ["fancy"] }
+pretty_assertions = { workspace = true }
+serde_json = { workspace = true }
+wiremock = { workspace = true }
