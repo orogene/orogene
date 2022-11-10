@@ -15,6 +15,7 @@ kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
 petgraph = { version = "0.6.2", default-features = false, features = ["stable_graph"] }
+ssri = { workspace = true }
 thiserror = { workspace = true }
 unicase = "2.6.0"
 url = { workspace = true }

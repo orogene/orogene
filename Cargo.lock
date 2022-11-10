@@ -1608,6 +1608,7 @@ dependencies = [
  "petgraph",
  "pretty_assertions",
  "serde_json",
+ "ssri",
  "thiserror",
  "unicase",
  "url",
