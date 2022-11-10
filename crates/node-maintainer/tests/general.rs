@@ -34,6 +34,7 @@ async fn setup_packuments(mock_server: &MockServer) {
                         "b": "^2.0.0"
                     },
                     "dist": {
+                        "integrity": "sha512-deadbeef",
                         "tarball": "https://example.com/a-1.0.0.tgz"
                     }
                 }
@@ -56,6 +57,7 @@ async fn setup_packuments(mock_server: &MockServer) {
                         "c": "^3.0.0"
                     },
                     "dist": {
+                        "integrity": "sha512-badc0ffee",
                         "tarball": "https://example.com/b-2.0.0.tgz"
                     }
                 }
@@ -75,6 +77,7 @@ async fn setup_packuments(mock_server: &MockServer) {
                     "name": "c",
                     "version": "3.0.0",
                     "dist": {
+                        "integrity": "sha512-bad1dea",
                         "tarball": "https://example.com/c-3.0.0.tgz"
                     }
                 }

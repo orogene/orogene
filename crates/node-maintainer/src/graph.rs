@@ -49,7 +49,7 @@ impl Graph {
                 pathnames.push_front(self.inner[parent_idx].package.name());
                 parent = self.inner[parent_idx].parent;
             }
-            KdlNode::new("dep")
+            KdlNode::new("pkg")
         };
         for name in pathnames.drain(..) {
             kdl_node.push(name);
@@ -71,6 +71,7 @@ impl Graph {
             {
                 let mut inode = KdlNode::new("integrity");
                 inode.push(i.to_string());
+                kdl_node.ensure_children().nodes_mut().push(inode);
             }
         }
         if !node.dependencies.is_empty() {
@@ -120,12 +121,7 @@ impl Graph {
     pub fn to_kdl(&self) -> KdlDocument {
         let mut doc = KdlDocument::new();
         doc.nodes_mut().push("lockfile-version 1".parse().unwrap());
-        doc.nodes_mut().push(KdlNode::new("packages"));
-        let packages_node = doc.get_mut("packages").unwrap();
-        packages_node
-            .ensure_children()
-            .nodes_mut()
-            .push(self.node_kdl(self.root, true));
+        doc.nodes_mut().push(self.node_kdl(self.root, true));
         let mut other_nodes = self
             .inner
             .node_indices()
@@ -133,10 +129,7 @@ impl Graph {
             .map(|node| self.node_kdl(node, false))
             .collect::<Vec<_>>();
         other_nodes.sort_by_key(|n1| n1.name().to_string());
-        packages_node
-            .ensure_children()
-            .nodes_mut()
-            .append(&mut other_nodes);
+        doc.nodes_mut().append(&mut other_nodes);
         doc.fmt();
         doc
     }
