@@ -80,7 +80,7 @@ impl PackageFetcher for DirFetcher {
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         let path = match pkg.resolved() {
-            PackageResolution::Dir { path } => path,
+            PackageResolution::Dir { path, .. } => path,
             _ => panic!("There shouldn't be anything but Dirs here"),
         };
         self.metadata_from_path(path).await

@@ -160,7 +160,7 @@ impl PackageFetcher for GitFetcher {
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         use PackageResolution::*;
         let info = match pkg.resolved() {
-            Git(info) => info,
+            Git { info, .. } => info,
             _ => panic!("Only git specs allowed."),
         };
         let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use miette::Diagnostic;
 use node_semver::Version;
+use oro_common::VersionMetadata;
 use oro_package_spec::PackageSpec;
 use thiserror::Error;
 
@@ -55,6 +56,14 @@ pub enum NassunError {
     #[error(transparent)]
     #[diagnostic(code(nassun::bad_url))]
     UrlError(#[from] url::ParseError),
+
+    #[error(transparent)]
+    #[diagnostic(code(nassun::integrity_parse_error))]
+    IntegrityError(#[from] ssri::Error),
+
+    #[error("Package metadata for {0} is missing a package tarball URL.")]
+    #[diagnostic(code(nassun::no_tarball))]
+    NoTarball(String, PackageSpec, Box<VersionMetadata>),
 
     #[error("No matching `{name}` version found for spec `{spec}`.")]
     #[diagnostic(

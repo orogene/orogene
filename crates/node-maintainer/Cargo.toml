@@ -11,6 +11,7 @@ oro-package-spec = { path = "../oro-package-spec" }
 
 async-std = { workspace = true }
 futures = { workspace = true }
+kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
 petgraph = { version = "0.6.2", default-features = false, features = ["stable_graph"] }

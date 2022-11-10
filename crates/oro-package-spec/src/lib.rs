@@ -55,6 +55,26 @@ impl PackageSpec {
             _ => self,
         }
     }
+
+    pub fn requested(&self) -> String {
+        let mut f = String::new();
+        use PackageSpec::*;
+        match self {
+            Dir { path } => format!("{}", path.display()),
+            Git(info) => format!("{}", info),
+            Npm { ref requested, .. } => requested
+                .as_ref()
+                .map(|r| r.to_string())
+                .unwrap_or_else(|| "*".to_string()),
+            Alias { ref spec, .. } => {
+                format!(
+                    "{}{}",
+                    if let Npm { .. } = **spec { "npm:" } else { "" },
+                    spec
+                )
+            }
+        }
+    }
 }
 
 impl FromStr for PackageSpec {
@@ -81,7 +101,7 @@ impl fmt::Display for PackageSpec {
                 }
                 write!(f, "{}", name)?;
                 if let Some(req) = requested {
-                    write!(f, "{}", req)?;
+                    write!(f, "@{}", req)?;
                 }
                 Ok(())
             }

@@ -1383,6 +1383,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kdl"
+version = "4.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "062c875482ccb676fd40c804a40e3824d4464c18c364547456d1c8e8e951ae47"
+dependencies = [
+ "miette",
+ "nom",
+ "thiserror",
+]
+
+[[package]]
 name = "kv-log-macro"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1587,6 +1598,7 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "futures 0.3.25",
+ "kdl",
  "maplit",
  "miette",
  "nassun",

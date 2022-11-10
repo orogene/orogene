@@ -1,11 +1,11 @@
 use oro_package_spec::PackageSpec;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DepType {
     Prod,
     Dev,
-    Opt,
     Peer,
+    Opt,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,6 +16,9 @@ pub struct Edge {
 
 impl Edge {
     pub(crate) fn new(requested: PackageSpec, dep_type: DepType) -> Self {
-        Self { requested, dep_type }
+        Self {
+            requested,
+            dep_type,
+        }
     }
 }

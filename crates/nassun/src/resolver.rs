@@ -3,21 +3,28 @@ use std::{fmt::Display, path::PathBuf, sync::Arc};
 use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_common::Packument;
 use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
+use ssri::Integrity;
 use url::Url;
 
 use crate::{fetch::PackageFetcher, package::Package, NassunError};
 
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum PackageResolution {
     Npm {
+        name: String,
         version: SemVerVersion,
+        integrity: Option<Integrity>,
         tarball: Url,
     },
     Dir {
+        name: String,
         path: PathBuf,
     },
-    Git(GitInfo),
+    Git {
+        name: String,
+        info: GitInfo,
+    },
 }
 
 impl Display for PackageResolution {
@@ -25,8 +32,24 @@ impl Display for PackageResolution {
         use PackageResolution::*;
         match self {
             Npm { tarball, .. } => write!(f, "{}", tarball),
-            Dir { path } => write!(f, "{}", path.to_string_lossy()),
-            Git(info) => write!(f, "{}", info),
+            Dir { path, .. } => write!(f, "{}", path.to_string_lossy()),
+            Git { info, .. } => write!(f, "{}", info),
+        }
+    }
+}
+
+impl std::fmt::Debug for PackageResolution {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use PackageResolution::*;
+        match self {
+            Npm {
+                tarball,
+                name,
+                version,
+                ..
+            } => write!(f, "{name}@{version} ({tarball})"),
+            Dir { path, name } => write!(f, "{name}@{}", path.to_string_lossy()),
+            Git { name, info } => write!(f, "{name}@{info}"),
         }
     }
 }
@@ -45,10 +68,11 @@ impl PackageResolution {
                     None => false,
                 }
             }
-            (PR::Dir { path: pr_path }, PS::Dir { path: ps_path }) => {
+            (PR::Dir { path: pr_path, .. }, PS::Dir { path: ps_path }) => {
                 pr_path == &ps_path.canonicalize()?
             }
-            (PR::Git(..), PS::Git(..)) => true,
+            // TODO: Implement this.
+            (PR::Git { .. }, PS::Git(..)) => false,
             _ => false,
         })
     }
@@ -108,12 +132,16 @@ impl PackageResolver {
 
         if let Dir { ref path } = spec {
             return Ok(PackageResolution::Dir {
+                name: name.into(),
                 path: self.base_dir.join(path).canonicalize()?,
             });
         }
 
         if let Git(info) = spec {
-            return Ok(PackageResolution::Git(info.clone()));
+            return Ok(PackageResolution::Git {
+                name: name.into(),
+                info: info.clone(),
+            });
         }
 
         if packument.versions.is_empty() {
@@ -189,8 +217,19 @@ impl PackageResolver {
 
         target
             .and_then(|v| packument.versions.get(v))
+            .ok_or_else(|| NassunError::NoVersion {
+                name: name.into(),
+                spec: spec.clone(),
+                versions: packument.versions.keys().map(|k| k.to_string()).collect(),
+            })
             .and_then(|v| {
-                Some(PackageResolution::Npm {
+                let integrity = match v.dist.integrity.as_ref().map(|i| i.parse::<Integrity>()) {
+                    Some(Ok(i)) => Some(i),
+                    Some(Err(e)) => return Err(NassunError::IntegrityError(e)),
+                    None => None,
+                };
+                Ok(PackageResolution::Npm {
+                    name: name.into(),
                     version: v
                         .manifest
                         .version
@@ -199,14 +238,16 @@ impl PackageResolver {
                     tarball: if let Some(tarball) = &v.dist.tarball {
                         tarball.clone()
                     } else {
-                        return None;
+                        // TODO: This ends up as a very confusing error
+                        // message. We should spit out a custom one here.
+                        return Err(NassunError::NoTarball(
+                            name.into(),
+                            wanted.clone(),
+                            Box::new(v.clone()),
+                        ));
                     },
+                    integrity,
                 })
-            })
-            .ok_or_else(|| NassunError::NoVersion {
-                name: name.into(),
-                spec: spec.clone(),
-                versions: packument.versions.keys().map(|k| k.to_string()).collect(),
             })
     }
 }

@@ -13,9 +13,10 @@ async fn basic_flatten() -> Result<()> {
     setup_packuments(&mock_server).await;
     let nm = NodeMaintainer::builder()
         .registry(mock_server.uri().parse().into_diagnostic()?)
-        .resolve("a")
+        .resolve("a@^1")
         .await?;
 
+    nm.write_lockfile(".").await?;
     println!("{}", nm.render());
 
     Ok(())
@@ -30,7 +31,7 @@ async fn setup_packuments(mock_server: &MockServer) {
                     "name": "a",
                     "version": "1.0.0",
                     "dependencies": {
-                        "b": "2.0.0"
+                        "b": "^2.0.0"
                     },
                     "dist": {
                         "tarball": "https://example.com/a-1.0.0.tgz"
@@ -52,7 +53,7 @@ async fn setup_packuments(mock_server: &MockServer) {
                     "name": "b",
                     "version": "2.0.0",
                     "dependencies": {
-                        "c": "3.0.0"
+                        "c": "^3.0.0"
                     },
                     "dist": {
                         "tarball": "https://example.com/b-2.0.0.tgz"

@@ -44,7 +44,10 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub async fn resolve(self, root_spec: impl AsRef<str>) -> Result<NodeMaintainer, NodeMaintainerError> {
+    pub async fn resolve(
+        self,
+        root_spec: impl AsRef<str>,
+    ) -> Result<NodeMaintainer, NodeMaintainerError> {
         let nassun = self.nassun_opts.build();
         let package = nassun.resolve(root_spec).await?;
         let mut nm = NodeMaintainer {
@@ -73,6 +76,15 @@ impl NodeMaintainer {
         Ok(())
     }
 
+    pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+        fs::write(
+            path.as_ref().join("package-lock.kdl"),
+            self.graph.to_kdl().to_string(),
+        )
+        .await?;
+        Ok(())
+    }
+
     pub fn render(&self) -> String {
         self.graph.render()
     }
@@ -93,7 +105,7 @@ impl NodeMaintainer {
                 // at root)
                 let name = UniCase::new(name.clone());
                 if !names.contains(&name) {
-                    let requested = spec.parse()?;
+                    let requested = format!("{name}@{spec}").parse()?;
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
                     // make a new edge and move on.
@@ -109,7 +121,7 @@ impl NodeMaintainer {
                                     satisfier_idx,
                                     Edge::new(requested, dep_type.clone()),
                                 );
-                                self.graph[satisfier_idx]
+                                self.graph[node_idx]
                                     .dependencies
                                     .insert(name.clone(), edge_idx);
                                 false
@@ -167,7 +179,10 @@ impl NodeMaintainer {
         let mut parent_idx = Some(dependent_idx);
         let mut target_idx = dependent_idx;
         while let Some(curr_target_idx) = parent_idx {
-            if graph[curr_target_idx].dependencies.contains_key(&child_name) {
+            if graph[curr_target_idx]
+                .dependencies
+                .contains_key(&child_name)
+            {
                 // We've run into a conflict, so we can't place it in this
                 // parent. We previously checked if this conflict would have
                 // satisfied our request, so there's no need to worry about
@@ -187,9 +202,11 @@ impl NodeMaintainer {
             child_node.parent = Some(target_idx);
         }
         {
+            let dependent = &mut graph[dependent_idx];
+            dependent.dependencies.insert(child_name.clone(), edge_idx);
+        }
+        {
             let node = &mut graph[target_idx];
-            node.dependencies
-                .insert(child_name.clone(), edge_idx);
             node.children.insert(child_name, child_idx);
         }
         child_idx

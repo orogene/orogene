@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use nassun::Package;
-use petgraph::stable_graph::{NodeIndex, EdgeIndex};
+use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;
 
 use crate::Graph;
