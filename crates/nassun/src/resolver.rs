@@ -256,5 +256,5 @@ fn max_satisfying<'a>(
     versions: impl Iterator<Item = &'a SemVerVersion>,
     range: &SemVerRange,
 ) -> Option<&'a SemVerVersion> {
-    versions.filter(|v| range.satisfies(*v)).max()
+    versions.filter(|v| range.satisfies(v)).max()
 }

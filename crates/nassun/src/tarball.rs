@@ -82,7 +82,7 @@ impl Tarball {
                 let takeme = path.clone();
 
                 async_std::task::spawn_blocking(move || {
-                    mkdirp::mkdirp(&takeme.parent().unwrap()).map_err(|e| {
+                    mkdirp::mkdirp(takeme.parent().unwrap()).map_err(|e| {
                         NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
                     })
                 })
