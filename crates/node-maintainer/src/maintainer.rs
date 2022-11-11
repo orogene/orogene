@@ -77,11 +77,7 @@ impl NodeMaintainer {
     }
 
     pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(
-            path.as_ref(),
-            self.graph.to_kdl().to_string(),
-        )
-        .await?;
+        fs::write(path.as_ref(), self.graph.to_kdl().to_string()).await?;
         Ok(())
     }
 
