@@ -72,17 +72,25 @@ impl NodeMaintainer {
     }
 
     pub async fn render_to_file(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(path.as_ref().join("graph.dot"), self.graph.render()).await?;
+        fs::write(path.as_ref(), self.graph.render()).await?;
         Ok(())
     }
 
     pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         fs::write(
-            path.as_ref().join("package-lock.kdl"),
+            path.as_ref(),
             self.graph.to_kdl().to_string(),
         )
         .await?;
         Ok(())
+    }
+
+    pub fn to_resolved_tree(&self) -> crate::ResolvedTree {
+        self.graph.to_resolved_tree()
+    }
+
+    pub fn to_kdl(&self) -> kdl::KdlDocument {
+        self.graph.to_kdl()
     }
 
     pub fn render(&self) -> String {
@@ -179,10 +187,7 @@ impl NodeMaintainer {
         let mut parent_idx = Some(dependent_idx);
         let mut target_idx = dependent_idx;
         while let Some(curr_target_idx) = parent_idx {
-            if graph[curr_target_idx]
-                .dependencies
-                .contains_key(&child_name)
-            {
+            if graph[curr_target_idx].children.contains_key(&child_name) {
                 // We've run into a conflict, so we can't place it in this
                 // parent. We previously checked if this conflict would have
                 // satisfied our request, so there's no need to worry about

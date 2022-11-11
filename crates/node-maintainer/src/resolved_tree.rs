@@ -9,14 +9,14 @@ use unicase::UniCase;
 
 use crate::DepType;
 
-#[derive(Debug, Clone)]
-pub struct Lockfile {
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedTree {
     pub version: u64,
-    pub root: Pkg,
-    pub packages: Vec<Pkg>,
+    pub root: PackageNode,
+    pub packages: Vec<PackageNode>,
 }
 
-impl Lockfile {
+impl ResolvedTree {
     pub fn to_kdl(&self) -> KdlDocument {
         let mut doc = KdlDocument::new();
         doc.set_leading(
@@ -34,8 +34,8 @@ impl Lockfile {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Pkg {
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct PackageNode {
     pub name: UniCase<String>,
     pub is_root: bool,
     pub path: Vec<UniCase<String>>,
@@ -48,7 +48,7 @@ pub struct Pkg {
     pub optional_dependencies: HashMap<UniCase<String>, PackageSpec>,
 }
 
-impl Pkg {
+impl PackageNode {
     fn to_kdl(&self) -> KdlNode {
         let mut kdl_node = if self.is_root {
             KdlNode::new("root")
