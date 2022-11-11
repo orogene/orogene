@@ -57,7 +57,6 @@ impl PackageSpec {
     }
 
     pub fn requested(&self) -> String {
-        let mut f = String::new();
         use PackageSpec::*;
         match self {
             Dir { path } => format!("{}", path.display()),
