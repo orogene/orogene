@@ -7,7 +7,7 @@ use kdl::KdlDocument;
 use nassun::PackageResolution;
 use petgraph::{
     dot::Dot,
-    stable_graph::{NodeIndex, StableGraph},
+    stable_graph::{NodeIndex, StableGraph, EdgeIndex},
 };
 use unicase::UniCase;
 
@@ -29,6 +29,20 @@ impl Index<NodeIndex> for Graph {
 
 impl IndexMut<NodeIndex> for Graph {
     fn index_mut(&mut self, index: NodeIndex) -> &mut Self::Output {
+        &mut self.inner[index]
+    }
+}
+
+impl Index<EdgeIndex> for Graph {
+    type Output = Edge;
+
+    fn index(&self, index: EdgeIndex) -> &Self::Output {
+        &self.inner[index]
+    }
+}
+
+impl IndexMut<EdgeIndex> for Graph {
+    fn index_mut(&mut self, index: EdgeIndex) -> &mut Self::Output {
         &mut self.inner[index]
     }
 }

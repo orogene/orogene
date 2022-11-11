@@ -154,7 +154,7 @@ impl NodeMaintainer {
             // added all those lookups to. Next items will be in whatever
             // order resolves first.
             while let Some((package, dep_type)) = packages.next().await {
-                q.push_back(Self::add_child(
+                q.push_back(Self::place_child(
                     &mut self.graph,
                     node_idx,
                     package?,
@@ -165,7 +165,7 @@ impl NodeMaintainer {
         Ok(())
     }
 
-    fn add_child(
+    fn place_child(
         graph: &mut Graph,
         dependent_idx: NodeIndex,
         package: Package,
@@ -174,12 +174,20 @@ impl NodeMaintainer {
         let child_name = UniCase::new(package.name().to_string());
         let child_node = Node::new(package);
         let child_idx = graph.inner.add_node(child_node);
+        // We needed to generate the node index before setting it in the node,
+        // so we do that now.
+        graph[child_idx].idx = child_idx;
+
+        // Edges represent the logical dependency relationship (not the
+        // hierarchy location).
         let edge_idx = graph.inner.add_edge(
             dependent_idx,
             child_idx,
             Edge::new(graph[child_idx].package.from().clone(), dep_type),
         );
-        // Now we calculate the highest location that we can place this node in.
+
+        // Now we calculate the highest hierarchy location that we can place
+        // this node in.
         let mut parent_idx = Some(dependent_idx);
         let mut target_idx = dependent_idx;
         while let Some(curr_target_idx) = parent_idx {
@@ -189,24 +197,77 @@ impl NodeMaintainer {
                 // satisfied our request, so there's no need to worry about
                 // that at this point.
                 break;
-            } else {
-                // No conflict yet. Let's try to go higher!
-                target_idx = curr_target_idx;
-                parent_idx = graph[curr_target_idx].parent;
             }
+
+            // TODO: this is wrong, it doesn't take into account trees like this:
+            //
+            // - A1
+            // - B
+            //   +- C
+            //      +- D (dep on A1)
+            //   +- F (dep on A2)
+            //
+            // In this case, when trying to place A2, we look at our parent
+            // (B), and see that it doesn't depend on A at all, so we look one
+            // more up and notice the conflict with A1. So, we place the
+            // dependency inside B:
+            //
+            // - A1
+            // - B
+            //   +- C
+            //      +- D (dep on A1)
+            //   +- F (dep on A2)
+            //   +- A2
+            //
+            //
+            // But this is wrong, because now D will resolve A to A2 instead
+            // of A1! NPM Classic got around this by placing "phantom"
+            // dependency crumbs along the way whenever it "bubbled up"
+            // dependencies in the tree.
+            //
+            // I'd like to be able to pull this off without needing those
+            // phantom deps. I don't think any of the other resolvers do it?
+            if let Some(parent_idx) = graph[curr_target_idx].parent {
+                // Check the current target's parent to see if any of _its_
+                // currently-placed dependencies would be shadowed by us
+                // placing our new node as a sibling or below it.
+                if let Some(edge) = graph[parent_idx].dependencies.get(&child_name) {
+                    if graph
+                        .inner
+                        .edge_endpoints(*edge)
+                        .map(|(from, _)| {
+                            graph[from].depth(graph) >= graph[curr_target_idx].depth(graph)
+                        })
+                        .expect("edge missing nodes?")
+                    {
+                        // We've placed a dependency in an ancestor that would
+                        // be shadowed by our placement, so we can't place it
+                        // at this level. Stop bubbling up.
+                        break;
+                    }
+                }
+            }
+
+            // No conflict yet. Let's try to go higher!
+            target_idx = curr_target_idx;
+            parent_idx = graph[curr_target_idx].parent;
         }
 
         // Finally, we put everything in its place.
         {
             let mut child_node = &mut graph[child_idx];
-            child_node.idx = child_idx;
+            // The parent is the _hierarchy_ location, so we set its parent
+            // accordingly.
             child_node.parent = Some(target_idx);
         }
         {
+            // Now we set backlinks: first, the dependent node needs to point
+            // to the child, wherever it is in the graph.
             let dependent = &mut graph[dependent_idx];
             dependent.dependencies.insert(child_name.clone(), edge_idx);
         }
         {
+            // Finally, we add the backlink from the parent node to the child.
             let node = &mut graph[target_idx];
             node.children.insert(child_name, child_idx);
         }

@@ -4,6 +4,8 @@ use nassun::Package;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;
 
+use crate::Graph;
+
 #[derive(Debug)]
 pub struct Node {
     pub(crate) idx: NodeIndex,
@@ -26,13 +28,13 @@ impl Node {
         }
     }
 
-    // pub(crate) fn depth(&self, graph: &Graph) -> usize {
-    //     let mut depth = 0;
-    //     let mut current = self.parent;
-    //     while let Some(idx) = current {
-    //         depth += 1;
-    //         current = graph.inner[idx].parent;
-    //     }
-    //     depth
-    // }
+    pub(crate) fn depth(&self, graph: &Graph) -> usize {
+        let mut depth = 0;
+        let mut current = self.parent;
+        while let Some(idx) = current {
+            depth += 1;
+            current = graph.inner[idx].parent;
+        }
+        depth
+    }
 }
