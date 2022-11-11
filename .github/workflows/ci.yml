@@ -28,7 +28,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        rust: [1.65.0, stable]
+        # TODO: Clippy has a fatal bug in 1.65.0/stable, so commenting this out for
+        # now. Bring it back when 1.66 or 1.67 become stable.
+        # rust: [1.65.0, stable]
+        rust: [nightly]
         os: [ubuntu-latest, macOS-latest, windows-latest]
 
     steps:
