@@ -6,8 +6,9 @@ use node_semver::Version;
 use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 use unicase::UniCase;
+use url::Url;
 
-use crate::DepType;
+use crate::{DepType, NodeMaintainerError};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedTree {
@@ -32,6 +33,26 @@ impl ResolvedTree {
         doc.fmt();
         doc
     }
+
+    pub fn from_kdl(kdl: &str) -> Result<Self, NodeMaintainerError> {
+        let kdl: KdlDocument = kdl.parse()?;
+        Ok(Self {
+            version: kdl
+                .get_arg("lockfile-version")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(1) as u64,
+            root: kdl
+                .get("root")
+                .ok_or_else(|| NodeMaintainerError::MissingRoot(kdl.clone()))
+                .and_then(|node| PackageNode::from_kdl(node, true))?,
+            packages: kdl
+                .nodes()
+                .iter()
+                .filter(|node| node.name().to_string() == *"pkg")
+                .map(|node| PackageNode::from_kdl(node, false))
+                .collect::<Result<Vec<PackageNode>, NodeMaintainerError>>()?,
+        })
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -49,6 +70,94 @@ pub struct PackageNode {
 }
 
 impl PackageNode {
+    fn from_kdl(node: &KdlNode, is_root: bool) -> Result<Self, NodeMaintainerError> {
+        let children = node.children().cloned().unwrap_or_else(KdlDocument::new);
+        let path = node
+            .entries()
+            .iter()
+            .filter(|e| e.name().is_none() && e.value().is_base10())
+            .map(|e| UniCase::new(e.value().to_string()))
+            .collect::<Vec<_>>();
+        let name = path
+            .last()
+            .cloned()
+            .ok_or_else(|| NodeMaintainerError::MissingName(node.clone()))?;
+        let integrity = children
+            .get_arg("integrity")
+            .map(|i| i.to_string().parse())
+            .transpose()?;
+        let version = children
+            .get_arg("version")
+            .map(|val| {
+                val.to_string()
+                    .parse()
+                    .map_err(NodeMaintainerError::SemverParseError)
+            })
+            .transpose()?;
+        let resolved = children
+            .get_arg("resolved")
+            .map(
+                |resolved| -> Result<PackageResolution, NodeMaintainerError> {
+                    let url: Url = resolved.to_string().parse()?;
+                    let version = version
+                        .clone()
+                        .ok_or_else(|| NodeMaintainerError::MissingVersion(node.clone()))?;
+                    match url.scheme() {
+                        // TODO: This will also have to cover plain URL deps,
+                        // when Nassun supports them.
+                        "http" | "https" => Ok(PackageResolution::Npm {
+                            name: name.to_string(),
+                            version,
+                            tarball: url,
+                            integrity: integrity.clone(),
+                        }),
+                        scheme => Err(NodeMaintainerError::UnsupportedScheme(scheme.into())),
+                    }
+                },
+            )
+            .transpose()?;
+        Ok(Self {
+            name,
+            is_root,
+            path,
+            integrity,
+            resolved,
+            version,
+            dependencies: Self::from_kdl_deps(&children, &DepType::Prod)?,
+            dev_dependencies: Self::from_kdl_deps(&children, &DepType::Dev)?,
+            optional_dependencies: Self::from_kdl_deps(&children, &DepType::Opt)?,
+            peer_dependencies: Self::from_kdl_deps(&children, &DepType::Peer)?,
+        })
+    }
+
+    fn from_kdl_deps(
+        children: &KdlDocument,
+        dep_type: &DepType,
+    ) -> Result<HashMap<UniCase<String>, PackageSpec>, NodeMaintainerError> {
+        use DepType::*;
+        // TODO: Move this to a central location, like Display for DepType itself.
+        let type_name = match dep_type {
+            Prod => "dependencies",
+            Dev => "dev-dependencies",
+            Peer => "peer-dependencies",
+            Opt => "optional-dependencies",
+        };
+        let mut deps = HashMap::new();
+        if let Some(node) = children.get(type_name) {
+            if let Some(children) = node.children() {
+                for dep in children.nodes() {
+                    let name = UniCase::new(dep.name().to_string());
+                    let spec = dep
+                        .get(0)
+                        .map(|spec| spec.to_string())
+                        .unwrap_or_else(|| "*".to_string());
+                    deps.insert(name, spec.parse()?);
+                }
+            }
+        }
+        Ok(deps)
+    }
+
     fn to_kdl(&self) -> KdlNode {
         let mut kdl_node = if self.is_root {
             KdlNode::new("root")
@@ -83,30 +192,30 @@ impl PackageNode {
             kdl_node
                 .ensure_children()
                 .nodes_mut()
-                .push(self.kdl_deps(&DepType::Prod, &self.dependencies));
+                .push(self.to_kdl_deps(&DepType::Prod, &self.dependencies));
         }
         if !self.dev_dependencies.is_empty() {
             kdl_node
                 .ensure_children()
                 .nodes_mut()
-                .push(self.kdl_deps(&DepType::Dev, &self.dev_dependencies));
+                .push(self.to_kdl_deps(&DepType::Dev, &self.dev_dependencies));
         }
         if !self.peer_dependencies.is_empty() {
             kdl_node
                 .ensure_children()
                 .nodes_mut()
-                .push(self.kdl_deps(&DepType::Peer, &self.peer_dependencies));
+                .push(self.to_kdl_deps(&DepType::Peer, &self.peer_dependencies));
         }
         if !self.optional_dependencies.is_empty() {
             kdl_node
                 .ensure_children()
                 .nodes_mut()
-                .push(self.kdl_deps(&DepType::Opt, &self.optional_dependencies));
+                .push(self.to_kdl_deps(&DepType::Opt, &self.optional_dependencies));
         }
         kdl_node
     }
 
-    fn kdl_deps(
+    fn to_kdl_deps(
         &self,
         dep_type: &DepType,
         deps: &HashMap<UniCase<String>, PackageSpec>,
@@ -114,9 +223,9 @@ impl PackageNode {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
-            Dev => "devDependencies",
-            Peer => "peerDependencies",
-            Opt => "optionalDependencies",
+            Dev => "dev-dependencies",
+            Peer => "peer-dependencies",
+            Opt => "optional-dependencies",
         };
         let mut deps_node = KdlNode::new(type_name);
         for (name, requested) in deps {

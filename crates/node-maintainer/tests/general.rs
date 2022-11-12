@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use kdl::KdlDocument;
 use maplit::hashmap;
 use miette::{IntoDiagnostic, Result};
 use nassun::PackageResolution;
@@ -13,19 +16,40 @@ use wiremock::{
 #[async_std::test]
 async fn basic_flatten() -> Result<()> {
     let mock_server = MockServer::start().await;
-    setup_packuments(&mock_server).await;
+    let mock_data = r#"
+    a {
+        version "1.0.0"
+        dependencies {
+            b "^2.0.0"
+        }
+    }
+    b {
+        version "2.0.0"
+        dependencies {
+            c "^3.0.0"
+        }
+    }
+    c {
+        version "3.0.0"
+        dependencies {
+            d "^4.0.0"
+        }
+    }
+    "#;
+    mocks_from_kdl(&mock_server, mock_data.parse()?).await;
     let nm = NodeMaintainer::builder()
         .registry(mock_server.uri().parse().into_diagnostic()?)
-        .resolve("b@^2")
+        .resolve("a@^1")
         .await?;
 
-    let expected = ResolvedTree {
-        version: 1,
-        root: pkg("b", "2", true, vec!["b".into()])?,
-        packages: vec![pkg("c", "3", false, vec!["c".into()])?],
-    };
+    nm.write_lockfile("package-lock.kdl").await?;
+    // let expected = ResolvedTree {
+    //     version: 1,
+    //     root: pkg("b", "2", true, vec!["b".into()])?,
+    //     packages: vec![pkg("c", "3", false, vec!["c".into()])?],
+    // };
 
-    assert_eq!(expected, nm.to_resolved_tree());
+    // assert_eq!(expected, nm.to_resolved_tree().to_kdl().to_string());
     Ok(())
 }
 
@@ -51,6 +75,50 @@ async fn nesting_simple_conflict() -> Result<()> {
 
     assert_eq!(expected, nm.to_resolved_tree());
     Ok(())
+}
+
+async fn mocks_from_kdl(mock_server: &MockServer, doc: KdlDocument) {
+    let mut packuments = HashMap::new();
+    for node in doc.nodes() {
+        let name = node.name().to_string();
+        let children = node.children().unwrap();
+        let version = children.get_arg("version").unwrap().to_string();
+        let dependencies = children.get("dependencies").map(|deps| {
+            let dep_kids = deps.children().unwrap();
+            let mut deps = json!({});
+            for dep in dep_kids.nodes() {
+                deps[dep.name().to_string()] = json!(dep.get(0).unwrap().to_string());
+            }
+            deps
+        });
+        let packument = packuments.entry(name.clone()).or_insert_with(|| {
+            json!({
+                "versions": {},
+                "dist-tags": {}
+            })
+        });
+        packument["versions"][version.clone()] = json!({
+            "name": name.clone(),
+            "version": version.clone(),
+            "dist": {
+                "tarball": format!("https://example.com/{}-{}.tgz", name, version),
+                "integrity": "sha512-deadbeef"
+            }
+        });
+        if let Some(deps) = dependencies {
+            packument["versions"][version.clone()]["dependencies"] = deps;
+        }
+        // Last version gets "latest"
+        packument["dist-tags"]["latest"] = json!(version);
+    }
+
+    for (name, packument) in packuments {
+        Mock::given(method("GET"))
+            .and(path(name))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&packument))
+            .mount(mock_server)
+            .await;
+    }
 }
 
 fn pkg(
