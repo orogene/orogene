@@ -16,6 +16,25 @@ async fn basic_flatten() -> Result<()> {
     setup_packuments(&mock_server).await;
     let nm = NodeMaintainer::builder()
         .registry(mock_server.uri().parse().into_diagnostic()?)
+        .resolve("b@^2")
+        .await?;
+
+    let expected = ResolvedTree {
+        version: 1,
+        root: pkg("b", "2", true, vec!["b".into()])?,
+        packages: vec![pkg("c", "3", false, vec!["c".into()])?],
+    };
+
+    assert_eq!(expected, nm.to_resolved_tree());
+    Ok(())
+}
+
+#[async_std::test]
+async fn nesting_simple_conflict() -> Result<()> {
+    let mock_server = MockServer::start().await;
+    setup_packuments(&mock_server).await;
+    let nm = NodeMaintainer::builder()
+        .registry(mock_server.uri().parse().into_diagnostic()?)
         .resolve("a@^1")
         .await?;
 
@@ -41,7 +60,7 @@ fn pkg(
     path: Vec<UniCase<String>>,
 ) -> Result<PackageNode> {
     Ok(match (name, version) {
-        ("a", _) => PackageNode {
+        ("a", "1") => PackageNode {
             name: "a".into(),
             is_root,
             path,
@@ -53,7 +72,7 @@ fn pkg(
             },
             ..Default::default()
         },
-        ("b", _) => PackageNode {
+        ("b", "2") => PackageNode {
             name: "b".into(),
             is_root,
             path,
@@ -107,7 +126,7 @@ fn pkg(
             integrity: Some("sha512-12345".parse().into_diagnostic()?),
             ..Default::default()
         },
-        ("d", _) => PackageNode {
+        ("d", "4") => PackageNode {
             name: "d".into(),
             is_root,
             path,

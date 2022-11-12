@@ -7,6 +7,8 @@ use futures::{FutureExt, StreamExt};
 use nassun::{Nassun, NassunOpts, Package};
 use oro_common::Manifest;
 use petgraph::stable_graph::NodeIndex;
+use petgraph::visit::EdgeRef;
+use petgraph::Direction;
 use unicase::UniCase;
 use url::Url;
 
@@ -153,14 +155,24 @@ impl NodeMaintainer {
             // We drain the current contents of our FuturesUnordered that we
             // added all those lookups to. Next items will be in whatever
             // order resolves first.
+            //
+            // QUIRK: while we try to keep things stable, we can't guarantee
+            // stability if a dependency is present in more than one category.
+            //
+            // TODO: Consider waiting for _all_ dependencies to resolve and
+            // _then_ sorting them by DepType + name.
             while let Some((package, dep_type)) = packages.next().await {
                 q.push_back(Self::place_child(
                     &mut self.graph,
                     node_idx,
                     package?,
                     dep_type,
-                ));
+                )?);
             }
+
+            // We sort the current queue so we consider more shallow dependencies first.
+            q.make_contiguous()
+                .sort_by_key(|idx| self.graph[*idx].depth(&self.graph));
         }
         Ok(())
     }
@@ -170,7 +182,8 @@ impl NodeMaintainer {
         dependent_idx: NodeIndex,
         package: Package,
         dep_type: DepType,
-    ) -> NodeIndex {
+    ) -> Result<NodeIndex, NodeMaintainerError> {
+        let requested = package.from().clone();
         let child_name = UniCase::new(package.name().to_string());
         let child_node = Node::new(package);
         let child_idx = graph.inner.add_node(child_node);
@@ -183,67 +196,24 @@ impl NodeMaintainer {
         let edge_idx = graph.inner.add_edge(
             dependent_idx,
             child_idx,
-            Edge::new(graph[child_idx].package.from().clone(), dep_type),
+            Edge::new(requested.clone(), dep_type),
         );
 
         // Now we calculate the highest hierarchy location that we can place
         // this node in.
         let mut parent_idx = Some(dependent_idx);
         let mut target_idx = dependent_idx;
-        while let Some(curr_target_idx) = parent_idx {
-            if graph[curr_target_idx].children.contains_key(&child_name) {
-                // We've run into a conflict, so we can't place it in this
-                // parent. We previously checked if this conflict would have
-                // satisfied our request, so there's no need to worry about
-                // that at this point.
-                break;
-            }
-
-            // TODO: this is wrong, it doesn't take into account trees like this:
-            //
-            // - A1
-            // - B
-            //   +- C
-            //      +- D (dep on A1)
-            //   +- F (dep on A2)
-            //
-            // In this case, when trying to place A2, we look at our parent
-            // (B), and see that it doesn't depend on A at all, so we look one
-            // more up and notice the conflict with A1. So, we place the
-            // dependency inside B:
-            //
-            // - A1
-            // - B
-            //   +- C
-            //      +- D (dep on A1)
-            //   +- F (dep on A2)
-            //   +- A2
-            //
-            //
-            // But this is wrong, because now D will resolve A to A2 instead
-            // of A1! NPM Classic got around this by placing "phantom"
-            // dependency crumbs along the way whenever it "bubbled up"
-            // dependencies in the tree.
-            //
-            // I'd like to be able to pull this off without needing those
-            // phantom deps. I don't think any of the other resolvers do it?
-            if let Some(parent_idx) = graph[curr_target_idx].parent {
-                // Check the current target's parent to see if any of _its_
-                // currently-placed dependencies would be shadowed by us
-                // placing our new node as a sibling or below it.
-                if let Some(edge) = graph[parent_idx].dependencies.get(&child_name) {
-                    if graph
+        'outer: while let Some(curr_target_idx) = parent_idx {
+            if let Some(resolved) = graph.resolve_dep(curr_target_idx, &child_name) {
+                for edge_ref in graph.inner.edges_directed(resolved, Direction::Incoming) {
+                    let (from, _) = graph
                         .inner
-                        .edge_endpoints(*edge)
-                        .map(|(from, _)| {
-                            graph[from].depth(graph) >= graph[curr_target_idx].depth(graph)
-                        })
-                        .expect("edge missing nodes?")
+                        .edge_endpoints(edge_ref.id())
+                        .expect("Where did the edge go?!?!");
+                    if graph.is_ancestor(curr_target_idx, from)
+                        && !graph[resolved].package.resolved().satisfies(&requested)?
                     {
-                        // We've placed a dependency in an ancestor that would
-                        // be shadowed by our placement, so we can't place it
-                        // at this level. Stop bubbling up.
-                        break;
+                        break 'outer;
                     }
                 }
             }
@@ -271,7 +241,7 @@ impl NodeMaintainer {
             let node = &mut graph[target_idx];
             node.children.insert(child_name, child_idx);
         }
-        child_idx
+        Ok(child_idx)
     }
 
     fn package_deps<'a, 'b>(

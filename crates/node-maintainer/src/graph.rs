@@ -7,7 +7,7 @@ use kdl::KdlDocument;
 use nassun::PackageResolution;
 use petgraph::{
     dot::Dot,
-    stable_graph::{NodeIndex, StableGraph, EdgeIndex},
+    stable_graph::{EdgeIndex, NodeIndex, StableGraph},
 };
 use unicase::UniCase;
 
@@ -48,6 +48,28 @@ impl IndexMut<EdgeIndex> for Graph {
 }
 
 impl Graph {
+    pub fn resolve_dep(&self, node: NodeIndex, dep: &UniCase<String>) -> Option<NodeIndex> {
+        let mut current = Some(node);
+        while let Some(curr) = current {
+            if let Some(resolved) = self[curr].children.get(dep) {
+                return Some(*resolved);
+            }
+            current = self[curr].parent;
+        }
+        None
+    }
+
+    pub fn is_ancestor(&self, ancestor: NodeIndex, descendant: NodeIndex) -> bool {
+        let mut current = Some(descendant);
+        while let Some(curr) = current {
+            if curr == ancestor {
+                return true;
+            }
+            current = self[curr].parent;
+        }
+        false
+    }
+
     pub fn to_resolved_tree(&self) -> ResolvedTree {
         let root = self.node_pkg_node(self.root, true);
         let packages = self
@@ -117,22 +139,17 @@ impl Graph {
                 parent = self.inner[parent_idx].parent;
             }
         };
-        let resolved = node.package.resolved();
-        let version = if let &PackageResolution::Npm { version, .. } = &resolved {
+        let resolved = node.package.resolved().clone();
+        let version = if let &PackageResolution::Npm { ref version, .. } = &resolved {
             Some(version.clone())
         } else {
             None
         };
 
-        let (resolved, integrity) = if is_root {
-            (None, None)
+        let integrity = if let &PackageResolution::Npm { ref integrity, .. } = &resolved {
+            integrity.clone()
         } else {
-            let integrity = if let &PackageResolution::Npm { integrity, .. } = &resolved {
-                integrity.clone()
-            } else {
-                None
-            };
-            (Some(resolved.clone()), integrity)
+            None
         };
         let mut prod_deps = HashMap::new();
         let mut dev_deps = HashMap::new();
@@ -162,7 +179,7 @@ impl Graph {
             name: UniCase::new(node.package.name().to_string()),
             is_root,
             path: path.into(),
-            resolved,
+            resolved: Some(resolved),
             version,
             integrity,
             dependencies: prod_deps,
