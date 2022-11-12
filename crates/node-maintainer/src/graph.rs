@@ -72,12 +72,13 @@ impl Graph {
 
     pub fn to_resolved_tree(&self) -> ResolvedTree {
         let root = self.node_pkg_node(self.root, true);
-        let packages = self
+        let mut packages: Vec<_> = self
             .inner
             .node_indices()
             .filter(|idx| *idx != self.root)
             .map(|idx| self.node_pkg_node(idx, false))
             .collect();
+        packages.sort_by(|a, b| a.path.cmp(&b.path));
         ResolvedTree {
             version: 1,
             root,

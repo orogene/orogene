@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 
@@ -156,11 +157,8 @@ impl NodeMaintainer {
             // added all those lookups to. Next items will be in whatever
             // order resolves first.
             //
-            // QUIRK: while we try to keep things stable, we can't guarantee
-            // stability if a dependency is present in more than one category.
-            //
-            // TODO: Consider waiting for _all_ dependencies to resolve and
-            // _then_ sorting them by DepType + name.
+            // Order doesn't matter here: each node name is unique, so we
+            // don't have to worry about races messing with placement.
             while let Some((package, dep_type)) = packages.next().await {
                 q.push_back(Self::place_child(
                     &mut self.graph,
@@ -170,9 +168,16 @@ impl NodeMaintainer {
                 )?);
             }
 
-            // We sort the current queue so we consider more shallow dependencies first.
-            q.make_contiguous()
-                .sort_by_key(|idx| self.graph[*idx].depth(&self.graph));
+            // We sort the current queue so we consider more shallow
+            // dependencies first, and we also sort alphabetically.
+            q.make_contiguous().sort_by(|a_idx, b_idx| {
+                let a = &self.graph[*a_idx];
+                let b = &self.graph[*b_idx];
+                match a.depth(&self.graph).cmp(&b.depth(&self.graph)) {
+                    Ordering::Equal => a.package.name().cmp(b.package.name()),
+                    other => other,
+                }
+            })
         }
         Ok(())
     }
