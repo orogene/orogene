@@ -12,9 +12,10 @@ impl OroClient {
         package_name: impl AsRef<str>,
         use_corgi: bool,
     ) -> Result<Packument, OroClientError> {
-        Ok(self
+        let url = self.registry.join(package_name.as_ref())?;
+        let text = self
             .client
-            .get(self.registry.join(package_name.as_ref())?)
+            .get(url.clone())
             .header(
                 "Accept",
                 if use_corgi {
@@ -33,8 +34,10 @@ impl OroClient {
                     OroClientError::RequestError(err)
                 }
             })?
-            .json()
-            .await?)
+            .text()
+            .await?;
+        serde_json::from_str(&text)
+            .map_err(move |e| OroClientError::from_json_err(e, url.to_string(), text))
     }
 }
 

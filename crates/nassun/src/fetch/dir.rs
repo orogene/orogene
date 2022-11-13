@@ -5,7 +5,7 @@ use async_std::sync::Arc;
 use async_trait::async_trait;
 use futures::io::AsyncRead;
 use node_semver::Version;
-use oro_common::{Dist, Manifest as OroManifest, Packument, VersionMetadata};
+use oro_common::{Manifest as OroManifest, Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 
@@ -120,21 +120,8 @@ impl Manifest {
         new_manifest.name = Some(name);
         new_manifest.version = Some(version);
         Ok(VersionMetadata {
-            dist: Dist {
-                shasum: None,
-                tarball: None,
-
-                integrity: None,
-                file_count: None,
-                unpacked_size: None,
-                npm_signature: None,
-                rest: HashMap::new(),
-            },
-            npm_user: None,
-            has_shrinkwrap: None,
-            maintainers: Vec::new(),
-            deprecated: None,
             manifest: self.0.clone(),
+            ..Default::default()
         })
     }
 
