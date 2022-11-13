@@ -9,6 +9,7 @@ use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use cmd_ping::PingCmd;
+use cmd_resolve::ResolveCmd;
 use cmd_view::ViewCmd;
 
 #[derive(Debug, Parser)]
@@ -88,6 +89,9 @@ pub enum OroCmd {
     /// Ping the registry.
     Ping(PingCmd),
 
+    /// Resolve a package tree and save the lockfile to the project directory.
+    Resolve(ResolveCmd),
+
     /// Get information about a package.
     View(ViewCmd),
 }
@@ -98,6 +102,7 @@ impl OroCommand for Orogene {
         tracing::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
             OroCmd::Ping(ping) => ping.execute().await,
+            OroCmd::Resolve(resolve) => resolve.execute().await,
             OroCmd::View(view) => view.execute().await,
         }
     }
@@ -108,6 +113,9 @@ impl OroConfigLayer for Orogene {
         match self.subcommand {
             OroCmd::Ping(ref mut ping) => {
                 ping.layer_config(args.subcommand_matches("ping").unwrap(), conf)
+            }
+            OroCmd::Resolve(ref mut resolve) => {
+                resolve.layer_config(args.subcommand_matches("resolve").unwrap(), conf)
             }
             OroCmd::View(ref mut view) => {
                 view.layer_config(args.subcommand_matches("view").unwrap(), conf)

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder};
 use url::Url;
 
 #[derive(Clone, Debug)]
@@ -13,7 +13,11 @@ impl OroClient {
     pub fn new(registry: Url) -> Self {
         Self {
             registry: Arc::new(registry),
-            client: Client::new(),
+            client: ClientBuilder::new()
+                .user_agent("orogene")
+                .pool_max_idle_per_host(20)
+                .build()
+                .expect("Failed to build HTTP client."),
         }
     }
 
@@ -27,9 +31,6 @@ impl OroClient {
 
 impl Default for OroClient {
     fn default() -> Self {
-        Self {
-            registry: Arc::new(Url::parse("https://registry.npmjs.org").unwrap()),
-            client: Client::new(),
-        }
+        Self::new(Url::parse("https://registry.npmjs.org").unwrap())
     }
 }

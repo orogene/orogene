@@ -1,0 +1,17 @@
+[package]
+name = "cmd-resolve"
+version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+node-maintainer = { path = "../../crates/node-maintainer" }
+oro-command = { path = "../../crates/oro-command" }
+oro-config = { path = "../../crates/oro-config" }
+
+async-trait = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+miette = { workspace = true }
+url = { workspace = true }

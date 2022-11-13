@@ -481,6 +481,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmd-resolve"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "clap",
+ "miette",
+ "node-maintainer",
+ "oro-command",
+ "oro-config",
+ "url",
+]
+
+[[package]]
 name = "cmd-view"
 version = "0.1.0"
 dependencies = [
@@ -1859,6 +1872,7 @@ dependencies = [
  "async-trait",
  "clap",
  "cmd-ping",
+ "cmd-resolve",
  "cmd-view",
  "directories",
  "embed-resource",

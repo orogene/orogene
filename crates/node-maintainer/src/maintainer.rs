@@ -3,8 +3,7 @@ use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 
 use async_std::fs;
-use futures::stream::FuturesUnordered;
-use futures::{FutureExt, StreamExt};
+use futures::FutureExt;
 use nassun::{Nassun, NassunOpts, Package};
 use oro_common::Manifest;
 use petgraph::stable_graph::NodeIndex;
@@ -97,7 +96,7 @@ impl NodeMaintainer {
     }
 
     async fn resolve(&mut self) -> Result<(), NodeMaintainerError> {
-        let mut packages = FuturesUnordered::new();
+        let mut packages = Vec::new();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
         // Start iterating over the queue. We'll be adding things to it as we find them.
@@ -153,13 +152,10 @@ impl NodeMaintainer {
                     names.insert(name);
                 }
             }
-            // We drain the current contents of our FuturesUnordered that we
-            // added all those lookups to. Next items will be in whatever
-            // order resolves first.
-            //
+
             // Order doesn't matter here: each node name is unique, so we
             // don't have to worry about races messing with placement.
-            while let Some((package, dep_type)) = packages.next().await {
+            for (package, dep_type) in futures::future::join_all(packages.drain(..)).await {
                 q.push_back(Self::place_child(
                     &mut self.graph,
                     node_idx,

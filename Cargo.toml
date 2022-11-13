@@ -13,6 +13,7 @@ build = "build.rs"
 [dependencies]
 # Commands
 cmd-ping = { path = "./commands/cmd-ping" }
+cmd-resolve = { path = "./commands/cmd-resolve" }
 cmd-view = { path = "./commands/cmd-view" }
 
 # Workspace Deps
