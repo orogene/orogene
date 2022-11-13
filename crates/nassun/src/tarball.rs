@@ -63,11 +63,8 @@ impl Tarball {
 
         let dir = PathBuf::from(dir.as_ref());
         let takeme = dir.clone();
-        async_std::task::spawn_blocking(move || {
-            mkdirp::mkdirp(&takeme)
-                .map_err(|e| NassunError::ExtractIoError(e, Some(takeme.clone())))
-        })
-        .await?;
+        mkdirp::mkdirp(&takeme)
+            .map_err(|e| NassunError::ExtractIoError(e, Some(takeme.clone())))?;
 
         while let Some(file) = files.next().await {
             let file = file?;
@@ -81,12 +78,10 @@ impl Tarball {
             if let async_tar::EntryType::Regular = header.entry_type() {
                 let takeme = path.clone();
 
-                async_std::task::spawn_blocking(move || {
-                    mkdirp::mkdirp(takeme.parent().unwrap()).map_err(|e| {
-                        NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
-                    })
-                })
-                .await?;
+                mkdirp::mkdirp(takeme.parent().unwrap()).map_err(|e| {
+                    NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
+                })?;
+
                 let mut writer = async_std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
