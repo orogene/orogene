@@ -20,6 +20,14 @@ thiserror = { workspace = true }
 unicase = "2.6.0"
 url = { workspace = true }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = { workspace = true }
+js-sys = { workspace = true }
+serde = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+
 [dev-dependencies]
 async-std = { workspace = true, features = ["attributes", "tokio1"] }
 maplit = { workspace = true }
@@ -27,3 +35,10 @@ miette = { workspace = true, features = ["fancy"] }
 pretty_assertions = { workspace = true }
 serde_json = { workspace = true }
 wiremock = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# Temporary workaround. See https://github.com/rustwasm/wasm-pack/issues/864
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

@@ -16,7 +16,7 @@ type Result<T> = std::result::Result<T, JsNassunError>;
 
 #[wasm_bindgen]
 pub async fn packument(spec: &str, opts: JsValue) -> Result<JsValue> {
-    JsNassun::new(opts)?.resolve(spec).await?.packument()
+    JsNassun::new(opts)?.resolve(spec).await?.packument().await
 }
 
 #[wasm_bindgen]
@@ -133,9 +133,11 @@ impl JsPackage {
         self.resolved.clone()
     }
 
-    pub fn packument(&self) -> Result<JsValue> {
+    pub async fn packument(&self) -> Result<JsValue> {
         self.package
             .packument()
+            .await
+            .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))?
             .serialize(&self.serializer)
             .map_err(|e| JsNassunError(NassunError::MiscError(format!("{e}"))))
     }

@@ -133,12 +133,13 @@ impl Manifest {
             tags: HashMap::new(),
             rest: HashMap::new(),
         };
+        let version = metadata.manifest.version.clone().unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         packument
             .tags
-            .insert("latest".into(), metadata.manifest.version.clone().unwrap());
+            .insert("latest".into(), version.clone());
         packument
             .versions
-            .insert(metadata.manifest.version.clone().unwrap(), metadata);
+            .insert(version, metadata);
         Ok(packument)
     }
 }

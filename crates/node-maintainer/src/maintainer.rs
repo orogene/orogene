@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 
+#[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use futures::FutureExt;
 use nassun::{Nassun, NassunOpts, Package};
@@ -73,11 +74,13 @@ impl NodeMaintainer {
         NodeMaintainerOptions::new()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn render_to_file(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         fs::write(path.as_ref(), self.graph.render()).await?;
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         fs::write(path.as_ref(), self.graph.to_kdl().to_string()).await?;
         Ok(())

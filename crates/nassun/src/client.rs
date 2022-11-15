@@ -198,11 +198,17 @@ impl Nassun {
             #[cfg(not(target_arch = "wasm32"))]
             Dir { .. } => self.dir_fetcher.clone(),
             #[cfg(target_arch = "wasm32")]
-            Dir { .. } => panic!("Directory dependencies are not enabled."),
+            Dir { .. } => panic!(
+                "Directory dependencies are not enabled. (While trying to process {})",
+                arg
+            ),
             #[cfg(not(target_arch = "wasm32"))]
             Git(..) => self.git_fetcher.clone(),
             #[cfg(target_arch = "wasm32")]
-            Git(..) => panic!("Git dependencies are not enabled."),
+            Git(..) => panic!(
+                "Git dependencies are not enabled. (While trying to process {})",
+                arg
+            ),
         }
     }
 }

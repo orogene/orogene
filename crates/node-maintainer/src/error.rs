@@ -59,4 +59,9 @@ pub enum NodeMaintainerError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     NassunError(#[from] nassun::NassunError),
+
+    // Generic error
+    #[error("{0}")]
+    #[diagnostic(code(node_maintainer::miscellaneous_error))]
+    MiscError(String),
 }
