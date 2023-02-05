@@ -3,7 +3,6 @@ use std::{fmt::Display, path::PathBuf, sync::Arc};
 use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_common::Packument;
 use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
-use ssri::Integrity;
 use url::Url;
 
 use crate::{fetch::PackageFetcher, package::Package, NassunError};
@@ -14,7 +13,6 @@ pub enum PackageResolution {
     Npm {
         name: String,
         version: SemVerVersion,
-        integrity: Option<Integrity>,
         tarball: Url,
     },
     Dir {
@@ -85,7 +83,7 @@ pub(crate) struct PackageResolver {
 }
 
 impl PackageResolver {
-    pub(crate) async fn resolve_from(
+    pub(crate) fn resolve_from(
         &self,
         name: String,
         from: PackageSpec,
@@ -223,11 +221,6 @@ impl PackageResolver {
                 versions: packument.versions.keys().map(|k| k.to_string()).collect(),
             })
             .and_then(|v| {
-                let integrity = match v.dist.integrity.as_ref().map(|i| i.parse::<Integrity>()) {
-                    Some(Ok(i)) => Some(i),
-                    Some(Err(e)) => return Err(NassunError::IntegrityError(e)),
-                    None => None,
-                };
                 Ok(PackageResolution::Npm {
                     name: name.into(),
                     version: v
@@ -238,15 +231,12 @@ impl PackageResolver {
                     tarball: if let Some(tarball) = &v.dist.tarball {
                         tarball.clone()
                     } else {
-                        // TODO: This ends up as a very confusing error
-                        // message. We should spit out a custom one here.
                         return Err(NassunError::NoTarball(
                             name.into(),
                             wanted.clone(),
                             Box::new(v.clone()),
                         ));
                     },
-                    integrity,
                 })
             })
     }

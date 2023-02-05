@@ -4,11 +4,12 @@ use kdl::{KdlDocument, KdlNode};
 use nassun::PackageResolution;
 use node_semver::Version;
 use oro_package_spec::PackageSpec;
+use petgraph::stable_graph::NodeIndex;
 use ssri::Integrity;
 use unicase::UniCase;
 use url::Url;
 
-use crate::{DepType, NodeMaintainerError};
+use crate::{DepType, Graph, IntoKdl, NodeMaintainerError, ResolvedMetadata};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedTree {
@@ -18,6 +19,13 @@ pub struct ResolvedTree {
 }
 
 impl ResolvedTree {
+    pub(crate) fn to_graph(self) -> Graph {
+        let mut graph = Graph::default();
+        let root_idx = self.root.into_graph_node(&mut graph);
+        graph.root = root_idx;
+        graph
+    }
+
     pub fn to_kdl(&self) -> KdlDocument {
         let mut doc = KdlDocument::new();
         doc.set_leading(
@@ -34,24 +42,27 @@ impl ResolvedTree {
         doc
     }
 
-    pub fn from_kdl(kdl: &str) -> Result<Self, NodeMaintainerError> {
-        let kdl: KdlDocument = kdl.parse()?;
-        Ok(Self {
-            version: kdl
-                .get_arg("lockfile-version")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(1) as u64,
-            root: kdl
-                .get("root")
-                .ok_or_else(|| NodeMaintainerError::MissingRoot(kdl.clone()))
-                .and_then(|node| PackageNode::from_kdl(node, true))?,
-            packages: kdl
-                .nodes()
-                .iter()
-                .filter(|node| node.name().to_string() == *"pkg")
-                .map(|node| PackageNode::from_kdl(node, false))
-                .collect::<Result<Vec<PackageNode>, NodeMaintainerError>>()?,
-        })
+    pub fn from_kdl(kdl: impl IntoKdl) -> Result<Self, NodeMaintainerError> {
+        let kdl: KdlDocument = kdl.into_kdl()?;
+        fn inner(kdl: KdlDocument) -> Result<ResolvedTree, NodeMaintainerError> {
+            Ok(ResolvedTree {
+                version: kdl
+                    .get_arg("lockfile-version")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(1) as u64,
+                root: kdl
+                    .get("root")
+                    .ok_or_else(|| NodeMaintainerError::MissingRoot(kdl.clone()))
+                    .and_then(|node| PackageNode::from_kdl(node, true))?,
+                packages: kdl
+                    .nodes()
+                    .iter()
+                    .filter(|node| node.name().to_string() == *"pkg")
+                    .map(|node| PackageNode::from_kdl(node, false))
+                    .collect::<Result<Vec<PackageNode>, NodeMaintainerError>>()?,
+            })
+        }
+        inner(kdl)
     }
 }
 
@@ -70,6 +81,16 @@ pub struct PackageNode {
 }
 
 impl PackageNode {
+    fn into_graph_node(self, graph: &mut Graph) -> NodeIndex {
+        let resolved_metadata = ResolvedMetadata {
+            dependencies: self.dependencies,
+            dev_dependencies: self.dev_dependencies,
+            peer_dependencies: self.peer_dependencies,
+            optional_dependencies: self.optional_dependencies,
+            integrity: self.integrity,
+        };
+    }
+
     fn from_kdl(node: &KdlNode, is_root: bool) -> Result<Self, NodeMaintainerError> {
         let children = node.children().cloned().unwrap_or_else(KdlDocument::new);
         let path = node
@@ -109,7 +130,6 @@ impl PackageNode {
                             name: name.to_string(),
                             version,
                             tarball: url,
-                            integrity: integrity.clone(),
                         }),
                         scheme => Err(NodeMaintainerError::UnsupportedScheme(scheme.into())),
                     }
@@ -178,12 +198,9 @@ impl PackageNode {
                 rnode.push(resolved.to_string());
                 kdl_node.ensure_children().nodes_mut().push(rnode);
 
-                if let &PackageResolution::Npm {
-                    integrity: Some(i), ..
-                } = &resolved
-                {
+                if let Some(integrity) = &self.integrity {
                     let mut inode = KdlNode::new("integrity");
-                    inode.push(i.to_string());
+                    inode.push(integrity.to_string());
                     kdl_node.ensure_children().nodes_mut().push(inode);
                 }
             }

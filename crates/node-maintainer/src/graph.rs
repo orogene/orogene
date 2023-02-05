@@ -147,11 +147,6 @@ impl Graph {
             None
         };
 
-        let integrity = if let &PackageResolution::Npm { ref integrity, .. } = &resolved {
-            integrity.clone()
-        } else {
-            None
-        };
         let mut prod_deps = HashMap::new();
         let mut dev_deps = HashMap::new();
         let mut peer_deps = HashMap::new();
@@ -182,7 +177,7 @@ impl Graph {
             path: path.into(),
             resolved: Some(resolved),
             version,
-            integrity,
+            integrity: node.resolved_metadata.integrity.clone(),
             dependencies: prod_deps,
             dev_dependencies: dev_deps,
             peer_dependencies: peer_deps,

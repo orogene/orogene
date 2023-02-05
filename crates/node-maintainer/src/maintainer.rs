@@ -59,7 +59,7 @@ impl NodeMaintainerOptions {
         };
         let node = nm.graph.inner.add_node(Node::new(package));
         nm.graph[node].root = node;
-        nm.resolve().await?;
+        nm.run_resolver().await?;
         Ok(nm)
     }
 }
@@ -72,6 +72,12 @@ pub struct NodeMaintainer {
 impl NodeMaintainer {
     pub fn builder() -> NodeMaintainerOptions {
         NodeMaintainerOptions::new()
+    }
+
+    pub async fn resolve(
+        root_spec: impl AsRef<str>,
+    ) -> Result<NodeMaintainer, NodeMaintainerError> {
+        Self::builder().resolve(root_spec).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -98,7 +104,7 @@ impl NodeMaintainer {
         self.graph.render()
     }
 
-    async fn resolve(&mut self) -> Result<(), NodeMaintainerError> {
+    async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {
         let mut packages = Vec::new();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
@@ -191,6 +197,7 @@ impl NodeMaintainer {
         let child_name = UniCase::new(package.name().to_string());
         let child_node = Node::new(package);
         let child_idx = graph.inner.add_node(child_node);
+        graph[child_idx].root = graph.root;
         // We needed to generate the node index before setting it in the node,
         // so we do that now.
         graph[child_idx].idx = child_idx;

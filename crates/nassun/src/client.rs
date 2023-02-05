@@ -177,17 +177,16 @@ impl Nassun {
     /// [`PackageResolution`]. This is meant to be a lower-level call that
     /// expects the caller to have already done any necessary parsing work on
     /// its arguments.
-    pub async fn resolve_from(
+    pub fn resolve_from(
         &self,
         name: String,
         from: PackageSpec,
         resolved: PackageResolution,
-    ) -> Result<Package> {
+    ) -> Package {
         let fetcher = self.pick_fetcher(&from);
-        Ok(self
+        self
             .resolver
             .resolve_from(name, from, resolved, fetcher)
-            .await)
     }
 
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {
