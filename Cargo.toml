@@ -9,6 +9,7 @@ repository = "https://github.com/orogene/orogene"
 homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 build = "build.rs"
+rust-version = "1.67.0"
 
 [dependencies]
 # Commands
