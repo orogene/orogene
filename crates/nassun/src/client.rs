@@ -8,6 +8,7 @@ use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
+use crate::entries::Entries;
 use crate::error::Result;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::fetch::DirFetcher;
@@ -15,12 +16,13 @@ use crate::fetch::DirFetcher;
 use crate::fetch::GitFetcher;
 use crate::fetch::{DummyFetcher, NpmFetcher, PackageFetcher};
 use crate::package::Package;
-use crate::resolver::PackageResolver;
-use crate::{Entries, PackageResolution, Tarball};
+use crate::resolver::{PackageResolution, PackageResolver};
+use crate::tarball::Tarball;
 
 /// Build a new Nassun instance with specified options.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct NassunOpts {
+    #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
@@ -32,6 +34,8 @@ impl NassunOpts {
         Default::default()
     }
 
+    /// Cache directory to use for requests.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.cache = Some(PathBuf::from(cache.as_ref()));
         self
@@ -42,29 +46,37 @@ impl NassunOpts {
         self
     }
 
+    /// Adds a registry to use for a specific scope.
     pub fn scope_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
         self.registries
             .insert(Some(scope.as_ref().into()), registry);
         self
     }
 
+    /// Base directory to use for resolving relative paths. Defaults to `"."`.
     pub fn base_dir(mut self, base_dir: impl AsRef<Path>) -> Self {
         self.base_dir = Some(PathBuf::from(base_dir.as_ref()));
         self
     }
 
+    /// Default tag to use when resolving package versions. Defaults to `latest`.
     pub fn default_tag(mut self, default_tag: impl AsRef<str>) -> Self {
         self.default_tag = Some(default_tag.as_ref().into());
         self
     }
 
+    /// Build a new Nassun instance from this options object.
     pub fn build(self) -> Nassun {
         let registry = self
             .registries
             .get(&None)
             .cloned()
             .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
+        #[cfg(target_arch = "wasm32")]
+        let client_builder = OroClient::builder().registry(registry);
+        #[cfg(not(target_arch = "wasm32"))]
         let mut client_builder = OroClient::builder().registry(registry);
+        #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
             client_builder = client_builder.cache(cache.clone());
             Arc::new(Some(cache))
@@ -75,6 +87,8 @@ impl NassunOpts {
         Nassun {
             #[cfg(not(target_arch = "wasm32"))]
             cache,
+            #[cfg(target_arch = "wasm32")]
+            cache: Arc::new(None),
             resolver: PackageResolver {
                 #[cfg(target_arch = "wasm32")]
                 base_dir: PathBuf::from("."),

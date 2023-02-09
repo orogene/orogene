@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use nassun::Package;
+use nassun::package::Package;
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;

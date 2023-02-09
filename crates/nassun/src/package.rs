@@ -1,5 +1,7 @@
 use std::fmt;
-use std::path::{Path, PathBuf};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+use std::path::PathBuf;
 
 use async_std::sync::Arc;
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
@@ -7,7 +9,9 @@ use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 
 use crate::entries::Entries;
-use crate::error::{NassunError, Result};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::NassunError;
+use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::resolver::PackageResolution;
 use crate::tarball::Tarball;
@@ -21,6 +25,7 @@ pub struct Package {
     pub(crate) resolved: PackageResolution,
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
     pub(crate) base_dir: PathBuf,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(crate) cache: Arc<Option<PathBuf>>,
 }
 

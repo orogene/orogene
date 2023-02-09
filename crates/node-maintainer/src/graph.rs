@@ -6,14 +6,15 @@ use std::{
 };
 
 use kdl::KdlDocument;
-use nassun::{Package, PackageResolution};
+use nassun::{package::Package, PackageResolution};
 use petgraph::{
     dot::Dot,
     stable_graph::{EdgeIndex, NodeIndex, StableGraph},
 };
 use unicase::UniCase;
 
-use crate::{DepType, Edge, Lockfile, LockfileNode, Node, NodeMaintainerError};
+use crate::{error::NodeMaintainerError, DepType, Edge, Lockfile, LockfileNode, Node};
+
 #[cfg(debug_assertions)]
 use NodeMaintainerError::GraphValidationError;
 
@@ -176,6 +177,9 @@ impl Graph {
             } else {
                 break;
             }
+        }
+        if current == Some(self.root) {
+            return Ok(None);
         }
         Ok(current.map(|idx| self.inner[idx].package.clone()))
     }
