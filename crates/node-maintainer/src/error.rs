@@ -23,7 +23,7 @@ pub enum NodeMaintainerError {
     /// Missing version for NPM package entry in lockfile.
     #[error("Missing version for NPM package entry in lockfile.")]
     #[diagnostic(code(node_maintainer::kdl::missing_version))]
-    MissingVersion(KdlNode),
+    MissingVersion,
 
     /// Failed to parse an integrity value.
     #[error(transparent)]
@@ -44,6 +44,10 @@ pub enum NodeMaintainerError {
     #[error(transparent)]
     #[diagnostic(code(node_maintainer::kdl::parse_error))]
     KdlParseError(#[from] kdl::KdlError),
+
+    #[error("Invalid lockfile version format.")]
+    #[diagnostic(code(node_maintainer::kdl::invalid_lockfile_version))]
+    InvalidLockfileVersion,
 
     /// Generic package spec error.
     #[error(transparent)]

@@ -147,7 +147,7 @@ impl Nassun {
     ///
     /// This uses default [`Nassun`] settings and does not cache the result.
     /// To configure `Nassun`, and/or enable more efficient caching/reuse,
-    /// look at [`Package::tarball` instead].
+    /// look at [`Package::tarball`] instead.
     pub async fn tarball(spec: impl AsRef<str>) -> Result<Tarball> {
         Self::new().resolve(spec.as_ref()).await?.tarball().await
     }
@@ -159,7 +159,7 @@ impl Nassun {
     ///
     /// This uses default [`Nassun`] settings and does not cache the result.
     /// To configure `Nassun`, and/or enable more efficient caching/reuse,
-    /// look at [`Package::entries` instead].
+    /// look at [`Package::entries`] instead.
     pub async fn entries(spec: impl AsRef<str>) -> Result<Entries> {
         Self::new().resolve(spec.as_ref()).await?.entries().await
     }

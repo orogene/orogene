@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use kdl::{KdlDocument, KdlNode};
-use nassun::PackageResolution;
+use nassun::{Nassun, PackageResolution};
 use node_semver::Version;
 use oro_package_spec::PackageSpec;
 use petgraph::stable_graph::NodeIndex;
@@ -9,21 +9,60 @@ use ssri::Integrity;
 use unicase::UniCase;
 use url::Url;
 
-use crate::{DepType, Graph, IntoKdl, NodeMaintainerError, ResolvedMetadata};
+use crate::{DepType, Graph, IntoKdl, Node, NodeMaintainerError, ResolvedMetadata};
 
+/// A representation of a resolved lockfile.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct ResolvedTree {
+pub struct Lockfile {
     pub version: u64,
-    pub root: PackageNode,
-    pub packages: Vec<PackageNode>,
+    pub root: LockfileNode,
+    pub packages: Vec<LockfileNode>,
 }
 
-impl ResolvedTree {
-    pub(crate) fn to_graph(self) -> Graph {
+impl Lockfile {
+    pub(crate) async fn into_graph(self, nassun: &Nassun) -> Result<Graph, NodeMaintainerError> {
         let mut graph = Graph::default();
-        let root_idx = self.root.into_graph_node(&mut graph);
+        let root_idx = self.root.to_graph_node(&mut graph, nassun).await?;
         graph.root = root_idx;
-        graph
+        // Place all the packages in the tree, by their logical filesystem
+        // location, without hooking up the dependency graph itself (yet).
+        for pkg in &self.packages {
+            let idx = pkg.to_graph_node(&mut graph, nassun).await?;
+            self.place_child(&mut graph, idx)?;
+        }
+        // TODO
+        // self.resolve_dependencies(&mut graph)?;
+        Ok(graph)
+    }
+
+    fn place_child(&self, graph: &mut Graph, child: NodeIndex) -> Result<(), NodeMaintainerError> {
+        if self.is_placed(graph, child) {
+            return Ok(());
+        }
+
+        let is_toplevel = graph[child].resolved_metadata.path.len() == 1;
+        if is_toplevel {
+            let name = graph[child].resolved_metadata.name.clone();
+            let root_idx = graph.root;
+            graph[root_idx].children.insert(name, child);
+        }
+        Ok(())
+    }
+
+    fn is_placed(&self, graph: &mut Graph, child: NodeIndex) -> bool {
+        let path = &graph[child].resolved_metadata.path;
+        let mut current = graph.inner.node_weight(graph.root);
+        for segment in path {
+            if let Some(current_node) = current {
+                current = current_node
+                    .children
+                    .get(&segment)
+                    .and_then(|idx| graph.inner.node_weight(*idx));
+            } else {
+                break;
+            }
+        }
+        current.is_some()
     }
 
     pub fn to_kdl(&self) -> KdlDocument {
@@ -44,22 +83,27 @@ impl ResolvedTree {
 
     pub fn from_kdl(kdl: impl IntoKdl) -> Result<Self, NodeMaintainerError> {
         let kdl: KdlDocument = kdl.into_kdl()?;
-        fn inner(kdl: KdlDocument) -> Result<ResolvedTree, NodeMaintainerError> {
-            Ok(ResolvedTree {
+        fn inner(kdl: KdlDocument) -> Result<Lockfile, NodeMaintainerError> {
+            Ok(Lockfile {
                 version: kdl
                     .get_arg("lockfile-version")
                     .and_then(|v| v.as_i64())
-                    .unwrap_or(1) as u64,
+                    .map(|v| v.try_into())
+                    .transpose()
+                    // TODO: add a miette span here
+                    .map_err(|_| NodeMaintainerError::InvalidLockfileVersion)?
+                    .unwrap_or(1),
                 root: kdl
                     .get("root")
+                    // TODO: add a miette span here
                     .ok_or_else(|| NodeMaintainerError::MissingRoot(kdl.clone()))
-                    .and_then(|node| PackageNode::from_kdl(node, true))?,
+                    .and_then(|node| LockfileNode::from_kdl(node, true))?,
                 packages: kdl
                     .nodes()
-                    .iter()
-                    .filter(|node| node.name().to_string() == *"pkg")
-                    .map(|node| PackageNode::from_kdl(node, false))
-                    .collect::<Result<Vec<PackageNode>, NodeMaintainerError>>()?,
+                    .into_iter()
+                    .filter(|node| node.name().to_string() == "pkg")
+                    .map(|node| LockfileNode::from_kdl(node, false))
+                    .collect::<Result<Vec<LockfileNode>, NodeMaintainerError>>()?,
             })
         }
         inner(kdl)
@@ -67,11 +111,11 @@ impl ResolvedTree {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct PackageNode {
+pub struct LockfileNode {
     pub name: UniCase<String>,
     pub is_root: bool,
     pub path: Vec<UniCase<String>>,
-    pub resolved: Option<PackageResolution>,
+    pub resolved: Option<Url>,
     pub version: Option<Version>,
     pub integrity: Option<Integrity>,
     pub dependencies: HashMap<UniCase<String>, PackageSpec>,
@@ -80,15 +124,74 @@ pub struct PackageNode {
     pub optional_dependencies: HashMap<UniCase<String>, PackageSpec>,
 }
 
-impl PackageNode {
-    fn into_graph_node(self, graph: &mut Graph) -> NodeIndex {
-        let resolved_metadata = ResolvedMetadata {
-            dependencies: self.dependencies,
-            dev_dependencies: self.dev_dependencies,
-            peer_dependencies: self.peer_dependencies,
-            optional_dependencies: self.optional_dependencies,
-            integrity: self.integrity,
+impl LockfileNode {
+    async fn to_graph_node(
+        &self,
+        graph: &mut Graph,
+        nassun: &Nassun,
+    ) -> Result<NodeIndex, NodeMaintainerError> {
+        let version = if let Some(ref version) = self.version {
+            version
+        } else {
+            return Err(NodeMaintainerError::MissingVersion);
         };
+        let spec: PackageSpec = format!("{}@{version}", self.name).parse()?;
+        let package = match &spec.target() {
+            PackageSpec::Dir { path } => {
+                let resolution = PackageResolution::Dir {
+                    name: self.name.to_string(),
+                    path: path.clone(),
+                };
+                nassun.resolve_from(self.name.to_string(), spec, resolution)
+            }
+            PackageSpec::Npm { scope, name, .. } => {
+                if let Some(ref url) = self.resolved {
+                    let resolution = PackageResolution::Npm {
+                        name: if let Some(scope) = scope {
+                            format!("{scope}@{name}")
+                        } else {
+                            name.to_string()
+                        },
+                        version: version.clone(),
+                        tarball: url.clone(),
+                        integrity: self.integrity.clone(),
+                    };
+                    nassun.resolve_from(self.name.to_string(), spec, resolution)
+                } else {
+                    nassun.resolve(spec.to_string()).await?
+                }
+            }
+            PackageSpec::Git(info) => {
+                if info.committish().is_some() {
+                    let resolution = PackageResolution::Git {
+                        name: self.name.to_string(),
+                        info: info.clone(),
+                    };
+                    nassun.resolve_from(self.name.to_string(), spec, resolution)
+                } else {
+                    nassun.resolve(spec.to_string()).await?
+                }
+            }
+            PackageSpec::Alias { .. } => {
+                unreachable!("Alias should have already been resolved by the .target() call above.")
+            }
+        };
+        let resolved_metadata = ResolvedMetadata {
+            name: self.name.clone(),
+            path: self.path.clone(),
+            version: self.version.clone(),
+            resolved: self.resolved.clone(),
+            dependencies: self.dependencies.clone(),
+            dev_dependencies: self.dev_dependencies.clone(),
+            peer_dependencies: self.peer_dependencies.clone(),
+            optional_dependencies: self.optional_dependencies.clone(),
+            integrity: self.integrity.clone(),
+        };
+        let idx = graph.inner.add_node(Node::new(package));
+        let node = &mut graph.inner[idx];
+        node.idx = idx;
+        node.resolved_metadata = resolved_metadata;
+        Ok(idx)
     }
 
     fn from_kdl(node: &KdlNode, is_root: bool) -> Result<Self, NodeMaintainerError> {
@@ -99,9 +202,19 @@ impl PackageNode {
             .filter(|e| e.name().is_none() && e.value().is_base10())
             .map(|e| UniCase::new(e.value().to_string()))
             .collect::<Vec<_>>();
-        let name = path
-            .last()
+        let name = children
+            .get_arg("name")
             .cloned()
+            .map(|val| UniCase::new(val.to_string()))
+            .or_else(|| {
+                let len = path.len();
+                if len > 1 && path[len - 2].starts_with("@") {
+                    Some(UniCase::new(format!("{}@{}", path[len - 2], path[len - 1])))
+                } else {
+                    path.last().cloned()
+                }
+            })
+            // TODO: add a miette span here
             .ok_or_else(|| NodeMaintainerError::MissingName(node.clone()))?;
         let integrity = children
             .get_arg("integrity")
@@ -112,29 +225,15 @@ impl PackageNode {
             .map(|val| {
                 val.to_string()
                     .parse()
+                    // TODO: add a miette span here
                     .map_err(NodeMaintainerError::SemverParseError)
             })
             .transpose()?;
         let resolved = children
             .get_arg("resolved")
-            .map(
-                |resolved| -> Result<PackageResolution, NodeMaintainerError> {
-                    let url: Url = resolved.to_string().parse()?;
-                    let version = version
-                        .clone()
-                        .ok_or_else(|| NodeMaintainerError::MissingVersion(node.clone()))?;
-                    match url.scheme() {
-                        // TODO: This will also have to cover plain URL deps,
-                        // when Nassun supports them.
-                        "http" | "https" => Ok(PackageResolution::Npm {
-                            name: name.to_string(),
-                            version,
-                            tarball: url,
-                        }),
-                        scheme => Err(NodeMaintainerError::UnsupportedScheme(scheme.into())),
-                    }
-                },
-            )
+            .map(|resolved| -> Result<Url, NodeMaintainerError> {
+                Ok(resolved.to_string().parse()?)
+            })
             .transpose()?;
         Ok(Self {
             name,
@@ -155,7 +254,6 @@ impl PackageNode {
         dep_type: &DepType,
     ) -> Result<HashMap<UniCase<String>, PackageSpec>, NodeMaintainerError> {
         use DepType::*;
-        // TODO: Move this to a central location, like Display for DepType itself.
         let type_name = match dep_type {
             Prod => "dependencies",
             Dev => "dev-dependencies",
@@ -187,12 +285,12 @@ impl PackageNode {
         for name in &self.path {
             kdl_node.push(name.as_ref());
         }
+        if let Some(ref version) = self.version {
+            let mut vnode = KdlNode::new("version");
+            vnode.push(version.to_string());
+            kdl_node.ensure_children().nodes_mut().push(vnode);
+        }
         if let Some(resolved) = &self.resolved {
-            if let &PackageResolution::Npm { version, .. } = &resolved {
-                let mut vnode = KdlNode::new("version");
-                vnode.push(version.to_string());
-                kdl_node.ensure_children().nodes_mut().push(vnode);
-            }
             if !self.is_root {
                 let mut rnode = KdlNode::new("resolved");
                 rnode.push(resolved.to_string());

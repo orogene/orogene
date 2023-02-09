@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
-use nassun::{Nassun, Package, PackageResolution};
+use nassun::Package;
+use node_semver::Version;
 use oro_package_spec::PackageSpec;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use ssri::Integrity;
 use unicase::UniCase;
+use url::Url;
 
 use crate::Graph;
 
@@ -29,24 +31,6 @@ pub struct Node {
 }
 
 impl Node {
-    pub(crate) fn from_resolved(
-        nassun: &Nassun,
-        name: String,
-        from: PackageSpec,
-        resolved: PackageResolution,
-        metadata: ResolvedMetadata,
-    ) -> Self {
-        Self {
-            package: nassun.resolve_from(name, from, resolved),
-            idx: NodeIndex::new(0),
-            root: NodeIndex::new(0),
-            parent: None,
-            children: HashMap::new(),
-            dependencies: HashMap::new(),
-            resolved_metadata: metadata,
-        }
-    }
-
     pub(crate) fn new(package: Package) -> Self {
         Self {
             package,
@@ -76,6 +60,10 @@ impl Node {
 /// resolve a package graph without needing to make any Nassun requests.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(crate) struct ResolvedMetadata {
+    pub(crate) name: UniCase<String>,
+    pub(crate) path: Vec<UniCase<String>>,
+    pub(crate) version: Option<Version>,
+    pub(crate) resolved: Option<Url>,
     pub(crate) integrity: Option<Integrity>,
     pub(crate) dependencies: HashMap<UniCase<String>, PackageSpec>,
     pub(crate) dev_dependencies: HashMap<UniCase<String>, PackageSpec>,

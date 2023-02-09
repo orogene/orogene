@@ -39,6 +39,10 @@ pub enum PackageSpec {
 }
 
 impl PackageSpec {
+    pub fn is_alias(&self) -> bool {
+        matches!(self, PackageSpec::Alias { .. })
+    }
+
     pub fn is_npm(&self) -> bool {
         use PackageSpec::*;
         match self {
@@ -51,7 +55,11 @@ impl PackageSpec {
     pub fn target(&self) -> &PackageSpec {
         use PackageSpec::*;
         match self {
-            Alias { ref spec, .. } => spec,
+            Alias { ref spec, .. } => if spec.is_alias() {
+                spec.target()
+            } else {
+                spec
+            },
             _ => self,
         }
     }

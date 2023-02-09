@@ -5,6 +5,7 @@ use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use futures::FutureExt;
+use kdl::KdlDocument;
 use nassun::{Nassun, NassunOpts, Package};
 use oro_common::Manifest;
 use petgraph::stable_graph::NodeIndex;
@@ -15,7 +16,7 @@ use url::Url;
 
 use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
-use crate::{Graph, Node};
+use crate::{Graph, IntoKdl, Lockfile, Node};
 
 #[derive(Debug, Clone, Default)]
 pub struct NodeMaintainerOptions {
@@ -45,6 +46,20 @@ impl NodeMaintainerOptions {
     pub fn default_tag(mut self, tag: impl AsRef<str>) -> Self {
         self.nassun_opts = self.nassun_opts.default_tag(tag);
         self
+    }
+
+    pub async fn from_kdl(self, kdl: impl IntoKdl) -> Result<NodeMaintainer, NodeMaintainerError> {
+        async fn inner(
+            me: NodeMaintainerOptions,
+            kdl: KdlDocument,
+        ) -> Result<NodeMaintainer, NodeMaintainerError> {
+            let nassun = me.nassun_opts.build();
+            let graph = Lockfile::from_kdl(kdl)?.into_graph(&nassun).await?;
+            let mut nm = NodeMaintainer { nassun, graph };
+            nm.run_resolver().await?;
+            Ok(nm)
+        }
+        inner(self, kdl.into_kdl()?).await
     }
 
     pub async fn resolve(
@@ -88,15 +103,15 @@ impl NodeMaintainer {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(path.as_ref(), self.graph.to_kdl().to_string()).await?;
+        fs::write(path.as_ref(), self.graph.to_kdl()?.to_string()).await?;
         Ok(())
     }
 
-    pub fn to_resolved_tree(&self) -> crate::ResolvedTree {
+    pub fn to_resolved_tree(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
         self.graph.to_resolved_tree()
     }
 
-    pub fn to_kdl(&self) -> kdl::KdlDocument {
+    pub fn to_kdl(&self) -> Result<kdl::KdlDocument, NodeMaintainerError> {
         self.graph.to_kdl()
     }
 

@@ -3,6 +3,7 @@ use std::{fmt::Display, path::PathBuf, sync::Arc};
 use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_common::Packument;
 use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
+use ssri::Integrity;
 use url::Url;
 
 use crate::{fetch::PackageFetcher, package::Package, NassunError};
@@ -14,6 +15,7 @@ pub enum PackageResolution {
         name: String,
         version: SemVerVersion,
         tarball: Url,
+        integrity: Option<Integrity>,
     },
     Dir {
         name: String,
@@ -29,9 +31,9 @@ impl Display for PackageResolution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use PackageResolution::*;
         match self {
-            Npm { tarball, .. } => write!(f, "{}", tarball),
-            Dir { path, .. } => write!(f, "{}", path.to_string_lossy()),
-            Git { info, .. } => write!(f, "{}", info),
+            Npm { tarball, .. } => write!(f, "{tarball}"),
+            Dir { path, .. } => write!(f, "file:{}", path.to_string_lossy()),
+            Git { info, .. } => write!(f, "{info}"),
         }
     }
 }
@@ -237,6 +239,7 @@ impl PackageResolver {
                             Box::new(v.clone()),
                         ));
                     },
+                    integrity: v.dist.integrity.as_ref().map(|i| i.parse()).transpose()?
                 })
             })
     }

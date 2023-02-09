@@ -75,6 +75,24 @@ pub enum GitInfo {
 }
 
 impl GitInfo {
+    pub fn committish(&self) -> Option<&str> {
+        use GitInfo::*;
+        match self {
+            Hosted { committish, .. } => committish.as_deref(),
+            Url { committish, .. } => committish.as_deref(),
+            Ssh { committish, .. } => committish.as_deref(),
+        }
+    }
+
+    pub fn semver(&self) -> Option<&Range> {
+        use GitInfo::*;
+        match self {
+            Hosted { semver, .. } => semver.as_ref(),
+            Url { semver, .. } => semver.as_ref(),
+            Ssh { semver, .. } => semver.as_ref(),
+        }
+    }
+
     pub fn ssh(&self) -> Option<String> {
         use GitHost::*;
         use GitInfo::*;

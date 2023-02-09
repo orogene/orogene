@@ -11,7 +11,7 @@ use petgraph::{
 };
 use unicase::UniCase;
 
-use crate::{DepType, Edge, Node, NodeMaintainerError, PackageNode, ResolvedTree};
+use crate::{DepType, Edge, Lockfile, LockfileNode, Node, NodeMaintainerError};
 
 #[derive(Debug, Default)]
 pub struct Graph {
@@ -70,24 +70,24 @@ impl Graph {
         false
     }
 
-    pub fn to_resolved_tree(&self) -> ResolvedTree {
-        let root = self.node_pkg_node(self.root, true);
-        let mut packages: Vec<_> = self
+    pub fn to_resolved_tree(&self) -> Result<Lockfile, NodeMaintainerError> {
+        let root = self.node_lockfile_node(self.root, true)?;
+        let mut packages = self
             .inner
             .node_indices()
             .filter(|idx| *idx != self.root)
-            .map(|idx| self.node_pkg_node(idx, false))
-            .collect();
+            .map(|idx| self.node_lockfile_node(idx, false))
+            .collect::<Result<Vec<_>, NodeMaintainerError>>()?;
         packages.sort_by(|a, b| a.path.cmp(&b.path));
-        ResolvedTree {
+        Ok(Lockfile {
             version: 1,
             root,
             packages,
-        }
+        })
     }
 
-    pub fn to_kdl(&self) -> KdlDocument {
-        self.to_resolved_tree().to_kdl()
+    pub fn to_kdl(&self) -> Result<KdlDocument, NodeMaintainerError> {
+        Ok(self.to_resolved_tree()?.to_kdl())
     }
 
     pub fn render(&self) -> String {
@@ -124,7 +124,11 @@ impl Graph {
         Ok(None)
     }
 
-    fn node_pkg_node(&self, node: NodeIndex, is_root: bool) -> PackageNode {
+    fn node_lockfile_node(
+        &self,
+        node: NodeIndex,
+        is_root: bool,
+    ) -> Result<LockfileNode, NodeMaintainerError> {
         let node = &self.inner[node];
         let mut path = VecDeque::new();
         path.push_front(UniCase::new(node.package.name().to_owned()));
@@ -140,8 +144,12 @@ impl Graph {
                 parent = self.inner[parent_idx].parent;
             }
         };
-        let resolved = node.package.resolved().clone();
-        let version = if let &PackageResolution::Npm { ref version, .. } = &resolved {
+        let resolved = match node.package.resolved() {
+            PackageResolution::Npm { tarball, .. } => tarball.clone(),
+            PackageResolution::Dir { path, .. } => path.to_string_lossy().parse()?,
+            PackageResolution::Git { info, .. } => info.to_string().parse()?,
+        };
+        let version = if let &PackageResolution::Npm { ref version, .. } = node.package.resolved() {
             Some(version.clone())
         } else {
             None
@@ -171,17 +179,20 @@ impl Graph {
                 deps.insert(name.clone(), requested.clone());
             }
         }
-        PackageNode {
+        Ok(LockfileNode {
             name: UniCase::new(node.package.name().to_string()),
             is_root,
             path: path.into(),
             resolved: Some(resolved),
             version,
-            integrity: node.resolved_metadata.integrity.clone(),
             dependencies: prod_deps,
             dev_dependencies: dev_deps,
             peer_dependencies: peer_deps,
             optional_dependencies: opt_deps,
-        }
+            integrity: match node.package.resolved() {
+                PackageResolution::Npm { ref integrity, .. } => integrity.clone(),
+                _ => None,
+            },
+        })
     }
 }

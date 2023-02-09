@@ -7,7 +7,6 @@ pub enum DepType {
     Peer,
     Opt,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Edge {
     pub(crate) requested: PackageSpec,
