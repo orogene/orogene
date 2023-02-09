@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use async_trait::async_trait;
 use clap::Args;
-use miette::{Result, IntoDiagnostic};
+use miette::{IntoDiagnostic, Result};
 use node_maintainer::NodeMaintainerOptions;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;

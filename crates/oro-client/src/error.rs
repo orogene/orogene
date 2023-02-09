@@ -13,9 +13,7 @@ pub enum OroClientError {
 
     /// Got some bad JSON we couldn't parse.
     #[error("Received some unexpected JSON. Unable to parse.")]
-    #[diagnostic(
-        code(oro_client::bad_json),
-    )]
+    #[diagnostic(code(oro_client::bad_json))]
     BadJson {
         source: serde_json::Error,
         url: String,

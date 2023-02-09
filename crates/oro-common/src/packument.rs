@@ -5,7 +5,20 @@ use serde_json::Value;
 use std::collections::HashMap;
 use url::Url;
 
-use crate::{Manifest, PersonField};
+use crate::{CorgiManifest, Manifest, PersonField};
+
+/// A serializable representation of a Packument -- the toplevel metadata
+/// object containing information about package versions, dist-tags, etc.
+///
+/// This version is a reduced-size packument that only contains fields from
+/// "Corgi" packuments (or will only (de)serialize those specific fields).
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CorgiPackument {
+    #[serde(default)]
+    pub versions: HashMap<Version, CorgiVersionMetadata>,
+    #[serde(default, rename = "dist-tags")]
+    pub tags: HashMap<String, Version>,
+}
 
 /// A serializable representation of a Packument -- the toplevel metadata
 /// object containing information about package versions, dist-tags, etc.
@@ -19,6 +32,48 @@ pub struct Packument {
     pub tags: HashMap<String, Version>,
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
+}
+
+impl From<CorgiPackument> for Packument {
+    fn from(value: CorgiPackument) -> Self {
+        Packument {
+            versions: value
+                .versions
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            tags: value.tags.into(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Packument> for CorgiPackument {
+    fn from(value: Packument) -> Self {
+        CorgiPackument {
+            versions: value
+                .versions
+                .into_iter()
+                .map(|(k, v)| (k, v.into()))
+                .collect(),
+            tags: value.tags.into(),
+        }
+    }
+}
+
+/// A manifest for an individual package version.
+///
+/// This version is a reduced-size VersionMetadata that only contains fields
+/// from "Corgi" packuments (or will only (de)serialize those specific
+/// fields).
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CorgiVersionMetadata {
+    #[serde(default)]
+    pub dist: CorgiDist,
+    #[serde(rename = "_hasShrinkwrap", skip_serializing_if = "Option::is_none")]
+    pub has_shrinkwrap: Option<bool>,
+    #[serde(flatten)]
+    pub manifest: CorgiManifest,
 }
 
 /// A manifest for an individual package version.
@@ -39,6 +94,27 @@ pub struct VersionMetadata {
     pub manifest: Manifest,
 }
 
+impl From<CorgiVersionMetadata> for VersionMetadata {
+    fn from(value: CorgiVersionMetadata) -> Self {
+        VersionMetadata {
+            dist: value.dist.into(),
+            has_shrinkwrap: value.has_shrinkwrap,
+            manifest: value.manifest.into(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<VersionMetadata> for CorgiVersionMetadata {
+    fn from(value: VersionMetadata) -> Self {
+        CorgiVersionMetadata {
+            dist: value.dist.into(),
+            has_shrinkwrap: value.has_shrinkwrap,
+            manifest: value.manifest.into(),
+        }
+    }
+}
+
 /// Representation for the `bin` field in package manifests.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -52,6 +128,19 @@ pub enum Bin {
 pub struct NpmUser {
     pub name: String,
     pub email: Option<String>,
+}
+
+/// Distribution information for a particular package version.
+///
+/// This version is a reduced-size CorgiDist that only contains fields from
+/// "Corgi" packuments (or will only (de)serialize those specific fields).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CorgiDist {
+    pub shasum: Option<String>,
+    pub tarball: Option<Url>,
+    pub integrity: Option<String>,
+    #[serde(rename = "npm-signature")]
+    pub npm_signature: Option<String>,
 }
 
 /// Distribution information for a particular package version.
@@ -70,4 +159,27 @@ pub struct Dist {
 
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
+}
+
+impl From<CorgiDist> for Dist {
+    fn from(value: CorgiDist) -> Self {
+        Dist {
+            shasum: value.shasum,
+            tarball: value.tarball,
+            integrity: value.integrity,
+            npm_signature: value.npm_signature,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Dist> for CorgiDist {
+    fn from(value: Dist) -> Self {
+        CorgiDist {
+            shasum: value.shasum,
+            tarball: value.tarball,
+            integrity: value.integrity,
+            npm_signature: value.npm_signature,
+        }
+    }
 }

@@ -5,7 +5,7 @@ use async_std::sync::Arc;
 use async_trait::async_trait;
 use dashmap::DashMap;
 use oro_client::{self, OroClient};
-use oro_common::{Packument, VersionMetadata};
+use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use url::Url;
 
@@ -17,26 +17,18 @@ use crate::resolver::PackageResolution;
 #[derive(Debug)]
 pub(crate) struct NpmFetcher {
     client: OroClient,
-    /// Corgis are a compressed kind of packument that omits some
-    /// "unnecessary" fields (for some common operations during package
-    /// management). This can significantly speed up installs, and is done
-    /// through a special Accept header on request.
-    use_corgi: bool,
     registries: HashMap<Option<String>, Url>,
     packuments: DashMap<String, Arc<Packument>>,
+    corgi_packuments: DashMap<String, Arc<CorgiPackument>>,
 }
 
 impl NpmFetcher {
-    pub(crate) fn new(
-        client: OroClient,
-        use_corgi: bool,
-        registries: HashMap<Option<String>, Url>,
-    ) -> Self {
+    pub(crate) fn new(client: OroClient, registries: HashMap<Option<String>, Url>) -> Self {
         Self {
             client,
-            use_corgi,
             registries,
             packuments: DashMap::new(),
+            corgi_packuments: DashMap::new(),
         }
     }
 }
@@ -67,6 +59,19 @@ impl PackageFetcher for NpmFetcher {
         Ok(self._name(spec).to_string())
     }
 
+    async fn corgi_metadata(&self, pkg: &Package) -> Result<CorgiVersionMetadata> {
+        let wanted = match pkg.resolved() {
+            PackageResolution::Npm { ref version, .. } => version,
+            _ => unreachable!(),
+        };
+        let packument = self.corgi_packument(pkg.from(), Path::new("")).await?;
+        packument
+            .versions
+            .get(wanted)
+            .cloned()
+            .ok_or_else(|| NassunError::MissingVersion(pkg.from().clone(), wanted.clone()))
+    }
+
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         let wanted = match pkg.resolved() {
             PackageResolution::Npm { ref version, .. } => version,
@@ -78,6 +83,37 @@ impl PackageFetcher for NpmFetcher {
             .get(wanted)
             .cloned()
             .ok_or_else(|| NassunError::MissingVersion(pkg.from().clone(), wanted.clone()))
+    }
+
+    async fn corgi_packument(
+        &self,
+        spec: &PackageSpec,
+        _base_dir: &Path,
+    ) -> Result<Arc<CorgiPackument>> {
+        // When fetching the packument itself, we need the _package_ name, not
+        // its alias! Hence these shenanigans.
+        let pkg = match spec {
+            PackageSpec::Alias { ref spec, .. } => spec,
+            pkg @ PackageSpec::Npm { .. } => pkg,
+            _ => unreachable!(),
+        };
+        if let PackageSpec::Npm {
+            ref name,
+            ref scope,
+            ..
+        } = pkg
+        {
+            if let Some(packument) = self.corgi_packuments.get(name) {
+                return Ok(packument.value().clone());
+            }
+            let client = self.client.with_registry(self.pick_registry(scope));
+            let packument = Arc::new(client.corgi_packument(&name).await?);
+            self.corgi_packuments
+                .insert(name.clone(), packument.clone());
+            Ok(packument)
+        } else {
+            unreachable!()
+        }
     }
 
     async fn packument(&self, spec: &PackageSpec, _base_dir: &Path) -> Result<Arc<Packument>> {
@@ -98,7 +134,7 @@ impl PackageFetcher for NpmFetcher {
                 return Ok(packument.value().clone());
             }
             let client = self.client.with_registry(self.pick_registry(scope));
-            let packument = Arc::new(client.packument(&name, self.use_corgi).await?);
+            let packument = Arc::new(client.packument(&name).await?);
             self.packuments.insert(name.clone(), packument.clone());
             Ok(packument)
         } else {

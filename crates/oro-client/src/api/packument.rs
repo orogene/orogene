@@ -1,5 +1,5 @@
-use oro_common::Packument;
-use reqwest::StatusCode;
+use oro_common::{CorgiPackument, Packument};
+use reqwest::{StatusCode, Url};
 
 use crate::{OroClient, OroClientError};
 
@@ -10,10 +10,30 @@ impl OroClient {
     pub async fn packument(
         &self,
         package_name: impl AsRef<str>,
-        use_corgi: bool,
     ) -> Result<Packument, OroClientError> {
         let url = self.registry.join(package_name.as_ref())?;
-        let text = self
+        let text = self.packument_impl(package_name, &url, false).await?;
+        serde_json::from_str(&text)
+            .map_err(move |e| OroClientError::from_json_err(e, url.to_string(), text))
+    }
+
+    pub async fn corgi_packument(
+        &self,
+        package_name: impl AsRef<str>,
+    ) -> Result<CorgiPackument, OroClientError> {
+        let url = self.registry.join(package_name.as_ref())?;
+        let text = self.packument_impl(package_name, &url, true).await?;
+        serde_json::from_str(&text)
+            .map_err(move |e| OroClientError::from_json_err(e, url.to_string(), text))
+    }
+
+    async fn packument_impl(
+        &self,
+        package_name: impl AsRef<str>,
+        url: &Url,
+        use_corgi: bool,
+    ) -> Result<String, OroClientError> {
+        Ok(self
             .client
             .get(url.clone())
             .header(
@@ -35,9 +55,7 @@ impl OroClient {
                 }
             })?
             .text()
-            .await?;
-        serde_json::from_str(&text)
-            .map_err(move |e| OroClientError::from_json_err(e, url.to_string(), text))
+            .await?)
     }
 }
 
@@ -45,7 +63,7 @@ impl OroClient {
 mod test {
     use maplit::hashmap;
     use miette::{IntoDiagnostic, Result};
-    use oro_common::{Manifest, VersionMetadata};
+    use oro_common::{CorgiManifest, CorgiVersionMetadata, Manifest, VersionMetadata};
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use wiremock::matchers::{header, headers, method, path};
@@ -77,11 +95,11 @@ mod test {
             .await;
 
         assert_eq!(
-            client.packument("some-pkg", true).await?,
-            Packument {
+            client.corgi_packument("some-pkg").await?,
+            CorgiPackument {
                 versions: hashmap!(
-                    "1.0.0".parse()? => VersionMetadata {
-                        manifest: Manifest {
+                    "1.0.0".parse()? => CorgiVersionMetadata {
+                        manifest: CorgiManifest {
                             name: Some("some-pkg".to_string()),
                             version: Some("1.0.0".parse()?),
                             dependencies: hashmap!(
@@ -114,7 +132,7 @@ mod test {
             .await;
 
         assert_eq!(
-            client.packument("some-pkg", false).await?,
+            client.packument("some-pkg").await?,
             Packument {
                 versions: hashmap!(
                     "1.0.0".parse()? => VersionMetadata {

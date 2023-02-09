@@ -5,6 +5,25 @@ use node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CorgiManifest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<Version>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub dependencies: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub dev_dependencies: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub optional_dependencies: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub peer_dependencies: HashMap<String, String>,
+    #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies")]
+    pub bundled_dependencies: Vec<String>,
+}
+
 #[derive(Builder, Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
@@ -152,6 +171,35 @@ pub struct Manifest {
     #[serde(flatten, default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub _rest: HashMap<String, Value>,
+}
+
+impl From<CorgiManifest> for Manifest {
+    fn from(value: CorgiManifest) -> Self {
+        Manifest {
+            name: value.name,
+            version: value.version,
+            dependencies: value.dependencies,
+            dev_dependencies: value.dev_dependencies,
+            optional_dependencies: value.optional_dependencies,
+            peer_dependencies: value.peer_dependencies,
+            bundled_dependencies: value.bundled_dependencies,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Manifest> for CorgiManifest {
+    fn from(value: Manifest) -> Self {
+        CorgiManifest {
+            name: value.name,
+            version: value.version,
+            dependencies: value.dependencies,
+            dev_dependencies: value.dev_dependencies,
+            optional_dependencies: value.optional_dependencies,
+            peer_dependencies: value.peer_dependencies,
+            bundled_dependencies: value.bundled_dependencies,
+        }
+    }
 }
 
 fn object_or_bust<'de, D, K, V>(deserializer: D) -> std::result::Result<HashMap<K, V>, D::Error>

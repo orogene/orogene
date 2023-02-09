@@ -55,11 +55,13 @@ impl PackageSpec {
     pub fn target(&self) -> &PackageSpec {
         use PackageSpec::*;
         match self {
-            Alias { ref spec, .. } => if spec.is_alias() {
-                spec.target()
-            } else {
-                spec
-            },
+            Alias { ref spec, .. } => {
+                if spec.is_alias() {
+                    spec.target()
+                } else {
+                    spec
+                }
+            }
             _ => self,
         }
     }

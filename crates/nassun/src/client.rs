@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
 use oro_client::OroClient;
-use oro_common::{Packument, VersionMetadata};
+use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
@@ -59,11 +59,6 @@ impl NassunOpts {
         self
     }
 
-    pub fn use_corgi(mut self, use_corgi: bool) -> Self {
-        self.use_corgi = Some(use_corgi);
-        self
-    }
-
     pub fn build(self) -> Nassun {
         let registry = self
             .registries
@@ -71,7 +66,6 @@ impl NassunOpts {
             .cloned()
             .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
         let client = OroClient::new(registry);
-        let use_corgi = self.use_corgi.unwrap_or(true);
         Nassun {
             // cache: self.cache,
             resolver: PackageResolver {
@@ -86,7 +80,6 @@ impl NassunOpts {
             npm_fetcher: Arc::new(NpmFetcher::new(
                 #[allow(clippy::redundant_clone)]
                 client.clone(),
-                use_corgi,
                 self.registries,
             )),
             #[cfg(not(target_arch = "wasm32"))]
@@ -131,6 +124,20 @@ impl Nassun {
         Self::new().resolve(spec.as_ref()).await?.packument().await
     }
 
+    /// Resolves a partial (corgi) version of the [`Packument`] for the given
+    /// package `spec`.
+    ///
+    /// This uses default [`Nassun`] settings and does not cache the result.
+    /// To configure `Nassun`, and/or enable more efficient caching/reuse,
+    /// look at [`Package::packument` instead].
+    pub async fn corgi_packument(spec: impl AsRef<str>) -> Result<Arc<CorgiPackument>> {
+        Self::new()
+            .resolve(spec.as_ref())
+            .await?
+            .corgi_packument()
+            .await
+    }
+
     /// Resolves a [`VersionMetadata`] from the given package `spec`, using
     /// the default resolution algorithm.
     ///
@@ -139,6 +146,20 @@ impl Nassun {
     /// look at [`Package::metadata` instead].
     pub async fn metadata(spec: impl AsRef<str>) -> Result<VersionMetadata> {
         Self::new().resolve(spec.as_ref()).await?.metadata().await
+    }
+
+    /// Resolves a partial (corgi) version of the [`VersionMetadata`] from the
+    /// given package `spec`, using the default resolution algorithm.
+    ///
+    /// This uses default [`Nassun`] settings and does not cache the result.
+    /// To configure `Nassun`, and/or enable more efficient caching/reuse,
+    /// look at [`Package::metadata` instead].
+    pub async fn corgi_metadata(spec: impl AsRef<str>) -> Result<CorgiVersionMetadata> {
+        Self::new()
+            .resolve(spec.as_ref())
+            .await?
+            .corgi_metadata()
+            .await
     }
 
     /// Resolves a [`Tarball`] from the given package `spec`, using the
@@ -184,9 +205,7 @@ impl Nassun {
         resolved: PackageResolution,
     ) -> Package {
         let fetcher = self.pick_fetcher(&from);
-        self
-            .resolver
-            .resolve_from(name, from, resolved, fetcher)
+        self.resolver.resolve_from(name, from, resolved, fetcher)
     }
 
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {

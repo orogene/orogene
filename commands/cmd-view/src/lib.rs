@@ -29,7 +29,6 @@ impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
         let pkg = NassunOpts::new()
             .registry(self.registry)
-            .use_corgi(false)
             .base_dir(
                 std::env::current_dir()
                     .into_diagnostic()

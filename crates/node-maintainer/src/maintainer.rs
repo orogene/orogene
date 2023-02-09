@@ -7,7 +7,7 @@ use async_std::fs;
 use futures::FutureExt;
 use kdl::KdlDocument;
 use nassun::{Nassun, NassunOpts, Package};
-use oro_common::Manifest;
+use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -126,7 +126,11 @@ impl NodeMaintainer {
         // Start iterating over the queue. We'll be adding things to it as we find them.
         while let Some(node_idx) = q.pop_front() {
             let mut names = HashSet::new();
-            let manifest = self.graph[node_idx].package.metadata().await?.manifest;
+            let manifest = self.graph[node_idx]
+                .package
+                .corgi_metadata()
+                .await?
+                .manifest;
             // Grab all the deps from the current package and fire off a
             // lookup. These will be resolved concurrently.
             for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
@@ -273,7 +277,7 @@ impl NodeMaintainer {
     fn package_deps<'a, 'b>(
         &'a self,
         node_idx: NodeIndex,
-        manifest: &'b Manifest,
+        manifest: &'b CorgiManifest,
     ) -> Box<dyn Iterator<Item = ((&'b String, &'b String), DepType)> + 'b> {
         let deps = manifest
             .dependencies

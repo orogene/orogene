@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use async_std::sync::Arc;
-use oro_common::{Packument, VersionMetadata};
+use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 
@@ -49,6 +49,20 @@ impl Package {
         self.fetcher.metadata(self).await
     }
 
+    /// The partial (corgi) version of the [`Packument`] that this `Package`
+    /// was resolved from.
+    pub async fn corgi_packument(&self) -> Result<Arc<CorgiPackument>> {
+        self.fetcher
+            .corgi_packument(&self.from, &self.base_dir)
+            .await
+    }
+
+    /// The partial (corgi) version of the [`VersionMetadata`], aka the
+    /// manifest, aka roughly the metadata defined in `package.json`.
+    pub async fn corgi_metadata(&self) -> Result<CorgiVersionMetadata> {
+        self.fetcher.corgi_metadata(self).await
+    }
+
     /// [`AsyncRead`] of the raw tarball data for this package. The data will
     /// not be checked for integrity based on the current `Package`'s
     /// [`Integrity`]. That is, bad or incomplete data may be returned.
@@ -64,7 +78,7 @@ impl Package {
     /// returned in case of integrity validation failure.
     pub async fn tarball(&self) -> Result<Tarball> {
         let data = self.fetcher.tarball(self).await?;
-        if let Some(integrity) = self.metadata().await?.dist.integrity {
+        if let Some(integrity) = self.corgi_metadata().await?.dist.integrity {
             if let Ok(integrity) = integrity.parse::<Integrity>() {
                 Ok(Tarball::new(data, integrity))
             } else {

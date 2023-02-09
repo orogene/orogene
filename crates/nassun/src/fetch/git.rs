@@ -4,7 +4,7 @@ use async_process::{Command, Stdio};
 use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use oro_client::{self, OroClient};
-use oro_common::{Packument, VersionMetadata};
+use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
@@ -157,6 +157,19 @@ impl PackageFetcher for GitFetcher {
             .await
     }
 
+    async fn corgi_metadata(&self, pkg: &Package) -> Result<CorgiVersionMetadata> {
+        use PackageResolution::*;
+        let info = match pkg.resolved() {
+            Git { info, .. } => info,
+            _ => panic!("Only git specs allowed."),
+        };
+        let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;
+        self.fetch_to_temp_dir(info, dir.path()).await?;
+        self.dir_fetcher
+            .corgi_metadata_from_path(&dir.path().join("package"))
+            .await
+    }
+
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         use PackageResolution::*;
         let info = match pkg.resolved() {
@@ -167,6 +180,27 @@ impl PackageFetcher for GitFetcher {
         self.fetch_to_temp_dir(info, dir.path()).await?;
         self.dir_fetcher
             .metadata_from_path(&dir.path().join("package"))
+            .await
+    }
+
+    async fn corgi_packument(
+        &self,
+        spec: &PackageSpec,
+        _base_dir: &Path,
+    ) -> Result<Arc<CorgiPackument>> {
+        use PackageSpec::*;
+        let spec = match spec {
+            Alias { spec, .. } => spec,
+            spec => spec,
+        };
+        let info = match spec {
+            Git(info) => info,
+            _ => panic!("Only git specs allowed."),
+        };
+        let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;
+        self.fetch_to_temp_dir(info, dir.path()).await?;
+        self.dir_fetcher
+            .corgi_packument_from_path(&dir.path().join("package"))
             .await
     }
 

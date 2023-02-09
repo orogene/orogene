@@ -1,7 +1,7 @@
 use std::{fmt::Display, path::PathBuf, sync::Arc};
 
 use node_semver::{Range as SemVerRange, Version as SemVerVersion};
-use oro_common::Packument;
+use oro_common::CorgiPackument;
 use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
 use ssri::Integrity;
 use url::Url;
@@ -107,7 +107,7 @@ impl PackageResolver {
         wanted: PackageSpec,
         fetcher: Arc<dyn PackageFetcher>,
     ) -> Result<Package, NassunError> {
-        let packument = fetcher.packument(&wanted, &self.base_dir).await?;
+        let packument = fetcher.corgi_packument(&wanted, &self.base_dir).await?;
         let resolved = self.get_resolution(&name, &wanted, &packument)?;
         Ok(Package {
             name,
@@ -122,7 +122,7 @@ impl PackageResolver {
         &self,
         name: &str,
         wanted: &PackageSpec,
-        packument: &Arc<Packument>,
+        packument: &Arc<CorgiPackument>,
     ) -> Result<PackageResolution, NassunError> {
         use PackageSpec::*;
         let spec = match wanted {
@@ -239,7 +239,7 @@ impl PackageResolver {
                             Box::new(v.clone()),
                         ));
                     },
-                    integrity: v.dist.integrity.as_ref().map(|i| i.parse()).transpose()?
+                    integrity: v.dist.integrity.as_ref().map(|i| i.parse()).transpose()?,
                 })
             })
     }
