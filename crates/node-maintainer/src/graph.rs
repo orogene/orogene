@@ -145,9 +145,9 @@ impl Graph {
             }
         };
         let resolved = match node.package.resolved() {
-            PackageResolution::Npm { tarball, .. } => tarball.clone(),
-            PackageResolution::Dir { path, .. } => path.to_string_lossy().parse()?,
-            PackageResolution::Git { info, .. } => info.to_string().parse()?,
+            PackageResolution::Npm { tarball, .. } => tarball.to_string(),
+            PackageResolution::Dir { path, .. } => path.to_string_lossy().into(),
+            PackageResolution::Git { info, .. } => info.to_string(),
         };
         let version = if let &PackageResolution::Npm { ref version, .. } = node.package.resolved() {
             Some(version.clone())

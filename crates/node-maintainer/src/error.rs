@@ -11,9 +11,9 @@ pub enum NodeMaintainerError {
     UnsupportedScheme(String),
 
     /// Failed to parse a resolved URL while parsing lockfile
-    #[error("Failed to parse a resolved URL while parsing lockfile")]
+    #[error("Failed to parse a resolved URL while parsing lockfile: {0}")]
     #[diagnostic(code(node_maintainer::kdl::url_parse_error))]
-    UrlParseError(#[from] url::ParseError),
+    UrlParseError(String, #[source] url::ParseError),
 
     /// Failed to parse a Semver string.
     #[error("Failed to parse a Semver string.")]

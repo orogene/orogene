@@ -7,7 +7,6 @@ use oro_package_spec::PackageSpec;
 use petgraph::stable_graph::NodeIndex;
 use ssri::Integrity;
 use unicase::UniCase;
-use url::Url;
 
 use crate::{DepType, Graph, IntoKdl, Node, NodeMaintainerError, ResolvedMetadata};
 
@@ -115,7 +114,7 @@ pub struct LockfileNode {
     pub name: UniCase<String>,
     pub is_root: bool,
     pub path: Vec<UniCase<String>>,
-    pub resolved: Option<Url>,
+    pub resolved: Option<String>,
     pub version: Option<Version>,
     pub integrity: Option<Integrity>,
     pub dependencies: HashMap<UniCase<String>, PackageSpec>,
@@ -153,7 +152,9 @@ impl LockfileNode {
                             name.to_string()
                         },
                         version: version.clone(),
-                        tarball: url.clone(),
+                        tarball: url
+                            .parse()
+                            .map_err(|e| NodeMaintainerError::UrlParseError(url.clone(), e))?,
                         integrity: self.integrity.clone(),
                     };
                     nassun.resolve_from(self.name.to_string(), spec, resolution)
@@ -231,10 +232,7 @@ impl LockfileNode {
             .transpose()?;
         let resolved = children
             .get_arg("resolved")
-            .map(|resolved| -> Result<Url, NodeMaintainerError> {
-                Ok(resolved.to_string().parse()?)
-            })
-            .transpose()?;
+            .map(|resolved| resolved.to_string());
         Ok(Self {
             name,
             is_root,

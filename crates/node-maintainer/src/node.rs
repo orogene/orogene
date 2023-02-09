@@ -6,7 +6,6 @@ use oro_package_spec::PackageSpec;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use ssri::Integrity;
 use unicase::UniCase;
-use url::Url;
 
 use crate::Graph;
 
@@ -63,7 +62,7 @@ pub(crate) struct ResolvedMetadata {
     pub(crate) name: UniCase<String>,
     pub(crate) path: Vec<UniCase<String>>,
     pub(crate) version: Option<Version>,
-    pub(crate) resolved: Option<Url>,
+    pub(crate) resolved: Option<String>,
     pub(crate) integrity: Option<Integrity>,
     pub(crate) dependencies: HashMap<UniCase<String>, PackageSpec>,
     pub(crate) dev_dependencies: HashMap<UniCase<String>, PackageSpec>,
