@@ -25,7 +25,6 @@ pub struct NassunOpts {
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
-    use_corgi: Option<bool>,
 }
 
 impl NassunOpts {
