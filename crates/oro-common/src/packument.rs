@@ -115,6 +115,18 @@ impl From<VersionMetadata> for CorgiVersionMetadata {
     }
 }
 
+impl From<CorgiVersionMetadata> for CorgiManifest {
+    fn from(value: CorgiVersionMetadata) -> Self {
+        value.manifest
+    }
+}
+
+impl From<VersionMetadata> for Manifest {
+    fn from(value: VersionMetadata) -> Self {
+        value.manifest
+    }
+}
+
 /// Representation for the `bin` field in package manifests.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]

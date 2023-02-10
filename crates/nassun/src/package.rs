@@ -14,6 +14,7 @@ use crate::tarball::Tarball;
 
 /// A resolved package. A concrete version has been determined from its
 /// PackageSpec by the version resolver.
+#[derive(Clone)]
 pub struct Package {
     pub(crate) from: PackageSpec,
     pub(crate) name: String,

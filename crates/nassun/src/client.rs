@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
 use oro_client::OroClient;
-use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
+use oro_common::{CorgiManifest, CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
@@ -13,7 +13,7 @@ use crate::error::Result;
 use crate::fetch::DirFetcher;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::fetch::GitFetcher;
-use crate::fetch::{NpmFetcher, PackageFetcher};
+use crate::fetch::{DummyFetcher, NpmFetcher, PackageFetcher};
 use crate::package::Package;
 use crate::resolver::PackageResolver;
 use crate::{Entries, PackageResolution, Tarball};
@@ -205,6 +205,24 @@ impl Nassun {
     ) -> Package {
         let fetcher = self.pick_fetcher(&from);
         self.resolver.resolve_from(name, from, resolved, fetcher)
+    }
+
+    /// Creates a "resolved" package from a plain [`oro_common::Manifest`].
+    /// This is useful for, say, creating dummy packages for top-level
+    /// projects.
+    pub fn dummy_from_manifest(manifest: CorgiManifest) -> Package {
+        Package {
+            from: PackageSpec::Dir {
+                path: PathBuf::from("."),
+            },
+            name: manifest.name.clone().unwrap_or_else(|| "dummy".to_string()),
+            resolved: PackageResolution::Dir {
+                name: manifest.name.clone().unwrap_or_else(|| "dummy".to_string()),
+                path: PathBuf::from("."),
+            },
+            base_dir: PathBuf::from("."),
+            fetcher: Arc::new(DummyFetcher(manifest)),
+        }
     }
 
     fn pick_fetcher(&self, arg: &PackageSpec) -> Arc<dyn PackageFetcher> {

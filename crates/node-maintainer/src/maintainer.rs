@@ -62,6 +62,19 @@ impl NodeMaintainerOptions {
         inner(self, kdl.into_kdl()?).await
     }
 
+    pub async fn from_manifest(self, manifest: CorgiManifest) -> Result<NodeMaintainer, NodeMaintainerError> {
+        let nassun = self.nassun_opts.build();
+        let package = Nassun::dummy_from_manifest(manifest);
+        let mut nm = NodeMaintainer {
+            nassun,
+            graph: Default::default(),
+        };
+        let node = nm.graph.inner.add_node(Node::new(package));
+        nm.graph[node].root = node;
+        nm.run_resolver().await?;
+        Ok(nm)
+    }
+
     pub async fn resolve(
         self,
         root_spec: impl AsRef<str>,
@@ -117,6 +130,13 @@ impl NodeMaintainer {
 
     pub fn render(&self) -> String {
         self.graph.render()
+    }
+
+    pub async fn package_at_path(
+        &self,
+        path: &Path,
+    ) -> Result<Option<Package>, NodeMaintainerError> {
+        self.graph.package_at_path(path).await
     }
 
     async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {

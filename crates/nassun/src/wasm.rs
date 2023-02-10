@@ -95,15 +95,7 @@ impl JsNassun {
     }
 
     pub async fn resolve(&self, spec: &str) -> Result<JsPackage> {
-        let package = self.0.resolve(spec).await?;
-        let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
-        Ok(JsPackage {
-            from: JsValue::from_str(&package.from().to_string()),
-            name: JsValue::from_str(package.name()),
-            resolved: JsValue::from_str(&format!("{}", package.resolved())),
-            package,
-            serializer,
-        })
+        Ok(JsPackage::from_core_package(self.0.resolve(spec).await?))
     }
 }
 
@@ -114,6 +106,20 @@ pub struct JsPackage {
     resolved: JsValue,
     package: Package,
     serializer: serde_wasm_bindgen::Serializer,
+}
+
+#[wasm_bindgen(js_class = Package)]
+impl JsPackage {
+    pub fn from_core_package(package: RsPackage) -> Package {
+        let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
+        Package {
+            from: JsValue::from_str(&package.from().to_string()),
+            name: JsValue::from_str(package.name()),
+            resolved: JsValue::from_str(&format!("{}", package.resolved())),
+            package,
+            serializer,
+        }
+    }
 }
 
 #[wasm_bindgen(js_class = Package)]

@@ -1,10 +1,11 @@
 use std::{
     collections::{HashMap, VecDeque},
     ops::{Index, IndexMut},
+    path::Path,
 };
 
 use kdl::KdlDocument;
-use nassun::PackageResolution;
+use nassun::{Package, PackageResolution};
 use petgraph::{
     dot::Dot,
     stable_graph::{EdgeIndex, NodeIndex, StableGraph},
@@ -107,6 +108,34 @@ impl Graph {
                 |_, edge| { format!("{}", edge.requested) }
             ))
         )
+    }
+
+    pub(crate) async fn package_at_path(
+        &self,
+        path: &Path,
+    ) -> Result<Option<Package>, NodeMaintainerError> {
+        let mut current = Some(self.root);
+        let mut in_nm = true;
+        let nm = UniCase::new("node_modules".to_owned());
+        for segment in path {
+            let segment = UniCase::new(segment.to_string_lossy().into());
+            if segment == nm {
+                in_nm = true;
+                continue;
+            } else if let Some(curr_idx) = current {
+                if !in_nm {
+                    break;
+                } else if let Some(child) = self.inner[curr_idx].children.get(&segment) {
+                    current = Some(*child);
+                    in_nm = false;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        Ok(current.map(|idx| self.inner[idx].package.clone()))
     }
 
     pub(crate) fn find_by_name(

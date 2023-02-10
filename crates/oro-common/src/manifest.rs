@@ -5,6 +5,8 @@ use node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+use crate::{VersionMetadata, CorgiVersionMetadata};
+
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CorgiManifest {
@@ -198,6 +200,24 @@ impl From<Manifest> for CorgiManifest {
             optional_dependencies: value.optional_dependencies,
             peer_dependencies: value.peer_dependencies,
             bundled_dependencies: value.bundled_dependencies,
+        }
+    }
+}
+
+impl From<CorgiManifest> for CorgiVersionMetadata {
+    fn from(value: CorgiManifest) -> Self {
+        CorgiVersionMetadata {
+            manifest: value,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Manifest> for VersionMetadata {
+    fn from(value: Manifest) -> Self {
+        VersionMetadata {
+            manifest: value,
+            ..Default::default()
         }
     }
 }

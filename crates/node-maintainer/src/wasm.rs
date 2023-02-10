@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
+use nassun::Package;
 use serde::Deserialize;
 use thiserror::Error;
 use url::Url;
@@ -26,8 +27,62 @@ pub struct JsNodeMaintainer(NodeMaintainer);
 
 #[wasm_bindgen(js_class = NodeMaintainer)]
 impl JsNodeMaintainer {
+<<<<<<< HEAD
     pub fn to_kdl(&self) -> String {
         self.0.to_kdl().to_string()
+=======
+    fn opts_from_js_value(opts: JsValue) -> Result<NodeMaintainerOptions> {
+        console_error_panic_hook::set_once();
+        let mut opts_builder = NodeMaintainerOptions::new();
+        let mut opts: Vec<JsNodeMaintainerOptions> = serde_wasm_bindgen::from_value(opts)
+            .map_err(|e| JsNodeMaintainerError(NodeMaintainerError::MiscError(format!("{e}"))))?;
+        if let Some(opts) = opts.pop() {
+            if let Some(registry) = opts.registry {
+                opts_builder = opts_builder.registry(registry);
+            }
+            if let Some(scopes) = opts.scoped_registries {
+                for (scope, registry) in scopes {
+                    opts_builder = opts_builder.scope_registry(scope, registry);
+                }
+            }
+        }
+        Ok(opts_builder)
+    }
+
+    #[wasm_bindgen(variadic)]
+    pub async fn resolve(spec: &str, opts: JsValue) -> Result<JsNodeMaintainer> {
+        let opts_builder = Self::opts_from_js_value(opts)?;
+        opts_builder
+            .resolve(spec)
+            .await
+            .map(JsNodeMaintainer)
+            .map_err(JsNodeMaintainerError)
+    }
+
+    #[wasm_bindgen(variadic)]
+    pub async fn from_manifest(manifest: JsValue, opts: JsValue) -> Result<JsNodeMaintainer> {
+        let manifest = serde_wasm_bindgen::from_value(manifest)
+            .map_err(|e| JsNodeMaintainerError(NodeMaintainerError::MiscError(format!("{e}"))))?;
+        let opts_builder = Self::opts_from_js_value(opts)?;
+        opts_builder
+            .from_manifest(manifest)
+            .await
+            .map(JsNodeMaintainer)
+            .map_err(JsNodeMaintainerError)
+    }
+
+    pub fn to_kdl(&self) -> Result<String> {
+        Ok(self.0.to_kdl()?.to_string())
+>>>>>>> 0e5d094 (get a package from a path and make a NodeMaintainer from a CorgiManifest)
+    }
+
+    pub async fn package_at_path(&self, path: &str) -> Result<Option<Package>> {
+        Ok(self
+            .0
+            .package_at_path(Path::new(path))
+            .await
+            .map_err(JsNodeMaintainerError)?
+            .map(Package::from_core_package))
     }
 }
 

@@ -89,6 +89,14 @@ pub enum NassunError {
     #[diagnostic(code(nassun::invalid_package_spec))]
     InvalidPackageSpec(PackageSpec),
 
+    #[error("Unsupported dummy package operation: {0}")]
+    #[diagnostic(code(nassun::unsupported_dummy_operation))]
+    UnsupportedDummyOperation(String),
+
+    #[error("Dummy package does not have a name.")]
+    #[diagnostic(code(nassun::dummy_no_name))]
+    DummyNoName,
+
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
     /// don't implement std::error::Error.
