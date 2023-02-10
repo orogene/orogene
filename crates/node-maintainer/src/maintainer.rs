@@ -6,7 +6,7 @@ use std::path::Path;
 use async_std::fs;
 use futures::FutureExt;
 use kdl::KdlDocument;
-use nassun::{Nassun, NassunOpts, Package};
+use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -121,75 +121,80 @@ impl NodeMaintainer {
 
     async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {
         let mut packages = Vec::new();
+        let mut package_groups = Vec::new();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
         // Start iterating over the queue. We'll be adding things to it as we find them.
-        while let Some(node_idx) = q.pop_front() {
-            let mut names = HashSet::new();
-            let manifest = self.graph[node_idx]
-                .package
-                .corgi_metadata()
-                .await?
-                .manifest;
-            // Grab all the deps from the current package and fire off a
-            // lookup. These will be resolved concurrently.
-            for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
-                // `dependencies` > `optionalDependencies` ->
-                // `peerDependencies` -> `devDependencies` (if we're looking
-                // at root)
-                let name = UniCase::new(name.clone());
-                if !names.contains(&name) {
-                    let requested = format!("{name}@{spec}").parse()?;
-                    // Walk up the current hierarchy to see if we find a
-                    // dependency that already satisfies this request. If so,
-                    // make a new edge and move on.
-                    let needs_new_node =
-                        if let Some(satisfier_idx) = self.graph.find_by_name(node_idx, &name)? {
-                            if self.graph[satisfier_idx]
-                                .package
-                                .resolved()
-                                .satisfies(&requested)?
-                            {
-                                let edge_idx = self.graph.inner.add_edge(
-                                    node_idx,
-                                    satisfier_idx,
-                                    Edge::new(requested, dep_type.clone()),
-                                );
-                                self.graph[node_idx]
-                                    .dependencies
-                                    .insert(name.clone(), edge_idx);
-                                false
-                            } else {
-                                // The name does exist up our parent chain,
-                                // but its resolution doesn't satisfy our
-                                // request. We'll have to add a new node here.
-                                true
-                            }
-                        } else {
-                            true
+        while !q.is_empty() {
+            // TODO: limit by number of dependencies processed at the same time?
+            while let Some(node_idx) = q.pop_front() {
+                let mut names = HashSet::new();
+                let manifest = self.graph[node_idx]
+                    .package
+                    .corgi_metadata()
+                    .await?
+                    .manifest;
+                // Grab all the deps from the current package and fire off a
+                // lookup. These will be resolved concurrently.
+                for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
+                    // `dependencies` > `optionalDependencies` ->
+                    // `peerDependencies` -> `devDependencies` (if we're looking
+                    // at root)
+                    let name = UniCase::new(name.clone());
+                    if !names.contains(&name) {
+                        let requested = format!("{name}@{spec}").parse()?;
+                        // Walk up the current hierarchy to see if we find a
+                        // dependency that already satisfies this request. If so,
+                        // make a new edge and move on.
+                        if !Self::satisfy_dependency(
+                            &mut self.graph,
+                            node_idx,
+                            &dep_type,
+                            &name,
+                            &requested,
+                        )? {
+                            // Otherwise, we have to fetch package metadata to
+                            // create a new node (which we'll place later).
+                            packages.push(
+                                // TODO: limit parallelism in nassun?
+                                self.nassun
+                                    .resolve(format!("{name}@{spec}"))
+                                    .map(|p| (p, requested, dep_type)),
+                            );
                         };
-                    if needs_new_node {
-                        // Otherwise, we have to fetch package metadata to
-                        // create a new node (which we'll place later).
-                        packages.push(
-                            self.nassun
-                                .resolve(format!("{name}@{spec}"))
-                                .map(|p| (p, dep_type)),
-                        );
-                    };
-                    names.insert(name);
+                        names.insert(name);
+                    }
                 }
+
+                package_groups.push(
+                    futures::future::join_all(packages.drain(..))
+                        .map(move |group| (group, node_idx)),
+                )
             }
 
             // Order doesn't matter here: each node name is unique, so we
             // don't have to worry about races messing with placement.
-            for (package, dep_type) in futures::future::join_all(packages.drain(..)).await {
-                q.push_back(Self::place_child(
-                    &mut self.graph,
-                    node_idx,
-                    package?,
-                    dep_type,
-                )?);
+            for (group, dependent_idx) in futures::future::join_all(package_groups.drain(..)).await
+            {
+                for (package, requested, dep_type) in group {
+                    let package = package?;
+                    let name = UniCase::new(package.name().to_string());
+                    if Self::satisfy_dependency(
+                        &mut self.graph,
+                        dependent_idx,
+                        &dep_type,
+                        &name,
+                        &requested,
+                    )? {
+                        continue;
+                    }
+                    q.push_back(Self::place_child(
+                        &mut self.graph,
+                        dependent_idx,
+                        package,
+                        dep_type,
+                    )?);
+                }
             }
 
             // We sort the current queue so we consider more shallow
@@ -204,6 +209,34 @@ impl NodeMaintainer {
             })
         }
         Ok(())
+    }
+
+    fn satisfy_dependency(
+        graph: &mut Graph,
+        dependent_idx: NodeIndex,
+        dep_type: &DepType,
+        name: &UniCase<String>,
+        requested: &PackageSpec,
+    ) -> Result<bool, NodeMaintainerError> {
+        if let Some(satisfier_idx) = graph.find_by_name(dependent_idx, &name)? {
+            if graph[satisfier_idx]
+                .package
+                .resolved()
+                .satisfies(&requested)?
+            {
+                let edge_idx = graph.inner.add_edge(
+                    dependent_idx,
+                    satisfier_idx,
+                    Edge::new(requested.clone(), dep_type.clone()),
+                );
+                graph[dependent_idx]
+                    .dependencies
+                    .insert(name.clone(), edge_idx);
+                return Ok(true);
+            }
+            return Ok(false);
+        }
+        return Ok(false);
     }
 
     fn place_child(
