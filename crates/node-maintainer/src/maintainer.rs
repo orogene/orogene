@@ -4,7 +4,7 @@ use std::path::Path;
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
-use futures::FutureExt;
+use futures::{FutureExt, StreamExt};
 use kdl::KdlDocument;
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
@@ -120,15 +120,14 @@ impl NodeMaintainer {
     }
 
     async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {
-        let mut packages = Vec::new();
         let mut package_groups = Vec::new();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
         // Start iterating over the queue. We'll be adding things to it as we find them.
         while !q.is_empty() {
-            // TODO: limit by number of dependencies processed at the same time?
             while let Some(node_idx) = q.pop_front() {
                 let mut names = HashSet::new();
+                let mut packages = Vec::new();
                 let manifest = self.graph[node_idx]
                     .package
                     .corgi_metadata()
@@ -156,45 +155,41 @@ impl NodeMaintainer {
                             // Otherwise, we have to fetch package metadata to
                             // create a new node (which we'll place later).
                             packages.push(
-                                // TODO: limit parallelism in nassun?
                                 self.nassun
                                     .resolve(format!("{name}@{spec}"))
-                                    .map(|p| (p, requested, dep_type)),
+                                    .map(move |p| (p, requested, dep_type, node_idx)),
                             );
                         };
                         names.insert(name);
                     }
                 }
 
-                package_groups.push(
-                    futures::future::join_all(packages.drain(..))
-                        .map(move |group| (group, node_idx)),
-                )
+                package_groups.push(futures::stream::iter(packages));
             }
 
             // Order doesn't matter here: each node name is unique, so we
             // don't have to worry about races messing with placement.
-            for (group, dependent_idx) in futures::future::join_all(package_groups.drain(..)).await
-            {
-                for (package, requested, dep_type) in group {
-                    let package = package?;
-                    let name = UniCase::new(package.name().to_string());
-                    if Self::satisfy_dependency(
-                        &mut self.graph,
-                        dependent_idx,
-                        &dep_type,
-                        &name,
-                        &requested,
-                    )? {
-                        continue;
-                    }
-                    q.push_back(Self::place_child(
-                        &mut self.graph,
-                        dependent_idx,
-                        package,
-                        dep_type,
-                    )?);
+            let mut stream = futures::stream::iter(package_groups.drain(..))
+                .flatten()
+                .buffer_unordered(30);
+            while let Some((package, requested, dep_type, dependent_idx)) = stream.next().await {
+                let package = package?;
+                let name = UniCase::new(package.name().to_string());
+                if Self::satisfy_dependency(
+                    &mut self.graph,
+                    dependent_idx,
+                    &dep_type,
+                    &name,
+                    &requested,
+                )? {
+                    continue;
                 }
+                q.push_back(Self::place_child(
+                    &mut self.graph,
+                    dependent_idx,
+                    package,
+                    dep_type,
+                )?);
             }
 
             // We sort the current queue so we consider more shallow
