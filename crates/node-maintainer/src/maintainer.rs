@@ -5,8 +5,7 @@ use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use futures::{TryFutureExt, StreamExt};
-use kdl::KdlDocument;
-use nassun::{Nassun, NassunOpts, Package};
+use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -16,7 +15,7 @@ use url::Url;
 
 use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
-use crate::{Graph, IntoKdl, Lockfile, Node};
+use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
 const DEFAULT_PARALLELISM: usize = 50;
 
@@ -24,6 +23,7 @@ const DEFAULT_PARALLELISM: usize = 50;
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
     parallelism: usize,
+    kdl_lock: Option<Lockfile>,
 }
 
 impl NodeMaintainerOptions {
@@ -34,6 +34,12 @@ impl NodeMaintainerOptions {
     pub fn parallelism(mut self, parallelism: usize) -> Self {
         self.parallelism = parallelism;
         self
+    }
+
+    pub fn kdl_lock(mut self, kdl_lock: impl IntoKdl) -> Result<Self, NodeMaintainerError> {
+        let lock = Lockfile::from_kdl(kdl_lock)?;
+        self.kdl_lock = Some(lock);
+        Ok(self)
     }
 
     pub fn registry(mut self, registry: Url) -> Self {
@@ -56,48 +62,35 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub async fn from_kdl(self, kdl: impl IntoKdl) -> Result<NodeMaintainer, NodeMaintainerError> {
-        async fn inner(
-            me: NodeMaintainerOptions,
-            kdl: KdlDocument,
-        ) -> Result<NodeMaintainer, NodeMaintainerError> {
-            let nassun = me.nassun_opts.build();
-            let graph = Lockfile::from_kdl(kdl)?.into_graph(&nassun).await?;
-            let mut nm = NodeMaintainer { nassun, graph, parallelism: me.parallelism };
-            nm.run_resolver().await?;
-            Ok(nm)
-        }
-        inner(self, kdl.into_kdl()?).await
-    }
-
-    pub async fn from_manifest(self, manifest: CorgiManifest) -> Result<NodeMaintainer, NodeMaintainerError> {
+    pub async fn resolve_manifest(self, root: CorgiManifest) -> Result<NodeMaintainer, NodeMaintainerError> {
         let nassun = self.nassun_opts.build();
-        let package = Nassun::dummy_from_manifest(manifest);
+        let root_pkg = Nassun::dummy_from_manifest(root.clone());
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
         };
-        let node = nm.graph.inner.add_node(Node::new(package));
+        let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
-        nm.run_resolver().await?;
+        nm.run_resolver(self.kdl_lock).await?;
         Ok(nm)
     }
 
-    pub async fn resolve(
+    pub async fn resolve_spec(
         self,
         root_spec: impl AsRef<str>,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
         let nassun = self.nassun_opts.build();
-        let package = nassun.resolve(root_spec).await?;
+        let root_pkg = nassun.resolve(root_spec).await?;
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
         };
-        let node = nm.graph.inner.add_node(Node::new(package));
+        let corgi = root_pkg.corgi_metadata().await?.manifest;
+        let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
-        nm.run_resolver().await?;
+        nm.run_resolver(self.kdl_lock).await?;
         Ok(nm)
     }
 }
@@ -107,6 +100,7 @@ impl Default for NodeMaintainerOptions {
         NodeMaintainerOptions {
             nassun_opts: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
+            kdl_lock: None,
         }
     }
 }
@@ -129,10 +123,16 @@ impl NodeMaintainer {
         NodeMaintainerOptions::new()
     }
 
-    pub async fn resolve(
+    pub async fn resolve_manifest(
+        root: CorgiManifest,
+    ) -> Result<NodeMaintainer, NodeMaintainerError> {
+        Self::builder().resolve_manifest(root).await
+    }
+
+    pub async fn resolve_spec(
         root_spec: impl AsRef<str>,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
-        Self::builder().resolve(root_spec).await
+        Self::builder().resolve_spec(root_spec).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -147,8 +147,8 @@ impl NodeMaintainer {
         Ok(())
     }
 
-    pub fn to_resolved_tree(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
-        self.graph.to_resolved_tree()
+    pub fn to_lockfile(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
+        self.graph.to_lockfile()
     }
 
     pub fn to_kdl(&self) -> Result<kdl::KdlDocument, NodeMaintainerError> {
@@ -166,7 +166,10 @@ impl NodeMaintainer {
         self.graph.package_at_path(path).await
     }
 
-    async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {
+    async fn run_resolver(
+        &mut self,
+        kdl_lock: Option<Lockfile>,
+    ) -> Result<(), NodeMaintainerError> {
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
@@ -185,11 +188,7 @@ impl NodeMaintainer {
         while !q.is_empty() || in_flight != 0 {
             while let Some(node_idx) = q.pop_front() {
                 let mut names = HashSet::new();
-                let manifest = self.graph[node_idx]
-                    .package
-                    .corgi_metadata()
-                    .await?
-                    .manifest;
+                let manifest = self.graph[node_idx].manifest.clone();
                 // Grab all the deps from the current package and fire off a
                 // lookup. These will be resolved concurrently.
                 for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
@@ -197,28 +196,64 @@ impl NodeMaintainer {
                     // `peerDependencies` -> `devDependencies` (if we're looking
                     // at root)
                     let name = UniCase::new(name.clone());
-                    if !names.contains(&name) {
-                        let dep = NodeDependency {
-                            name: name.clone(),
-                            spec: spec.to_string(),
-                            dep_type: dep_type.clone(),
-                            node_idx,
-                        };
 
-                        // Walk up the current hierarchy to see if we find a
-                        // dependency that already satisfies this request. If so,
-                        // make a new edge and move on.
-                        if !Self::satisfy_dependency(
-                            &mut self.graph,
-                            &dep,
-                        )? {
-                            // Otherwise, we have to fetch package metadata to
-                            // create a new node (which we'll place later).
-                            in_flight += 1;
-                            package_sink.unbounded_send(dep)?;
-                        };
-                        names.insert(name);
+                    if names.contains(&name) {
+                        continue;
+                    } else {
+                        names.insert(name.clone());
                     }
+
+                    let dep = NodeDependency {
+                        name: name.clone(),
+                        spec: spec.to_string(),
+                        dep_type: dep_type.clone(),
+                        node_idx,
+                    };
+
+                    let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
+
+                    // Walk up the current hierarchy to see if we find a
+                    // dependency that already satisfies this request. If so,
+                    // make a new edge and move on.
+                    if !Self::satisfy_dependency(
+                        &mut self.graph,
+                        &dep,
+                    )? {
+                        // If we have a lockfile, first check if there's a
+                        // dep there that would satisfy this.
+                        if let Some(kdl_lock) = &kdl_lock {
+                            if let Some((package, lockfile_node)) = self
+                                .satisfy_from_lockfile(
+                                    &self.graph,
+                                    node_idx,
+                                    &kdl_lock,
+                                    &name,
+                                    &requested,
+                                )
+                                .await?
+                            {
+                                let target_path = lockfile_node.path.clone();
+                                q.push_back(
+                                    Self::place_child(
+                                        &mut self.graph,
+                                        node_idx,
+                                        package,
+                                        &requested,
+                                        dep_type,
+                                        lockfile_node.into(),
+                                        Some(target_path),
+                                    )
+                                    .await?,
+                                );
+                                continue;
+                            }
+                        }
+
+                        // Otherwise, we have to fetch package metadata to
+                        // create a new node (which we'll place later).
+                        in_flight += 1;
+                        package_sink.unbounded_send(dep)?;
+                    };
                 }
             }
 
@@ -240,12 +275,17 @@ impl NodeMaintainer {
                     )? {
                         continue;
                     }
+                    let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
+                    let manifest = package.corgi_metadata().await?.manifest;
                     q.push_back(Self::place_child(
                         &mut self.graph,
                         dep.node_idx,
                         package,
+                        &requested,
                         dep.dep_type,
-                    )?);
+                        manifest,
+                        None,
+                    ).await?);
                 }
 
                 // We sort the current queue so we consider more shallow
@@ -290,15 +330,60 @@ impl NodeMaintainer {
         return Ok(false);
     }
 
-    fn place_child(
+    async fn satisfy_from_lockfile(
+        &self,
+        graph: &Graph,
+        dependent_idx: NodeIndex,
+        lockfile: &Lockfile,
+        name: &UniCase<String>,
+        requested: &PackageSpec,
+    ) -> Result<Option<(Package, LockfileNode)>, NodeMaintainerError> {
+        let mut path = graph.node_path(dependent_idx);
+        let mut last_loop = false;
+        loop {
+            if path.is_empty() {
+                last_loop = true;
+            }
+            path.push_back(name.clone());
+            let path_str = UniCase::from(
+                path.iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join("/node_modules/"),
+            );
+            path.pop_back();
+            if let Some(lockfile_node) = lockfile.packages().get(&path_str) {
+                if let Some(package) = lockfile_node.to_package(&self.nassun).await? {
+                    if package.resolved().satisfies(&requested)? {
+                        return Ok(Some((package, lockfile_node.clone())));
+                    } else {
+                        // TODO: Log this We found a lockfile node in a place
+                        // where it would be loaded, but it doesn't satisfy the
+                        // actual request, so it would be wrong. Return None here
+                        // so the node gets re-resolved.
+                        return Ok(None);
+                    }
+                }
+            }
+            if last_loop {
+                break;
+            }
+            path.pop_back();
+        }
+        Ok(None)
+    }
+
+    async fn place_child(
         graph: &mut Graph,
         dependent_idx: NodeIndex,
         package: Package,
+        requested: &PackageSpec,
         dep_type: DepType,
+        corgi: CorgiManifest,
+        target_path: Option<Vec<UniCase<String>>>,
     ) -> Result<NodeIndex, NodeMaintainerError> {
-        let requested = package.from().clone();
         let child_name = UniCase::new(package.name().to_string());
-        let child_node = Node::new(package);
+        let child_node = Node::new(package, corgi);
         let child_idx = graph.inner.add_node(child_node);
         graph[child_idx].root = graph.root;
         // We needed to generate the node index before setting it in the node,
@@ -313,28 +398,49 @@ impl NodeMaintainer {
             Edge::new(requested.clone(), dep_type),
         );
 
-        // Now we calculate the highest hierarchy location that we can place
-        // this node in.
-        let mut parent_idx = Some(dependent_idx);
-        let mut target_idx = dependent_idx;
-        'outer: while let Some(curr_target_idx) = parent_idx {
-            if let Some(resolved) = graph.resolve_dep(curr_target_idx, &child_name) {
-                for edge_ref in graph.inner.edges_directed(resolved, Direction::Incoming) {
-                    let (from, _) = graph
-                        .inner
-                        .edge_endpoints(edge_ref.id())
-                        .expect("Where did the edge go?!?!");
-                    if graph.is_ancestor(curr_target_idx, from)
-                        && !graph[resolved].package.resolved().satisfies(&requested)?
-                    {
-                        break 'outer;
-                    }
+        let mut target_idx = graph.root;
+        let mut found_in_path = true;
+        // If we got a suggested target path, we'll try to use that first.
+        if let Some(target_path) = target_path {
+            for segment in target_path.iter().take(target_path.len() - 1) {
+                if let Some(new_target) = &graph[target_idx].children.get(segment) {
+                    target_idx = **new_target;
+                } else {
+                    // We couldn't find the target path. We'll just place the
+                    // node in the highest possible location.
+                    found_in_path = false;
+                    break;
                 }
             }
+        } else {
+            found_in_path = false;
+        }
 
-            // No conflict yet. Let's try to go higher!
-            target_idx = curr_target_idx;
-            parent_idx = graph[curr_target_idx].parent;
+        if !found_in_path {
+            // If we didn't have a path, or the path wasn't correct, we
+            // calculate the highest hierarchy location that we can place this
+            // node in.
+            let mut parent_idx = Some(dependent_idx);
+            target_idx = dependent_idx;
+            'outer: while let Some(curr_target_idx) = parent_idx {
+                if let Some(resolved) = graph.resolve_dep(curr_target_idx, &child_name) {
+                    for edge_ref in graph.inner.edges_directed(resolved, Direction::Incoming) {
+                        let (from, _) = graph
+                            .inner
+                            .edge_endpoints(edge_ref.id())
+                            .expect("Where did the edge go?!?!");
+                        if graph.is_ancestor(curr_target_idx, from)
+                            && !graph[resolved].package.resolved().satisfies(&requested)?
+                        {
+                            break 'outer;
+                        }
+                    }
+                }
+
+                // No conflict yet. Let's try to go higher!
+                target_idx = curr_target_idx;
+                parent_idx = graph[curr_target_idx].parent;
+            }
         }
 
         // Finally, we put everything in its place.
@@ -362,7 +468,7 @@ impl NodeMaintainer {
         &'a self,
         node_idx: NodeIndex,
         manifest: &'b CorgiManifest,
-    ) -> Box<dyn Iterator<Item = ((&'b String, &'b String), DepType)> + 'b> {
+    ) -> Box<dyn Iterator<Item = ((&'b String, &'b String), DepType)> + 'b + Send> {
         let deps = manifest
             .dependencies
             .iter()

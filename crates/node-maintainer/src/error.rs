@@ -26,13 +26,23 @@ pub enum NodeMaintainerError {
     #[diagnostic(code(node_maintainer::kdl::missing_version))]
     MissingVersion,
 
+    /// Missing resolution for package entry in lockfile.
+    #[error("Missing version for NPM package entry in lockfile.")]
+    #[diagnostic(code(node_maintainer::kdl::missing_version))]
+    MissingResolution,
+
     /// Failed to parse an integrity value.
     #[error(transparent)]
     #[diagnostic(code(node_maintainer::kdl::integrity_parse_error))]
     IntegrityParseError(#[from] ssri::Error),
 
+    /// Failed to parse an integrity value while loading lockfile.
+    #[error("Failed to parse an integrity value while loading lockfile node:\n{0}")]
+    #[diagnostic(code(node_maintainer::kdl::integrity_parse_error))]
+    LockfileIntegrityParseError(KdlNode, #[source] ssri::Error),
+
     /// Missing package node name.
-    #[error("Missing package node name.")]
+    #[error("Missing package node name:\n{0}")]
     #[diagnostic(code(node_maintainer::kdl::missing_node_name))]
     MissingName(KdlNode),
 
