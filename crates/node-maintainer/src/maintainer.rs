@@ -1,12 +1,16 @@
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::path::Path;
+use std::sync::atomic;
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
-use futures::{FutureExt, StreamExt};
+use futures::channel::mpsc;
+use futures::lock::Mutex;
+use futures::{StreamExt, TryStreamExt};
 use kdl::KdlDocument;
-use nassun::{Nassun, NassunOpts, Package, PackageSpec};
+use nassun::{Nassun, NassunOpts, Package};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -79,6 +83,13 @@ impl NodeMaintainerOptions {
     }
 }
 
+pub struct NodeDependency {
+    name: UniCase<String>,
+    spec: String,
+    dep_type: DepType,
+    node_idx: NodeIndex,
+}
+
 pub struct NodeMaintainer {
     nassun: Nassun,
     graph: Graph,
@@ -120,113 +131,177 @@ impl NodeMaintainer {
     }
 
     async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {
-        let mut package_groups = Vec::new();
-        let mut q = VecDeque::new();
-        q.push_back(self.graph.root);
-        // Start iterating over the queue. We'll be adding things to it as we find them.
-        while !q.is_empty() {
-            while let Some(node_idx) = q.pop_front() {
-                let mut names = HashSet::new();
-                let mut packages = Vec::new();
-                let manifest = self.graph[node_idx]
-                    .package
-                    .corgi_metadata()
-                    .await?
-                    .manifest;
-                // Grab all the deps from the current package and fire off a
-                // lookup. These will be resolved concurrently.
-                for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
-                    // `dependencies` > `optionalDependencies` ->
-                    // `peerDependencies` -> `devDependencies` (if we're looking
-                    // at root)
-                    let name = UniCase::new(name.clone());
-                    if !names.contains(&name) {
-                        let requested = format!("{name}@{spec}").parse()?;
+        let idx_queue = Arc::new(Mutex::new(VecDeque::from([self.graph.root])));
+
+        // Number of nodes in processing. When this drops to zero we close
+        // both idx_receiver and dep_receiver so that streams end.
+        let in_flight_count = Arc::new(atomic::AtomicUsize::new(1));
+
+        let nassun = Arc::new(&self.nassun);
+        let graph = Arc::new(Mutex::new(&mut self.graph));
+
+        let (idx_sender, idx_receiver) = mpsc::unbounded::<()>();
+        idx_sender.unbounded_send(())?;
+
+        let (dep_sender, dep_receiver) = mpsc::unbounded::<NodeDependency>();
+
+        let dep_receiver = dep_receiver.map(|node_dep| {
+            let idx_queue = idx_queue.clone();
+            let in_flight_count = in_flight_count.clone();
+            let graph = graph.clone();
+            let nassun = nassun.clone();
+            let idx_sender = idx_sender.clone();
+            let dep_sender = dep_sender.clone();
+
+            async move {
+                let package = nassun.resolve(&node_dep.name).await?;
+
+                let mut graph = graph.lock().await;
+                let satisfies = Self::satisfy_dependency(&mut graph, &node_dep)?;
+                if satisfies {
+                    // Terminate early because another package has satisfied
+                    // the dependency.
+                    if in_flight_count.fetch_sub(1, atomic::Ordering::SeqCst) == 1 {
+                        idx_sender.close_channel();
+                        dep_sender.close_channel();
+                    }
+                    return Ok::<_, NodeMaintainerError>(());
+                }
+                let child_idx =
+                    Self::place_child(&mut graph, node_dep.node_idx, package, node_dep.dep_type)?;
+
+                // Important: this has to be locked *after* locking the graph
+                // to avoid deadlocks between two dep_receiver and idx_receiver.
+                let mut idx_queue = idx_queue.lock().await;
+                idx_queue.push_back(child_idx);
+
+                // We sort the current queue so we consider more shallow
+                // dependencies first, and we also sort alphabetically.
+                idx_queue.make_contiguous().sort_by(|a_idx, b_idx| {
+                    let a = &graph[*a_idx];
+                    let b = &graph[*b_idx];
+                    match a.depth(&graph).cmp(&b.depth(&graph)) {
+                        Ordering::Equal => a.package.name().cmp(b.package.name()),
+                        other => other,
+                    }
+                });
+
+                // Drop mutexes early so that idx_receiver can run without
+                // blocking.
+                drop(idx_queue);
+                drop(graph);
+
+                // Notify idx_receiver about new queue element.
+                idx_sender.unbounded_send(())?;
+
+                Ok::<_, NodeMaintainerError>(())
+            }
+        });
+
+        let idx_receiver =
+            idx_receiver.map(|()| {
+                let graph = graph.clone();
+                let idx_queue = idx_queue.clone();
+                let in_flight_count = in_flight_count.clone();
+                let idx_sender = idx_sender.clone();
+                let dep_sender = dep_sender.clone();
+
+                async move {
+                    // Same as above: lock on graph first, and idx_queue later
+                    let mut graph = graph.lock().await;
+                    let node_idx = idx_queue.lock().await.pop_front().ok_or(
+                        NodeMaintainerError::MiscError("Unexpected end of idx_queue".to_string()),
+                    )?;
+
+                    let mut names = HashSet::new();
+                    let manifest = graph[node_idx].package.corgi_metadata().await?.manifest;
+
+                    let mut deps = Vec::new();
+
+                    // Grab all the deps from the current package and fire off a
+                    // lookup. These will be resolved concurrently.
+                    for ((name, spec), dep_type) in Self::package_deps(&graph, node_idx, &manifest)
+                    {
+                        // `dependencies` > `optionalDependencies` ->
+                        // `peerDependencies` -> `devDependencies` (if we're looking
+                        // at root)
+                        let name = UniCase::new(name.clone());
+                        if names.contains(&name) {
+                            continue;
+                        }
+
+                        let node_dep = NodeDependency {
+                            name: name.clone(),
+                            spec: spec.to_string(),
+                            dep_type: dep_type.clone(),
+                            node_idx,
+                        };
+
                         // Walk up the current hierarchy to see if we find a
                         // dependency that already satisfies this request. If so,
                         // make a new edge and move on.
-                        if !Self::satisfy_dependency(
-                            &mut self.graph,
-                            node_idx,
-                            &dep_type,
-                            &name,
-                            &requested,
-                        )? {
-                            // Otherwise, we have to fetch package metadata to
-                            // create a new node (which we'll place later).
-                            packages.push(
-                                self.nassun
-                                    .resolve(format!("{name}@{spec}"))
-                                    .map(move |p| (p, requested, dep_type, node_idx)),
-                            );
-                        };
+                        let satisfies = Self::satisfy_dependency(&mut graph, &node_dep)?;
+                        if satisfies {
+                            names.insert(name);
+                            continue;
+                        }
+
+                        // Otherwise, we have to fetch package metadata to
+                        // create a new node (which we'll place later).
+                        in_flight_count.fetch_add(1, atomic::Ordering::SeqCst);
+                        deps.push(node_dep);
                         names.insert(name);
                     }
-                }
 
-                package_groups.push(futures::stream::iter(packages));
-            }
+                    // Release mutex so that code below doesn't dead lock
+                    drop(graph);
 
-            // Order doesn't matter here: each node name is unique, so we
-            // don't have to worry about races messing with placement.
-            let mut stream = futures::stream::iter(package_groups.drain(..))
-                .flatten()
-                .buffer_unordered(30);
-            while let Some((package, requested, dep_type, dependent_idx)) = stream.next().await {
-                let package = package?;
-                let name = UniCase::new(package.name().to_string());
-                if Self::satisfy_dependency(
-                    &mut self.graph,
-                    dependent_idx,
-                    &dep_type,
-                    &name,
-                    &requested,
-                )? {
-                    continue;
-                }
-                q.push_back(Self::place_child(
-                    &mut self.graph,
-                    dependent_idx,
-                    package,
-                    dep_type,
-                )?);
-            }
+                    for node_dep in deps {
+                        dep_sender.unbounded_send(node_dep)?;
+                    }
 
-            // We sort the current queue so we consider more shallow
-            // dependencies first, and we also sort alphabetically.
-            q.make_contiguous().sort_by(|a_idx, b_idx| {
-                let a = &self.graph[*a_idx];
-                let b = &self.graph[*b_idx];
-                match a.depth(&self.graph).cmp(&b.depth(&self.graph)) {
-                    Ordering::Equal => a.package.name().cmp(b.package.name()),
-                    other => other,
+                    if in_flight_count.fetch_sub(1, atomic::Ordering::SeqCst) == 1 {
+                        idx_sender.close_channel();
+                        dep_sender.close_channel();
+                    }
+
+                    Ok::<(), NodeMaintainerError>(())
                 }
-            })
-        }
+            });
+
+        futures::stream::select(
+            // Fetch dependencies at high concurrency and unordered because
+            // we sort the `idx_queue` by depth/name on every push anyway.
+            dep_receiver.buffer_unordered(100),
+            // Process nodes one-by-one and in order because processor is
+            // effectively synchronous (if not for the mutexes) anyway.
+            idx_receiver.buffered(1),
+        )
+        .try_for_each(|_| futures::future::ready(Ok(())))
+        .await?;
+
         Ok(())
     }
 
     fn satisfy_dependency(
         graph: &mut Graph,
-        dependent_idx: NodeIndex,
-        dep_type: &DepType,
-        name: &UniCase<String>,
-        requested: &PackageSpec,
+        node_dep: &NodeDependency,
     ) -> Result<bool, NodeMaintainerError> {
-        if let Some(satisfier_idx) = graph.find_by_name(dependent_idx, &name)? {
+        if let Some(satisfier_idx) = graph.find_by_name(node_dep.node_idx, &node_dep.name)? {
+            let requested = format!("{:}@{:}", node_dep.name, node_dep.spec).parse()?;
             if graph[satisfier_idx]
                 .package
                 .resolved()
                 .satisfies(&requested)?
             {
                 let edge_idx = graph.inner.add_edge(
-                    dependent_idx,
+                    node_dep.node_idx,
                     satisfier_idx,
-                    Edge::new(requested.clone(), dep_type.clone()),
+                    Edge::new(requested.clone(), node_dep.dep_type.clone()),
                 );
-                graph[dependent_idx]
+                graph[node_dep.node_idx]
                     .dependencies
-                    .insert(name.clone(), edge_idx);
+                    .insert(node_dep.name.clone(), edge_idx);
                 return Ok(true);
             }
             return Ok(false);
@@ -302,8 +377,8 @@ impl NodeMaintainer {
         Ok(child_idx)
     }
 
-    fn package_deps<'a, 'b>(
-        &'a self,
+    fn package_deps<'b>(
+        graph: &Graph,
         node_idx: NodeIndex,
         manifest: &'b CorgiManifest,
     ) -> Box<dyn Iterator<Item = ((&'b String, &'b String), DepType)> + 'b> {
@@ -324,7 +399,7 @@ impl NodeMaintainer {
                     .map(|x| (x, DepType::Peer)),
             );
 
-        if node_idx == self.graph.root {
+        if node_idx == graph.root {
             Box::new(deps.chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev))))
         } else {
             Box::new(deps)

@@ -1,3 +1,5 @@
+use crate::maintainer::NodeDependency;
+use futures::channel::mpsc;
 use kdl::{KdlDocument, KdlNode};
 use miette::Diagnostic;
 use thiserror::Error;
@@ -68,4 +70,12 @@ pub enum NodeMaintainerError {
     #[error("{0}")]
     #[diagnostic(code(node_maintainer::miscellaneous_error))]
     MiscError(String),
+
+    #[error("Failed to send data on idx mpsc channel.")]
+    #[diagnostic(code(node_maintainer::kdl::io_error))]
+    TryIdxSendError(#[from] mpsc::TrySendError<()>),
+
+    #[error("Failed to send data on dep mpsc channel.")]
+    #[diagnostic(code(node_maintainer::kdl::io_error))]
+    TryDepSendError(#[from] mpsc::TrySendError<NodeDependency>),
 }
