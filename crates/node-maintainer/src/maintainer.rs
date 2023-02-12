@@ -154,7 +154,9 @@ impl NodeMaintainer {
             let dep_sender = dep_sender.clone();
 
             async move {
-                let package = nassun.resolve(&node_dep.name).await?;
+                let package = nassun
+                    .resolve(format!("{}@{}", node_dep.name, node_dep.spec))
+                    .await?;
 
                 let mut graph = graph.lock().await;
                 let satisfies = Self::satisfy_dependency(&mut graph, &node_dep)?;
