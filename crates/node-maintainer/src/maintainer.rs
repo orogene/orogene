@@ -140,11 +140,11 @@ impl NodeMaintainer {
     }
 
     async fn run_resolver(&mut self) -> Result<(), NodeMaintainerError> {
-        let mut package_groups = Vec::new();
+        let mut package_streams = futures::stream::select_all::SelectAll::new();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
         // Start iterating over the queue. We'll be adding things to it as we find them.
-        while !q.is_empty() {
+        while !q.is_empty() || !package_streams.is_empty() {
             while let Some(node_idx) = q.pop_front() {
                 let mut names = HashSet::new();
                 let mut packages = Vec::new();
@@ -184,15 +184,12 @@ impl NodeMaintainer {
                     }
                 }
 
-                package_groups.push(futures::stream::iter(packages));
+                package_streams.push(futures::stream::iter(packages).buffer_unordered(30));
             }
 
             // Order doesn't matter here: each node name is unique, so we
             // don't have to worry about races messing with placement.
-            let mut stream = futures::stream::iter(package_groups.drain(..))
-                .flatten()
-                .buffer_unordered(30);
-            while let Some((package, requested, dep_type, dependent_idx)) = stream.next().await {
+            if let Some((package, requested, dep_type, dependent_idx)) = package_streams.next().await {
                 let package = package?;
                 let name = UniCase::new(package.name().to_string());
                 if Self::satisfy_dependency(
@@ -210,18 +207,18 @@ impl NodeMaintainer {
                     package,
                     dep_type,
                 )?);
-            }
 
-            // We sort the current queue so we consider more shallow
-            // dependencies first, and we also sort alphabetically.
-            q.make_contiguous().sort_by(|a_idx, b_idx| {
-                let a = &self.graph[*a_idx];
-                let b = &self.graph[*b_idx];
-                match a.depth(&self.graph).cmp(&b.depth(&self.graph)) {
-                    Ordering::Equal => a.package.name().cmp(b.package.name()),
-                    other => other,
-                }
-            })
+                // We sort the current queue so we consider more shallow
+                // dependencies first, and we also sort alphabetically.
+                q.make_contiguous().sort_by(|a_idx, b_idx| {
+                    let a = &self.graph[*a_idx];
+                    let b = &self.graph[*b_idx];
+                    match a.depth(&self.graph).cmp(&b.depth(&self.graph)) {
+                        Ordering::Equal => a.package.name().cmp(b.package.name()),
+                        other => other,
+                    }
+                })
+            }
         }
         Ok(())
     }
