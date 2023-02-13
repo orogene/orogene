@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
-use config::{ConfigError, Environment, File};
+use config::{ConfigError, Environment, File, ConfigBuilder, builder::DefaultState};
 use miette::{Diagnostic, Result};
 use thiserror::Error;
 
@@ -26,6 +26,7 @@ pub enum OroConfigError {
 }
 
 pub struct OroConfigOptions {
+    builder: ConfigBuilder<DefaultState>,
     global: bool,
     env: bool,
     pkg_root: Option<PathBuf>,
@@ -35,6 +36,7 @@ pub struct OroConfigOptions {
 impl Default for OroConfigOptions {
     fn default() -> Self {
         OroConfigOptions {
+            builder: OroConfig::builder(),
             global: true,
             env: true,
             pkg_root: None,
@@ -68,8 +70,13 @@ impl OroConfigOptions {
         self
     }
 
+    pub fn set_default(mut self, key: &str, value: &str) -> Result<Self, OroConfigError> {
+        self.builder = self.builder.set_default(key, value)?;
+        Ok(self)
+    }
+
     pub fn load(self) -> Result<OroConfig> {
-        let mut builder = OroConfig::builder();
+        let mut builder = self.builder;
         if self.global {
             if let Some(config_file) = self.global_config_file {
                 let path = config_file.display().to_string();
