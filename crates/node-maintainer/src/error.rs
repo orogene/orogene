@@ -1,5 +1,6 @@
 use kdl::{KdlDocument, KdlNode};
 use miette::Diagnostic;
+use futures::channel::mpsc;
 use thiserror::Error;
 
 #[allow(clippy::large_enum_variant)]
@@ -68,4 +69,14 @@ pub enum NodeMaintainerError {
     #[error("{0}")]
     #[diagnostic(code(node_maintainer::miscellaneous_error))]
     MiscError(String),
+
+    #[error("Failed to send data through mpsc channel.")]
+    #[diagnostic(code(node_maintainer::mpsc_error))]
+    TrySendError,
+}
+
+impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {
+    fn from(_: mpsc::TrySendError<T>) -> Self {
+        NodeMaintainerError::TrySendError
+    }
 }
