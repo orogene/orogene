@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
@@ -30,6 +30,11 @@ pub struct NodeMaintainerOptions {
 impl NodeMaintainerOptions {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
+        self.nassun_opts = self.nassun_opts.cache(PathBuf::from(cache.as_ref()));
+        self
     }
 
     pub fn parallelism(mut self, parallelism: usize) -> Self {

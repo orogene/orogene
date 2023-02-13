@@ -64,7 +64,11 @@ impl NassunOpts {
             .get(&None)
             .cloned()
             .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
-        let client = OroClient::new(registry);
+        let mut client_builder = OroClient::builder().registry(registry);
+        if let Some(cache) = self.cache {
+            client_builder = client_builder.cache(cache);
+        }
+        let client = client_builder.build();
         Nassun {
             // cache: self.cache,
             resolver: PackageResolver {

@@ -14,7 +14,9 @@ type Result = std::result::Result<Box<dyn AsyncRead + Unpin>, OroClientError>;
 impl OroClient {
     pub async fn stream_external(&self, url: &Url) -> Result {
         Ok(Box::new(
-            self.client
+            // NOTE: We don't want to cache these requests. If you want to
+            // cache them, cache them manually.
+            self.client_uncached
                 .get(url.to_string())
                 .send()
                 .await?

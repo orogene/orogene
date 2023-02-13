@@ -20,6 +20,10 @@ pub struct Orogene {
     #[arg(global = true, long = "root")]
     root: Option<PathBuf>,
 
+    /// Location of disk cache
+    #[arg(global = true, long)]
+    cache: Option<PathBuf>,
+
     /// File to read configuration values from.
     #[arg(global = true, long)]
     config: Option<PathBuf>,
@@ -59,24 +63,37 @@ impl Orogene {
         Ok(())
     }
 
+    fn build_config(&self) -> Result<OroConfig> {
+        let dirs = ProjectDirs::from("", "", "orogene");
+        let cfg_builder = OroConfigOptions::new();
+        // TODO: Figure out a way to set defaults globally, but that only get
+        // used if CLI args fall through? idk what's going on.
+        //     .set_default("registry", "https://registry.npmjs.org")?
+        //     .set_default("root", ".")?;
+        // if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
+        //     cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy().to_string())?;
+        // }
+
+        let cfg = if let Some(file) = &self.config {
+            cfg_builder.global_config_file(Some(file.clone())).load()?
+        } else {
+            cfg_builder
+                .global_config_file(
+                    dirs.as_ref()
+                        .map(|d| d.config_dir().to_owned().join("ororc.toml")),
+                )
+                .pkg_root(self.root.clone())
+                .load()?
+        };
+
+        Ok(cfg)
+    }
+
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
         let matches = Orogene::command().get_matches();
         let mut oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
-        let cfg = if let Some(file) = &oro.config {
-            OroConfigOptions::new()
-                .global_config_file(Some(file.clone()))
-                .load()?
-        } else {
-            OroConfigOptions::new()
-                .global_config_file(
-                    ProjectDirs::from("", "", "orogene")
-                        .map(|d| d.config_dir().to_owned().join("ororc.toml")),
-                )
-                .pkg_root(oro.root.clone())
-                .load()?
-        };
-        oro.layer_config(&matches, &cfg)?;
+        oro.layer_config(&matches, &oro.build_config()?)?;
         oro.setup_logging()?;
         oro.execute().await?;
         tracing::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
