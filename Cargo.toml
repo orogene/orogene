@@ -15,6 +15,7 @@ rust-version = "1.67.0"
 # Commands
 cmd-ping = { path = "./commands/cmd-ping" }
 cmd-resolve = { path = "./commands/cmd-resolve" }
+cmd-restore = { path = "./commands/cmd-restore" }
 cmd-view = { path = "./commands/cmd-view" }
 
 # Workspace Deps

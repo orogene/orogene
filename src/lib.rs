@@ -10,6 +10,7 @@ use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use cmd_ping::PingCmd;
 use cmd_resolve::ResolveCmd;
+use cmd_restore::RestoreCmd;
 use cmd_view::ViewCmd;
 
 #[derive(Debug, Parser)]
@@ -109,6 +110,9 @@ pub enum OroCmd {
     /// Resolve a package tree and save the lockfile to the project directory.
     Resolve(ResolveCmd),
 
+    /// Resolves and extracts a node_modules/ tree.
+    Restore(RestoreCmd),
+
     /// Get information about a package.
     View(ViewCmd),
 }
@@ -118,9 +122,10 @@ impl OroCommand for Orogene {
     async fn execute(self) -> Result<()> {
         tracing::info!("Running command: {:#?}", self.subcommand);
         match self.subcommand {
-            OroCmd::Ping(ping) => ping.execute().await,
-            OroCmd::Resolve(resolve) => resolve.execute().await,
-            OroCmd::View(view) => view.execute().await,
+            OroCmd::Ping(cmd) => cmd.execute().await,
+            OroCmd::Resolve(cmd) => cmd.execute().await,
+            OroCmd::Restore(cmd) => cmd.execute().await,
+            OroCmd::View(cmd) => cmd.execute().await,
         }
     }
 }
@@ -128,14 +133,17 @@ impl OroCommand for Orogene {
 impl OroConfigLayer for Orogene {
     fn layer_config(&mut self, args: &ArgMatches, conf: &OroConfig) -> Result<()> {
         match self.subcommand {
-            OroCmd::Ping(ref mut ping) => {
-                ping.layer_config(args.subcommand_matches("ping").unwrap(), conf)
+            OroCmd::Ping(ref mut cmd) => {
+                cmd.layer_config(args.subcommand_matches("ping").unwrap(), conf)
             }
-            OroCmd::Resolve(ref mut resolve) => {
-                resolve.layer_config(args.subcommand_matches("resolve").unwrap(), conf)
+            OroCmd::Resolve(ref mut cmd) => {
+                cmd.layer_config(args.subcommand_matches("resolve").unwrap(), conf)
             }
-            OroCmd::View(ref mut view) => {
-                view.layer_config(args.subcommand_matches("view").unwrap(), conf)
+            OroCmd::Restore(ref mut cmd) => {
+                cmd.layer_config(args.subcommand_matches("restore").unwrap(), conf)
+            }
+            OroCmd::View(ref mut cmd) => {
+                cmd.layer_config(args.subcommand_matches("view").unwrap(), conf)
             }
         }
     }
