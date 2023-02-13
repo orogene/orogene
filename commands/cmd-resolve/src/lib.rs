@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use async_trait::async_trait;
 use clap::Args;
-use miette::{IntoDiagnostic, Result};
+use miette::{Context, IntoDiagnostic, Result};
 use node_maintainer::NodeMaintainerOptions;
 use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
@@ -28,9 +28,19 @@ pub struct ResolveCmd {
 impl OroCommand for ResolveCmd {
     async fn execute(self) -> Result<()> {
         let root = self.root.unwrap_or_else(|| PathBuf::from("."));
-        NodeMaintainerOptions::new()
-            .registry(self.registry)
-            .resolve(root.canonicalize().into_diagnostic()?.to_string_lossy())
+        let mut nm = NodeMaintainerOptions::new().registry(self.registry);
+        let lock_path = root.join("package-lock.kdl");
+        if lock_path.exists() {
+            let kdl = fs::read_to_string(&lock_path)
+                .into_diagnostic()
+                .wrap_err_with(|| {
+                    format!("Failed to read lockfile at {}", lock_path.to_string_lossy())
+                })?;
+            nm = nm.kdl_lock(kdl).wrap_err_with(
+                || format!("Failed to parse lockfile at {}", lock_path.to_string_lossy()),
+            )?;
+        }
+        nm.resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
             .await?
             .write_lockfile(root.join("package-lock.kdl"))
             .await?;

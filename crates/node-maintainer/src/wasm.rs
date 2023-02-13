@@ -27,10 +27,6 @@ pub struct JsNodeMaintainer(NodeMaintainer);
 
 #[wasm_bindgen(js_class = NodeMaintainer)]
 impl JsNodeMaintainer {
-<<<<<<< HEAD
-    pub fn to_kdl(&self) -> String {
-        self.0.to_kdl().to_string()
-=======
     fn opts_from_js_value(opts: JsValue) -> Result<NodeMaintainerOptions> {
         console_error_panic_hook::set_once();
         let mut opts_builder = NodeMaintainerOptions::new();
@@ -73,7 +69,6 @@ impl JsNodeMaintainer {
 
     pub fn to_kdl(&self) -> Result<String> {
         Ok(self.0.to_kdl()?.to_string())
->>>>>>> 0e5d094 (get a package from a path and make a NodeMaintainer from a CorgiManifest)
     }
 
     pub async fn package_at_path(&self, path: &str) -> Result<Option<Package>> {

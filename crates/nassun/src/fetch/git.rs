@@ -189,11 +189,7 @@ impl PackageFetcher for GitFetcher {
         _base_dir: &Path,
     ) -> Result<Arc<CorgiPackument>> {
         use PackageSpec::*;
-        let spec = match spec {
-            Alias { spec, .. } => spec,
-            spec => spec,
-        };
-        let info = match spec {
+        let info = match spec.target() {
             Git(info) => info,
             _ => panic!("Only git specs allowed."),
         };

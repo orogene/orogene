@@ -1,67 +1,34 @@
 use std::collections::HashMap;
 
 use kdl::{KdlDocument, KdlNode};
-use nassun::{Nassun, PackageResolution};
+use nassun::{Nassun, Package, PackageResolution};
 use node_semver::Version;
+use oro_common::CorgiManifest;
 use oro_package_spec::PackageSpec;
-use petgraph::stable_graph::NodeIndex;
 use ssri::Integrity;
 use unicase::UniCase;
 
-use crate::{DepType, Graph, IntoKdl, Node, NodeMaintainerError, ResolvedMetadata};
+use crate::{DepType, IntoKdl, NodeMaintainerError};
 
 /// A representation of a resolved lockfile.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Lockfile {
-    pub version: u64,
-    pub root: LockfileNode,
-    pub packages: Vec<LockfileNode>,
+    pub(crate) version: u64,
+    pub(crate) root: LockfileNode,
+    pub(crate) packages: HashMap<UniCase<String>, LockfileNode>,
 }
 
 impl Lockfile {
-    pub(crate) async fn into_graph(self, nassun: &Nassun) -> Result<Graph, NodeMaintainerError> {
-        let mut graph = Graph::default();
-        let root_idx = self.root.to_graph_node(&mut graph, nassun).await?;
-        graph.root = root_idx;
-        // Place all the packages in the tree, by their logical filesystem
-        // location, without hooking up the dependency graph itself (yet).
-        for pkg in &self.packages {
-            let idx = pkg.to_graph_node(&mut graph, nassun).await?;
-            self.place_child(&mut graph, idx)?;
-        }
-        // TODO
-        // self.resolve_dependencies(&mut graph)?;
-        Ok(graph)
+    pub fn version(&self) -> u64 {
+        self.version
     }
 
-    fn place_child(&self, graph: &mut Graph, child: NodeIndex) -> Result<(), NodeMaintainerError> {
-        if self.is_placed(graph, child) {
-            return Ok(());
-        }
-
-        let is_toplevel = graph[child].resolved_metadata.path.len() == 1;
-        if is_toplevel {
-            let name = graph[child].resolved_metadata.name.clone();
-            let root_idx = graph.root;
-            graph[root_idx].children.insert(name, child);
-        }
-        Ok(())
+    pub fn root(&self) -> &LockfileNode {
+        &self.root
     }
 
-    fn is_placed(&self, graph: &mut Graph, child: NodeIndex) -> bool {
-        let path = &graph[child].resolved_metadata.path;
-        let mut current = graph.inner.node_weight(graph.root);
-        for segment in path {
-            if let Some(current_node) = current {
-                current = current_node
-                    .children
-                    .get(&segment)
-                    .and_then(|idx| graph.inner.node_weight(*idx));
-            } else {
-                break;
-            }
-        }
-        current.is_some()
+    pub fn packages(&self) -> &HashMap<UniCase<String>, LockfileNode> {
+        &self.packages
     }
 
     pub fn to_kdl(&self) -> KdlDocument {
@@ -73,7 +40,9 @@ impl Lockfile {
         version_node.push(self.version as i64);
         doc.nodes_mut().push(version_node);
         doc.nodes_mut().push(self.root.to_kdl());
-        for pkg in &self.packages {
+        let mut packages = self.packages.iter().collect::<Vec<_>>();
+        packages.sort_by(|(a, _), (b, _)| a.cmp(b));
+        for (_, pkg) in packages {
             doc.nodes_mut().push(pkg.to_kdl());
         }
         doc.fmt();
@@ -83,6 +52,22 @@ impl Lockfile {
     pub fn from_kdl(kdl: impl IntoKdl) -> Result<Self, NodeMaintainerError> {
         let kdl: KdlDocument = kdl.into_kdl()?;
         fn inner(kdl: KdlDocument) -> Result<Lockfile, NodeMaintainerError> {
+            let packages = kdl
+                .nodes()
+                .into_iter()
+                .filter(|node| node.name().to_string() == "pkg")
+                .map(|node| LockfileNode::from_kdl(node, false))
+                .map(|node| {
+                    let node = node?;
+                    let path_str =
+                            node.path
+                                .iter()
+                                .map(|x| x.to_string())
+                                .collect::<Vec<_>>()
+                                .join("/node_modules/");
+                    Ok((UniCase::from(path_str), node))
+                })
+                .collect::<Result<HashMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>()?;
             Ok(Lockfile {
                 version: kdl
                     .get_arg("lockfile-version")
@@ -97,12 +82,7 @@ impl Lockfile {
                     // TODO: add a miette span here
                     .ok_or_else(|| NodeMaintainerError::MissingRoot(kdl.clone()))
                     .and_then(|node| LockfileNode::from_kdl(node, true))?,
-                packages: kdl
-                    .nodes()
-                    .into_iter()
-                    .filter(|node| node.name().to_string() == "pkg")
-                    .map(|node| LockfileNode::from_kdl(node, false))
-                    .collect::<Result<Vec<LockfileNode>, NodeMaintainerError>>()?,
+                packages,
             })
         }
         inner(kdl)
@@ -117,24 +97,42 @@ pub struct LockfileNode {
     pub resolved: Option<String>,
     pub version: Option<Version>,
     pub integrity: Option<Integrity>,
-    pub dependencies: HashMap<UniCase<String>, PackageSpec>,
-    pub dev_dependencies: HashMap<UniCase<String>, PackageSpec>,
-    pub peer_dependencies: HashMap<UniCase<String>, PackageSpec>,
-    pub optional_dependencies: HashMap<UniCase<String>, PackageSpec>,
+    pub dependencies: HashMap<String, String>,
+    pub dev_dependencies: HashMap<String, String>,
+    pub peer_dependencies: HashMap<String, String>,
+    pub optional_dependencies: HashMap<String, String>,
+}
+
+impl From<LockfileNode> for CorgiManifest {
+    fn from(value: LockfileNode) -> Self {
+        CorgiManifest {
+            name: Some(value.name.to_string()),
+            version: value.version,
+            dependencies: value.dependencies,
+            dev_dependencies: value.dev_dependencies,
+            peer_dependencies: value.peer_dependencies,
+            optional_dependencies: value.optional_dependencies,
+            bundled_dependencies: Vec::new(),
+        }
+    }
 }
 
 impl LockfileNode {
-    async fn to_graph_node(
+    pub(crate) async fn to_package(
         &self,
-        graph: &mut Graph,
         nassun: &Nassun,
-    ) -> Result<NodeIndex, NodeMaintainerError> {
-        let version = if let Some(ref version) = self.version {
-            version
-        } else {
-            return Err(NodeMaintainerError::MissingVersion);
+    ) -> Result<Option<Package>, NodeMaintainerError> {
+        let spec = match (self.resolved.as_ref(), self.version.as_ref()) {
+            (Some(resolved), Some(version)) if resolved.starts_with("http") => {
+                format!("{}@{version}", self.name)
+            }
+            (Some(resolved), _) => format!("{}@{resolved}", self.name),
+            _ => {
+                // We ignore this node because it's incomplete and we can't trust it anymore.
+                return Ok(None);
+            }
         };
-        let spec: PackageSpec = format!("{}@{version}", self.name).parse()?;
+        let spec: PackageSpec = spec.parse()?;
         let package = match &spec.target() {
             PackageSpec::Dir { path } => {
                 let resolution = PackageResolution::Dir {
@@ -143,14 +141,15 @@ impl LockfileNode {
                 };
                 nassun.resolve_from(self.name.to_string(), spec, resolution)
             }
-            PackageSpec::Npm { scope, name, .. } => {
+            PackageSpec::Npm { name, .. } => {
+                let version = if let Some(ref version) = self.version {
+                    version
+                } else {
+                    return Err(NodeMaintainerError::MissingVersion);
+                };
                 if let Some(ref url) = self.resolved {
                     let resolution = PackageResolution::Npm {
-                        name: if let Some(scope) = scope {
-                            format!("{scope}@{name}")
-                        } else {
-                            name.to_string()
-                        },
+                        name: name.clone(),
                         version: version.clone(),
                         tarball: url
                             .parse()
@@ -177,22 +176,7 @@ impl LockfileNode {
                 unreachable!("Alias should have already been resolved by the .target() call above.")
             }
         };
-        let resolved_metadata = ResolvedMetadata {
-            name: self.name.clone(),
-            path: self.path.clone(),
-            version: self.version.clone(),
-            resolved: self.resolved.clone(),
-            dependencies: self.dependencies.clone(),
-            dev_dependencies: self.dev_dependencies.clone(),
-            peer_dependencies: self.peer_dependencies.clone(),
-            optional_dependencies: self.optional_dependencies.clone(),
-            integrity: self.integrity.clone(),
-        };
-        let idx = graph.inner.add_node(Node::new(package));
-        let node = &mut graph.inner[idx];
-        node.idx = idx;
-        node.resolved_metadata = resolved_metadata;
-        Ok(idx)
+        Ok(Some(package))
     }
 
     fn from_kdl(node: &KdlNode, is_root: bool) -> Result<Self, NodeMaintainerError> {
@@ -200,38 +184,39 @@ impl LockfileNode {
         let path = node
             .entries()
             .iter()
-            .filter(|e| e.name().is_none() && e.value().is_base10())
-            .map(|e| UniCase::new(e.value().to_string()))
-            .collect::<Vec<_>>();
-        let name = children
-            .get_arg("name")
-            .cloned()
-            .map(|val| UniCase::new(val.to_string()))
-            .or_else(|| {
-                let len = path.len();
-                if len > 1 && path[len - 2].starts_with("@") {
-                    Some(UniCase::new(format!("{}@{}", path[len - 2], path[len - 1])))
-                } else {
-                    path.last().cloned()
-                }
+            .filter(|e| e.value().is_string() && e.name().is_none())
+            .map(|e| {
+                UniCase::new(
+                    e.value()
+                        .as_string()
+                        .expect("We already checked that it's a string, above.")
+                        .into(),
+                )
             })
+            .collect::<Vec<_>>();
+        let name = path
+            .last()
+            .cloned()
             // TODO: add a miette span here
             .ok_or_else(|| NodeMaintainerError::MissingName(node.clone()))?;
         let integrity = children
             .get_arg("integrity")
-            .map(|i| i.to_string().parse())
-            .transpose()?;
+            .and_then(|i| i.as_string())
+            .map(|i| i.parse())
+            .transpose()
+            .map_err(|e| NodeMaintainerError::LockfileIntegrityParseError(node.clone(), e))?;
         let version = children
             .get_arg("version")
+            .and_then(|val| val.as_string())
             .map(|val| {
-                val.to_string()
-                    .parse()
+                val.parse()
                     // TODO: add a miette span here
                     .map_err(NodeMaintainerError::SemverParseError)
             })
             .transpose()?;
         let resolved = children
             .get_arg("resolved")
+            .and_then(|resolved| resolved.as_string())
             .map(|resolved| resolved.to_string());
         Ok(Self {
             name,
@@ -250,7 +235,7 @@ impl LockfileNode {
     fn from_kdl_deps(
         children: &KdlDocument,
         dep_type: &DepType,
-    ) -> Result<HashMap<UniCase<String>, PackageSpec>, NodeMaintainerError> {
+    ) -> Result<HashMap<String, String>, NodeMaintainerError> {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
@@ -262,12 +247,12 @@ impl LockfileNode {
         if let Some(node) = children.get(type_name) {
             if let Some(children) = node.children() {
                 for dep in children.nodes() {
-                    let name = UniCase::new(dep.name().to_string());
+                    let name = dep.name().value().to_string();
                     let spec = dep
                         .get(0)
-                        .map(|spec| spec.to_string())
-                        .unwrap_or_else(|| "*".to_string());
-                    deps.insert(name, spec.parse()?);
+                        .and_then(|spec| spec.value().as_string())
+                        .unwrap_or_else(|| "*");
+                    deps.insert(name.clone(), spec.into());
                 }
             }
         }
@@ -328,11 +313,7 @@ impl LockfileNode {
         kdl_node
     }
 
-    fn to_kdl_deps(
-        &self,
-        dep_type: &DepType,
-        deps: &HashMap<UniCase<String>, PackageSpec>,
-    ) -> KdlNode {
+    fn to_kdl_deps(&self, dep_type: &DepType, deps: &HashMap<String, String>) -> KdlNode {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
@@ -343,14 +324,14 @@ impl LockfileNode {
         let mut deps_node = KdlNode::new(type_name);
         for (name, requested) in deps {
             let children = deps_node.ensure_children();
-            let mut ddnode = KdlNode::new(name.to_string());
-            ddnode.push(requested.requested());
+            let mut ddnode = KdlNode::new(name.clone());
+            ddnode.push(requested.clone());
             children.nodes_mut().push(ddnode);
         }
         deps_node
             .ensure_children()
             .nodes_mut()
-            .sort_by_key(|n| n.name().to_string());
+            .sort_by_key(|n| n.name().value().to_string());
         deps_node
     }
 }

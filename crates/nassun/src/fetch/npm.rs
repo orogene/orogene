@@ -92,16 +92,11 @@ impl PackageFetcher for NpmFetcher {
     ) -> Result<Arc<CorgiPackument>> {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
-        let pkg = match spec {
-            PackageSpec::Alias { ref spec, .. } => spec,
-            pkg @ PackageSpec::Npm { .. } => pkg,
-            _ => unreachable!(),
-        };
         if let PackageSpec::Npm {
             ref name,
             ref scope,
             ..
-        } = pkg
+        } = spec.target()
         {
             if let Some(packument) = self.corgi_packuments.get(name) {
                 return Ok(packument.value().clone());
@@ -112,7 +107,7 @@ impl PackageFetcher for NpmFetcher {
                 .insert(name.clone(), packument.clone());
             Ok(packument)
         } else {
-            unreachable!()
+            unreachable!("How did a non-Npm resolution get here?");
         }
     }
 

@@ -71,15 +71,24 @@ impl Graph {
         false
     }
 
-    pub fn to_resolved_tree(&self) -> Result<Lockfile, NodeMaintainerError> {
+    pub fn to_lockfile(&self) -> Result<Lockfile, NodeMaintainerError> {
         let root = self.node_lockfile_node(self.root, true)?;
-        let mut packages = self
+        let packages = self
             .inner
             .node_indices()
             .filter(|idx| *idx != self.root)
-            .map(|idx| self.node_lockfile_node(idx, false))
-            .collect::<Result<Vec<_>, NodeMaintainerError>>()?;
-        packages.sort_by(|a, b| a.path.cmp(&b.path));
+            .map(|idx| {
+                let node = self.node_lockfile_node(idx, false)?;
+                Ok((
+                    UniCase::from(node.path
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/")),
+                    node,
+                ))
+            })
+            .collect::<Result<HashMap<_, _>, NodeMaintainerError>>()?;
         Ok(Lockfile {
             version: 1,
             root,
@@ -88,7 +97,7 @@ impl Graph {
     }
 
     pub fn to_kdl(&self) -> Result<KdlDocument, NodeMaintainerError> {
-        Ok(self.to_resolved_tree()?.to_kdl())
+        Ok(self.to_lockfile()?.to_kdl())
     }
 
     pub fn render(&self) -> String {
@@ -153,15 +162,11 @@ impl Graph {
         Ok(None)
     }
 
-    fn node_lockfile_node(
-        &self,
-        node: NodeIndex,
-        is_root: bool,
-    ) -> Result<LockfileNode, NodeMaintainerError> {
-        let node = &self.inner[node];
+    pub(crate) fn node_path(&self, node_idx: NodeIndex) -> VecDeque<UniCase<String>> {
+        let node = &self.inner[node_idx];
         let mut path = VecDeque::new();
         path.push_front(UniCase::new(node.package.name().to_owned()));
-        if !is_root {
+        if node_idx != self.root {
             let mut parent = node.parent;
             while let Some(parent_idx) = parent {
                 if parent_idx == self.root {
@@ -173,6 +178,16 @@ impl Graph {
                 parent = self.inner[parent_idx].parent;
             }
         };
+        path
+    }
+
+    fn node_lockfile_node(
+        &self,
+        node: NodeIndex,
+        is_root: bool,
+    ) -> Result<LockfileNode, NodeMaintainerError> {
+        let path = self.node_path(node);
+        let node = &self.inner[node];
         let resolved = match node.package.resolved() {
             PackageResolution::Npm { tarball, .. } => tarball.to_string(),
             PackageResolution::Dir { path, .. } => path.to_string_lossy().into(),
@@ -205,7 +220,7 @@ impl Graph {
                     Peer => &mut peer_deps,
                     Opt => &mut opt_deps,
                 };
-                deps.insert(name.clone(), requested.clone());
+                deps.insert(name.to_string(), requested.requested().clone());
             }
         }
         Ok(LockfileNode {

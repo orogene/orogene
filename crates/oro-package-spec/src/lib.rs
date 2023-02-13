@@ -101,13 +101,10 @@ impl fmt::Display for PackageSpec {
             Dir { path } => write!(f, "{}", path.display()),
             Git(info) => write!(f, "{}", info),
             Npm {
-                ref scope,
                 ref name,
                 ref requested,
+                ..
             } => {
-                if let Some(scope) = scope {
-                    write!(f, "@{}/", scope)?;
-                }
                 write!(f, "{}", name)?;
                 if let Some(req) = requested {
                     write!(f, "@{}", req)?;
