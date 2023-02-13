@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
-use futures::{TryFutureExt, StreamExt};
+use async_std::sync::{Arc, Mutex};
+use futures::{StreamExt, TryFutureExt};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
@@ -62,7 +63,10 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub async fn resolve_manifest(self, root: CorgiManifest) -> Result<NodeMaintainer, NodeMaintainerError> {
+    pub async fn resolve_manifest(
+        self,
+        root: CorgiManifest,
+    ) -> Result<NodeMaintainer, NodeMaintainerError> {
         let nassun = self.nassun_opts.build();
         let root_pkg = Nassun::dummy_from_manifest(root.clone());
         let mut nm = NodeMaintainer {
@@ -105,6 +109,7 @@ impl Default for NodeMaintainerOptions {
     }
 }
 
+#[derive(Debug, Clone)]
 struct NodeDependency {
     name: UniCase<String>,
     spec: String,
@@ -173,14 +178,40 @@ impl NodeMaintainer {
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
+
+        // Number of dependencies queued for processing in `package_stream`
         let mut in_flight = 0;
+
+        // Since we queue dependencies for multiple packages at once - it is
+        // not unlikely that some of them would be duplicated by currently
+        // fetched dependencies. Thus we maintain a mapping from "name@spec" to
+        // a vector of `NodeDependency`s. When we will fetch the package - we
+        // will apply it to all dependencies that need it.
+        let fetches: HashMap<String, Vec<NodeDependency>> = HashMap::new();
+        let fetches = Arc::new(Mutex::new(fetches));
 
         let mut package_stream = package_stream
             .map(|dep: NodeDependency| {
-                self.nassun
-                    .resolve(format!("{}@{}", dep.name, dep.spec))
-                    .map_ok(move |p| (p, dep))
+                let spec = format!("{}@{}", dep.name, dep.spec);
+                let maybe_spec = if let Some(mut fetches) = fetches.try_lock() {
+                    if let Some(list) = fetches.get_mut(&spec) {
+                        // Package fetch is already in-flight, add dependency
+                        // to the existing list.
+                        list.push(dep);
+                        None
+                    } else {
+                        // Fetch package since we are the first one to get here.
+                        fetches.insert(spec.clone(), vec![dep]);
+                        Some(spec)
+                    }
+                } else {
+                    // Mutex is locked - fetch the package
+                    Some(spec)
+                };
+                futures::future::ready(maybe_spec)
             })
+            .filter_map(|maybe_spec| maybe_spec)
+            .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
             .buffer_unordered(self.parallelism)
             .ready_chunks(self.parallelism);
 
@@ -215,10 +246,7 @@ impl NodeMaintainer {
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
                     // make a new edge and move on.
-                    if !Self::satisfy_dependency(
-                        &mut self.graph,
-                        &dep,
-                    )? {
+                    if !Self::satisfy_dependency(&mut self.graph, &dep)? {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
                         if let Some(kdl_lock) = &kdl_lock {
@@ -265,27 +293,34 @@ impl NodeMaintainer {
             // Order doesn't matter here: each node name is unique, so we
             // don't have to worry about races messing with placement.
             if let Some(packages) = package_stream.next().await {
-                in_flight -= packages.len();
                 for res in packages {
-                    let (package, dep) = res?;
+                    let (package, spec) = res?;
+                    let deps = fetches.lock().await.remove(&spec);
 
-                    if Self::satisfy_dependency(
-                        &mut self.graph,
-                        &dep,
-                    )? {
-                        continue;
+                    if let Some(deps) = deps {
+                        in_flight -= deps.len();
+                        let manifest = package.corgi_metadata().await?.manifest;
+
+                        for dep in deps {
+                            if Self::satisfy_dependency(&mut self.graph, &dep)? {
+                                continue;
+                            }
+
+                            let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
+                            q.push_back(
+                                Self::place_child(
+                                    &mut self.graph,
+                                    dep.node_idx,
+                                    package.clone(),
+                                    &requested,
+                                    dep.dep_type,
+                                    manifest.clone(),
+                                    None,
+                                )
+                                .await?,
+                            );
+                        }
                     }
-                    let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-                    let manifest = package.corgi_metadata().await?.manifest;
-                    q.push_back(Self::place_child(
-                        &mut self.graph,
-                        dep.node_idx,
-                        package,
-                        &requested,
-                        dep.dep_type,
-                        manifest,
-                        None,
-                    ).await?);
                 }
 
                 // We sort the current queue so we consider more shallow
