@@ -59,12 +59,12 @@ impl Lockfile {
                 .map(|node| LockfileNode::from_kdl(node, false))
                 .map(|node| {
                     let node = node?;
-                    let path_str =
-                            node.path
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<_>>()
-                                .join("/node_modules/");
+                    let path_str = node
+                        .path
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/");
                     Ok((UniCase::from(path_str), node))
                 })
                 .collect::<Result<HashMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>()?;

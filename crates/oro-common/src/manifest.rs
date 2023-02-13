@@ -5,7 +5,7 @@ use node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-use crate::{VersionMetadata, CorgiVersionMetadata};
+use crate::{CorgiVersionMetadata, VersionMetadata};
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -10,17 +10,17 @@ use crate::package::Package;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use dir::DirFetcher;
+pub(crate) use dummy::DummyFetcher;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use git::GitFetcher;
 pub(crate) use npm::NpmFetcher;
-pub(crate) use dummy::DummyFetcher;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod dir;
+mod dummy;
 #[cfg(not(target_arch = "wasm32"))]
 mod git;
 mod npm;
-mod dummy;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[async_trait]

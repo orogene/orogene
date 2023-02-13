@@ -1,6 +1,6 @@
+use futures::channel::mpsc;
 use kdl::{KdlDocument, KdlNode};
 use miette::Diagnostic;
-use futures::channel::mpsc;
 use thiserror::Error;
 
 #[allow(clippy::large_enum_variant)]

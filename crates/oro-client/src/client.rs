@@ -115,6 +115,8 @@ impl OroClient {
 
 impl Default for OroClient {
     fn default() -> Self {
-        OroClientBuilder::new().registry(Url::parse("https://registry.npmjs.org").unwrap()).build()
+        OroClientBuilder::new()
+            .registry(Url::parse("https://registry.npmjs.org").unwrap())
+            .build()
     }
 }

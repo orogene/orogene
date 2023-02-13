@@ -80,11 +80,13 @@ impl Graph {
             .map(|idx| {
                 let node = self.node_lockfile_node(idx, false)?;
                 Ok((
-                    UniCase::from(node.path
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<_>>()
-                        .join("/node_modules/")),
+                    UniCase::from(
+                        node.path
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>()
+                            .join("/node_modules/"),
+                    ),
                     node,
                 ))
             })

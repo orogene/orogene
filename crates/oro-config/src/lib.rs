@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 pub use clap::ArgMatches;
 pub use config::Config as OroConfig;
-use config::{ConfigError, Environment, File, ConfigBuilder, builder::DefaultState};
+use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File};
 use miette::{Diagnostic, Result};
 use thiserror::Error;
 
