@@ -6,7 +6,7 @@ use std::task::{Context, Poll};
 use async_compression::futures::bufread::GzipDecoder;
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::io;
-use async_std::io::BufReader;
+use async_std::io::{BufReader, BufWriter};
 use async_tar::Archive;
 use futures::prelude::*;
 use ssri::{Integrity, IntegrityChecker};
@@ -69,12 +69,13 @@ impl Tarball {
         while let Some(file) = files.next().await {
             let file = file?;
             let header = file.header();
-            let path = dir.join(
-                header
-                    .path()
-                    .map_err(|e| NassunError::ExtractIoError(e, None))?
-                    .as_ref(),
-            );
+            let entry_path = header
+                .path()
+                .map_err(|e| NassunError::ExtractIoError(e, None))?;
+            let entry_subpath = entry_path
+                .strip_prefix("package")
+                .unwrap_or_else(|_| entry_path.as_ref());
+            let path = dir.join(entry_subpath);
             if let async_tar::EntryType::Regular = header.entry_type() {
                 let takeme = path.clone();
 
@@ -89,7 +90,7 @@ impl Tarball {
                     .await
                     .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
 
-                io::copy(file, async_std::io::BufWriter::new(&mut writer))
+                io::copy(BufReader::new(file), BufWriter::new(&mut writer))
                     .await
                     .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
             }

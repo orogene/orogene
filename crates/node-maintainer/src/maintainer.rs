@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
-use futures::{StreamExt, TryFutureExt};
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
@@ -174,6 +174,37 @@ impl NodeMaintainer {
         path: &Path,
     ) -> Result<Option<Package>, NodeMaintainerError> {
         self.graph.package_at_path(path).await
+    }
+
+    pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+        async fn inner(me: &NodeMaintainer, path: &Path) -> Result<(), NodeMaintainerError> {
+            let stream = futures::stream::iter(me.graph.inner.node_indices());
+            stream
+                .map(Ok)
+                .try_for_each_concurrent(me.parallelism, |child_idx| async move {
+                    if child_idx == me.graph.root {
+                        return Ok(());
+                    }
+                    let target_dir = path.join("node_modules").join(
+                        me.graph
+                            .node_path(child_idx)
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>()
+                            .join("/node_modules/"),
+                    );
+
+                    me.graph[child_idx]
+                        .package
+                        .tarball()
+                        .await?
+                        .extract_to_dir(target_dir)
+                        .await
+                })
+                .await?;
+            Ok(())
+        }
+        inner(self, path.as_ref()).await
     }
 
     async fn run_resolver(
@@ -518,12 +549,13 @@ impl NodeMaintainer {
                     .optional_dependencies
                     .iter()
                     .map(|x| (x, DepType::Opt)),
-            )
-            .chain(
-                manifest
-                    .peer_dependencies
-                    .iter()
-                    .map(|x| (x, DepType::Peer)),
+                // TODO: Place these properly.
+                // )
+                // .chain(
+                //     manifest
+                //         .peer_dependencies
+                //         .iter()
+                //         .map(|x| (x, DepType::Peer)),
             );
 
         if node_idx == self.graph.root {
