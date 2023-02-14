@@ -76,6 +76,13 @@ impl PackageResolution {
             _ => false,
         })
     }
+
+    pub fn npm_version(&self) -> Option<SemVerVersion> {
+        match self {
+            Self::Npm { version, .. } => Some(version.clone()),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

@@ -7,7 +7,7 @@ use unicase::UniCase;
 
 use crate::Graph;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     /// Index of this Node inside its [`Graph`].
     pub(crate) idx: NodeIndex,
@@ -46,5 +46,13 @@ impl Node {
             current = graph.inner[idx].parent;
         }
         depth
+    }
+
+    /// A vector of Node's children that are not its direct dependencies.
+    pub(crate) fn get_demotable_children(&self, graph: &Graph) -> Vec<NodeIndex> {
+        self.children
+            .values()
+            .filter_map(|&idx| (!graph.is_dependency(self.idx, idx)).then_some(idx))
+            .collect()
     }
 }
