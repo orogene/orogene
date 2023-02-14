@@ -250,7 +250,7 @@ impl LockfileNode {
                     let name = dep.name().value().to_string();
                     let spec = dep
                         .get(0)
-                        .and_then(|spec| spec.value().as_string())
+                        .and_then(|spec| spec.as_string())
                         .unwrap_or_else(|| "*");
                     deps.insert(name.clone(), spec.into());
                 }
