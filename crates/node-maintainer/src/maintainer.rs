@@ -386,14 +386,11 @@ impl NodeMaintainer {
                 .resolved()
                 .satisfies(&requested)?
             {
-                let edge_idx = graph.inner.add_edge(
+                graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
                     Edge::new(requested.clone(), dep.dep_type.clone()),
                 );
-                graph[dep.node_idx]
-                    .dependencies
-                    .insert(dep.name.clone(), edge_idx);
                 return Ok(true);
             }
             return Ok(false);
@@ -463,7 +460,7 @@ impl NodeMaintainer {
 
         // Edges represent the logical dependency relationship (not the
         // hierarchy location).
-        let edge_idx = graph.inner.add_edge(
+        graph.inner.add_edge(
             dependent_idx,
             child_idx,
             Edge::new(requested.clone(), dep_type),
@@ -520,12 +517,6 @@ impl NodeMaintainer {
             // The parent is the _hierarchy_ location, so we set its parent
             // accordingly.
             child_node.parent = Some(target_idx);
-        }
-        {
-            // Now we set backlinks: first, the dependent node needs to point
-            // to the child, wherever it is in the graph.
-            let dependent = &mut graph[dependent_idx];
-            dependent.dependencies.insert(child_name.clone(), edge_idx);
         }
         {
             // Finally, we add the backlink from the parent node to the child.
