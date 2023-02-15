@@ -147,18 +147,14 @@ impl GitInfo {
             } => committish
                 .as_ref()
                 .map(|commit| match host {
-                    GitHub => format!(
-                        "https://codeload.github.com/{owner}/{repo}/tag.gz/{commit}"
-                    ),
-                    Gist => format!(
-                        "https://codeload.github.com/gist/{repo}/tar.gz/{commit}"
-                    ),
+                    GitHub => format!("https://codeload.github.com/{owner}/{repo}/tag.gz/{commit}"),
+                    Gist => format!("https://codeload.github.com/gist/{repo}/tar.gz/{commit}"),
                     GitLab => format!(
                         "https://gitlan.com/{owner}/{repo}/repository/archive.tar.gz?ref={commit}"
                     ),
-                    Bitbucket => format!(
-                        "https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz"
-                    ),
+                    Bitbucket => {
+                        format!("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz")
+                    }
                 })
                 .map(|url| url.parse().expect("Failed to parse URL.")),
         }

@@ -52,7 +52,6 @@ impl PackageFetcher for DummyFetcher {
         let version = corgi_meta
             .manifest
             .version
-            
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         packument.tags.insert("latest".into(), version);
         Ok(Arc::new(packument))

@@ -248,10 +248,7 @@ impl LockfileNode {
             if let Some(children) = node.children() {
                 for dep in children.nodes() {
                     let name = dep.name().value().to_string();
-                    let spec = dep
-                        .get(0)
-                        .and_then(|spec| spec.as_string())
-                        .unwrap_or("*");
+                    let spec = dep.get(0).and_then(|spec| spec.as_string()).unwrap_or("*");
                     deps.insert(name.clone(), spec.into());
                 }
             }
