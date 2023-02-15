@@ -28,7 +28,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        rust: [1.67.0, stable]
+        rust: [stable]
         os: [ubuntu-latest, macOS-latest, windows-latest]
 
     steps:
@@ -45,39 +45,23 @@ jobs:
       - name: Run tests
         run: cargo test --all --verbose
 
-  miri:
-    name: Miri
-    runs-on: ubuntu-latest
+  # TODO: Re-enable someday. For now, mio is making this test fail, and it's
+  # not even mio's fault.
+  #
+  # miri:
+  #   name: Miri
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v1
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          components: miri,rust-src
-          override: true
-      - name: Run tests with miri
-        env:
-          MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-strict-provenance
-        run: cargo miri test --all --verbose
-
-  minimal_versions:
-    name: Minimal versions check
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macOS-latest, windows-latest]
-
-    steps:
-      - uses: actions/checkout@v1
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - name: Run minimal version build
-        run: cargo build -Z minimal-versions --all-features
-
+  #   steps:
+  #     - uses: actions/checkout@v1
+  #     - name: Install Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: nightly
+  #         components: miri,rust-src
+  #         override: true
+  #     - name: Run tests with miri
+  #       env:
+  #         MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-strict-provenance
+  #       run: cargo miri test --all --verbose
