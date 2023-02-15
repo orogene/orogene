@@ -197,7 +197,7 @@ impl Graph {
             PackageResolution::Dir { path, .. } => path.to_string_lossy().into(),
             PackageResolution::Git { info, .. } => info.to_string(),
         };
-        let version = if let &PackageResolution::Npm { ref version, .. } = node.package.resolved() {
+        let version = if let PackageResolution::Npm { version, .. } = node.package.resolved() {
             Some(version.clone())
         } else {
             None

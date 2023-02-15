@@ -34,7 +34,7 @@ impl DirFetcher {
             .map_err(|err| NassunError::DirReadError(err, pkg_path))?;
         let pkgjson: CorgiManifest =
             serde_json::from_slice(&json[..]).map_err(NassunError::SerdeError)?;
-        Ok(Manifest::Corgi(pkgjson))
+        Ok(Manifest::Corgi(Box::new(pkgjson)))
     }
     pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
@@ -43,7 +43,7 @@ impl DirFetcher {
             .map_err(|err| NassunError::DirReadError(err, pkg_path))?;
         let pkgjson: OroManifest =
             serde_json::from_slice(&json[..]).map_err(NassunError::SerdeError)?;
-        Ok(Manifest::FullFat(pkgjson))
+        Ok(Manifest::FullFat(Box::new(pkgjson)))
     }
 
     pub(crate) async fn name_from_path(&self, path: &Path) -> Result<String> {
@@ -152,8 +152,8 @@ impl PackageFetcher for DirFetcher {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) enum Manifest {
-    FullFat(OroManifest),
-    Corgi(CorgiManifest),
+    FullFat(Box<OroManifest>),
+    Corgi(Box<CorgiManifest>),
 }
 
 impl Manifest {
@@ -161,47 +161,41 @@ impl Manifest {
         self,
         path: impl AsRef<Path>,
     ) -> Result<CorgiVersionMetadata> {
-        let Manifest::Corgi(ref manifest @ CorgiManifest {
-            ref name,
-            ref version,
-            ..
-        }) = self else {
+        let Manifest::Corgi(manifest) = &self else {
             unreachable!("This should have been called in such a way as to guarantee corgi.")
         };
-        let name = name.clone().or_else(|| {
+        let name = manifest.name.clone().or_else(|| {
             path.as_ref().file_name().map(|name| name.to_string_lossy().into())
         }).ok_or_else(|| NassunError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
-        let version = version
+        let version = manifest
+            .version
             .clone()
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         let mut new_manifest = manifest.clone();
         new_manifest.name = Some(name);
         new_manifest.version = Some(version);
         Ok(CorgiVersionMetadata {
-            manifest: new_manifest,
+            manifest: *new_manifest,
             ..Default::default()
         })
     }
 
     pub(crate) fn into_metadata(self, path: impl AsRef<Path>) -> Result<VersionMetadata> {
-        let Manifest::FullFat(ref manifest @ OroManifest {
-            ref name,
-            ref version,
-            ..
-        }) = self else {
+        let Manifest::FullFat(manifest) = &self else {
             unreachable!("This should have been called in such a way as to guarantee fullfat.")
         };
-        let name = name.clone().or_else(|| {
+        let name = manifest.name.clone().or_else(|| {
             path.as_ref().file_name().map(|name| name.to_string_lossy().into())
         }).ok_or_else(|| NassunError::MiscError("Failed to find a valid name. Make sure the package.json has a `name` field, or that it exists inside a named directory.".into()))?;
-        let version = version
+        let version = manifest
+            .version
             .clone()
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
         let mut new_manifest = manifest.clone();
         new_manifest.name = Some(name);
         new_manifest.version = Some(version);
         Ok(VersionMetadata {
-            manifest: new_manifest,
+            manifest: *new_manifest,
             ..Default::default()
         })
     }

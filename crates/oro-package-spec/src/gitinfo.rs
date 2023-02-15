@@ -104,10 +104,10 @@ impl GitInfo {
                 ref repo,
                 ..
             } => Some(match host {
-                GitHub => format!("git@github.com:{}/{}.git", owner, repo),
-                Gist => format!("git@gist.github.com:/{}", repo),
-                GitLab => format!("git@gitlab.com:{}/{}.git", owner, repo),
-                Bitbucket => format!("git@bitbucket.com:{}/{}", owner, repo),
+                GitHub => format!("git@github.com:{owner}/{repo}.git"),
+                Gist => format!("git@gist.github.com:/{repo}"),
+                GitLab => format!("git@gitlab.com:{owner}/{repo}.git"),
+                Bitbucket => format!("git@bitbucket.com:{owner}/{repo}"),
             })
             .map(|url| url.parse().expect("URL failed to parse")),
         }
@@ -124,10 +124,10 @@ impl GitInfo {
                 ref repo,
                 ..
             } => Some(match host {
-                GitHub => format!("https://github.com/{}/{}.git", owner, repo),
-                Gist => format!("https://gist.github.com/{}.git", repo),
-                GitLab => format!("https://gitlab.com/{}/{}.git", owner, repo),
-                Bitbucket => format!("https://bitbucket.com/{}/{}.git", owner, repo),
+                GitHub => format!("https://github.com/{owner}/{repo}.git"),
+                Gist => format!("https://gist.github.com/{repo}.git"),
+                GitLab => format!("https://gitlab.com/{owner}/{repo}.git"),
+                Bitbucket => format!("https://bitbucket.com/{owner}/{repo}.git"),
             })
             .map(|url| url.parse().expect("URL failed to parse")),
         }
@@ -148,20 +148,16 @@ impl GitInfo {
                 .as_ref()
                 .map(|commit| match host {
                     GitHub => format!(
-                        "https://codeload.github.com/{}/{}/tag.gz/{}",
-                        owner, repo, commit
+                        "https://codeload.github.com/{owner}/{repo}/tag.gz/{commit}"
                     ),
                     Gist => format!(
-                        "https://codeload.github.com/gist/{}/tar.gz/{}",
-                        repo, commit
+                        "https://codeload.github.com/gist/{repo}/tar.gz/{commit}"
                     ),
                     GitLab => format!(
-                        "https://gitlan.com/{}/{}/repository/archive.tar.gz?ref={}",
-                        owner, repo, commit
+                        "https://gitlan.com/{owner}/{repo}/repository/archive.tar.gz?ref={commit}"
                     ),
                     Bitbucket => format!(
-                        "https://bitbucket.org/{}/{}/get/{}.tar.gz",
-                        owner, repo, commit
+                        "https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz"
                     ),
                 })
                 .map(|url| url.parse().expect("Failed to parse URL.")),
@@ -181,11 +177,11 @@ impl fmt::Display for GitInfo {
                 if url.scheme() != "git" {
                     write!(f, "git+")?;
                 }
-                write!(f, "{}", url)?;
+                write!(f, "{url}")?;
                 if let Some(comm) = committish {
-                    write!(f, "#{}", comm)?;
+                    write!(f, "#{comm}")?;
                 } else if let Some(semver) = semver {
-                    write!(f, "#semver:{}", semver)?;
+                    write!(f, "#semver:{semver}")?;
                 }
             }
             Ssh {
@@ -193,11 +189,11 @@ impl fmt::Display for GitInfo {
                 committish,
                 semver,
             } => {
-                write!(f, "git+ssh://{}", ssh)?;
+                write!(f, "git+ssh://{ssh}")?;
                 if let Some(comm) = committish {
-                    write!(f, "#{}", comm)?;
+                    write!(f, "#{comm}")?;
                 } else if let Some(semver) = semver {
-                    write!(f, "#semver:{}", semver)?;
+                    write!(f, "#semver:{semver}")?;
                 }
             }
             Hosted {
@@ -212,15 +208,15 @@ impl fmt::Display for GitInfo {
                     if !requested.starts_with("git://") {
                         write!(f, "git+")?;
                     }
-                    write!(f, "{}", requested)?;
+                    write!(f, "{requested}")?;
                 } else {
-                    write!(f, "{}:{}/{}", host, owner, repo)?;
+                    write!(f, "{host}:{owner}/{repo}")?;
                 }
 
                 if let Some(comm) = committish {
-                    write!(f, "#{}", comm)?;
+                    write!(f, "#{comm}")?;
                 } else if let Some(semver) = semver {
-                    write!(f, "#semver:{}", semver)?;
+                    write!(f, "#semver:{semver}")?;
                 }
             }
         }
@@ -241,7 +237,7 @@ mod tests {
         };
         assert_eq!(
             String::from("git+https://foo.com/hello.git#deadbeef"),
-            format!("{}", info)
+            format!("{info}")
         );
         let info = GitInfo::Url {
             url: "git://foo.org/goodbye.git".parse().unwrap(),
@@ -250,7 +246,7 @@ mod tests {
         };
         assert_eq!(
             String::from("git://foo.org/goodbye.git#semver:>=1.2.3 <2.0.0-0"),
-            format!("{}", info)
+            format!("{info}")
         );
     }
 
@@ -263,7 +259,7 @@ mod tests {
         };
         assert_eq!(
             String::from("git+ssh://git@foo.com:here.git#deadbeef"),
-            format!("{}", info)
+            format!("{info}")
         );
         let info = GitInfo::Ssh {
             ssh: "git@foo.com:here.git".into(),
@@ -272,7 +268,7 @@ mod tests {
         };
         assert_eq!(
             String::from("git+ssh://git@foo.com:here.git#semver:>=1.2.3 <2.0.0-0"),
-            format!("{}", info)
+            format!("{info}")
         );
     }
 
@@ -286,7 +282,7 @@ mod tests {
             semver: None,
             requested: None,
         };
-        assert_eq!(String::from("github:foo/bar"), format!("{}", info));
+        assert_eq!(String::from("github:foo/bar"), format!("{info}"));
         let info = GitInfo::Hosted {
             owner: "foo".into(),
             repo: "bar".into(),
@@ -297,7 +293,7 @@ mod tests {
         };
         assert_eq!(
             String::from("git+https://github.com/foo/bar.git#deadbeef"),
-            format!("{}", info)
+            format!("{info}")
         );
         let info = GitInfo::Hosted {
             owner: "foo".into(),
@@ -309,7 +305,7 @@ mod tests {
         };
         assert_eq!(
             String::from("git://gitlab.com/foo/bar.git#deadbeef"),
-            format!("{}", info)
+            format!("{info}")
         );
     }
 }

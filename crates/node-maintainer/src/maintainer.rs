@@ -290,7 +290,7 @@ impl NodeMaintainer {
                                 .satisfy_from_lockfile(
                                     &self.graph,
                                     node_idx,
-                                    &kdl_lock,
+                                    kdl_lock,
                                     &name,
                                     &requested,
                                 )
@@ -389,13 +389,13 @@ impl NodeMaintainer {
                 graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
-                    Edge::new(requested.clone(), dep.dep_type.clone()),
+                    Edge::new(requested, dep.dep_type.clone()),
                 );
                 return Ok(true);
             }
             return Ok(false);
         }
-        return Ok(false);
+        Ok(false)
     }
 
     async fn satisfy_from_lockfile(
@@ -422,7 +422,7 @@ impl NodeMaintainer {
             path.pop_back();
             if let Some(lockfile_node) = lockfile.packages().get(&path_str) {
                 if let Some(package) = lockfile_node.to_package(&self.nassun).await? {
-                    if package.resolved().satisfies(&requested)? {
+                    if package.resolved().satisfies(requested)? {
                         return Ok(Some((package, lockfile_node.clone())));
                     } else {
                         // TODO: Log this We found a lockfile node in a place
@@ -498,7 +498,7 @@ impl NodeMaintainer {
                             .edge_endpoints(edge_ref.id())
                             .expect("Where did the edge go?!?!");
                         if graph.is_ancestor(curr_target_idx, from)
-                            && !graph[resolved].package.resolved().satisfies(&requested)?
+                            && !graph[resolved].package.resolved().satisfies(requested)?
                         {
                             break 'outer;
                         }

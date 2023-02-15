@@ -96,7 +96,7 @@ impl OroCommand for ViewCmd {
 
             // <descrition>
             if let Some(desc) = description.as_ref() {
-                println!("{}", desc);
+                println!("{desc}");
             }
 
             // <homepage>
@@ -176,7 +176,7 @@ impl OroCommand for ViewCmd {
                     grid.add(Cell::from(val));
                 }
                 if let Some(out) = grid.fit_into_width(width) {
-                    print!("dependencies:\n{}", out);
+                    print!("dependencies:\n{out}");
                     let count = dependencies.len();
                     if count > max_deps {
                         println!("(...and {} more)", count - max_deps);
@@ -201,7 +201,7 @@ impl OroCommand for ViewCmd {
                         }) => {
                             print!("-");
                             if let Some(name) = name {
-                                print!(" {}", name);
+                                print!(" {name}");
                             }
                             if let Some(email) = email {
                                 print!(" <{}>", email.cyan());

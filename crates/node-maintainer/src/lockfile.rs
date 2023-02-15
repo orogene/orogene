@@ -54,7 +54,7 @@ impl Lockfile {
         fn inner(kdl: KdlDocument) -> Result<Lockfile, NodeMaintainerError> {
             let packages = kdl
                 .nodes()
-                .into_iter()
+                .iter()
                 .filter(|node| node.name().to_string() == "pkg")
                 .map(|node| LockfileNode::from_kdl(node, false))
                 .map(|node| {
@@ -251,7 +251,7 @@ impl LockfileNode {
                     let spec = dep
                         .get(0)
                         .and_then(|spec| spec.as_string())
-                        .unwrap_or_else(|| "*");
+                        .unwrap_or("*");
                     deps.insert(name.clone(), spec.into());
                 }
             }

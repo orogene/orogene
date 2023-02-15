@@ -42,7 +42,7 @@ impl From<CorgiPackument> for Packument {
                 .into_iter()
                 .map(|(k, v)| (k, v.into()))
                 .collect(),
-            tags: value.tags.into(),
+            tags: value.tags,
             ..Default::default()
         }
     }
@@ -56,7 +56,7 @@ impl From<Packument> for CorgiPackument {
                 .into_iter()
                 .map(|(k, v)| (k, v.into()))
                 .collect(),
-            tags: value.tags.into(),
+            tags: value.tags,
         }
     }
 }
