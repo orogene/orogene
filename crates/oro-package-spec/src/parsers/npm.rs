@@ -28,7 +28,7 @@ pub(crate) fn npm_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError
             )),
             |(scope_opt, name, req)| {
                 let name = if let Some(scope) = scope_opt {
-                    format!("@{}/{}", scope, name)
+                    format!("@{scope}/{name}")
                 } else {
                     name.into()
                 };

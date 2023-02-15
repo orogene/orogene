@@ -52,16 +52,14 @@ impl PackageFetcher for DummyFetcher {
         let version = corgi_meta
             .manifest
             .version
-            .clone()
             .unwrap_or_else(|| Version::parse("0.0.0").expect("Oops, typo"));
-        packument.tags.insert("latest".into(), version.clone());
+        packument.tags.insert("latest".into(), version);
         Ok(Arc::new(packument))
     }
 
     async fn tarball(&self, pkg: &Package) -> Result<crate::TarballStream> {
         Err(NassunError::UnsupportedDummyOperation(format!(
-            "tarball({:?})",
-            pkg
+            "tarball({pkg:?})"
         )))
     }
 }

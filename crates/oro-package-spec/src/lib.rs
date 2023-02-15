@@ -70,7 +70,7 @@ impl PackageSpec {
         use PackageSpec::*;
         match self {
             Dir { path } => format!("{}", path.display()),
-            Git(info) => format!("{}", info),
+            Git(info) => format!("{info}"),
             Npm { ref requested, .. } => requested
                 .as_ref()
                 .map(|r| r.to_string())
@@ -99,24 +99,24 @@ impl fmt::Display for PackageSpec {
         use PackageSpec::*;
         match self {
             Dir { path } => write!(f, "{}", path.display()),
-            Git(info) => write!(f, "{}", info),
+            Git(info) => write!(f, "{info}"),
             Npm {
                 ref name,
                 ref requested,
                 ..
             } => {
-                write!(f, "{}", name)?;
+                write!(f, "{name}")?;
                 if let Some(req) = requested {
-                    write!(f, "@{}", req)?;
+                    write!(f, "@{req}")?;
                 }
                 Ok(())
             }
             Alias { ref name, ref spec } => {
-                write!(f, "{}@", name)?;
+                write!(f, "{name}@")?;
                 if let Npm { .. } = **spec {
                     write!(f, "npm:")?;
                 }
-                write!(f, "{}", spec)
+                write!(f, "{spec}")
             }
         }
     }
@@ -126,9 +126,9 @@ impl fmt::Display for VersionSpec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use VersionSpec::*;
         match self {
-            Tag(tag) => write!(f, "{}", tag),
-            Version(v) => write!(f, "{}", v),
-            Range(range) => write!(f, "{}", range),
+            Tag(tag) => write!(f, "{tag}"),
+            Version(v) => write!(f, "{v}"),
+            Range(range) => write!(f, "{range}"),
         }
     }
 }
