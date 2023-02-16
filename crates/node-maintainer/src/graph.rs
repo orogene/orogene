@@ -15,6 +15,8 @@ use petgraph::{
 use unicase::UniCase;
 
 use crate::{DepType, Edge, Lockfile, LockfileNode, Node, NodeMaintainerError};
+#[cfg(debug_assertions)]
+use NodeMaintainerError::GraphValidationError;
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub(crate) struct DemotionTarget {
@@ -343,6 +345,85 @@ impl Graph {
         // When we are done with the original node - remove its subtree from
         // the graph completely.
         self.remove_subtree(node);
+    }
+
+    /// Validate that file system hierarchy (parent -> children) is compatible
+    /// with graph edges (dependent -> dependency).
+    #[cfg(debug_assertions)]
+    pub(crate) fn validate(&self) -> Result<(), NodeMaintainerError> {
+        // Verify that all nodes in the tree are in the graph
+        let mut q = VecDeque::new();
+        q.push_back(self.root);
+        while let Some(node) = q.pop_front() {
+            if !self.inner.contains_node(node) {
+                return Err(GraphValidationError(format!(
+                    "Missing node in the graph for: {node:?}"
+                )));
+            }
+
+            q.extend(self.inner[node].children.values());
+        }
+
+        // Verify that direct graph makes all dependencies available to
+        // dependents.
+        for edge_idx in self.inner.edge_indices() {
+            let (dependent, dependency) = self
+                .inner
+                .edge_endpoints(edge_idx)
+                .ok_or(GraphValidationError(format!("Missing edge: {edge_idx:?}")))?;
+
+            let dependent = &self.inner[dependent];
+            let dependency = &self.inner[dependency];
+
+            let edge = self
+                .inner
+                .edge_weight(edge_idx)
+                .ok_or(GraphValidationError(format!(
+                    "Missing edge weight: {edge_idx:?}"
+                )))?;
+
+            let dependency_parent = dependency.parent.ok_or(GraphValidationError(format!(
+                "Missing dependency parent: {:?}",
+                dependent.package.resolved(),
+            )))?;
+
+            // Check parent->child relationship
+            let dependency_name = UniCase::new(dependency.package.name().into());
+            if !self.inner[dependency_parent]
+                .children
+                .contains_key(&dependency_name)
+            {
+                return Err(GraphValidationError(format!(
+                    "Dependency {:?} is not in the children of {:?}",
+                    dependency.package.resolved(),
+                    self.inner[dependency_parent]
+                )));
+            }
+
+            // Parent of the dependency should be an ancestor of the dependent
+            // or dependency should be in dependent's subtree.
+            if !self.is_ancestor(dependent.idx, dependency.idx)
+                && !self.is_ancestor(dependency_parent, dependent.idx)
+            {
+                return Err(GraphValidationError(format!(
+                    "Dependency {:?} is unreachable from {:?}",
+                    dependency.package.resolved(),
+                    dependent.package.resolved(),
+                )));
+            }
+
+            // Check that dependency satisfies the requirement
+            if !dependency.package.resolved().satisfies(&edge.requested)? {
+                return Err(GraphValidationError(format!(
+                    "Dependency {:?} does not satisfy requirement {:?} from {:?}",
+                    dependency.package.resolved(),
+                    edge.requested,
+                    dependent.package.resolved(),
+                )));
+            }
+        }
+
+        Ok(())
     }
 
     fn remove_subtree(&mut self, node: NodeIndex) -> Option<Node> {

@@ -83,7 +83,7 @@ impl NodeMaintainerOptions {
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock).await?;
-        nm.optimize(nm.graph.root);
+        nm.optimize(nm.graph.root)?;
         Ok(nm)
     }
 
@@ -102,7 +102,7 @@ impl NodeMaintainerOptions {
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock).await?;
-        nm.optimize(nm.graph.root);
+        nm.optimize(nm.graph.root)?;
         Ok(nm)
     }
 }
@@ -559,7 +559,7 @@ impl NodeMaintainer {
         }
     }
 
-    fn optimize(&mut self, node_idx: NodeIndex) {
+    fn optimize(&mut self, node_idx: NodeIndex) -> Result<(), NodeMaintainerError> {
         let mut q = Vec::new();
         q.push(node_idx);
 
@@ -574,6 +574,11 @@ impl NodeMaintainer {
         for idx in q.into_iter().rev() {
             self.optimize_subtree(idx);
         }
+
+        #[cfg(debug_assertions)]
+        self.graph.validate()?;
+
+        Ok(())
     }
 
     fn optimize_subtree(&mut self, node_idx: NodeIndex) {

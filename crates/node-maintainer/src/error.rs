@@ -83,6 +83,10 @@ pub enum NodeMaintainerError {
     #[error("Failed to send data through mpsc channel.")]
     #[diagnostic(code(node_maintainer::mpsc_error))]
     TrySendError,
+
+    #[error("{0}")]
+    #[diagnostic(code(node_maintainer::graph_error))]
+    GraphValidationError(String),
 }
 
 impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {
