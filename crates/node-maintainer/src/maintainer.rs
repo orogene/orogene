@@ -7,7 +7,6 @@ use async_std::fs;
 use async_std::sync::{Arc, Mutex};
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
-use node_semver::Version as SemVerVersion;
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -83,7 +82,8 @@ impl NodeMaintainerOptions {
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock).await?;
-        nm.optimize(nm.graph.root)?;
+        #[cfg(debug_assertions)]
+        nm.graph.validate()?;
         Ok(nm)
     }
 
@@ -102,7 +102,8 @@ impl NodeMaintainerOptions {
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock).await?;
-        nm.optimize(nm.graph.root)?;
+        #[cfg(debug_assertions)]
+        nm.graph.validate()?;
         Ok(nm)
     }
 }
@@ -553,115 +554,6 @@ impl NodeMaintainer {
             Box::new(deps.chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev))))
         } else {
             Box::new(deps)
-        }
-    }
-
-    fn optimize(&mut self, node_idx: NodeIndex) -> Result<(), NodeMaintainerError> {
-        let mut q = Vec::new();
-        q.push(node_idx);
-
-        let mut i = 0;
-        while i < q.len() {
-            q.extend(self.graph.inner[q[i]].children.values());
-            i += 1;
-        }
-
-        // Optimize children first and parents later so that we could keep
-        // promoting node to the root if needed.
-        for idx in q.into_iter().rev() {
-            self.optimize_subtree(idx);
-        }
-
-        #[cfg(debug_assertions)]
-        self.graph.validate()?;
-
-        Ok(())
-    }
-
-    fn optimize_subtree(&mut self, node_idx: NodeIndex) {
-        // Find children that can be demoted (move deeper into the tree).
-        let node = &self.graph.inner[node_idx];
-        let demotable = node.get_demotable_children(&self.graph);
-
-        // Build a hashmap from a grand children's package name to a vector of
-        // node indices.
-        // Any of these grand children can be promoted (moved higher in the
-        // tree).
-        let mut promotable: HashMap<String, Vec<NodeIndex>> = HashMap::new();
-        for &child_idx in node.children.values() {
-            let child = &self.graph.inner[child_idx];
-            for &idx in child.children.values() {
-                let name = self.graph.inner[idx].package.name();
-
-                if let Some(list) = promotable.get_mut(name) {
-                    list.push(idx);
-                } else {
-                    promotable.insert(name.to_string(), vec![idx]);
-                }
-            }
-        }
-
-        // For each demotable child
-        for child_idx in demotable {
-            // That is an npm package
-            let child = &self.graph.inner[child_idx];
-            let child_version = child.package.resolved().npm_version();
-            if child_version.is_none() {
-                continue;
-            }
-
-            // Take every promotable child with the same name and build a map
-            // from version to the vector of indexes.
-            let mut promotable_by_version: HashMap<SemVerVersion, Vec<NodeIndex>> = HashMap::new();
-            if let Some(promotable) = promotable.remove(child.package.name()) {
-                for promotable_idx in promotable {
-                    // Promotable grand child might have different index if we
-                    // previously demoted its parent. Skip.
-                    if !self.graph.inner.contains_node(promotable_idx) {
-                        continue;
-                    }
-
-                    let promotable = &self.graph.inner[promotable_idx];
-                    if let Some(version) = promotable.package.resolved().npm_version() {
-                        if let Some(group) = promotable_by_version.get_mut(&version) {
-                            group.push(promotable_idx);
-                        } else {
-                            promotable_by_version.insert(version, vec![promotable_idx]);
-                        }
-                    }
-                }
-            }
-
-            // Find the most populated promotable version
-            let largest_group = promotable_by_version.into_values().reduce(|acc, group| {
-                if acc.len() < group.len() {
-                    group
-                } else {
-                    acc
-                }
-            });
-
-            if let Some(largest_group) = largest_group {
-                // Promote only if the promotable version has more duplicated
-                // packages than we'd have to create if we demote the current
-                // node.
-                let targets = self.graph.get_demotion_targets(child_idx);
-                if largest_group.len() <= targets.len() {
-                    continue;
-                }
-
-                // This is a costly check so perform it only when we are about
-                // to run the optimization.
-                if !self.graph.can_be_promoted(largest_group[0]) {
-                    continue;
-                }
-
-                // Promote group
-                self.graph.merge_and_promote(node_idx, &largest_group);
-
-                // Demote node
-                self.graph.clone_and_demote(child_idx, &targets);
-            }
         }
     }
 }

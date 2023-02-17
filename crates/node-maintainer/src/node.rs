@@ -47,12 +47,4 @@ impl Node {
         }
         depth
     }
-
-    /// A vector of Node's children that are not its direct dependencies.
-    pub(crate) fn get_demotable_children(&self, graph: &Graph) -> Vec<NodeIndex> {
-        self.children
-            .values()
-            .filter_map(|&idx| (!graph.is_dependency(self.idx, idx)).then_some(idx))
-            .collect()
-    }
 }
