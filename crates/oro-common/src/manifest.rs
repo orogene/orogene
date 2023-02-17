@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use derive_builder::Builder;
 use node_semver::{Range, Version};
@@ -14,14 +14,14 @@ pub struct CorgiManifest {
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<Version>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub dependencies: HashMap<String, String>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub dev_dependencies: HashMap<String, String>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub optional_dependencies: HashMap<String, String>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub peer_dependencies: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub dependencies: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub dev_dependencies: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub optional_dependencies: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub peer_dependencies: BTreeMap<String, String>,
     #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies")]
     pub bundled_dependencies: Vec<String>,
 }
@@ -141,21 +141,21 @@ pub struct Manifest {
     pub publish_config: HashMap<String, Value>,
 
     // Deps
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     #[builder(default)]
-    pub dependencies: HashMap<String, String>,
+    pub dependencies: BTreeMap<String, String>,
 
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     #[builder(default)]
-    pub dev_dependencies: HashMap<String, String>,
+    pub dev_dependencies: BTreeMap<String, String>,
 
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     #[builder(default)]
-    pub optional_dependencies: HashMap<String, String>,
+    pub optional_dependencies: BTreeMap<String, String>,
 
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     #[builder(default)]
-    pub peer_dependencies: HashMap<String, String>,
+    pub peer_dependencies: BTreeMap<String, String>,
 
     #[serde(
         default,
@@ -341,7 +341,7 @@ mod tests {
     }
 }
         "#;
-        let mut deps = HashMap::new();
+        let mut deps = BTreeMap::new();
         deps.insert(String::from("foo"), String::from("^3.2.1"));
         let parsed = serde_json::from_str::<Manifest>(string).into_diagnostic()?;
         assert_eq!(

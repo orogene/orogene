@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{BTreeMap, VecDeque},
     ffi::OsStr,
     ops::{Index, IndexMut},
     path::Path,
@@ -107,7 +107,7 @@ impl Graph {
                     node,
                 ))
             })
-            .collect::<Result<HashMap<_, _>, NodeMaintainerError>>()?;
+            .collect::<Result<BTreeMap<_, _>, NodeMaintainerError>>()?;
         Ok(Lockfile {
             version: 1,
             root,
@@ -299,10 +299,10 @@ impl Graph {
             None
         };
 
-        let mut prod_deps = HashMap::new();
-        let mut dev_deps = HashMap::new();
-        let mut peer_deps = HashMap::new();
-        let mut opt_deps = HashMap::new();
+        let mut prod_deps = BTreeMap::new();
+        let mut dev_deps = BTreeMap::new();
+        let mut peer_deps = BTreeMap::new();
+        let mut opt_deps = BTreeMap::new();
         for e in self.inner.edges_directed(node.idx, Direction::Outgoing) {
             use DepType::*;
 

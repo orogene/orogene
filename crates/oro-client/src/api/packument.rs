@@ -61,7 +61,7 @@ impl OroClient {
 
 #[cfg(test)]
 mod test {
-    use maplit::hashmap;
+    use maplit::{btreemap, hashmap};
     use miette::{IntoDiagnostic, Result};
     use oro_common::{CorgiManifest, CorgiVersionMetadata, Manifest, VersionMetadata};
     use pretty_assertions::assert_eq;
@@ -102,7 +102,7 @@ mod test {
                         manifest: CorgiManifest {
                             name: Some("some-pkg".to_string()),
                             version: Some("1.0.0".parse()?),
-                            dependencies: hashmap!(
+                            dependencies: btreemap!(
                                 "some-dep".to_string() => "1.0.0".to_string()
                             ),
                             ..Default::default()
@@ -139,7 +139,7 @@ mod test {
                         manifest: Manifest {
                             name: Some("some-pkg".to_string()),
                             version: Some("1.0.0".parse()?),
-                            dependencies: hashmap!(
+                            dependencies: btreemap!(
                                 "some-dep".to_string() => "1.0.0".to_string()
                             ),
                             ..Default::default()

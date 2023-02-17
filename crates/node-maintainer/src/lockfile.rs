@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use kdl::{KdlDocument, KdlNode};
 use nassun::{Nassun, Package, PackageResolution};
@@ -15,7 +15,7 @@ use crate::{DepType, IntoKdl, NodeMaintainerError};
 pub struct Lockfile {
     pub(crate) version: u64,
     pub(crate) root: LockfileNode,
-    pub(crate) packages: HashMap<UniCase<String>, LockfileNode>,
+    pub(crate) packages: BTreeMap<UniCase<String>, LockfileNode>,
 }
 
 impl Lockfile {
@@ -27,7 +27,7 @@ impl Lockfile {
         &self.root
     }
 
-    pub fn packages(&self) -> &HashMap<UniCase<String>, LockfileNode> {
+    pub fn packages(&self) -> &BTreeMap<UniCase<String>, LockfileNode> {
         &self.packages
     }
 
@@ -67,7 +67,8 @@ impl Lockfile {
                         .join("/node_modules/");
                     Ok((UniCase::from(path_str), node))
                 })
-                .collect::<Result<HashMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>()?;
+                .collect::<Result<BTreeMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>(
+                )?;
             Ok(Lockfile {
                 version: kdl
                     .get_arg("lockfile-version")
@@ -97,10 +98,10 @@ pub struct LockfileNode {
     pub resolved: Option<String>,
     pub version: Option<Version>,
     pub integrity: Option<Integrity>,
-    pub dependencies: HashMap<String, String>,
-    pub dev_dependencies: HashMap<String, String>,
-    pub peer_dependencies: HashMap<String, String>,
-    pub optional_dependencies: HashMap<String, String>,
+    pub dependencies: BTreeMap<String, String>,
+    pub dev_dependencies: BTreeMap<String, String>,
+    pub peer_dependencies: BTreeMap<String, String>,
+    pub optional_dependencies: BTreeMap<String, String>,
 }
 
 impl From<LockfileNode> for CorgiManifest {
@@ -235,7 +236,7 @@ impl LockfileNode {
     fn from_kdl_deps(
         children: &KdlDocument,
         dep_type: &DepType,
-    ) -> Result<HashMap<String, String>, NodeMaintainerError> {
+    ) -> Result<BTreeMap<String, String>, NodeMaintainerError> {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
@@ -243,7 +244,7 @@ impl LockfileNode {
             Peer => "peer-dependencies",
             Opt => "optional-dependencies",
         };
-        let mut deps = HashMap::new();
+        let mut deps = BTreeMap::new();
         if let Some(node) = children.get(type_name) {
             if let Some(children) = node.children() {
                 for dep in children.nodes() {
@@ -310,7 +311,7 @@ impl LockfileNode {
         kdl_node
     }
 
-    fn to_kdl_deps(&self, dep_type: &DepType, deps: &HashMap<String, String>) -> KdlNode {
+    fn to_kdl_deps(&self, dep_type: &DepType, deps: &BTreeMap<String, String>) -> KdlNode {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
