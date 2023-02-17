@@ -71,11 +71,10 @@ impl JsNodeMaintainer {
         Ok(self.0.to_kdl()?.to_string())
     }
 
-    pub async fn package_at_path(&self, path: &str) -> Result<Option<Package>> {
+    pub fn package_at_path(&self, path: &str) -> Result<Option<Package>> {
         Ok(self
             .0
             .package_at_path(Path::new(path))
-            .await
             .map_err(JsNodeMaintainerError)?
             .map(Package::from_core_package))
     }

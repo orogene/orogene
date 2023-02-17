@@ -172,11 +172,8 @@ impl NodeMaintainer {
         self.graph.render()
     }
 
-    pub async fn package_at_path(
-        &self,
-        path: &Path,
-    ) -> Result<Option<Package>, NodeMaintainerError> {
-        self.graph.package_at_path(path).await
+    pub fn package_at_path(&self, path: &Path) -> Result<Option<Package>, NodeMaintainerError> {
+        self.graph.package_at_path(path)
     }
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {

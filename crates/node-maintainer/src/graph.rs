@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     ops::{Index, IndexMut},
-    path::Path,
+    path::Path, ffi::OsStr,
 };
 
 use kdl::KdlDocument;
@@ -137,16 +137,18 @@ impl Graph {
         )
     }
 
-    pub(crate) async fn package_at_path(
+    pub(crate) fn package_at_path(
         &self,
         path: &Path,
     ) -> Result<Option<Package>, NodeMaintainerError> {
         let mut current = Some(self.root);
         let mut in_nm = true;
+        let slash = OsStr::new("/");
+        let backslash = OsStr::new("\\");
         let nm = UniCase::new("node_modules".to_owned());
-        for segment in path {
-            let segment = UniCase::new(segment.to_string_lossy().into());
-            if segment == nm {
+        for raw_segment in path {
+            let segment = UniCase::new(raw_segment.to_string_lossy().into());
+            if segment == nm || slash == raw_segment || backslash == raw_segment {
                 in_nm = true;
                 continue;
             } else if let Some(curr_idx) = current {
