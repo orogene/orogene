@@ -30,7 +30,7 @@ impl OroCommand for PingCmd {
             .registry
             .unwrap_or_else(|| "https://registry.npmjs.org".parse().unwrap());
         if !self.quiet && !self.json {
-            eprintln!("ping: {}", registry);
+            eprintln!("ping: {registry}");
         }
         let client = OroClient::new(registry.clone());
         let payload = client.ping().await?;

@@ -90,7 +90,7 @@ impl Orogene {
             .set_default("loglevel", "warn")?
             .set_default("root", ".")?;
         if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
-            cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy().to_string())?;
+            cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy())?;
         }
 
         let cfg = if let Some(file) = &self.config {
@@ -102,7 +102,7 @@ impl Orogene {
                     dirs.as_ref()
                         .map(|d| d.config_dir().to_owned().join("ororc.toml")),
                 )
-                .pkg_root(self.root.clone().or_else(move || Some(cwd)))
+                .pkg_root(self.root.clone().or(Some(cwd)))
                 .load()?
         };
 

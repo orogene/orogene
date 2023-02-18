@@ -276,7 +276,7 @@ async fn mocks_from_kdl(mock_server: &MockServer, doc: KdlDocument) {
             "name": name.clone(),
             "version": version.clone(),
             "dist": {
-                "tarball": format!("https://example.com/-/{}-{}.tgz", name, version),
+                "tarball": format!("https://example.com/-/{name}-{version}.tgz"),
                 "integrity": "sha512-deadbeef"
             }
         });
