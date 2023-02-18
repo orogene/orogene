@@ -77,7 +77,7 @@ impl OroConfigOptions {
     }
 
     pub fn load(self) -> Result<OroConfig> {
-        let mut builder= self.builder;
+        let mut builder = self.builder;
         if self.global {
             if let Some(config_file) = self.global_config_file {
                 let path = config_file.display().to_string();
