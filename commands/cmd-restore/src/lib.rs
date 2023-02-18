@@ -2,7 +2,6 @@ use std::{fs, path::PathBuf};
 
 use async_trait::async_trait;
 use clap::Args;
-use directories::ProjectDirs;
 use miette::{Context, IntoDiagnostic, Result};
 use node_maintainer::NodeMaintainerOptions;
 use oro_command::OroCommand;
@@ -11,9 +10,8 @@ use url::Url;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct RestoreCmd {
-    /// Default registry.
-    #[arg(default_value = "https://registry.npmjs.org", long)]
-    registry: Url,
+    #[clap(from_global)]
+    registry: Option<Url>,
 
     #[clap(from_global)]
     json: bool,
@@ -31,15 +29,14 @@ pub struct RestoreCmd {
 #[async_trait]
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
-        // TODO: Move all these defaults to the config layer, so they pick up
-        // configs from files.
-        let root = self.root.unwrap_or_else(|| PathBuf::from("."));
-        let mut nm = NodeMaintainerOptions::new().registry(self.registry);
+        let root = self
+            .root
+            .expect("root should've been set by global defaults");
+        let mut nm = NodeMaintainerOptions::new();
+        if let Some(registry) = self.registry {
+            nm = nm.registry(registry);
+        }
         if let Some(cache) = self.cache {
-            nm = nm.cache(cache);
-        } else if let Some(cache) =
-            ProjectDirs::from("", "", "orogene").map(|pd| pd.cache_dir().to_path_buf())
-        {
             nm = nm.cache(cache);
         }
         let lock_path = root.join("package-lock.kdl");
@@ -59,10 +56,10 @@ impl OroCommand for RestoreCmd {
         let resolved_nm = nm
             .resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
             .await?;
+        resolved_nm.extract_to(root.clone()).await?;
         resolved_nm
             .write_lockfile(root.join("package-lock.kdl"))
             .await?;
-        resolved_nm.extract_to(root).await?;
         Ok(())
     }
 }
