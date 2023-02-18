@@ -28,7 +28,6 @@ url = { workspace = true }
 async-tar = { git = "https://github.com/zkat/async-tar", branch = "master" }
 async-process = { version = "1.0.1" }
 async-std = { workspace = true, features = ["attributes", "std"] }
-mkdirp = { version = "1.0.0" }
 tempfile = { workspace = true }
 which = { version = "4.0.2" }
 

@@ -63,7 +63,7 @@ impl Tarball {
 
         let dir = PathBuf::from(dir.as_ref());
         let takeme = dir.clone();
-        mkdirp::mkdirp(&takeme)
+        std::fs::create_dir_all(&takeme)
             .map_err(|e| NassunError::ExtractIoError(e, Some(takeme.clone())))?;
 
         while let Some(file) = files.next().await {
@@ -78,7 +78,7 @@ impl Tarball {
             if let async_tar::EntryType::Regular = header.entry_type() {
                 let takeme = path.clone();
 
-                mkdirp::mkdirp(takeme.parent().unwrap()).map_err(|e| {
+                std::fs::create_dir_all(takeme.parent().unwrap()).map_err(|e| {
                     NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
                 })?;
 

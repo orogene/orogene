@@ -1750,12 +1750,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mkdirp"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "864e1de64c29b386d2dc7822aea156a7e4d45d4393ac748878dc21c9c41037f0"
-
-[[package]]
 name = "nassun"
 version = "0.1.0"
 dependencies = [
@@ -1769,7 +1763,6 @@ dependencies = [
  "futures 0.3.26",
  "js-sys",
  "miette",
- "mkdirp",
  "node-semver",
  "oro-client",
  "oro-common",
