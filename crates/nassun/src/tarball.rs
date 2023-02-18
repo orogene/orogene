@@ -84,14 +84,21 @@ impl Tarball {
 
                 let mut writer = async_std::fs::OpenOptions::new()
                     .write(true)
-                    .create(true)
+                    .create_new(true)
                     .open(&path)
                     .await
                     .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
 
-                io::copy(BufReader::new(file), BufWriter::new(&mut writer))
-                    .await
-                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
+                let size = header.size()? as usize;
+                if size > 512 * 1024 {
+                    io::copy(BufReader::new(file), BufWriter::new(&mut writer))
+                        .await
+                        .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
+                } else {
+                    let mut buf = Vec::with_capacity(size);
+                    BufReader::new(file).read_to_end(&mut buf).await?;
+                    BufWriter::new(writer).write_all(&buf).await?;
+                }
             }
         }
 

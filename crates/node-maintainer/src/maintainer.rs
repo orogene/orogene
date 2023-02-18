@@ -195,12 +195,20 @@ impl NodeMaintainer {
                             .join("/node_modules/"),
                     );
 
+                    // let start = std::time::Instant::now();
                     me.graph[child_idx]
                         .package
                         .tarball()
                         .await?
                         .extract_to_dir(target_dir)
-                        .await
+                        .await?;
+                    // TODO: Replace with `tracing`.
+                    // println!(
+                    //     "Extracted {} in {:?}ms",
+                    //     me.graph[child_idx].package.name(),
+                    //     start.elapsed().as_millis()
+                    // );
+                    Ok::<_, NodeMaintainerError>(())
                 })
                 .await?;
             Ok(())
