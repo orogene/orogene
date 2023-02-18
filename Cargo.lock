@@ -2094,6 +2094,7 @@ dependencies = [
  "oro-config",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

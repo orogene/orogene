@@ -12,14 +12,19 @@ use cmd_ping::PingCmd;
 use cmd_resolve::ResolveCmd;
 use cmd_restore::RestoreCmd;
 use cmd_view::ViewCmd;
+use url::Url;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Orogene {
-    /// Package path to operate on
-    #[arg(global = true, long = "root")]
+    /// Package path to operate on.
+    #[arg(global = true, long)]
     root: Option<PathBuf>,
+
+    /// Registry used for unscoped packages.
+    #[arg(global = true, long)]
+    registry: Option<Url>,
 
     /// Location of disk cache
     #[arg(global = true, long)]
@@ -29,13 +34,11 @@ pub struct Orogene {
     #[arg(global = true, long)]
     config: Option<PathBuf>,
 
-    /// Log output level/directive. Supports plain loglevels (off, error,
-    /// warn, info, debug, trace) as well as more advanced directives in the
-    /// format `target[span{field=value}]=level`.
-    #[clap(global = true, long, default_value = "warn")]
-    loglevel: String,
+    /// Log output level/directive.
+    #[clap(global = true, long)]
+    loglevel: Option<String>,
 
-    /// Disable all output
+    /// Disable all output.
     #[arg(global = true, long, short)]
     quiet: bool,
 
@@ -56,7 +59,11 @@ impl Orogene {
                     .with_default_directive(if self.quiet {
                         LevelFilter::OFF.into()
                     } else {
-                        self.loglevel.parse().into_diagnostic()?
+                        self.loglevel
+                            .clone()
+                            .unwrap_or_else(|| "warn".to_owned())
+                            .parse()
+                            .into_diagnostic()?
                     })
                     .from_env_lossy(),
             )
@@ -66,24 +73,25 @@ impl Orogene {
 
     fn build_config(&self) -> Result<OroConfig> {
         let dirs = ProjectDirs::from("", "", "orogene");
-        let cfg_builder = OroConfigOptions::new();
-        // TODO: Figure out a way to set defaults globally, but that only get
-        // used if CLI args fall through? idk what's going on.
-        //     .set_default("registry", "https://registry.npmjs.org")?
-        //     .set_default("root", ".")?;
-        // if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
-        //     cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy().to_string())?;
-        // }
+
+        let mut cfg_builder = OroConfigOptions::new()
+            .set_default("registry", "https://registry.npmjs.org")?
+            .set_default("loglevel", "warn")?
+            .set_default("root", ".")?;
+        if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
+            cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy().to_string())?;
+        }
 
         let cfg = if let Some(file) = &self.config {
             cfg_builder.global_config_file(Some(file.clone())).load()?
         } else {
+            let cwd = std::env::current_dir().into_diagnostic()?;
             cfg_builder
                 .global_config_file(
                     dirs.as_ref()
                         .map(|d| d.config_dir().to_owned().join("ororc.toml")),
                 )
-                .pkg_root(self.root.clone())
+                .pkg_root(self.root.clone().or_else(move || Some(cwd)))
                 .load()?
         };
 
