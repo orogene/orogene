@@ -72,9 +72,8 @@ impl Tarball {
             let entry_path = header
                 .path()
                 .map_err(|e| NassunError::ExtractIoError(e, None))?;
-            let entry_subpath = entry_path
-                .strip_prefix("package")
-                .unwrap_or_else(|_| entry_path.as_ref());
+            let entry_subpath =
+                strip_one((&*entry_path).into()).unwrap_or_else(|| entry_path.as_ref().into());
             let path = dir.join(entry_subpath);
             if let async_tar::EntryType::Regular = header.entry_type() {
                 let takeme = path.clone();
@@ -125,6 +124,11 @@ impl Tarball {
         // }
         Ok(())
     }
+}
+
+fn strip_one(path: &Path) -> Option<&Path> {
+    let mut comps = path.components();
+    comps.next().map(|_| comps.as_path())
 }
 
 impl AsyncRead for Tarball {
