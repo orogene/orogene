@@ -3,7 +3,7 @@ name = "orogene"
 version = "0.1.0"
 authors = ["Orogene Maintainers and Contributors"]
 edition = "2021"
-description = "wip"
+description = "`node_modules/` package manager and utility toolkit."
 license = "Apache-2.0"
 repository = "https://github.com/orogene/orogene"
 homepage = "https://github.com/orogene/orogene"
@@ -30,6 +30,7 @@ directories = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 tracing = { workspace = true}
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+url = { workspace = true }
 
 [workspace]
 members = [
