@@ -23,18 +23,29 @@ pub struct Orogene {
     root: Option<PathBuf>,
 
     /// Registry used for unscoped packages.
+    ///
+    /// Defaults to https://registry.npmjs.org.
     #[arg(global = true, long)]
     registry: Option<Url>,
 
-    /// Location of disk cache
+    /// Location of disk cache.
+    ///
+    /// Default location varies by platform.
     #[arg(global = true, long)]
     cache: Option<PathBuf>,
 
     /// File to read configuration values from.
+    ///
+    /// When specified, global configuration loading is disabled and
+    /// configuration values will only be read from this location.
     #[arg(global = true, long)]
     config: Option<PathBuf>,
 
     /// Log output level/directive.
+    ///
+    /// Supports plain loglevels (off, error, warn, info, debug, trace) as
+    /// well as more advanced directives in the format
+    /// `target[span{field=value}]=level`.
     #[clap(global = true, long)]
     loglevel: Option<String>,
 
