@@ -97,7 +97,9 @@ impl Tarball {
                 } else {
                     let mut buf = Vec::with_capacity(size);
                     BufReader::new(file).read_to_end(&mut buf).await?;
-                    BufWriter::new(writer).write_all(&buf).await?;
+                    let mut stream = BufWriter::new(writer);
+                    stream.write_all(&buf).await?;
+                    stream.flush().await?;
                 }
             }
         }
