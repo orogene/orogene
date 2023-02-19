@@ -89,9 +89,9 @@ impl Tarball {
                     .await
                     .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
 
-                    io::copy(BufReader::new(file), BufWriter::new(&mut writer))
-                        .await
-                        .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
+                io::copy(BufReader::new(file), BufWriter::new(&mut writer))
+                    .await
+                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
             }
         }
         Ok(())
