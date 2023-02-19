@@ -3,6 +3,8 @@ use kdl::{KdlDocument, KdlNode};
 use miette::Diagnostic;
 use thiserror::Error;
 
+use crate::{NpmPackageLock, NpmPackageLockEntry};
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error, Diagnostic)]
 pub enum NodeMaintainerError {
@@ -39,17 +41,37 @@ pub enum NodeMaintainerError {
     /// Failed to parse an integrity value while loading lockfile.
     #[error("Failed to parse an integrity value while loading lockfile node:\n{0}")]
     #[diagnostic(code(node_maintainer::kdl::integrity_parse_error))]
-    LockfileIntegrityParseError(KdlNode, #[source] ssri::Error),
+    KdlLockfileIntegrityParseError(KdlNode, #[source] ssri::Error),
 
     /// Missing package node name.
     #[error("Missing package node name:\n{0}")]
     #[diagnostic(code(node_maintainer::kdl::missing_node_name))]
-    MissingName(KdlNode),
+    KdlLockMissingName(KdlNode),
+
+    /// Missing package node name.
+    #[error("Missing package name:\n{0:#?}")]
+    #[diagnostic(code(node_maintainer::npm::missing_name))]
+    NpmLockMissingName(NpmPackageLockEntry),
+
+    /// Failed to parse an integrity value while loading NPM lockfile.
+    #[error("Failed to parse an integrity value while loading lockfile node:\n{0:#?}")]
+    #[diagnostic(code(node_maintainer::npm::integrity_parse_error))]
+    NpmLockfileIntegrityParseError(NpmPackageLockEntry, #[source] ssri::Error),
+
+    /// Unsupported NPM Package Lock version.
+    #[error("Unsupported NPM Package Lock version: {0}")]
+    #[diagnostic(code(node_maintainer::npm::unsupported_package_lock_Version))]
+    NpmUnsupportedPackageLockVersion(u64),
 
     /// No root node in KDL lockfile.
     #[error("No root node in KDL lockfile.")]
     #[diagnostic(code(node_maintainer::kdl::missing_root))]
-    MissingRoot(KdlDocument),
+    KdlLockMissingRoot(KdlDocument),
+
+    /// No root node in NPM lockfile.
+    #[error("No root package in NPM lockfile.")]
+    #[diagnostic(code(node_maintainer::npm::missing_root))]
+    NpmLockMissingRoot(NpmPackageLock),
 
     /// Error parsing lockfile.
     #[error(transparent)]
@@ -75,7 +97,12 @@ pub enum NodeMaintainerError {
     #[diagnostic(transparent)]
     NassunError(#[from] nassun::NassunError),
 
-    // Generic error
+    /// Generic serde_json error.
+    #[error(transparent)]
+    #[diagnostic(code(node_maintainer::serde_json_error))]
+    SerdeJsonError(#[from] serde_json::Error),
+
+    /// Generic error
     #[error("{0}")]
     #[diagnostic(code(node_maintainer::miscellaneous_error))]
     MiscError(String),

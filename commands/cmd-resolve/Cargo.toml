@@ -13,6 +13,5 @@ oro-config = { path = "../../crates/oro-config" }
 
 async-trait = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
-directories = { workspace = true }
 miette = { workspace = true }
 url = { workspace = true }

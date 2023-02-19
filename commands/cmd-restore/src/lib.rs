@@ -53,6 +53,20 @@ impl OroCommand for RestoreCmd {
                 )
             })?;
         }
+        let lock_path = root.join("package-lock.json");
+        if lock_path.exists() {
+            let json = fs::read_to_string(&lock_path)
+                .into_diagnostic()
+                .wrap_err_with(|| {
+                    format!("Failed to read lockfile at {}", lock_path.to_string_lossy())
+                })?;
+            nm = nm.npm_lock(json).wrap_err_with(|| {
+                format!(
+                    "Failed to parse NPM package lockfile at {}",
+                    lock_path.to_string_lossy()
+                )
+            })?;
+        }
         let resolved_nm = nm
             .resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
             .await?;
