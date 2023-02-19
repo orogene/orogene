@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nassun::Package;
 use oro_common::CorgiManifest;
-use petgraph::stable_graph::NodeIndex;
+use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;
 
 use crate::optimizer;
@@ -18,6 +18,8 @@ pub struct Node {
     pub(crate) manifest: CorgiManifest,
     /// Quick index back to this Node's [`Graph`]'s root Node.
     pub(crate) root: NodeIndex,
+    /// Name-indexed map of outgoing [`crate::Edge`]s from this Node.
+    pub(crate) dependencies: HashMap<UniCase<String>, EdgeIndex>,
     /// Parent, if any, of this Node in the logical filesystem hierarchy.
     pub(crate) parent: Option<NodeIndex>,
     /// Children of this node in the logical filesystem hierarchy. These are
@@ -35,6 +37,7 @@ impl Node {
             root: NodeIndex::new(0),
             parent: None,
             children: HashMap::new(),
+            dependencies: HashMap::new(),
         }
     }
 

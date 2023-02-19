@@ -10,8 +10,6 @@ use nassun::{Package, PackageResolution};
 use petgraph::{
     dot::Dot,
     stable_graph::{EdgeIndex, NodeIndex, StableGraph},
-    visit::EdgeRef,
-    Direction,
 };
 use unicase::UniCase;
 
@@ -318,19 +316,22 @@ impl Graph {
         let mut dev_deps = BTreeMap::new();
         let mut peer_deps = BTreeMap::new();
         let mut opt_deps = BTreeMap::new();
-        for e in self.inner.edges_directed(node.idx, Direction::Outgoing) {
+        let dependencies = node
+            .dependencies
+            .iter()
+            .map(|(name, edge_idx)| {
+                let edge = &self.inner[*edge_idx];
+                (name, &edge.requested, &edge.dep_type)
+            });
+        for (name, requested, dep_type) in dependencies {
             use DepType::*;
-
-            let name = self.inner[e.target()].package.name();
-            let edge = e.weight();
-
-            let deps = match edge.dep_type {
+            let deps = match dep_type {
                 Prod => &mut prod_deps,
                 Dev => &mut dev_deps,
                 Peer => &mut peer_deps,
                 Opt => &mut opt_deps,
             };
-            deps.insert(name.to_string(), edge.requested.requested().clone());
+            deps.insert(name.to_string(), requested.requested().clone());
         }
         Ok(LockfileNode {
             name: UniCase::new(node.package.name().to_string()),
