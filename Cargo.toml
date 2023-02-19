@@ -42,7 +42,7 @@ members = [
 [workspace.dependencies]
 async-std = "1.12.0"
 async-trait = "0.1.64"
-cacache = "11.0.2"
+cacache = "11.1.0"
 chrono = "0.4.23"
 clap = "4.1.4"
 console_error_panic_hook = "0.1.7"
