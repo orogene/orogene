@@ -9,7 +9,7 @@ use url::Url;
 use crate::{fetch::PackageFetcher, package::Package, NassunError};
 
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum PackageResolution {
     Npm {
         name: String,

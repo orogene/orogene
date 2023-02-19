@@ -13,6 +13,10 @@ pub struct RestoreCmd {
     #[clap(from_global)]
     registry: Option<Url>,
 
+    /// Apply experimental optimization technique to lockfile.
+    #[arg(long)]
+    optimize_lockfile: bool,
+
     #[clap(from_global)]
     json: bool,
 
@@ -39,6 +43,7 @@ impl OroCommand for RestoreCmd {
         if let Some(cache) = self.cache {
             nm = nm.cache(cache);
         }
+        nm = nm.optimize(self.optimize_lockfile);
         let lock_path = root.join("package-lock.kdl");
         if lock_path.exists() {
             let kdl = fs::read_to_string(&lock_path)

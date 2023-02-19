@@ -138,6 +138,21 @@ impl Graph {
         )
     }
 
+    pub fn render_tree(&self) -> String {
+        let mut res = Vec::new();
+        res.push("digraph {".into());
+        for node in self.inner.node_weights() {
+            let label = format!("{:?} @ {}", node.package.resolved(), node.package.name());
+            res.push(format!("  {} [label={:?}]", node.idx.index(), label));
+
+            if let Some(parent) = node.parent {
+                res.push(format!("  {} -> {}", parent.index(), node.idx.index()));
+            }
+        }
+        res.push("}".into());
+        res.join("\n")
+    }
+
     pub(crate) fn package_at_path(
         &self,
         path: &Path,
@@ -219,7 +234,7 @@ impl Graph {
             q.extend(self.inner[node].children.values());
         }
 
-        // Verify that direct graph makes all dependencies available to
+        // Verify that directed graph makes all dependencies available to
         // dependents.
         for edge_idx in self.inner.edge_indices() {
             let (dependent, dependency) = self

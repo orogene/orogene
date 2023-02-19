@@ -15,5 +15,6 @@ mod into_kdl;
 mod lockfile;
 mod maintainer;
 mod node;
+mod optimizer;
 #[cfg(target_arch = "wasm32")]
 pub use wasm::*;

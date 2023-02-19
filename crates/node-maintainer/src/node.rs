@@ -5,6 +5,7 @@ use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
 use unicase::UniCase;
 
+use crate::optimizer;
 use crate::Graph;
 
 #[derive(Debug, Clone)]
@@ -46,5 +47,11 @@ impl Node {
             current = graph.inner[idx].parent;
         }
         depth
+    }
+}
+
+impl optimizer::Package for Node {
+    fn name(&self) -> &str {
+        self.package.name()
     }
 }

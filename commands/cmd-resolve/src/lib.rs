@@ -15,6 +15,10 @@ pub struct ResolveCmd {
     #[arg(default_value = "https://registry.npmjs.org", long)]
     registry: Url,
 
+    /// Apply experimental optimization technique to lockfile.
+    #[arg(long)]
+    optimize_lockfile: bool,
+
     #[clap(from_global)]
     json: bool,
 
@@ -34,7 +38,9 @@ impl OroCommand for ResolveCmd {
         // TODO: Move all these defaults to the config layer, so they pick up
         // configs from files.
         let root = self.root.unwrap_or_else(|| PathBuf::from("."));
-        let mut nm = NodeMaintainerOptions::new().registry(self.registry);
+        let mut nm = NodeMaintainerOptions::new()
+            .optimize(self.optimize_lockfile)
+            .registry(self.registry);
         if let Some(cache) = self.cache {
             nm = nm.cache(cache);
         } else if let Some(cache) =

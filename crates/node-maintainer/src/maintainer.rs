@@ -6,16 +6,17 @@ use std::path::{Path, PathBuf};
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use nassun::{Nassun, NassunOpts, Package, PackageSpec};
+use nassun::{Nassun, NassunOpts, Package, PackageResolution, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
-use petgraph::visit::EdgeRef;
+use petgraph::visit::{EdgeRef, VisitMap, Visitable};
 use petgraph::Direction;
 use unicase::UniCase;
 use url::Url;
 
 use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
+use crate::optimizer::Tree;
 use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
 const DEFAULT_PARALLELISM: usize = 50;
@@ -24,6 +25,7 @@ const DEFAULT_PARALLELISM: usize = 50;
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
     parallelism: usize,
+    optimize: bool,
     kdl_lock: Option<Lockfile>,
 }
 
@@ -39,6 +41,11 @@ impl NodeMaintainerOptions {
 
     pub fn parallelism(mut self, parallelism: usize) -> Self {
         self.parallelism = parallelism;
+        self
+    }
+
+    pub fn optimize(mut self, optimize: bool) -> Self {
+        self.optimize = optimize;
         self
     }
 
@@ -84,6 +91,9 @@ impl NodeMaintainerOptions {
         nm.run_resolver(self.kdl_lock).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
+        if self.optimize {
+            nm.optimize()?;
+        }
         Ok(nm)
     }
 
@@ -104,6 +114,9 @@ impl NodeMaintainerOptions {
         nm.run_resolver(self.kdl_lock).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
+        if self.optimize {
+            nm.optimize()?;
+        }
         Ok(nm)
     }
 }
@@ -113,6 +126,7 @@ impl Default for NodeMaintainerOptions {
         NodeMaintainerOptions {
             nassun_opts: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
+            optimize: false,
             kdl_lock: None,
         }
     }
@@ -563,5 +577,102 @@ impl NodeMaintainer {
         } else {
             Box::new(deps)
         }
+    }
+
+    fn optimize(&mut self) -> Result<(), NodeMaintainerError> {
+        // Clear parent/children in every node and merge nodes with the same
+        // package names and versions.
+        let mut idx_by_package: HashMap<String, HashMap<PackageResolution, NodeIndex>> =
+            HashMap::new();
+        let mut merge_queue: HashMap<NodeIndex, NodeIndex> = HashMap::new();
+        for node in self.graph.inner.node_weights_mut() {
+            node.parent = None;
+            node.children.clear();
+
+            if let Some(idxs) = idx_by_package.get_mut(node.package.name()) {
+                if let Some(idx) = idxs.get(node.package.resolved()) {
+                    merge_queue.insert(node.idx, *idx);
+                } else {
+                    idxs.insert(node.package.resolved().clone(), node.idx);
+                }
+            } else {
+                let mut idxs = HashMap::new();
+                idxs.insert(node.package.resolved().clone(), node.idx);
+                idx_by_package.insert(node.package.name().to_string(), idxs);
+            }
+        }
+
+        // Merge edges from duplicate nodes.
+        for (merge_from, merge_into) in merge_queue.iter() {
+            let edges = self
+                .graph
+                .inner
+                .edges_directed(*merge_from, Direction::Outgoing)
+                .map(|e| (*merge_into, e.target(), e.id()))
+                .chain(
+                    self.graph
+                        .inner
+                        .edges_directed(*merge_from, Direction::Incoming)
+                        .map(|e| (e.source(), *merge_into, e.id())),
+                )
+                .collect::<Vec<_>>();
+
+            for (from, to, id) in edges {
+                let edge = self.graph.inner.remove_edge(id).expect("edge");
+                let from = merge_queue.get(&from).cloned().unwrap_or(from);
+                let to = merge_queue.get(&to).cloned().unwrap_or(to);
+                self.graph.inner.add_edge(from, to, edge);
+            }
+
+            self.graph
+                .inner
+                .remove_node(*merge_from)
+                .expect("removed node");
+        }
+
+        // Build optimal tree
+        let tree = Tree::build(&self.graph.inner, self.graph.root);
+
+        // Walk the tree, filling parent/children in Nodes and creating
+        // duplicate nodes where needed.
+        let mut visit_map = self.graph.inner.visit_map();
+        let mut tree_to_graph = HashMap::new();
+        for node in tree.nodes() {
+            if visit_map.visit(node.graph_idx) {
+                tree_to_graph.insert(node.idx, node.graph_idx);
+            } else {
+                // Clone node and outgoing edges (incoming are not used when
+                // serializing the graph).
+                let idx = self
+                    .graph
+                    .inner
+                    .add_node(self.graph.inner[node.graph_idx].clone());
+
+                let edges = self
+                    .graph
+                    .inner
+                    .edges_directed(node.graph_idx, Direction::Outgoing)
+                    .map(|e| (e.target(), e.weight().clone()))
+                    .collect::<Vec<_>>();
+
+                for (target, edge) in edges {
+                    self.graph.inner.add_edge(idx, target, edge);
+                }
+
+                tree_to_graph.insert(node.idx, idx);
+            }
+        }
+
+        for node in tree.nodes() {
+            let graph_node = &mut self.graph.inner[tree_to_graph[&node.idx]];
+            graph_node.parent = node.parent.map(|idx| tree_to_graph[&idx]);
+            for (dep_name, dep_idx) in &node.children {
+                graph_node
+                    .children
+                    .insert(UniCase::new(dep_name.into()), tree_to_graph[dep_idx]);
+            }
+        }
+
+        Ok(())
     }
 }
