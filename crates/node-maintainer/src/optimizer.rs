@@ -306,7 +306,7 @@ impl<P: Package + Clone> Tree<P> {
         // Clear unused data
         self[root].dependents.clear();
 
-        // Recurse and lower dependcies in children
+        // Recurse and promote dependencies in children
         let children = self.inner[&root]
             .children
             .keys()
@@ -327,7 +327,7 @@ impl<P: Package + Clone> Tree<P> {
                 .into_iter()
                 .collect::<Vec<_>>();
 
-            // Now try to lower each leaf child.
+            // Now try to promote each leaf child.
             for (child_name, child_idx) in children.iter() {
                 let is_leaf = self.inner[child_idx].children.is_empty();
                 if !is_leaf {
@@ -349,6 +349,17 @@ impl<P: Package + Clone> Tree<P> {
                     )
                 });
                 if has_local_deps {
+                    continue;
+                }
+
+                // Check if parent requires a different version of the package
+                let version_conflict = graph
+                    .edges_directed(self.inner[&parent].graph_idx, Direction::Outgoing)
+                    .any(|e| {
+                        e.target() != self.inner[child_idx].graph_idx
+                            && graph[e.target()].name() == child_name
+                    });
+                if version_conflict {
                     continue;
                 }
 
@@ -535,7 +546,7 @@ mod tests {
     }
 
     #[test]
-    fn it_doesnt_lower_past_dependencies() {
+    fn it_doesnt_promote_past_dependencies() {
         let mut graph = StableGraph::new();
 
         let root = graph.add_node(Node::new("root", "1.0.0"));
@@ -587,10 +598,44 @@ mod tests {
             render_tree(&tree),
             vec![
                 ("a@1.0.0".into(), vec!["b@2.0.0".into(), "c@3.0.0".into(),]),
-                ("b@2.0.0".into(), vec!["c@5.0.0".into(), "d@4.0.0".into()]),
+                ("b@2.0.0".into(), vec!["d@4.0.0".into()]),
                 ("c@3.0.0".into(), vec![]),
+                ("d@4.0.0".into(), vec!["c@5.0.0".into()]),
                 ("c@5.0.0".into(), vec![]),
-                ("d@4.0.0".into(), vec![]),
+            ],
+        );
+    }
+
+    #[test]
+    fn it_doesnt_substitute_deps() {
+        let mut graph = StableGraph::new();
+
+        let root = graph.add_node(Node::new("root", "1.0.0"));
+        let a = graph.add_node(Node::new("a", "1.0.0"));
+        graph.add_edge(root, a, Edge {});
+        let b = graph.add_node(Node::new("b", "1.0.0"));
+        graph.add_edge(a, b, Edge {});
+        // If we promote "c1" to root - we shouldn't promote "c2" to "a" because
+        // "a" depends on "c1"
+        let c1 = graph.add_node(Node::new("c", "1.0.0"));
+        graph.add_edge(a, c1, Edge {});
+        let c2 = graph.add_node(Node::new("c", "2.0.0"));
+        graph.add_edge(b, c2, Edge {});
+
+        let tree = Tree::build(&graph, root);
+        assert_eq!(tree.inner.len(), 5);
+
+        assert_eq!(
+            render_tree(&tree),
+            vec![
+                (
+                    "root@1.0.0".into(),
+                    vec!["a@1.0.0".into(), "c@1.0.0".into(),]
+                ),
+                ("a@1.0.0".into(), vec!["b@1.0.0".into()]),
+                ("c@1.0.0".into(), vec![]),
+                ("b@1.0.0".into(), vec!["c@2.0.0".into()]),
+                ("c@2.0.0".into(), vec![]),
             ],
         );
     }
