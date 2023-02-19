@@ -8,7 +8,7 @@ use async_compression::futures::bufread::GzipDecoder;
 use async_std::io;
 use async_std::io::{BufReader, BufWriter};
 use async_tar::Archive;
-use futures::prelude::*;
+use futures::{AsyncRead, StreamExt};
 use ssri::{Integrity, IntegrityChecker};
 
 use crate::entries::{Entries, Entry};
@@ -89,48 +89,11 @@ impl Tarball {
                     .await
                     .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
 
-                let size = header.size()? as usize;
-                if size > 512 * 1024 {
                     io::copy(BufReader::new(file), BufWriter::new(&mut writer))
                         .await
                         .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
-                } else {
-                    let mut buf = Vec::with_capacity(size);
-                    BufReader::new(file).read_to_end(&mut buf).await?;
-                    let mut stream = BufWriter::new(writer);
-                    stream.write_all(&buf).await?;
-                    stream.flush().await?;
-                }
             }
         }
-
-        // NOTE: Because we might be caching the tarball itself (or at least
-        // generating an `Integrity` for it), we make sure to read to the very
-        // end of the tarball stream.
-
-        // NOTE: We probably don't need to do this here, but I want to keep
-        // this code as reference for when it's actually needed. Most likely,
-        // that will be when we're calculating the `Integrity` of the tarball
-        // itself.
-
-        // let mut reader = files
-        //     .into_inner()
-        //     .into_inner()
-        //     .map_err(|_| NassunError::MiscError("Failed to get inner Read".into()))?
-        //     .into_inner()
-        //     .into_inner();
-        // let mut buf = [0u8; 1024];
-        // loop {
-        //     let n = reader
-        //         .read(&mut buf)
-        //         .await
-        //         .map_err(|e| NassunError::ExtractIoError(e, None))?;
-        //     if n > 0 {
-        //         continue;
-        //     } else {
-        //         break;
-        //     }
-        // }
         Ok(())
     }
 }
