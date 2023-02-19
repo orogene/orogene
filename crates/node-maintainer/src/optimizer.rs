@@ -546,6 +546,56 @@ mod tests {
     }
 
     #[test]
+    fn it_doesnt_create_conflicts_after_demotion() {
+        let mut graph = StableGraph::new();
+
+        let root = graph.add_node(Node::new("root", "1.0.0"));
+
+        let a = graph.add_node(Node::new("a", "1.0.0"));
+        let b = graph.add_node(Node::new("b", "1.0.0"));
+        let c = graph.add_node(Node::new("c", "1.0.0"));
+        let d = graph.add_node(Node::new("d", "1.0.0"));
+
+        let s1 = graph.add_node(Node::new("s", "1.0.0"));
+        let s2 = graph.add_node(Node::new("s", "2.0.0"));
+
+        graph.add_edge(root, a, Edge {});
+        graph.add_edge(root, b, Edge {});
+        graph.add_edge(root, c, Edge {});
+
+        graph.add_edge(c, d, Edge {});
+
+        // A and D depend on old version of s
+        graph.add_edge(a, s1, Edge {});
+        graph.add_edge(d, s1, Edge {});
+
+        // B and C on new version
+        graph.add_edge(b, s2, Edge {});
+        graph.add_edge(c, s2, Edge {});
+
+        let tree = Tree::build(&graph, root);
+        assert_eq!(tree.inner.len(), 8);
+
+        assert_eq!(
+            render_tree(&tree),
+            vec![
+                (
+                    "root@1.0.0".into(),
+                    vec!["a@1.0.0".into(), "b@1.0.0".into(), "c@1.0.0".into(), "s@2.0.0".into()]
+                ),
+                ("a@1.0.0".into(), vec!["s@1.0.0".into()]),
+                ("b@1.0.0".into(), vec![]),
+                // TODO(indutny): this is a bug! It can't depend on s1!
+                ("c@1.0.0".into(), vec!["d@1.0.0".into(), "s@1.0.0".into()]),
+                ("s@2.0.0".into(), vec![]),
+                ("s@1.0.0".into(), vec![]),
+                ("d@1.0.0".into(), vec![]),
+                ("s@1.0.0".into(), vec![]),
+            ],
+        );
+    }
+
+    #[test]
     fn it_doesnt_promote_past_dependencies() {
         let mut graph = StableGraph::new();
 
