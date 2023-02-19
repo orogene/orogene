@@ -43,13 +43,7 @@ impl Node {
 
     /// This Node's depth in the logical filesystem hierarchy.
     pub(crate) fn depth(&self, graph: &Graph) -> usize {
-        let mut depth = 0;
-        let mut current = self.parent;
-        while let Some(idx) = current {
-            depth += 1;
-            current = graph.inner[idx].parent;
-        }
-        depth
+        graph.node_parent_iter(self.idx).count() - 1
     }
 }
 

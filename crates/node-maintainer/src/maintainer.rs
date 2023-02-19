@@ -89,11 +89,11 @@ impl NodeMaintainerOptions {
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock).await?;
-        #[cfg(debug_assertions)]
-        nm.graph.validate()?;
         if self.optimize {
             nm.optimize()?;
         }
+        #[cfg(debug_assertions)]
+        nm.graph.validate()?;
         Ok(nm)
     }
 
@@ -112,11 +112,11 @@ impl NodeMaintainerOptions {
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock).await?;
-        #[cfg(debug_assertions)]
-        nm.graph.validate()?;
         if self.optimize {
             nm.optimize()?;
         }
+        #[cfg(debug_assertions)]
+        nm.graph.validate()?;
         Ok(nm)
     }
 }
@@ -650,25 +650,12 @@ impl NodeMaintainer {
             if visit_map.visit(node.graph_idx) {
                 tree_to_graph.insert(node.idx, node.graph_idx);
             } else {
-                // Clone node and outgoing edges (incoming are not used when
-                // serializing the graph).
-                let idx = self
-                    .graph
-                    .inner
-                    .add_node(self.graph.inner[node.graph_idx].clone());
-
-                let edges = self
-                    .graph
-                    .inner
-                    .edges_directed(node.graph_idx, Direction::Outgoing)
-                    .map(|e| (e.target(), e.weight().clone()))
-                    .collect::<Vec<_>>();
-
-                for (target, edge) in edges {
-                    self.graph.inner.add_edge(idx, target, edge);
-                }
-
-                tree_to_graph.insert(node.idx, idx);
+                tree_to_graph.insert(
+                    node.idx,
+                    self.graph
+                        .inner
+                        .add_node(self.graph.inner[node.graph_idx].clone()),
+                );
             }
         }
 
