@@ -37,7 +37,11 @@ pub enum NassunError {
     #[diagnostic(code(nassun::git::checkout::repo))]
     GitCheckoutError(String, String),
 
-    #[error("Failed to extract tarball. {0}")]
+    #[error("Failed to extract tarball. {0}{}", if let Some(path) = .1 {
+        format!(" (file: {})", path.to_string_lossy())
+    } else {
+        "".to_string()
+    })]
     #[diagnostic(code(nassun::io::extract))]
     ExtractIoError(#[source] std::io::Error, Option<PathBuf>),
 
