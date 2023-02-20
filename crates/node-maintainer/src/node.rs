@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use nassun::Package;
-use oro_common::CorgiManifest;
+use oro_common::{CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;
 
@@ -25,18 +25,24 @@ pub struct Node {
     /// not necessarily dependencies, and this Node's dependencies may not all
     /// be in this HashMap.
     pub(crate) children: HashMap<UniCase<String>, NodeIndex>,
+    /// Tarball file size
+    pub(crate) tarball_size: Option<u64>,
+    /// The number of individual files in the tarball
+    pub(crate) tarball_file_count: Option<u64>,
 }
 
 impl Node {
-    pub(crate) fn new(package: Package, manifest: CorgiManifest) -> Self {
+    pub(crate) fn new(package: Package, metadata: CorgiVersionMetadata) -> Self {
         Self {
             package,
-            manifest,
+            manifest: metadata.manifest,
             idx: NodeIndex::new(0),
             root: NodeIndex::new(0),
             parent: None,
             children: HashMap::new(),
             dependencies: HashMap::new(),
+            tarball_size: metadata.dist.unpacked_size.and_then(|s| s.try_into().ok()),
+            tarball_file_count: metadata.dist.file_count.and_then(|s| s.try_into().ok()),
         }
     }
 

@@ -1,14 +1,13 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{self, AtomicUsize};
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
-use oro_common::CorgiManifest;
+use oro_common::{CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -87,7 +86,7 @@ impl NodeMaintainerOptions {
             graph: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
         };
-        let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
+        let node = nm.graph.inner.add_node(Node::new(root_pkg, root.into()));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
         #[cfg(debug_assertions)]
@@ -106,7 +105,7 @@ impl NodeMaintainerOptions {
             graph: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
         };
-        let corgi = root_pkg.corgi_metadata().await?.manifest;
+        let corgi = root_pkg.corgi_metadata().await?;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
         nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
@@ -188,18 +187,34 @@ impl NodeMaintainer {
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         async fn inner(me: &NodeMaintainer, path: &Path) -> Result<(), NodeMaintainerError> {
-            let stream = futures::stream::iter(me.graph.inner.node_indices());
-            let concurrent_count = Arc::new(AtomicUsize::new(0));
-            stream
-                .map(|idx| Ok((idx, concurrent_count.clone())))
+            let mut indices = me
+                .graph
+                .inner
+                .node_indices()
+                .filter(|idx| *idx != me.graph.root)
+                .collect::<Vec<_>>();
+            // Let's pack the stream with out slowest downloads first, so they
+            // don't start late and push the overall time window forward.
+            indices.sort_unstable_by_key(|idx| me.graph[*idx].tarball_size);
+
+            let (package_sink, package_stream) = futures::channel::mpsc::channel(me.parallelism);
+
+            let sink_clone = package_sink.clone();
+            let mut sink_clone2 = package_sink.clone();
+            let mut sink_clone3 = package_sink.clone();
+            let stream = futures::stream::iter(indices.iter().rev());
+            let tarball_downloads = stream
+                .map(|idx| Ok((idx, sink_clone.clone())))
                 .try_for_each_concurrent(
                     me.parallelism,
-                    move |(child_idx, concurrent_count)| async move {
-                        if child_idx == me.graph.root {
-                            return Ok(());
-                        }
-
-                        concurrent_count.fetch_add(1, atomic::Ordering::SeqCst);
+                    |(idx, mut package_sink)| async move {
+                        let child_idx = *idx;
+                        tracing::debug!(
+                            "Downloading {} ({:?} bytes, {:?} files)",
+                            me.graph[child_idx].package.name(),
+                            me.graph[child_idx].tarball_size,
+                            me.graph[child_idx].tarball_file_count
+                        );
                         let target_dir = path.join("node_modules").join(
                             me.graph
                                 .node_path(child_idx)
@@ -210,23 +225,44 @@ impl NodeMaintainer {
                         );
 
                         let start = std::time::Instant::now();
-                        me.graph[child_idx]
+                        let tarball = me.graph[child_idx]
                             .package
                             .tarball()
                             .await?
-                            .extract_to_dir(&target_dir)
+                            .to_temp()
                             .await?;
                         tracing::debug!(
-                            "Extracted {} to {} in {:?}ms. {} in flight.",
+                            "Downloaded {} in {:?}ms.",
                             me.graph[child_idx].package.name(),
-                            target_dir.display(),
                             start.elapsed().as_millis(),
-                            concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
                         );
+                        package_sink.try_send((
+                            me.graph[child_idx].package.name(),
+                            tarball,
+                            target_dir,
+                        ))?;
                         Ok::<_, NodeMaintainerError>(())
                     },
                 )
-                .await?;
+                .and_then(|_| async move {
+                    sink_clone2.close_channel();
+                    Ok(())
+                })
+                .map_err(move |e| {
+                    sink_clone3.close_channel();
+                    e
+                });
+            let tarball_stream = package_stream.map(Ok).try_for_each_concurrent(
+                me.parallelism * 5,
+                |(name, tarball, target_dir)| async move {
+                    let start = std::time::Instant::now();
+                    tracing::debug!("Extracting {} to {:?}", name, target_dir);
+                    async_std::task::spawn_blocking(|| tarball.extract_to_dir(target_dir)).await?;
+                    tracing::debug!("Extracted {} in {:?}ms", name, start.elapsed().as_millis());
+                    Ok::<_, NodeMaintainerError>(())
+                },
+            );
+            futures::future::try_join(tarball_downloads.boxed(), tarball_stream.boxed()).await?;
             Ok(())
         }
         inner(self, path.as_ref()).await
@@ -355,7 +391,7 @@ impl NodeMaintainer {
 
                     if let Some(deps) = deps {
                         in_flight -= deps.len();
-                        let manifest = package.corgi_metadata().await?.manifest;
+                        let metadata = package.corgi_metadata().await?;
 
                         for dep in deps {
                             if Self::satisfy_dependency(&mut self.graph, &dep)? {
@@ -370,7 +406,7 @@ impl NodeMaintainer {
                                     package.clone(),
                                     &requested,
                                     dep.dep_type,
-                                    manifest.clone(),
+                                    metadata.clone(),
                                     None,
                                 )
                                 .await?,
@@ -470,7 +506,7 @@ impl NodeMaintainer {
         package: Package,
         requested: &PackageSpec,
         dep_type: DepType,
-        corgi: CorgiManifest,
+        corgi: CorgiVersionMetadata,
         target_path: Option<Vec<UniCase<String>>>,
     ) -> Result<NodeIndex, NodeMaintainerError> {
         let child_name = UniCase::new(package.name().to_string());

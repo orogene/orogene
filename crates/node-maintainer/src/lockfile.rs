@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use kdl::{KdlDocument, KdlNode};
 use nassun::{Nassun, Package, PackageResolution};
 use node_semver::Version;
-use oro_common::CorgiManifest;
+use oro_common::{CorgiDist, CorgiManifest, CorgiVersionMetadata};
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
 use ssri::Integrity;
@@ -137,22 +137,32 @@ pub struct LockfileNode {
     pub resolved: Option<String>,
     pub version: Option<Version>,
     pub integrity: Option<Integrity>,
+    pub size: Option<u64>,
+    pub file_count: Option<u64>,
     pub dependencies: BTreeMap<String, String>,
     pub dev_dependencies: BTreeMap<String, String>,
     pub peer_dependencies: BTreeMap<String, String>,
     pub optional_dependencies: BTreeMap<String, String>,
 }
 
-impl From<LockfileNode> for CorgiManifest {
+impl From<LockfileNode> for CorgiVersionMetadata {
     fn from(value: LockfileNode) -> Self {
-        CorgiManifest {
-            name: Some(value.name.to_string()),
-            version: value.version,
-            dependencies: value.dependencies,
-            dev_dependencies: value.dev_dependencies,
-            peer_dependencies: value.peer_dependencies,
-            optional_dependencies: value.optional_dependencies,
-            bundled_dependencies: Vec::new(),
+        CorgiVersionMetadata {
+            manifest: CorgiManifest {
+                name: Some(value.name.to_string()),
+                version: value.version,
+                dependencies: value.dependencies,
+                dev_dependencies: value.dev_dependencies,
+                peer_dependencies: value.peer_dependencies,
+                optional_dependencies: value.optional_dependencies,
+                bundled_dependencies: Vec::new(),
+            },
+            dist: CorgiDist {
+                unpacked_size: value.size.and_then(|x| x.try_into().ok()),
+                file_count: value.file_count.and_then(|x| x.try_into().ok()),
+                ..Default::default()
+            },
+            ..Default::default()
         }
     }
 }
@@ -258,6 +268,14 @@ impl LockfileNode {
             .get_arg("resolved")
             .and_then(|resolved| resolved.as_string())
             .map(|resolved| resolved.to_string());
+        let size = children
+            .get_arg("size")
+            .and_then(|size| size.as_i64())
+            .and_then(|size| size.try_into().ok());
+        let file_count = children
+            .get_arg("file_count")
+            .and_then(|file_count| file_count.as_i64())
+            .and_then(|file_count| file_count.try_into().ok());
         Ok(Self {
             name,
             is_root,
@@ -265,6 +283,8 @@ impl LockfileNode {
             integrity,
             resolved,
             version,
+            size,
+            file_count,
             dependencies: Self::from_kdl_deps(&children, &DepType::Prod)?,
             dev_dependencies: Self::from_kdl_deps(&children, &DepType::Dev)?,
             optional_dependencies: Self::from_kdl_deps(&children, &DepType::Opt)?,
@@ -322,6 +342,18 @@ impl LockfileNode {
                     kdl_node.ensure_children().nodes_mut().push(inode);
                 }
             }
+        }
+        if let Some(size) = &self.size.and_then(|x| x.try_into().ok()) {
+            let size: i64 = *size;
+            let mut vnode = KdlNode::new("size");
+            vnode.push(size);
+            kdl_node.ensure_children().nodes_mut().push(vnode);
+        }
+        if let Some(file_count) = &self.file_count.and_then(|x| x.try_into().ok()) {
+            let file_count: i64 = *file_count;
+            let mut vnode = KdlNode::new("file_count");
+            vnode.push(file_count);
+            kdl_node.ensure_children().nodes_mut().push(vnode);
         }
         if !self.dependencies.is_empty() {
             kdl_node
@@ -404,6 +436,8 @@ impl LockfileNode {
             integrity,
             resolved: npm.resolved.clone(),
             version,
+            size: None,
+            file_count: None,
             dependencies: npm.dependencies.clone(),
             dev_dependencies: npm.dev_dependencies.clone(),
             optional_dependencies: npm.optional_dependencies.clone(),

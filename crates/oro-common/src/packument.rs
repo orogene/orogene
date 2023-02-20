@@ -153,6 +153,10 @@ pub struct CorgiDist {
     pub integrity: Option<String>,
     #[serde(rename = "npm-signature")]
     pub npm_signature: Option<String>,
+    #[serde(rename = "unpackedSize")]
+    pub unpacked_size: Option<usize>,
+    #[serde(rename = "fileCount")]
+    pub file_count: Option<usize>,
 }
 
 /// Distribution information for a particular package version.
@@ -180,6 +184,8 @@ impl From<CorgiDist> for Dist {
             tarball: value.tarball,
             integrity: value.integrity,
             npm_signature: value.npm_signature,
+            unpacked_size: value.unpacked_size,
+            file_count: value.file_count,
             ..Default::default()
         }
     }
@@ -192,6 +198,8 @@ impl From<Dist> for CorgiDist {
             tarball: value.tarball,
             integrity: value.integrity,
             npm_signature: value.npm_signature,
+            unpacked_size: value.unpacked_size,
+            file_count: value.file_count,
         }
     }
 }
