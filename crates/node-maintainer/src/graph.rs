@@ -10,8 +10,6 @@ use nassun::{Package, PackageResolution};
 use petgraph::{
     dot::Dot,
     stable_graph::{EdgeIndex, NodeIndex, StableGraph},
-    visit::EdgeRef,
-    Direction,
 };
 use unicase::UniCase;
 
@@ -67,25 +65,17 @@ impl IndexMut<EdgeIndex> for Graph {
 
 impl Graph {
     pub fn resolve_dep(&self, node: NodeIndex, dep: &UniCase<String>) -> Option<NodeIndex> {
-        let mut current = Some(node);
-        while let Some(curr) = current {
-            if let Some(resolved) = self[curr].children.get(dep) {
+        for parent in self.node_parent_iter(node) {
+            if let Some(resolved) = parent.children.get(dep) {
                 return Some(*resolved);
             }
-            current = self[curr].parent;
         }
         None
     }
 
     pub fn is_ancestor(&self, ancestor: NodeIndex, descendant: NodeIndex) -> bool {
-        let mut current = Some(descendant);
-        while let Some(curr) = current {
-            if curr == ancestor {
-                return true;
-            }
-            current = self[curr].parent;
-        }
-        false
+        self.node_parent_iter(descendant)
+            .any(|parent| parent.idx == ancestor)
     }
 
     pub fn to_lockfile(&self) -> Result<Lockfile, NodeMaintainerError> {
@@ -138,6 +128,28 @@ impl Graph {
         )
     }
 
+    pub fn render_tree(&self) -> String {
+        let mut res = Vec::new();
+        res.push("digraph {".into());
+        for node in self.inner.node_weights() {
+            let label = format!("{:?} @ {}", node.package.resolved(), node.package.name());
+            res.push(format!("  {} [label={:?}]", node.idx.index(), label));
+
+            if let Some(parent) = node.parent {
+                res.push(format!("  {} -> {}", parent.index(), node.idx.index()));
+            }
+        }
+        res.push("}".into());
+        res.join("\n")
+    }
+
+    pub(crate) fn node_parent_iter(&self, idx: NodeIndex) -> NodeParentIterator {
+        NodeParentIterator {
+            graph: self,
+            current: Some(idx),
+        }
+    }
+
     pub(crate) fn package_at_path(
         &self,
         path: &Path,
@@ -173,14 +185,13 @@ impl Graph {
         parent: NodeIndex,
         name: &UniCase<String>,
     ) -> Result<Option<NodeIndex>, NodeMaintainerError> {
-        let mut parent = self.inner.node_weight(parent);
-        while let Some(node) = parent {
+        Ok(self.node_parent_iter(parent).find_map(|node| {
             if node.children.contains_key(name) {
-                return Ok(Some(node.children[name]));
+                Some(node.children[name])
+            } else {
+                None
             }
-            parent = node.parent.and_then(|idx| self.inner.node_weight(idx));
-        }
-        Ok(None)
+        }))
     }
 
     pub(crate) fn node_path(&self, node_idx: NodeIndex) -> VecDeque<UniCase<String>> {
@@ -219,62 +230,30 @@ impl Graph {
             q.extend(self.inner[node].children.values());
         }
 
-        // Verify that direct graph makes all dependencies available to
-        // dependents.
-        for edge_idx in self.inner.edge_indices() {
-            let (dependent, dependency) = self
-                .inner
-                .edge_endpoints(edge_idx)
-                .ok_or(GraphValidationError(format!("Missing edge: {edge_idx:?}")))?;
+        // Verify that depencies are satisfied by the logical hierarchy.
+        for dependent in self.inner.node_weights() {
+            for (dep_name, edge_idx) in &dependent.dependencies {
+                let edge = &self.inner[*edge_idx];
 
-            let dependent = &self.inner[dependent];
-            let dependency = &self.inner[dependency];
+                if let Some(dep_idx) = self.resolve_dep(dependent.idx, dep_name) {
+                    let dependency = &self.inner[dep_idx];
 
-            let edge = self
-                .inner
-                .edge_weight(edge_idx)
-                .ok_or(GraphValidationError(format!(
-                    "Missing edge weight: {edge_idx:?}"
-                )))?;
-
-            let dependency_parent = dependency.parent.ok_or(GraphValidationError(format!(
-                "Missing dependency parent: {:?}",
-                dependent.package.resolved(),
-            )))?;
-
-            // Check parent->child relationship
-            let dependency_name = UniCase::new(dependency.package.name().into());
-            if !self.inner[dependency_parent]
-                .children
-                .contains_key(&dependency_name)
-            {
-                return Err(GraphValidationError(format!(
-                    "Dependency {:?} is not in the children of {:?}",
-                    dependency.package.resolved(),
-                    self.inner[dependency_parent]
-                )));
-            }
-
-            // Parent of the dependency should be an ancestor of the dependent
-            // or dependency should be in dependent's subtree.
-            if !self.is_ancestor(dependent.idx, dependency.idx)
-                && !self.is_ancestor(dependency_parent, dependent.idx)
-            {
-                return Err(GraphValidationError(format!(
-                    "Dependency {:?} is unreachable from {:?}",
-                    dependency.package.resolved(),
-                    dependent.package.resolved(),
-                )));
-            }
-
-            // Check that dependency satisfies the requirement
-            if !dependency.package.resolved().satisfies(&edge.requested)? {
-                return Err(GraphValidationError(format!(
-                    "Dependency {:?} does not satisfy requirement {:?} from {:?}",
-                    dependency.package.resolved(),
-                    edge.requested,
-                    dependent.package.resolved(),
-                )));
+                    if !dependency.package.resolved().satisfies(&edge.requested)? {
+                        return Err(GraphValidationError(format!(
+                            "Dependency {:?} does not satisfy requirement {:?} from {:?}",
+                            dependency.package.resolved(),
+                            edge.requested,
+                            dependent.package.resolved(),
+                        )));
+                    }
+                } else {
+                    return Err(GraphValidationError(format!(
+                        "Dependency {:?} {:?} not reachable from {:?}",
+                        dep_name,
+                        edge.requested,
+                        dependent.package.resolved(),
+                    )));
+                }
             }
         }
 
@@ -303,19 +282,19 @@ impl Graph {
         let mut dev_deps = BTreeMap::new();
         let mut peer_deps = BTreeMap::new();
         let mut opt_deps = BTreeMap::new();
-        for e in self.inner.edges_directed(node.idx, Direction::Outgoing) {
+        let dependencies = node.dependencies.iter().map(|(name, edge_idx)| {
+            let edge = &self.inner[*edge_idx];
+            (name, &edge.requested, &edge.dep_type)
+        });
+        for (name, requested, dep_type) in dependencies {
             use DepType::*;
-
-            let name = self.inner[e.target()].package.name();
-            let edge = e.weight();
-
-            let deps = match edge.dep_type {
+            let deps = match dep_type {
                 Prod => &mut prod_deps,
                 Dev => &mut dev_deps,
                 Peer => &mut peer_deps,
                 Opt => &mut opt_deps,
             };
-            deps.insert(name.to_string(), edge.requested.requested().clone());
+            deps.insert(name.to_string(), requested.requested().clone());
         }
         Ok(LockfileNode {
             name: UniCase::new(node.package.name().to_string()),
@@ -332,5 +311,24 @@ impl Graph {
                 _ => None,
             },
         })
+    }
+}
+
+pub(crate) struct NodeParentIterator<'a> {
+    graph: &'a Graph,
+    current: Option<NodeIndex>,
+}
+
+impl<'a> Iterator for NodeParentIterator<'a> {
+    type Item = &'a Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(idx) = self.current {
+            let res = &self.graph[idx];
+            self.current = res.parent;
+            Some(res)
+        } else {
+            None
+        }
     }
 }
