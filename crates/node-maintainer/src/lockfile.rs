@@ -5,6 +5,7 @@ use nassun::{Nassun, Package, PackageResolution};
 use node_semver::Version;
 use oro_common::CorgiManifest;
 use oro_package_spec::PackageSpec;
+use serde::{Deserialize, Serialize};
 use ssri::Integrity;
 use unicase::UniCase;
 
@@ -81,12 +82,50 @@ impl Lockfile {
                 root: kdl
                     .get("root")
                     // TODO: add a miette span here
-                    .ok_or_else(|| NodeMaintainerError::MissingRoot(kdl.clone()))
+                    .ok_or_else(|| NodeMaintainerError::KdlLockMissingRoot(kdl.clone()))
                     .and_then(|node| LockfileNode::from_kdl(node, true))?,
                 packages,
             })
         }
         inner(kdl)
+    }
+
+    pub fn from_npm(npm: impl AsRef<str>) -> Result<Self, NodeMaintainerError> {
+        let pkglock: NpmPackageLock = serde_json::from_str(npm.as_ref())?;
+        fn inner(npm: NpmPackageLock) -> Result<Lockfile, NodeMaintainerError> {
+            let packages = npm
+                .packages
+                .iter()
+                .map(|(path, entry)| LockfileNode::from_npm(path, entry))
+                .map(|node| {
+                    let node = node?;
+                    let path_str = node
+                        .path
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/");
+                    Ok((UniCase::from(path_str), node))
+                })
+                .collect::<Result<BTreeMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>(
+                )?;
+            Ok(Lockfile {
+                version: npm
+                    .lockfile_version
+                    .map(|v| v.try_into())
+                    .transpose()
+                    // TODO: add a miette span here
+                    .map_err(|_| NodeMaintainerError::InvalidLockfileVersion)?
+                    .unwrap_or(3),
+                root: npm
+                    .packages
+                    .get("")
+                    .ok_or_else(|| NodeMaintainerError::NpmLockMissingRoot(npm.clone()))
+                    .and_then(|node| LockfileNode::from_npm("", node))?,
+                packages,
+            })
+        }
+        inner(pkglock)
     }
 }
 
@@ -199,13 +238,13 @@ impl LockfileNode {
             .last()
             .cloned()
             // TODO: add a miette span here
-            .ok_or_else(|| NodeMaintainerError::MissingName(node.clone()))?;
+            .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(node.clone()))?;
         let integrity = children
             .get_arg("integrity")
             .and_then(|i| i.as_string())
             .map(|i| i.parse())
             .transpose()
-            .map_err(|e| NodeMaintainerError::LockfileIntegrityParseError(node.clone(), e))?;
+            .map_err(|e| NodeMaintainerError::KdlLockfileIntegrityParseError(node.clone(), e))?;
         let version = children
             .get_arg("version")
             .and_then(|val| val.as_string())
@@ -332,4 +371,75 @@ impl LockfileNode {
             .sort_by_key(|n| n.name().value().to_string());
         deps_node
     }
+
+    fn from_npm(path_str: &str, npm: &NpmPackageLockEntry) -> Result<Self, NodeMaintainerError> {
+        let mut path = "/".to_string();
+        path.push_str(path_str);
+        let path = path
+            .split("/node_modules/")
+            .skip(1)
+            .map(|s| s.into())
+            .collect::<Vec<_>>();
+        let name = npm
+            .name
+            .clone()
+            .map(UniCase::new)
+            .or_else(|| path.last().cloned())
+            .ok_or_else(|| NodeMaintainerError::NpmLockMissingName(npm.clone()))?;
+        let integrity = npm
+            .integrity
+            .as_ref()
+            .map(|i| i.parse())
+            .transpose()
+            .map_err(|e| NodeMaintainerError::NpmLockfileIntegrityParseError(npm.clone(), e))?;
+        let version = npm
+            .version
+            .as_ref()
+            .map(|val| val.parse().map_err(NodeMaintainerError::SemverParseError))
+            .transpose()?;
+        Ok(Self {
+            name,
+            is_root: path.is_empty(),
+            path,
+            integrity,
+            resolved: npm.resolved.clone(),
+            version,
+            dependencies: npm.dependencies.clone(),
+            dev_dependencies: npm.dev_dependencies.clone(),
+            optional_dependencies: npm.optional_dependencies.clone(),
+            peer_dependencies: npm.peer_dependencies.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NpmPackageLock {
+    #[serde(default)]
+    pub lockfile_version: Option<usize>,
+    #[serde(default)]
+    pub requires: bool,
+    #[serde(default)]
+    pub packages: BTreeMap<String, NpmPackageLockEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NpmPackageLockEntry {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub resolved: Option<String>,
+    #[serde(default)]
+    pub integrity: Option<String>,
+    #[serde(default)]
+    pub dependencies: BTreeMap<String, String>,
+    #[serde(default)]
+    pub dev_dependencies: BTreeMap<String, String>,
+    #[serde(default)]
+    pub optional_dependencies: BTreeMap<String, String>,
+    #[serde(default)]
+    pub peer_dependencies: BTreeMap<String, String>,
 }

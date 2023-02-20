@@ -2,7 +2,6 @@ use std::{fs, path::PathBuf};
 
 use async_trait::async_trait;
 use clap::Args;
-use directories::ProjectDirs;
 use miette::{Context, IntoDiagnostic, Result};
 use node_maintainer::NodeMaintainerOptions;
 use oro_command::OroCommand;
@@ -11,9 +10,8 @@ use url::Url;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct ResolveCmd {
-    /// Default registry.
-    #[arg(default_value = "https://registry.npmjs.org", long)]
-    registry: Url,
+    #[clap(from_global)]
+    registry: Option<Url>,
 
     #[clap(from_global)]
     json: bool,
@@ -34,12 +32,11 @@ impl OroCommand for ResolveCmd {
         // TODO: Move all these defaults to the config layer, so they pick up
         // configs from files.
         let root = self.root.unwrap_or_else(|| PathBuf::from("."));
-        let mut nm = NodeMaintainerOptions::new().registry(self.registry);
+        let mut nm = NodeMaintainerOptions::new();
+        if let Some(registry) = self.registry {
+            nm = nm.registry(registry);
+        }
         if let Some(cache) = self.cache {
-            nm = nm.cache(cache);
-        } else if let Some(cache) =
-            ProjectDirs::from("", "", "orogene").map(|pd| pd.cache_dir().to_path_buf())
-        {
             nm = nm.cache(cache);
         }
         let lock_path = root.join("package-lock.kdl");
@@ -52,6 +49,20 @@ impl OroCommand for ResolveCmd {
             nm = nm.kdl_lock(kdl).wrap_err_with(|| {
                 format!(
                     "Failed to parse lockfile at {}",
+                    lock_path.to_string_lossy()
+                )
+            })?;
+        }
+        let lock_path = root.join("package-lock.json");
+        if lock_path.exists() {
+            let json = fs::read_to_string(&lock_path)
+                .into_diagnostic()
+                .wrap_err_with(|| {
+                    format!("Failed to read lockfile at {}", lock_path.to_string_lossy())
+                })?;
+            nm = nm.npm_lock(json).wrap_err_with(|| {
+                format!(
+                    "Failed to parse NPM package lockfile at {}",
                     lock_path.to_string_lossy()
                 )
             })?;

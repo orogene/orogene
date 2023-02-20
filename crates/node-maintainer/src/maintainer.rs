@@ -25,6 +25,7 @@ pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
     parallelism: usize,
     kdl_lock: Option<Lockfile>,
+    npm_lock: Option<Lockfile>,
 }
 
 impl NodeMaintainerOptions {
@@ -45,6 +46,12 @@ impl NodeMaintainerOptions {
     pub fn kdl_lock(mut self, kdl_lock: impl IntoKdl) -> Result<Self, NodeMaintainerError> {
         let lock = Lockfile::from_kdl(kdl_lock)?;
         self.kdl_lock = Some(lock);
+        Ok(self)
+    }
+
+    pub fn npm_lock(mut self, npm_lock: impl AsRef<str>) -> Result<Self, NodeMaintainerError> {
+        let lock = Lockfile::from_npm(npm_lock)?;
+        self.npm_lock = Some(lock);
         Ok(self)
     }
 
@@ -81,7 +88,7 @@ impl NodeMaintainerOptions {
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
-        nm.run_resolver(self.kdl_lock).await?;
+        nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -101,7 +108,7 @@ impl NodeMaintainerOptions {
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
-        nm.run_resolver(self.kdl_lock).await?;
+        nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -114,6 +121,7 @@ impl Default for NodeMaintainerOptions {
             nassun_opts: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
             kdl_lock: None,
+            npm_lock: None,
         }
     }
 }
@@ -218,7 +226,7 @@ impl NodeMaintainer {
 
     async fn run_resolver(
         &mut self,
-        kdl_lock: Option<Lockfile>,
+        lockfile: Option<Lockfile>,
     ) -> Result<(), NodeMaintainerError> {
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
@@ -294,7 +302,7 @@ impl NodeMaintainer {
                     if !Self::satisfy_dependency(&mut self.graph, &dep)? {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
-                        if let Some(kdl_lock) = &kdl_lock {
+                        if let Some(kdl_lock) = &lockfile {
                             if let Some((package, lockfile_node)) = self
                                 .satisfy_from_lockfile(
                                     &self.graph,
