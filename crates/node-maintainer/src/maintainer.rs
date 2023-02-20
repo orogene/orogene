@@ -252,29 +252,24 @@ impl NodeMaintainer {
         let fetches = Arc::new(Mutex::new(fetches));
 
         let mut package_stream = package_stream
-            .map(|dep: NodeDependency| {
+            .filter_map(|dep: NodeDependency| async {
                 let spec = format!("{}@{}", dep.name, dep.spec);
-                let maybe_spec = if let Some(mut fetches) = fetches.try_lock() {
-                    if let Some(list) = fetches.get_mut(&spec) {
-                        // Package fetch is already in-flight, add dependency
-                        // to the existing list.
-                        list.push(dep);
-                        None
-                    } else {
-                        // Fetch package since we are the first one to get here.
-                        fetches.insert(spec.clone(), vec![dep]);
-                        Some(spec)
-                    }
+                let mut fetches = fetches.lock().await;
+                if let Some(list) = fetches.get_mut(&spec) {
+                    // Package fetch is already in-flight, add dependency
+                    // to the existing list.
+                    list.push(dep);
+                    None
                 } else {
-                    // Mutex is locked - fetch the package
+                    // Fetch package since we are the first one to get here.
+                    fetches.insert(spec.clone(), vec![dep]);
                     Some(spec)
-                };
-                futures::future::ready(maybe_spec)
+                }
             })
-            .filter_map(|maybe_spec| maybe_spec)
             .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
             .buffer_unordered(self.parallelism)
-            .ready_chunks(self.parallelism);
+            .ready_chunks(self.parallelism)
+            .boxed();
 
         // Start iterating over the queue. We'll be adding things to it as we find them.
         while !q.is_empty() || in_flight != 0 {
