@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{self, AtomicUsize};
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
@@ -188,36 +189,43 @@ impl NodeMaintainer {
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         async fn inner(me: &NodeMaintainer, path: &Path) -> Result<(), NodeMaintainerError> {
             let stream = futures::stream::iter(me.graph.inner.node_indices());
+            let concurrent_count = Arc::new(AtomicUsize::new(0));
             stream
-                .map(Ok)
-                .try_for_each_concurrent(me.parallelism, |child_idx| async move {
-                    if child_idx == me.graph.root {
-                        return Ok(());
-                    }
-                    let target_dir = path.join("node_modules").join(
-                        me.graph
-                            .node_path(child_idx)
-                            .iter()
-                            .map(|x| x.to_string())
-                            .collect::<Vec<_>>()
-                            .join("/node_modules/"),
-                    );
+                .map(|idx| Ok((idx, concurrent_count.clone())))
+                .try_for_each_concurrent(
+                    me.parallelism,
+                    move |(child_idx, concurrent_count)| async move {
+                        if child_idx == me.graph.root {
+                            return Ok(());
+                        }
 
-                    // let start = std::time::Instant::now();
-                    me.graph[child_idx]
-                        .package
-                        .tarball()
-                        .await?
-                        .extract_to_dir(target_dir)
-                        .await?;
-                    // TODO: Replace with `tracing`.
-                    // println!(
-                    //     "Extracted {} in {:?}ms",
-                    //     me.graph[child_idx].package.name(),
-                    //     start.elapsed().as_millis()
-                    // );
-                    Ok::<_, NodeMaintainerError>(())
-                })
+                        concurrent_count.fetch_add(1, atomic::Ordering::SeqCst);
+                        let target_dir = path.join("node_modules").join(
+                            me.graph
+                                .node_path(child_idx)
+                                .iter()
+                                .map(|x| x.to_string())
+                                .collect::<Vec<_>>()
+                                .join("/node_modules/"),
+                        );
+
+                        let start = std::time::Instant::now();
+                        me.graph[child_idx]
+                            .package
+                            .tarball()
+                            .await?
+                            .extract_to_dir(&target_dir)
+                            .await?;
+                        tracing::debug!(
+                            "Extracted {} to {} in {:?}ms. {} in flight.",
+                            me.graph[child_idx].package.name(),
+                            target_dir.display(),
+                            start.elapsed().as_millis(),
+                            concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
+                        );
+                        Ok::<_, NodeMaintainerError>(())
+                    },
+                )
                 .await?;
             Ok(())
         }

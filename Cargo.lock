@@ -1778,6 +1778,7 @@ dependencies = [
  "serde_json",
  "ssri",
  "thiserror",
+ "tracing",
  "unicase",
  "url",
  "wasm-bindgen",

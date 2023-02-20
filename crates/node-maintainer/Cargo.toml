@@ -19,6 +19,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
 unicase = "2.6.0"
 url = { workspace = true }
 
