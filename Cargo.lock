@@ -1717,6 +1717,7 @@ dependencies = [
  "dashmap",
  "futures 0.3.26",
  "js-sys",
+ "memmap2",
  "miette",
  "node-semver",
  "oro-client",

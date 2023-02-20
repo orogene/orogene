@@ -8,13 +8,15 @@ use async_compression::futures::bufread::GzipDecoder;
 use async_std::io;
 use async_std::io::{BufReader, BufWriter};
 use async_tar::Archive;
-use futures::{AsyncRead, StreamExt};
+use futures::{AsyncRead, AsyncReadExt, StreamExt};
+use memmap2::MmapMut;
 use ssri::{Integrity, IntegrityChecker};
 
 use crate::entries::{Entries, Entry};
 use crate::error::{NassunError, Result};
 use crate::TarballStream;
 
+pub const MAX_MMAP_SIZE: u64 = 1024 * 1024;
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
     reader: TarballStream,
@@ -89,9 +91,30 @@ impl Tarball {
                     .await
                     .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
 
-                io::copy(BufReader::new(file), BufWriter::new(&mut writer))
-                    .await
-                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
+                let size = header.size()?;
+                writer.set_len(size).await?;
+
+                let mmap = if size <= MAX_MMAP_SIZE {
+                    unsafe { MmapMut::map_mut(&writer).ok() }
+                } else {
+                    None
+                };
+
+                if let Some(mut mmap) = mmap {
+                    let mut buf = [0u8; 8 * 1024];
+                    let mut buf_reader = BufReader::new(file);
+                    loop {
+                        let bytes = buf_reader.read(&mut buf).await?;
+                        if bytes == 0 {
+                            break;
+                        }
+                        mmap.copy_from_slice(&buf[..bytes]);
+                    }
+                } else {
+                    io::copy(BufReader::new(file), BufWriter::new(&mut writer))
+                        .await
+                        .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
+                }
             }
         }
         Ok(())
