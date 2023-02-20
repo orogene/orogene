@@ -173,6 +173,23 @@ impl<P: Package + Clone> Tree<P> {
             .cloned()
             .collect::<Vec<_>>();
         for name in child_names {
+            // Package that conflicts with root's dependencies must be
+            // immediately promoted.
+            let hard_conflicts = self.inner[&root].conflicts[&name]
+                .iter()
+                .cloned()
+                .enumerate()
+                .filter(|(_, idx)| self.is_incompatible(graph, root, *idx))
+                .collect::<Vec<_>>();
+            for (i, conflict_idx) in hard_conflicts {
+                self[root]
+                    .conflicts
+                    .get_mut(&name)
+                    .expect("child package")
+                    .remove(i);
+                self.demote(graph, dfs, root, conflict_idx);
+            }
+
             while self.inner[&root].conflicts[&name].len() > 1 {
                 // Select conflicting package with less dependent packages that
                 // are not dependencies of the root.
@@ -191,14 +208,17 @@ impl<P: Package + Clone> Tree<P> {
                     .expect("child package")
                     .remove(i);
 
-                // Duplicate package into node's conflicts that are also
+                // Demote package into node's children that are also
                 // ancestors of the `least_used` (i.e. the subtrees that use
                 // `least_used`).
-                self.duplicate(graph, dfs, root, least_used);
+                self.demote(graph, dfs, root, least_used);
             }
 
-            assert_eq!(self.inner[&root].conflicts[&name].len(), 1);
-            queue.push(self.inner[&root].conflicts[&name][0]);
+            let conflicts = &self.inner[&root].conflicts[&name];
+            if !conflicts.is_empty() {
+                assert_eq!(conflicts.len(), 1);
+                queue.push(conflicts[0]);
+            }
         }
 
         // Populate `children` by draining `conflicts`
@@ -206,8 +226,10 @@ impl<P: Package + Clone> Tree<P> {
             let root = &mut self[root];
 
             while let Some((name, conflicts)) = root.conflicts.pop_last() {
-                assert_eq!(conflicts.len(), 1);
-                root.children.insert(name, conflicts[0]);
+                if !conflicts.is_empty() {
+                    assert_eq!(conflicts.len(), 1);
+                    root.children.insert(name, conflicts[0]);
+                }
             }
         }
 
@@ -217,7 +239,7 @@ impl<P: Package + Clone> Tree<P> {
         }
     }
 
-    fn duplicate<E>(
+    fn demote<E>(
         &mut self,
         graph: &StableGraph<P, E>,
         dfs: &mut StableDfsSpace<P, E>,
@@ -300,6 +322,20 @@ impl<P: Package + Clone> Tree<P> {
         )
     }
 
+    fn is_incompatible<E>(
+        &self,
+        graph: &StableGraph<P, E>,
+        parent: TreeIndex,
+        child: TreeIndex,
+    ) -> bool {
+        graph
+            .edges_directed(self.inner[&parent].graph_idx, Direction::Outgoing)
+            .any(|e| {
+                e.target() != self.inner[&child].graph_idx
+                    && graph[e.target()].name() == self.inner[&child].package.name()
+            })
+    }
+
     fn promote_leafs<E>(&mut self, graph: &StableGraph<P, E>, root: TreeIndex) -> bool {
         let mut changes = false;
 
@@ -353,13 +389,7 @@ impl<P: Package + Clone> Tree<P> {
                 }
 
                 // Check if parent requires a different version of the package
-                let version_conflict = graph
-                    .edges_directed(self.inner[&parent].graph_idx, Direction::Outgoing)
-                    .any(|e| {
-                        e.target() != self.inner[child_idx].graph_idx
-                            && graph[e.target()].name() == child_name
-                    });
-                if version_conflict {
+                if self.is_incompatible(graph, parent, *child_idx) {
                     continue;
                 }
 
@@ -581,16 +611,21 @@ mod tests {
             vec![
                 (
                     "root@1.0.0".into(),
-                    vec!["a@1.0.0".into(), "b@1.0.0".into(), "c@1.0.0".into(), "s@2.0.0".into()]
+                    vec![
+                        "a@1.0.0".into(),
+                        "b@1.0.0".into(),
+                        "c@1.0.0".into(),
+                        "d@1.0.0".into(),
+                        "s@1.0.0".into(),
+                    ]
                 ),
-                ("a@1.0.0".into(), vec!["s@1.0.0".into()]),
-                ("b@1.0.0".into(), vec![]),
-                // TODO(indutny): this is a bug! It can't depend on s1!
-                ("c@1.0.0".into(), vec!["d@1.0.0".into(), "s@1.0.0".into()]),
-                ("s@2.0.0".into(), vec![]),
-                ("s@1.0.0".into(), vec![]),
+                ("a@1.0.0".into(), vec![]),
+                ("b@1.0.0".into(), vec!["s@2.0.0".into()]),
+                ("c@1.0.0".into(), vec!["s@2.0.0".into()]),
                 ("d@1.0.0".into(), vec![]),
                 ("s@1.0.0".into(), vec![]),
+                ("s@2.0.0".into(), vec![]),
+                ("s@2.0.0".into(), vec![]),
             ],
         );
     }
