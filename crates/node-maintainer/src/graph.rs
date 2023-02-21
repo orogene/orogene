@@ -302,6 +302,8 @@ impl Graph {
             path: path.into(),
             resolved: Some(resolved),
             version,
+            size: node.tarball_size,
+            file_count: node.tarball_file_count,
             dependencies: prod_deps,
             dev_dependencies: dev_deps,
             peer_dependencies: peer_deps,
