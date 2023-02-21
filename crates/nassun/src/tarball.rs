@@ -174,7 +174,7 @@ impl AsyncRead for Tarball {
         let filled = buf.filled();
         let mut checker_done = false;
         if let Some(checker) = self.checker.as_mut() {
-            if filled.len() > 0 {
+            if !filled.is_empty() {
                 checker.input(filled);
             } else {
                 checker_done = true;

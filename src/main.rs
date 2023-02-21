@@ -3,5 +3,5 @@ use orogene::Orogene;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    Ok(Orogene::load().await?)
+    Orogene::load().await
 }
