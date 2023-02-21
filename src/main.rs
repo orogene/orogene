@@ -1,7 +1,7 @@
 use miette::Result;
 use orogene::Orogene;
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     Ok(Orogene::load().await?)
 }

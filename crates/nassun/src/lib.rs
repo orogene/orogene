@@ -1,5 +1,5 @@
-use futures::AsyncRead;
 pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
+use tokio::io::AsyncRead;
 
 mod client;
 mod entries;

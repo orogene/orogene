@@ -71,7 +71,7 @@ mod test {
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn packument_fetch() -> Result<()> {
         let mock_server = MockServer::start().await;
         let client = OroClient::new(mock_server.uri().parse().into_diagnostic()?);

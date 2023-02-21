@@ -1,8 +1,9 @@
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
 
 use crate::{fetch::PackageFetcher, package::Package};
 
-use async_std::sync::Arc;
 use async_trait::async_trait;
 use node_semver::Version;
 use oro_common::{CorgiManifest, CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};

@@ -1,11 +1,12 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use async_process::{Command, Stdio};
-use async_std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use oro_client::{self, OroClient};
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use oro_package_spec::{GitInfo, PackageSpec};
+use tokio::sync::Mutex;
 use url::Url;
 
 use crate::error::{NassunError, Result};

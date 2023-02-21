@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 oro-common = { path = "../oro-common" }
 
+async-compat = { workspace = true }
 futures = { workspace = true, features = ["io-compat"] }
 http-cache-reqwest = "0.6.0"
 miette = { workspace = true }
@@ -16,6 +17,7 @@ reqwest-middleware = "0.2.0"
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 
@@ -26,7 +28,6 @@ reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
 reqwest-wasm = { git = "https://github.com/tmpfs/reqwest", branch = "wasm-bytes-stream", features = ["json", "gzip", "stream"], package = "reqwest"}
 
 [dev-dependencies]
-async-std = { workspace = true, features = ["attributes", "tokio1"] }
 maplit = { workspace = true }
 pretty_assertions = { workspace = true }
 wiremock = { workspace = true }

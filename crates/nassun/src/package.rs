@@ -1,7 +1,7 @@
 use std::fmt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use async_std::sync::Arc;
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use oro_package_spec::PackageSpec;
 use ssri::Integrity;

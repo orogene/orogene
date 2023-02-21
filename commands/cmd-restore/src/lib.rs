@@ -71,9 +71,7 @@ impl OroCommand for RestoreCmd {
             .resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
             .await?;
         resolved_nm.extract_to(&root).await?;
-        resolved_nm
-            .write_lockfile(root.join("package-lock.kdl"))
-            .await?;
+        resolved_nm.write_lockfile(root.join("package-lock.kdl"))?;
         Ok(())
     }
 }

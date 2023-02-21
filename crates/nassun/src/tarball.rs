@@ -5,14 +5,15 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use async_compat::CompatExt;
 use async_compression::futures::bufread::GzipDecoder;
-#[cfg(not(target_arch = "wasm32"))]
-use async_std::io;
-use async_std::io::{BufReader, BufWriter};
 use async_tar::Archive;
-use futures::{AsyncRead, AsyncReadExt, StreamExt};
+use futures::StreamExt;
 use ssri::{Integrity, IntegrityChecker};
 use tempfile::NamedTempFile;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::io;
+use tokio::io::{AsyncRead, BufReader, BufWriter, ReadBuf};
 
 use crate::entries::{Entries, Entry};
 use crate::error::{NassunError, Result};
@@ -50,6 +51,8 @@ impl Tarball {
     /// [`TempTarball`] is dropped.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn to_temp(self) -> Result<TempTarball> {
+        use tokio::io::AsyncReadExt;
+
         let mut reader = BufReader::new(self);
         let mut buf = [0u8; 1024 * 8];
         let mut vec = Vec::new();
@@ -78,7 +81,7 @@ impl Tarball {
 
     /// A `Stream` of extracted entries from this tarball.
     pub fn entries(self) -> Result<Entries> {
-        let decoder = GzipDecoder::new(BufReader::new(self));
+        let decoder = GzipDecoder::new(BufReader::new(self).compat());
         let ar = Archive::new(decoder);
         Ok(Entries(
             ar.clone(),
@@ -86,7 +89,7 @@ impl Tarball {
                 ar.entries()
                     .map_err(|e| NassunError::ExtractIoError(e, None))?
                     .map(|res| {
-                        res.map(Entry)
+                        res.map(|e| Entry(e.compat()))
                             .map_err(|e| NassunError::ExtractIoError(e, None))
                     }),
             ),
@@ -96,6 +99,8 @@ impl Tarball {
     /// Extract this tarball to the given directory.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn extract_to_dir(self, dir: impl AsRef<Path>) -> Result<()> {
+        use tokio::io::AsyncReadExt;
+
         let mut files = self.entries()?;
 
         let dir = PathBuf::from(dir.as_ref());
@@ -141,8 +146,10 @@ impl Tarball {
                         .flush()
                         .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
                 } else {
-                    let mut writer: async_std::fs::File = writer.into();
-                    io::copy(BufReader::new(file), BufWriter::new(&mut writer))
+                    let writer = tokio::fs::File::from_std(writer);
+                    let mut writer = BufWriter::new(writer);
+                    let mut reader = BufReader::new(file);
+                    io::copy(&mut reader, &mut writer)
                         .await
                         .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
                 }
@@ -161,13 +168,14 @@ impl AsyncRead for Tarball {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<std::io::Result<usize>> {
-        let amt = futures::ready!(Pin::new(&mut self.reader).poll_read(cx, buf))?;
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        futures::ready!(Pin::new(&mut self.reader).poll_read(cx, buf))?;
+        let filled = buf.filled();
         let mut checker_done = false;
         if let Some(checker) = self.checker.as_mut() {
-            if amt > 0 {
-                checker.input(&buf[..amt]);
+            if filled.len() > 0 {
+                checker.input(filled);
             } else {
                 checker_done = true;
             }
@@ -185,7 +193,7 @@ impl AsyncRead for Tarball {
                 "Integrity check failed",
             )));
         }
-        Poll::Ready(Ok(amt))
+        Poll::Ready(Ok(()))
     }
 }
 

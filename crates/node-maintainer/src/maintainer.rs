@@ -1,16 +1,15 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-#[cfg(not(target_arch = "wasm32"))]
-use async_std::fs;
-use async_std::sync::{Arc, Mutex};
 use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::{CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
+use tokio::sync::Mutex;
 use unicase::UniCase;
 use url::Url;
 
@@ -158,14 +157,14 @@ impl NodeMaintainer {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn render_to_file(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(path.as_ref(), self.graph.render()).await?;
+    pub fn render_to_file(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+        std::fs::write(path.as_ref(), self.graph.render())?;
         Ok(())
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(path.as_ref(), self.graph.to_kdl()?.to_string()).await?;
+    pub fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+        std::fs::write(path.as_ref(), self.graph.to_kdl()?.to_string())?;
         Ok(())
     }
 
@@ -254,7 +253,7 @@ impl NodeMaintainer {
                 |(name, tarball, target_dir)| async move {
                     let start = std::time::Instant::now();
                     tracing::debug!("Extracting {} to {:?}", name, target_dir);
-                    async_std::task::spawn_blocking(|| tarball.extract_to_dir(target_dir)).await?;
+                    tokio::task::spawn_blocking(|| tarball.extract_to_dir(target_dir)).await??;
                     tracing::debug!("Extracted {} in {:?}ms", name, start.elapsed().as_millis());
                     Ok::<_, NodeMaintainerError>(())
                 },

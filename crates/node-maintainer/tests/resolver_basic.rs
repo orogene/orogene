@@ -10,7 +10,7 @@ use wiremock::{
     Mock, MockServer, ResponseTemplate,
 };
 
-#[async_std::test]
+#[tokio::test]
 async fn basic_flatten() -> Result<()> {
     let mock_server = MockServer::start().await;
     // This tests a basic linear dependency chain with no conflicts flattens
@@ -81,7 +81,7 @@ pkg "d" {
     Ok(())
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn nesting_simple_conflict() -> Result<()> {
     let mock_server = MockServer::start().await;
     // Testing that simple conflicts get resolved correctly.
@@ -163,7 +163,7 @@ pkg "d" "c" {
     Ok(())
 }
 
-#[async_std::test]
+#[tokio::test]
 async fn nesting_sibling_conflict() -> Result<()> {
     let mock_server = MockServer::start().await;
     // This tests that when a dependency conflict comes from different
@@ -203,7 +203,7 @@ async fn nesting_sibling_conflict() -> Result<()> {
         .resolve_spec("a@^1")
         .await?;
 
-    nm.write_lockfile("./package-lock.kdl").await?;
+    nm.write_lockfile("./package-lock.kdl")?;
 
     assert_eq!(
         nm.to_kdl()?.to_string(),

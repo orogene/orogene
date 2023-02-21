@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
-use async_std::sync::Arc;
 use async_trait::async_trait;
-use futures::io::AsyncRead;
 use node_semver::Version;
 use oro_common::{
     CorgiManifest, CorgiPackument, CorgiVersionMetadata, Manifest as OroManifest, Packument,
@@ -11,6 +10,7 @@ use oro_common::{
 };
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
+use tokio::io::AsyncRead;
 
 use crate::error::{NassunError, Result};
 use crate::fetch::PackageFetcher;
@@ -29,16 +29,17 @@ impl DirFetcher {
 impl DirFetcher {
     pub(crate) async fn corgi_manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
-        let json = async_std::fs::read(&pkg_path)
+        let json = tokio::fs::read(&pkg_path)
             .await
             .map_err(|err| NassunError::DirReadError(err, pkg_path))?;
         let pkgjson: CorgiManifest =
             serde_json::from_slice(&json[..]).map_err(NassunError::SerdeError)?;
         Ok(Manifest::Corgi(Box::new(pkgjson)))
     }
+
     pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
-        let json = async_std::fs::read(&pkg_path)
+        let json = tokio::fs::read(&pkg_path)
             .await
             .map_err(|err| NassunError::DirReadError(err, pkg_path))?;
         let pkgjson: OroManifest =

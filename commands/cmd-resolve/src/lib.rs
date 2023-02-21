@@ -69,8 +69,7 @@ impl OroCommand for ResolveCmd {
         }
         nm.resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
             .await?
-            .write_lockfile(root.join("package-lock.kdl"))
-            .await?;
+            .write_lockfile(root.join("package-lock.kdl"))?;
         Ok(())
     }
 }

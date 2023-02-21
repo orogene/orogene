@@ -111,6 +111,10 @@ pub enum NodeMaintainerError {
     #[diagnostic(code(node_maintainer::mpsc_error))]
     TrySendError,
 
+    #[error("Failed to spawn a task. This is an internal error.")]
+    #[diagnostic(code(node_maintainer::tokio::join_error))]
+    JoinError(#[from] tokio::task::JoinError),
+
     #[error("{0}")]
     #[diagnostic(code(node_maintainer::graph_error))]
     GraphValidationError(String),

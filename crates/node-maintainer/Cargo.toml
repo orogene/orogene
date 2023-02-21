@@ -9,7 +9,6 @@ nassun = { path = "../nassun" }
 oro-common = { path = "../oro-common" }
 oro-package-spec = { path = "../oro-package-spec" }
 
-async-std = { workspace = true }
 futures = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true }
@@ -19,6 +18,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt"]}
 tracing = { workspace = true }
 unicase = "2.6.0"
 url = { workspace = true }
@@ -32,7 +32,6 @@ wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 
 [dev-dependencies]
-async-std = { workspace = true, features = ["attributes", "tokio1"] }
 maplit = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 pretty_assertions = { workspace = true }

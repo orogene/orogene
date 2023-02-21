@@ -1,7 +1,6 @@
-use futures::{
-    stream::{StreamExt, TryStreamExt},
-    AsyncRead,
-};
+use async_compat::CompatExt;
+use futures::stream::{StreamExt, TryStreamExt};
+use tokio::io::AsyncRead;
 use url::Url;
 
 use crate::{OroClient, OroClientError};
@@ -29,22 +28,23 @@ impl OroClient {
                         "Error reading bytes",
                     )),
                 })
-                .into_async_read(),
+                .into_async_read()
+                .compat(),
         ))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use futures::AsyncReadExt;
     use miette::{IntoDiagnostic, Result};
     use pretty_assertions::assert_eq;
+    use tokio::io::AsyncReadExt;
     use wiremock::matchers::{method, path, query_param};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use super::*;
 
-    #[async_std::test]
+    #[tokio::test]
     async fn stream_external() -> Result<()> {
         let mock_server = MockServer::start().await;
         let client: OroClient = Default::default();
