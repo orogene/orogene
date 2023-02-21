@@ -172,12 +172,14 @@ impl AsyncRead for Tarball {
                 checker_done = true;
             }
         }
-        if checker_done && self
+        if checker_done
+            && self
                 .checker
                 .take()
                 .expect("there should've been a checker here")
                 .result()
-                .is_err() {
+                .is_err()
+        {
             return Poll::Ready(Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Integrity check failed",
@@ -213,8 +215,7 @@ impl TempTarball {
                 let entry_path = header
                     .path()
                     .map_err(|e| NassunError::ExtractIoError(e, None))?;
-                let entry_subpath =
-                    strip_one(&entry_path).unwrap_or_else(|| entry_path.as_ref());
+                let entry_subpath = strip_one(&entry_path).unwrap_or_else(|| entry_path.as_ref());
                 let path = dir.join(entry_subpath);
                 if let tar::EntryType::Regular = header.entry_type() {
                     let takeme = path.clone();

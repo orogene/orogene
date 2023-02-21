@@ -205,45 +205,42 @@ impl NodeMaintainer {
             let stream = futures::stream::iter(indices.iter().rev());
             let tarball_downloads = stream
                 .map(|idx| Ok((idx, sink_clone.clone())))
-                .try_for_each_concurrent(
-                    me.parallelism,
-                    |(idx, mut package_sink)| async move {
-                        let child_idx = *idx;
-                        tracing::debug!(
-                            "Downloading {} ({:?} bytes, {:?} files)",
-                            me.graph[child_idx].package.name(),
-                            me.graph[child_idx].tarball_size,
-                            me.graph[child_idx].tarball_file_count
-                        );
-                        let target_dir = path.join("node_modules").join(
-                            me.graph
-                                .node_path(child_idx)
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<_>>()
-                                .join("/node_modules/"),
-                        );
+                .try_for_each_concurrent(me.parallelism, |(idx, mut package_sink)| async move {
+                    let child_idx = *idx;
+                    tracing::debug!(
+                        "Downloading {} ({:?} bytes, {:?} files)",
+                        me.graph[child_idx].package.name(),
+                        me.graph[child_idx].tarball_size,
+                        me.graph[child_idx].tarball_file_count
+                    );
+                    let target_dir = path.join("node_modules").join(
+                        me.graph
+                            .node_path(child_idx)
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>()
+                            .join("/node_modules/"),
+                    );
 
-                        let start = std::time::Instant::now();
-                        let tarball = me.graph[child_idx]
-                            .package
-                            .tarball()
-                            .await?
-                            .to_temp()
-                            .await?;
-                        tracing::debug!(
-                            "Downloaded {} in {:?}ms.",
-                            me.graph[child_idx].package.name(),
-                            start.elapsed().as_millis(),
-                        );
-                        package_sink.try_send((
-                            me.graph[child_idx].package.name(),
-                            tarball,
-                            target_dir,
-                        ))?;
-                        Ok::<_, NodeMaintainerError>(())
-                    },
-                )
+                    let start = std::time::Instant::now();
+                    let tarball = me.graph[child_idx]
+                        .package
+                        .tarball()
+                        .await?
+                        .to_temp()
+                        .await?;
+                    tracing::debug!(
+                        "Downloaded {} in {:?}ms.",
+                        me.graph[child_idx].package.name(),
+                        start.elapsed().as_millis(),
+                    );
+                    package_sink.try_send((
+                        me.graph[child_idx].package.name(),
+                        tarball,
+                        target_dir,
+                    ))?;
+                    Ok::<_, NodeMaintainerError>(())
+                })
                 .and_then(|_| async move {
                     sink_clone2.close_channel();
                     Ok(())
