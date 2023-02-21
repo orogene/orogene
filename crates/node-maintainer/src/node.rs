@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use nassun::Package;
 use oro_common::CorgiManifest;
-use petgraph::stable_graph::NodeIndex;
+use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;
 
 use crate::Graph;
@@ -17,6 +17,8 @@ pub struct Node {
     pub(crate) manifest: CorgiManifest,
     /// Quick index back to this Node's [`Graph`]'s root Node.
     pub(crate) root: NodeIndex,
+    /// Name-indexed map of outgoing [`crate::Edge`]s from this Node.
+    pub(crate) dependencies: HashMap<UniCase<String>, EdgeIndex>,
     /// Parent, if any, of this Node in the logical filesystem hierarchy.
     pub(crate) parent: Option<NodeIndex>,
     /// Children of this node in the logical filesystem hierarchy. These are
@@ -34,17 +36,12 @@ impl Node {
             root: NodeIndex::new(0),
             parent: None,
             children: HashMap::new(),
+            dependencies: HashMap::new(),
         }
     }
 
     /// This Node's depth in the logical filesystem hierarchy.
     pub(crate) fn depth(&self, graph: &Graph) -> usize {
-        let mut depth = 0;
-        let mut current = self.parent;
-        while let Some(idx) = current {
-            depth += 1;
-            current = graph.inner[idx].parent;
-        }
-        depth
+        graph.node_parent_iter(self.idx).count() - 1
     }
 }
