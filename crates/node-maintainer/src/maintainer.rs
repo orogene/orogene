@@ -188,13 +188,16 @@ impl NodeMaintainer {
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         async fn inner(me: &NodeMaintainer, path: &Path) -> Result<(), NodeMaintainerError> {
+            let start = std::time::Instant::now();
             let stream = futures::stream::iter(me.graph.inner.node_indices());
             let concurrent_count = Arc::new(AtomicUsize::new(0));
+            let total = me.graph.inner.node_count();
+            let total_completed = Arc::new(AtomicUsize::new(0));
             stream
-                .map(|idx| Ok((idx, concurrent_count.clone())))
+                .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
                 .try_for_each_concurrent(
                     me.parallelism,
-                    move |(child_idx, concurrent_count)| async move {
+                    move |(child_idx, concurrent_count, total_completed)| async move {
                         if child_idx == me.graph.root {
                             return Ok(());
                         }
@@ -217,16 +220,22 @@ impl NodeMaintainer {
                             .extract_to_dir(&target_dir)
                             .await?;
                         tracing::debug!(
-                            "Extracted {} to {} in {:?}ms. {} in flight.",
+                            "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
                             target_dir.display(),
                             start.elapsed().as_millis(),
+                            total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
                             concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
                         );
                         Ok::<_, NodeMaintainerError>(())
                     },
                 )
                 .await?;
+            tracing::info!(
+                "Extracted {} packages in {}ms.",
+                total,
+                start.elapsed().as_millis()
+            );
             Ok(())
         }
         inner(self, path.as_ref()).await
@@ -236,6 +245,8 @@ impl NodeMaintainer {
         &mut self,
         lockfile: Option<Lockfile>,
     ) -> Result<(), NodeMaintainerError> {
+        let start = std::time::Instant::now();
+
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
@@ -397,6 +408,11 @@ impl NodeMaintainer {
             }
         }
 
+        tracing::info!(
+            "Resolved graph of {} nodes in {}ms",
+            self.graph.inner.node_count(),
+            start.elapsed().as_millis()
+        );
         Ok(())
     }
 
