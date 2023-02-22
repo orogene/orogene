@@ -62,14 +62,13 @@ impl Tarball {
                 let mut tempfile = tempfile::NamedTempFile::new()?;
                 tempfile.write_all(&vec)?;
                 tempfile.write_all(&buf[..n])?;
-                'inner: loop {
+                loop {
                     let n = reader.read(&mut buf).await?;
                     if n == 0 {
-                        break 'inner;
+                        return Ok(TempTarball::File(tempfile));
                     }
                     tempfile.write_all(&buf[..n])?;
                 }
-                return Ok(TempTarball::File(tempfile));
             }
             vec.extend_from_slice(&buf[..n]);
         }
