@@ -110,20 +110,26 @@ impl AsyncRead for Tarball {
         buf: &mut [u8],
     ) -> Poll<std::io::Result<usize>> {
         let amt = futures::ready!(Pin::new(&mut self.reader).poll_read(cx, buf))?;
+        let mut checker_done = false;
         if let Some(checker) = self.checker.as_mut() {
             if amt > 0 {
                 checker.input(&buf[..amt]);
             } else {
-                let mut final_checker = IntegrityChecker::new(Integrity {
-                    hashes: Vec::with_capacity(0),
-                });
-                std::mem::swap(checker, &mut final_checker);
-                if final_checker.result().is_err() {
-                    return Poll::Ready(Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Integrity check failed",
-                    )));
-                }
+                checker_done = true;
+            }
+        }
+        if checker_done {
+            if self
+                .checker
+                .take()
+                .expect("There should've been a checker here")
+                .result()
+                .is_err()
+            {
+                return Poll::Ready(Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Integrity check failed",
+                )));
             }
         }
         Poll::Ready(Ok(amt))
