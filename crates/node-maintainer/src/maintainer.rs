@@ -213,16 +213,18 @@ impl NodeMaintainer {
                         );
 
                         let start = std::time::Instant::now();
-                        me.graph[child_idx]
+                        let temp = me.graph[child_idx]
                             .package
                             .tarball()
                             .await?
-                            .extract_to_dir(&target_dir)
+                            .to_temp()
                             .await?;
+                        let dir_clone = target_dir.clone();
+                        async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir)).await?;
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
-                            target_dir.display(),
+                            dir_clone.display(),
                             start.elapsed().as_millis(),
                             total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
                             concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
