@@ -220,7 +220,8 @@ impl NodeMaintainer {
                             .to_temp()
                             .await?;
                         let dir_clone = target_dir.clone();
-                        async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir)).await?;
+                        async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir))
+                            .await?;
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
