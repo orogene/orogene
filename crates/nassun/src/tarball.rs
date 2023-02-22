@@ -154,12 +154,14 @@ impl AsyncRead for Tarball {
                 checker_done = true;
             }
         }
-        if checker_done && self
+        if checker_done
+            && self
                 .checker
                 .take()
                 .expect("There should've been a checker here")
                 .result()
-                .is_err() {
+                .is_err()
+        {
             return Poll::Ready(Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 "Integrity check failed",
