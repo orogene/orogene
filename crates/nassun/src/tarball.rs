@@ -6,9 +6,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use async_compression::futures::bufread::GzipDecoder;
-#[cfg(not(target_arch = "wasm32"))]
-use async_std::io;
-use async_std::io::{BufReader, BufWriter};
+use async_std::io::BufReader;
 use async_tar::Archive;
 use futures::{AsyncRead, AsyncReadExt, StreamExt};
 use ssri::{Integrity, IntegrityChecker};
@@ -91,52 +89,6 @@ impl Tarball {
             ),
         ))
     }
-
-    /// Extract this tarball to the given directory.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir(self, dir: impl AsRef<Path>) -> Result<()> {
-        let mut files = self.entries()?;
-
-        let dir = PathBuf::from(dir.as_ref());
-        let takeme = dir.clone();
-        std::fs::create_dir_all(&takeme)
-            .map_err(|e| NassunError::ExtractIoError(e, Some(takeme.clone())))?;
-
-        while let Some(file) = files.next().await {
-            let file = file?;
-            let header = file.header();
-            let entry_path = header
-                .path()
-                .map_err(|e| NassunError::ExtractIoError(e, None))?;
-            let entry_subpath =
-                strip_one((&*entry_path).into()).unwrap_or_else(|| entry_path.as_ref().into());
-            let path = dir.join(entry_subpath);
-            if let async_tar::EntryType::Regular = header.entry_type() {
-                let takeme = path.clone();
-
-                std::fs::create_dir_all(takeme.parent().unwrap()).map_err(|e| {
-                    NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
-                })?;
-
-                let mut writer = async_std::fs::OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(&path)
-                    .await
-                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
-
-                io::copy(BufReader::new(file), BufWriter::new(&mut writer))
-                    .await
-                    .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
-            }
-        }
-        Ok(())
-    }
-}
-
-fn strip_one(path: &Path) -> Option<&Path> {
-    let mut comps = path.components();
-    comps.next().map(|_| comps.as_path())
 }
 
 impl AsyncRead for Tarball {
@@ -186,10 +138,8 @@ impl TempTarball {
             let mut ar = tar::Archive::new(gz);
             let files = ar.entries()?;
 
-            let dir = PathBuf::from(dir);
-            let takeme = dir.clone();
-            std::fs::create_dir_all(&takeme)
-                .map_err(|e| NassunError::ExtractIoError(e, Some(takeme.clone())))?;
+            std::fs::create_dir_all(dir)
+                .map_err(|e| NassunError::ExtractIoError(e, Some(PathBuf::from(dir))))?;
 
             for file in files {
                 let file = file?;
@@ -200,10 +150,8 @@ impl TempTarball {
                 let entry_subpath = strip_one(&entry_path).unwrap_or_else(|| entry_path.as_ref());
                 let path = dir.join(entry_subpath);
                 if let tar::EntryType::Regular = header.entry_type() {
-                    let takeme = path.clone();
-
-                    std::fs::create_dir_all(takeme.parent().unwrap()).map_err(|e| {
-                        NassunError::ExtractIoError(e, Some(takeme.parent().unwrap().into()))
+                    std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| {
+                        NassunError::ExtractIoError(e, Some(path.parent().unwrap().into()))
                     })?;
 
                     let mut writer = std::fs::OpenOptions::new()
@@ -216,7 +164,7 @@ impl TempTarball {
                     let mut reader = std::io::BufReader::new(file);
 
                     std::io::copy(&mut reader, &mut writer)
-                        .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))?;
+                        .map_err(|e| NassunError::ExtractIoError(e, Some(path)))?;
                 }
             }
             Ok(())
@@ -233,4 +181,10 @@ impl std::io::Read for TempTarball {
             TempTarball::Memory(m) => m.read(buf),
         }
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn strip_one(path: &Path) -> Option<&Path> {
+    let mut comps = path.components();
+    comps.next().map(|_| comps.as_path())
 }
