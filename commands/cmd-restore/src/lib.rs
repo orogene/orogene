@@ -33,6 +33,10 @@ impl OroCommand for RestoreCmd {
             .root
             .expect("root should've been set by global defaults");
         let mut nm = NodeMaintainerOptions::new();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            nm = nm.progress_bar(true);
+        };
         if let Some(registry) = self.registry {
             nm = nm.registry(registry);
         }
