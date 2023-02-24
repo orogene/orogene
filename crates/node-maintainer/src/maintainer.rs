@@ -233,15 +233,7 @@ impl NodeMaintainer {
                         async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir))
                             .await?;
                         pb.inc(1);
-                        pb.set_message(format!(
-                            "{}@{}",
-                            me.graph[child_idx].package.name(),
-                            me.graph[child_idx]
-                                .package
-                                .resolved()
-                                .npm_version()
-                                .unwrap()
-                        ));
+                        pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
@@ -346,10 +338,14 @@ impl NodeMaintainer {
 
                     let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
 
+                    if let Some(child_idx) = Self::satisfy_dependency(&mut self.graph, &pb, &dep)? {
+                        pb.inc(1);
+                        pb.set_message(format!("{:?}", self.graph[child_idx].package.resolved()));
+                    }
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
                     // make a new edge and move on.
-                    if !Self::satisfy_dependency(&mut self.graph, &pb, &dep)? {
+                    else {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
                         if let Some(kdl_lock) = &lockfile {
@@ -364,19 +360,24 @@ impl NodeMaintainer {
                                 .await?
                             {
                                 let target_path = lockfile_node.path.clone();
-                                q.push_back(
-                                    Self::place_child(
-                                        &mut self.graph,
-                                        &pb,
-                                        node_idx,
-                                        package,
-                                        &requested,
-                                        dep_type,
-                                        lockfile_node.into(),
-                                        Some(target_path),
-                                    )
-                                    .await?,
-                                );
+
+                                let child_idx = Self::place_child(
+                                    &mut self.graph,
+                                    node_idx,
+                                    package,
+                                    &requested,
+                                    dep_type,
+                                    lockfile_node.into(),
+                                    Some(target_path),
+                                )
+                                .await?;
+                                q.push_back(child_idx);
+
+                                pb.inc(1);
+                                pb.set_message(format!(
+                                    "{:?}",
+                                    self.graph[child_idx].package.resolved()
+                                ));
                                 continue;
                             }
                         }
@@ -406,24 +407,37 @@ impl NodeMaintainer {
                         let manifest = package.corgi_metadata().await?.manifest;
 
                         for dep in deps {
-                            if Self::satisfy_dependency(&mut self.graph, &pb, &dep)? {
+                            if let Some(child_idx) =
+                                Self::satisfy_dependency(&mut self.graph, &pb, &dep)?
+                            {
+                                pb.inc(1);
+                                pb.set_message(format!(
+                                    "{:?}",
+                                    self.graph[child_idx].package.resolved()
+                                ));
                                 continue;
                             }
 
                             let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-                            q.push_back(
-                                Self::place_child(
-                                    &mut self.graph,
-                                    &pb,
-                                    dep.node_idx,
-                                    package.clone(),
-                                    &requested,
-                                    dep.dep_type,
-                                    manifest.clone(),
-                                    None,
-                                )
-                                .await?,
-                            );
+
+                            let child_idx = Self::place_child(
+                                &mut self.graph,
+                                dep.node_idx,
+                                package.clone(),
+                                &requested,
+                                dep.dep_type,
+                                manifest.clone(),
+                                None,
+                            )
+                            .await?;
+
+                            q.push_back(child_idx);
+
+                            pb.inc(1);
+                            pb.set_message(format!(
+                                "{:?}",
+                                self.graph[child_idx].package.resolved()
+                            ));
                         }
                     }
                 }
@@ -455,7 +469,7 @@ impl NodeMaintainer {
         graph: &mut Graph,
         pb: &ProgressBar,
         dep: &NodeDependency,
-    ) -> Result<bool, NodeMaintainerError> {
+    ) -> Result<Option<NodeIndex>, NodeMaintainerError> {
         if let Some(satisfier_idx) = graph.find_by_name(dep.node_idx, &dep.name)? {
             let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
             if graph[satisfier_idx]
@@ -464,15 +478,7 @@ impl NodeMaintainer {
                 .satisfies(&requested)?
             {
                 pb.inc(1);
-                pb.set_message(format!(
-                    "{}@{}",
-                    graph[satisfier_idx].package.name(),
-                    graph[satisfier_idx]
-                        .package
-                        .resolved()
-                        .npm_version()
-                        .unwrap()
-                ));
+                pb.set_message(format!("{:?}", graph[satisfier_idx].package.resolved()));
                 let edge_idx = graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
@@ -481,11 +487,11 @@ impl NodeMaintainer {
                 graph[dep.node_idx]
                     .dependencies
                     .insert(dep.name.clone(), edge_idx);
-                return Ok(true);
+                return Ok(Some(satisfier_idx));
             }
-            return Ok(false);
+            return Ok(None);
         }
-        Ok(false)
+        Ok(None)
     }
 
     async fn satisfy_from_lockfile(
@@ -533,7 +539,6 @@ impl NodeMaintainer {
 
     async fn place_child(
         graph: &mut Graph,
-        pb: &ProgressBar,
         dependent_idx: NodeIndex,
         package: Package,
         requested: &PackageSpec,
@@ -619,13 +624,6 @@ impl NodeMaintainer {
             let node = &mut graph[target_idx];
             node.children.insert(child_name, child_idx);
         }
-
-        pb.inc(1);
-        pb.set_message(format!(
-            "{}@{}",
-            graph[child_idx].package.name(),
-            graph[child_idx].package.resolved().npm_version().unwrap()
-        ));
 
         Ok(child_idx)
     }
