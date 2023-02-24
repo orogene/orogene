@@ -198,13 +198,16 @@ impl NodeMaintainer {
             pb: &ProgressBar,
             path: &Path,
         ) -> Result<(), NodeMaintainerError> {
+            let start = std::time::Instant::now();
             let stream = futures::stream::iter(me.graph.inner.node_indices());
             let concurrent_count = Arc::new(AtomicUsize::new(0));
+            let total = me.graph.inner.node_count();
+            let total_completed = Arc::new(AtomicUsize::new(0));
             stream
-                .map(|idx| Ok((idx, concurrent_count.clone())))
+                .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
                 .try_for_each_concurrent(
                     me.parallelism,
-                    move |(child_idx, concurrent_count)| async move {
+                    move |(child_idx, concurrent_count, total_completed)| async move {
                         if child_idx == me.graph.root {
                             return Ok(());
                         }
@@ -220,11 +223,14 @@ impl NodeMaintainer {
                         );
 
                         let start = std::time::Instant::now();
-                        me.graph[child_idx]
+                        let temp = me.graph[child_idx]
                             .package
                             .tarball()
                             .await?
-                            .extract_to_dir(&target_dir)
+                            .to_temp()
+                            .await?;
+                        let dir_clone = target_dir.clone();
+                        async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir))
                             .await?;
                         pb.inc(1);
                         pb.set_message(format!(
@@ -237,16 +243,22 @@ impl NodeMaintainer {
                                 .unwrap()
                         ));
                         tracing::debug!(
-                            "Extracted {} to {} in {:?}ms. {} in flight.",
+                            "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
-                            target_dir.display(),
+                            dir_clone.display(),
                             start.elapsed().as_millis(),
+                            total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
                             concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
                         );
                         Ok::<_, NodeMaintainerError>(())
                     },
                 )
                 .await?;
+            tracing::info!(
+                "Extracted {} packages in {}ms.",
+                total,
+                start.elapsed().as_millis()
+            );
             Ok(())
         }
         inner(self, &pb, path.as_ref()).await?;
@@ -258,6 +270,7 @@ impl NodeMaintainer {
         &mut self,
         lockfile: Option<Lockfile>,
     ) -> Result<(), NodeMaintainerError> {
+        let start = std::time::Instant::now();
         let pb_style = ProgressStyle::default_bar()
             .template("{bar:40} [{pos}/{len}] {wide_msg}")
             .unwrap();
@@ -428,6 +441,12 @@ impl NodeMaintainer {
             }
         }
         pb.finish_with_message("Resolved!");
+
+        tracing::info!(
+            "Resolved graph of {} nodes in {}ms",
+            self.graph.inner.node_count(),
+            start.elapsed().as_millis()
+        );
         Ok(())
     }
 
@@ -453,11 +472,14 @@ impl NodeMaintainer {
                         .npm_version()
                         .unwrap()
                 ));
-                graph.inner.add_edge(
+                let edge_idx = graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
                     Edge::new(requested, dep.dep_type.clone()),
                 );
+                graph[dep.node_idx]
+                    .dependencies
+                    .insert(dep.name.clone(), edge_idx);
                 return Ok(true);
             }
             return Ok(false);
@@ -528,7 +550,7 @@ impl NodeMaintainer {
 
         // Edges represent the logical dependency relationship (not the
         // hierarchy location).
-        graph.inner.add_edge(
+        let edge_idx = graph.inner.add_edge(
             dependent_idx,
             child_idx,
             Edge::new(requested.clone(), dep_type),
@@ -578,7 +600,12 @@ impl NodeMaintainer {
                 parent_idx = graph[curr_target_idx].parent;
             }
         }
-
+        {
+            // Now we set backlinks: first, the dependent node needs to point
+            // to the child, wherever it is in the graph.
+            let dependent = &mut graph[dependent_idx];
+            dependent.dependencies.insert(child_name.clone(), edge_idx);
+        }
         // Finally, we put everything in its place.
         {
             let mut child_node = &mut graph[child_idx];
