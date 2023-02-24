@@ -189,7 +189,7 @@ impl NodeMaintainer {
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         let pb_style = ProgressStyle::default_bar()
-            .template("{bar:40} [{pos}/{len}] {wide_msg}")
+            .template("💾 {bar:40} [{pos}/{len}] {wide_msg}")
             .unwrap();
         let pb = ProgressBar::new(self.graph.inner.edge_count() as u64).with_style(pb_style);
 
@@ -262,7 +262,8 @@ impl NodeMaintainer {
             Ok(())
         }
         inner(self, &pb, path.as_ref()).await?;
-        pb.finish_with_message("Linked!");
+        pb.finish_and_clear();
+        println!("💾 Linked!");
         Ok(())
     }
 
@@ -272,7 +273,7 @@ impl NodeMaintainer {
     ) -> Result<(), NodeMaintainerError> {
         let start = std::time::Instant::now();
         let pb_style = ProgressStyle::default_bar()
-            .template("{bar:40} [{pos}/{len}] {wide_msg}")
+            .template("🔍 {bar:40} [{pos}/{len}] {wide_msg}")
             .unwrap();
         let pb = ProgressBar::new(0).with_style(pb_style);
 
@@ -439,7 +440,8 @@ impl NodeMaintainer {
                 })
             }
         }
-        pb.finish_with_message("Resolved!");
+        pb.finish_and_clear();
+        println!("🔍 Resolved!");
 
         tracing::info!(
             "Resolved graph of {} nodes in {}ms",
