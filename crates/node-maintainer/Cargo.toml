@@ -11,6 +11,7 @@ oro-package-spec = { path = "../oro-package-spec" }
 
 async-std = { workspace = true }
 futures = { workspace = true }
+indicatif = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }

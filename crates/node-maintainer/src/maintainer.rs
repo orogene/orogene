@@ -7,6 +7,7 @@ use std::sync::atomic::{self, AtomicUsize};
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use indicatif::{ProgressBar, ProgressStyle};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
@@ -236,6 +237,11 @@ impl NodeMaintainer {
         &mut self,
         lockfile: Option<Lockfile>,
     ) -> Result<(), NodeMaintainerError> {
+        let pb_style = ProgressStyle::default_bar()
+            .template("{bar:40} [{pos}/{len}] {wide_msg}")
+            .unwrap();
+        let pb = ProgressBar::new(0).with_style(pb_style);
+
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
         q.push_back(self.graph.root);
@@ -304,10 +310,12 @@ impl NodeMaintainer {
 
                     let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
 
+                    pb.inc_length(1);
+
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
                     // make a new edge and move on.
-                    if !Self::satisfy_dependency(&mut self.graph, &dep)? {
+                    if !Self::satisfy_dependency(&mut self.graph, &pb, &dep)? {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
                         if let Some(kdl_lock) = &lockfile {
@@ -325,6 +333,7 @@ impl NodeMaintainer {
                                 q.push_back(
                                     Self::place_child(
                                         &mut self.graph,
+                                        &pb,
                                         node_idx,
                                         package,
                                         &requested,
@@ -363,7 +372,7 @@ impl NodeMaintainer {
                         let manifest = package.corgi_metadata().await?.manifest;
 
                         for dep in deps {
-                            if Self::satisfy_dependency(&mut self.graph, &dep)? {
+                            if Self::satisfy_dependency(&mut self.graph, &pb, &dep)? {
                                 continue;
                             }
 
@@ -371,6 +380,7 @@ impl NodeMaintainer {
                             q.push_back(
                                 Self::place_child(
                                     &mut self.graph,
+                                    &pb,
                                     dep.node_idx,
                                     package.clone(),
                                     &requested,
@@ -396,12 +406,13 @@ impl NodeMaintainer {
                 })
             }
         }
-
+        pb.finish_with_message("Resolved!");
         Ok(())
     }
 
     fn satisfy_dependency(
         graph: &mut Graph,
+        pb: &ProgressBar,
         dep: &NodeDependency,
     ) -> Result<bool, NodeMaintainerError> {
         if let Some(satisfier_idx) = graph.find_by_name(dep.node_idx, &dep.name)? {
@@ -411,6 +422,16 @@ impl NodeMaintainer {
                 .resolved()
                 .satisfies(&requested)?
             {
+                pb.inc(1);
+                pb.set_message(format!(
+                    "{}@{}",
+                    graph[satisfier_idx].package.name(),
+                    graph[satisfier_idx]
+                        .package
+                        .resolved()
+                        .npm_version()
+                        .unwrap()
+                ));
                 graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
@@ -468,6 +489,7 @@ impl NodeMaintainer {
 
     async fn place_child(
         graph: &mut Graph,
+        pb: &ProgressBar,
         dependent_idx: NodeIndex,
         package: Package,
         requested: &PackageSpec,
@@ -548,6 +570,14 @@ impl NodeMaintainer {
             let node = &mut graph[target_idx];
             node.children.insert(child_name, child_idx);
         }
+
+        pb.inc(1);
+        pb.set_message(format!(
+            "{}@{}",
+            graph[child_idx].package.name(),
+            graph[child_idx].package.resolved().npm_version().unwrap()
+        ));
+
         Ok(child_idx)
     }
 
