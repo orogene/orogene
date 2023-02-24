@@ -341,10 +341,9 @@ impl NodeMaintainer {
                         dep_type: dep_type.clone(),
                         node_idx,
                     };
+                    pb.inc_length(1);
 
                     let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-
-                    pb.inc_length(1);
 
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
