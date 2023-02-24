@@ -188,7 +188,16 @@ impl NodeMaintainer {
     }
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        async fn inner(me: &NodeMaintainer, path: &Path) -> Result<(), NodeMaintainerError> {
+        let pb_style = ProgressStyle::default_bar()
+            .template("{bar:40} [{pos}/{len}] {wide_msg}")
+            .unwrap();
+        let pb = ProgressBar::new(self.graph.inner.edge_count() as u64).with_style(pb_style);
+
+        async fn inner(
+            me: &NodeMaintainer,
+            pb: &ProgressBar,
+            path: &Path,
+        ) -> Result<(), NodeMaintainerError> {
             let stream = futures::stream::iter(me.graph.inner.node_indices());
             let concurrent_count = Arc::new(AtomicUsize::new(0));
             stream
@@ -217,6 +226,16 @@ impl NodeMaintainer {
                             .await?
                             .extract_to_dir(&target_dir)
                             .await?;
+                        pb.inc(1);
+                        pb.set_message(format!(
+                            "{}@{}",
+                            me.graph[child_idx].package.name(),
+                            me.graph[child_idx]
+                                .package
+                                .resolved()
+                                .npm_version()
+                                .unwrap()
+                        ));
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {} in flight.",
                             me.graph[child_idx].package.name(),
@@ -230,7 +249,9 @@ impl NodeMaintainer {
                 .await?;
             Ok(())
         }
-        inner(self, path.as_ref()).await
+        inner(self, &pb, path.as_ref()).await?;
+        pb.finish_with_message("Linked!");
+        Ok(())
     }
 
     async fn run_resolver(
