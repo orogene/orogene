@@ -4,15 +4,19 @@ use async_trait::async_trait;
 use clap::{ArgMatches, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
-use oro_command::OroCommand;
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
-
-use cmd_ping::PingCmd;
-use cmd_resolve::ResolveCmd;
-use cmd_restore::RestoreCmd;
-use cmd_view::ViewCmd;
 use url::Url;
+
+use commands::{
+    OroCommand,
+    ping::PingCmd,
+    resolve::ResolveCmd,
+    restore::RestoreCmd,
+    view::ViewCmd,
+};
+
+mod commands;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]

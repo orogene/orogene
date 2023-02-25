@@ -4,10 +4,11 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_client::{self, OroClient};
-use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
 use serde_json::Value;
 use url::Url;
+
+use crate::commands::OroCommand;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct PingCmd {

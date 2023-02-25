@@ -4,12 +4,13 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::{Context, IntoDiagnostic, Result};
 use node_maintainer::NodeMaintainerOptions;
-use oro_command::OroCommand;
 use oro_config::OroConfigLayer;
 use url::Url;
 
+use crate::commands::OroCommand;
+
 #[derive(Debug, Args, OroConfigLayer)]
-pub struct ResolveCmd {
+pub struct RestoreCmd {
     #[clap(from_global)]
     registry: Option<Url>,
 
@@ -27,11 +28,11 @@ pub struct ResolveCmd {
 }
 
 #[async_trait]
-impl OroCommand for ResolveCmd {
+impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
-        // TODO: Move all these defaults to the config layer, so they pick up
-        // configs from files.
-        let root = self.root.unwrap_or_else(|| PathBuf::from("."));
+        let root = self
+            .root
+            .expect("root should've been set by global defaults");
         let mut nm = NodeMaintainerOptions::new();
         if let Some(registry) = self.registry {
             nm = nm.registry(registry);
@@ -67,8 +68,11 @@ impl OroCommand for ResolveCmd {
                 )
             })?;
         }
-        nm.resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
-            .await?
+        let resolved_nm = nm
+            .resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
+            .await?;
+        resolved_nm.extract_to(&root).await?;
+        resolved_nm
             .write_lockfile(root.join("package-lock.kdl"))
             .await?;
         Ok(())

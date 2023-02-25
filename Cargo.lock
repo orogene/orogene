@@ -481,69 +481,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmd-ping"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "miette",
- "oro-client",
- "oro-command",
- "oro-config",
- "serde",
- "serde_json",
- "url",
-]
-
-[[package]]
-name = "cmd-resolve"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "miette",
- "node-maintainer",
- "oro-command",
- "oro-config",
- "url",
-]
-
-[[package]]
-name = "cmd-restore"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "miette",
- "node-maintainer",
- "oro-command",
- "oro-config",
- "url",
-]
-
-[[package]]
-name = "cmd-view"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "chrono-humanize",
- "clap",
- "colored",
- "humansize",
- "miette",
- "nassun",
- "oro-client",
- "oro-command",
- "oro-common",
- "oro-config",
- "serde_json",
- "term_grid",
- "term_size",
- "url",
-]
-
-[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1933,14 +1870,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-command"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "miette",
-]
-
-[[package]]
 name = "oro-common"
 version = "0.1.0"
 dependencies = [
@@ -1998,16 +1927,23 @@ version = "0.1.0"
 dependencies = [
  "async-std",
  "async-trait",
+ "chrono",
+ "chrono-humanize",
  "clap",
- "cmd-ping",
- "cmd-resolve",
- "cmd-restore",
- "cmd-view",
+ "colored",
  "directories",
  "embed-resource",
+ "humansize",
  "miette",
- "oro-command",
+ "nassun",
+ "node-maintainer",
+ "oro-client",
+ "oro-common",
  "oro-config",
+ "serde",
+ "serde_json",
+ "term_grid",
+ "term_size",
  "tracing",
  "tracing-subscriber",
  "url",

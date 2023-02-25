@@ -4,11 +4,12 @@ use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nassun::NassunOpts;
-use oro_command::OroCommand;
 use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use oro_config::OroConfigLayer;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
+
+use crate::commands::OroCommand;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct ViewCmd {
