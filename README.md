@@ -1,6 +1,20 @@
-# orogene ![CI](https://github.com/orogene/orogene/workflows/CI/badge.svg)
+<div class="oranda-hide">
+# orogene
+</div>
 
-Yet another JavaScript package manager, I guess.
+> Yet another `node_modules/` package manager, I guess.
+
+[![crates.io](https://img.shields.io/crates/v/orogene.svg)](https://crates.io/crates/orogene)
+[![GitHub checks state](https://img.shields.io/github/checks-status/orogene/orogene/main)](https://github.com/orogene/orogene/actions/workflows/ci.yml?query=branch%3Amain)
+
+Orogene is a next-generation package manager for tools that use
+`node_modules/`, such as bundlers, CLI tools, and Node.js-based applications.
+It's fast, robust, and meant to be easily integrated into your workflows such
+that you never have to worry about whether your `node_modules/` is up to date.
+
+> *Note*: Orogene is still under heavy development and shouldn't be considered
+> much more than a tech demo or proof of concept. Do not use in production
+> yet.
 
 ## Building
 
@@ -8,10 +22,10 @@ Yet another JavaScript package manager, I guess.
 
 You will need a Rust toolchain installed. See [the official Rust docs for
 instructions](https://www.rust-lang.org/tools/install). And
-[git](https://git-scm.com/downloads). 
+[git](https://git-scm.com/downloads).
 Next, get a checkout of the source:
 
-```shell
+```
 git clone https://github.com/orogene/orogene.git
 cd orogene
 ```
@@ -40,7 +54,7 @@ Finished dev [unoptimized + debuginfo] target(s) in 1m 22s
 When you’ve made changes to the orogene source code, run `cargo build` again,
 and it will only compile the changed files quickly:
 
-```shell
+```
 cargo build
    Compiling orogene v0.1.0 (/Users/jan/Work/rust/orogene)
 	Finished dev [unoptimized + debuginfo] target(s) in 2.41s
@@ -53,7 +67,7 @@ default configuration, this will run an `oro` executable built for your local
 system in `./target/debug`. When you run it, it shows you a helpful page of
 instructions of what you can do with it. Give it a try:
 
-```shell
+```
 	Finished dev [unoptimized + debuginfo] target(s) in 0.14s
 	 Running `target/debug/oro`
 `node_modules/` package manager and utility toolkit.
