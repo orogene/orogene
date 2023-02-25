@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use clap::Args;
 use colored::*;
@@ -14,8 +16,14 @@ use crate::commands::OroCommand;
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct ViewCmd {
     /// Registry to get package data from.
-    #[arg(default_value = "https://registry.npmjs.org", long)]
-    registry: Url,
+    #[arg(from_global)]
+    registry: Option<Url>,
+
+    #[clap(from_global)]
+    root: Option<PathBuf>,
+
+    #[clap(from_global)]
+    cache: Option<PathBuf>,
 
     /// Package spec to look up.
     #[arg()]
@@ -28,13 +36,17 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkg = NassunOpts::new()
-            .registry(self.registry)
-            .base_dir(
-                std::env::current_dir()
-                    .into_diagnostic()
-                    .wrap_err("view::nocwd")?,
-            )
+        let mut nassun_opts = NassunOpts::new();
+        if let Some(registry) = self.registry {
+            nassun_opts = nassun_opts.registry(registry);
+        }
+        if let Some(root) = self.root {
+            nassun_opts = nassun_opts.base_dir(root);
+        }
+        if let Some(cache) = dbg!(self.cache) {
+            nassun_opts = nassun_opts.cache(cache);
+        }
+        let pkg = nassun_opts
             .build()
             .resolve(&self.pkg)
             .await?;
