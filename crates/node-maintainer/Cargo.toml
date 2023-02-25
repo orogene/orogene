@@ -23,6 +23,9 @@ tracing = { workspace = true }
 unicase = "2.6.0"
 url = { workspace = true }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+indicatif = { workspace = true }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
 js-sys = { workspace = true }

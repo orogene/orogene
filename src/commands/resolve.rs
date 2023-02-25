@@ -34,6 +34,7 @@ impl OroCommand for ResolveCmd {
         // configs from files.
         let root = self.root.unwrap_or_else(|| PathBuf::from("."));
         let mut nm = NodeMaintainerOptions::new();
+        nm = nm.progress_bar(true);
         if let Some(registry) = self.registry {
             nm = nm.registry(registry);
         }

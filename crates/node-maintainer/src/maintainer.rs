@@ -7,6 +7,8 @@ use std::sync::atomic::{self, AtomicUsize};
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
+#[cfg(not(target_arch = "wasm32"))]
+use indicatif::{ProgressBar, ProgressStyle};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
 use oro_common::CorgiManifest;
 use petgraph::stable_graph::NodeIndex;
@@ -27,11 +29,20 @@ pub struct NodeMaintainerOptions {
     parallelism: usize,
     kdl_lock: Option<Lockfile>,
     npm_lock: Option<Lockfile>,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    progress_bar: bool,
 }
 
 impl NodeMaintainerOptions {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn progress_bar(mut self, progress_bar: bool) -> Self {
+        self.progress_bar = progress_bar;
+        self
     }
 
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
@@ -86,6 +97,8 @@ impl NodeMaintainerOptions {
             nassun,
             graph: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
+            #[cfg(not(target_arch = "wasm32"))]
+            progress_bar: self.progress_bar,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
@@ -105,6 +118,8 @@ impl NodeMaintainerOptions {
             nassun,
             graph: Default::default(),
             parallelism: DEFAULT_PARALLELISM,
+            #[cfg(not(target_arch = "wasm32"))]
+            progress_bar: self.progress_bar,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
@@ -123,6 +138,8 @@ impl Default for NodeMaintainerOptions {
             parallelism: DEFAULT_PARALLELISM,
             kdl_lock: None,
             npm_lock: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            progress_bar: false,
         }
     }
 }
@@ -139,6 +156,8 @@ pub struct NodeMaintainer {
     nassun: Nassun,
     graph: Graph,
     parallelism: usize,
+    #[cfg(not(target_arch = "wasm32"))]
+    progress_bar: bool,
 }
 
 impl NodeMaintainer {
@@ -187,7 +206,22 @@ impl NodeMaintainer {
     }
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        async fn inner(me: &NodeMaintainer, path: &Path) -> Result<(), NodeMaintainerError> {
+        #[cfg(not(target_arch = "wasm32"))]
+        let pb = if self.progress_bar {
+            ProgressBar::new(self.graph.inner.edge_count() as u64).with_style(
+                ProgressStyle::default_bar()
+                    .template("💾 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
+                    .unwrap(),
+            )
+        } else {
+            ProgressBar::hidden()
+        };
+
+        async fn inner(
+            me: &NodeMaintainer,
+            #[cfg(not(target_arch = "wasm32"))] pb: &ProgressBar,
+            path: &Path,
+        ) -> Result<(), NodeMaintainerError> {
             let start = std::time::Instant::now();
             let stream = futures::stream::iter(me.graph.inner.node_indices());
             let concurrent_count = Arc::new(AtomicUsize::new(0));
@@ -222,6 +256,13 @@ impl NodeMaintainer {
                         let dir_clone = target_dir.clone();
                         async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir))
                             .await?;
+
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            pb.inc(1);
+                            pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
+                        };
+
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
@@ -239,9 +280,21 @@ impl NodeMaintainer {
                 total,
                 start.elapsed().as_millis()
             );
+            #[cfg(not(target_arch = "wasm32"))]
+            if me.progress_bar {
+                pb.finish_and_clear();
+                println!("💾 Linked!");
+            }
             Ok(())
         }
-        inner(self, path.as_ref()).await
+        inner(
+            self,
+            #[cfg(not(target_arch = "wasm32"))]
+            &pb,
+            path.as_ref(),
+        )
+        .await?;
+        Ok(())
     }
 
     async fn run_resolver(
@@ -249,6 +302,16 @@ impl NodeMaintainer {
         lockfile: Option<Lockfile>,
     ) -> Result<(), NodeMaintainerError> {
         let start = std::time::Instant::now();
+        #[cfg(not(target_arch = "wasm32"))]
+        let pb = if self.progress_bar {
+            ProgressBar::new(0).with_style(
+                ProgressStyle::default_bar()
+                    .template("🔍 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
+                    .unwrap(),
+            )
+        } else {
+            ProgressBar::hidden()
+        };
 
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
@@ -316,12 +379,25 @@ impl NodeMaintainer {
                         node_idx,
                     };
 
+                    #[cfg(not(target_arch = "wasm32"))]
+                    pb.inc_length(1);
+
                     let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
 
+                    if let Some(child_idx) = Self::satisfy_dependency(&mut self.graph, &dep)? {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            pb.inc(1);
+                            pb.set_message(format!(
+                                "{:?}",
+                                self.graph[child_idx].package.resolved()
+                            ));
+                        };
+                    }
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
                     // make a new edge and move on.
-                    if !Self::satisfy_dependency(&mut self.graph, &dep)? {
+                    else {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
                         if let Some(kdl_lock) = &lockfile {
@@ -336,18 +412,27 @@ impl NodeMaintainer {
                                 .await?
                             {
                                 let target_path = lockfile_node.path.clone();
-                                q.push_back(
-                                    Self::place_child(
-                                        &mut self.graph,
-                                        node_idx,
-                                        package,
-                                        &requested,
-                                        dep_type,
-                                        lockfile_node.into(),
-                                        Some(target_path),
-                                    )
-                                    .await?,
-                                );
+
+                                let child_idx = Self::place_child(
+                                    &mut self.graph,
+                                    node_idx,
+                                    package,
+                                    &requested,
+                                    dep_type,
+                                    lockfile_node.into(),
+                                    Some(target_path),
+                                )
+                                .await?;
+                                q.push_back(child_idx);
+
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    pb.inc(1);
+                                    pb.set_message(format!(
+                                        "{:?}",
+                                        self.graph[child_idx].package.resolved()
+                                    ));
+                                };
                                 continue;
                             }
                         }
@@ -377,23 +462,43 @@ impl NodeMaintainer {
                         let manifest = package.corgi_metadata().await?.manifest;
 
                         for dep in deps {
-                            if Self::satisfy_dependency(&mut self.graph, &dep)? {
+                            if let Some(child_idx) =
+                                Self::satisfy_dependency(&mut self.graph, &dep)?
+                            {
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    pb.inc(1);
+                                    pb.set_message(format!(
+                                        "{:?}",
+                                        self.graph[child_idx].package.resolved()
+                                    ));
+                                };
                                 continue;
                             }
 
                             let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-                            q.push_back(
-                                Self::place_child(
-                                    &mut self.graph,
-                                    dep.node_idx,
-                                    package.clone(),
-                                    &requested,
-                                    dep.dep_type,
-                                    manifest.clone(),
-                                    None,
-                                )
-                                .await?,
-                            );
+
+                            let child_idx = Self::place_child(
+                                &mut self.graph,
+                                dep.node_idx,
+                                package.clone(),
+                                &requested,
+                                dep.dep_type,
+                                manifest.clone(),
+                                None,
+                            )
+                            .await?;
+
+                            q.push_back(child_idx);
+
+                            #[cfg(not(target_arch = "wasm32"))]
+                            if self.progress_bar {
+                                pb.inc(1);
+                                pb.set_message(format!(
+                                    "{:?}",
+                                    self.graph[child_idx].package.resolved()
+                                ));
+                            }
                         }
                     }
                 }
@@ -411,6 +516,12 @@ impl NodeMaintainer {
             }
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            pb.finish_and_clear();
+            println!("🔍 Resolved!");
+        };
+
         tracing::info!(
             "Resolved graph of {} nodes in {}ms",
             self.graph.inner.node_count(),
@@ -422,7 +533,7 @@ impl NodeMaintainer {
     fn satisfy_dependency(
         graph: &mut Graph,
         dep: &NodeDependency,
-    ) -> Result<bool, NodeMaintainerError> {
+    ) -> Result<Option<NodeIndex>, NodeMaintainerError> {
         if let Some(satisfier_idx) = graph.find_by_name(dep.node_idx, &dep.name)? {
             let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
             if graph[satisfier_idx]
@@ -438,11 +549,11 @@ impl NodeMaintainer {
                 graph[dep.node_idx]
                     .dependencies
                     .insert(dep.name.clone(), edge_idx);
-                return Ok(true);
+                return Ok(Some(satisfier_idx));
             }
-            return Ok(false);
+            return Ok(None);
         }
-        Ok(false)
+        Ok(None)
     }
 
     async fn satisfy_from_lockfile(
