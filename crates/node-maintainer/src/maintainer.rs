@@ -210,7 +210,7 @@ impl NodeMaintainer {
         let pb = if self.progress_bar {
             ProgressBar::new(self.graph.inner.edge_count() as u64).with_style(
                 ProgressStyle::default_bar()
-                    .template("💾 {bar:40} [{pos}/{len}] {wide_msg}")
+                    .template("💾 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
                     .unwrap(),
             )
         } else {
@@ -306,7 +306,7 @@ impl NodeMaintainer {
         let pb = if self.progress_bar {
             ProgressBar::new(0).with_style(
                 ProgressStyle::default_bar()
-                    .template("🔍 {bar:40} [{pos}/{len}] {wide_msg}")
+                    .template("🔍 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
                     .unwrap(),
             )
         } else {
