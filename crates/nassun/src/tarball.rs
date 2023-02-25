@@ -7,7 +7,7 @@ use std::task::{Context, Poll};
 
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::io::BufReader;
-use async_tar::Archive;
+use async_tar_wasm::Archive;
 use futures::{AsyncRead, AsyncReadExt, StreamExt};
 use ssri::{Integrity, IntegrityChecker};
 use tempfile::NamedTempFile;

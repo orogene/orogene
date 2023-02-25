@@ -3,12 +3,17 @@ name = "oro-package-spec"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
+description = "NPM package specification parsing and manipulation."
+license = "Apache-2.0"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
 
 [dependencies]
-bytecount = "0.6.0"
+bytecount = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
 nom = { workspace = true }
-percent-encoding = "2.1.0"
+percent-encoding = { workspace = true }
 thiserror = { workspace = true }
 url = { workspace = true }

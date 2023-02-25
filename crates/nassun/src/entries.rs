@@ -2,10 +2,10 @@ use std::{borrow::Cow, pin::Pin, task::Poll};
 
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::{io::BufReader, path::Path};
-use async_tar::{Archive, Entry as TarEntry};
+use async_tar_wasm::{Archive, Entry as TarEntry};
 use futures::{AsyncRead, Stream};
 
-pub use async_tar::Header;
+pub use async_tar_wasm::Header;
 
 use crate::{error::Result, Tarball};
 

@@ -3,12 +3,17 @@ name = "oro-config"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
+description = "Configuration management for Orogene."
+license = "Apache-2.0"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
 
 [dependencies]
-oro-config-derive = { path = "../oro-config-derive" }
+oro-config-derive = { version = "=0.1.0", path = "../oro-config-derive" }
 
 clap = { workspace = true, features = ["derive"] }
-config = { version = "0.13.2", features = ["toml"] }
+config = { workspace = true, features = ["toml"] }
 miette = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }

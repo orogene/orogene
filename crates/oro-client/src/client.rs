@@ -1,15 +1,14 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache};
+use reqwest::Client;
 #[cfg(not(target_arch = "wasm32"))]
-use reqwest::{Client, ClientBuilder};
+use reqwest::ClientBuilder;
+#[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::ClientWithMiddleware;
-#[cfg(target_arch = "wasm32")]
-use reqwest_wasm::Client;
 use url::Url;
 
 #[derive(Clone, Debug)]
@@ -46,6 +45,9 @@ impl OroClientBuilder {
     }
 
     pub fn build(self) -> OroClient {
+        #[cfg(target_arch = "wasm32")]
+        let client_uncached = Client::new();
+
         #[cfg(not(target_arch = "wasm32"))]
         let client_uncached = ClientBuilder::new()
             .user_agent("orogene")
@@ -53,9 +55,6 @@ impl OroClientBuilder {
             .timeout(std::time::Duration::from_secs(10))
             .build()
             .expect("Failed to build HTTP client.");
-
-        #[cfg(target_arch = "wasm32")]
-        let client_uncached = Client::new();
 
         #[cfg(not(target_arch = "wasm32"))]
         let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone());
@@ -75,7 +74,7 @@ impl OroClientBuilder {
             registry: Arc::new(self.registry),
             #[cfg(not(target_arch = "wasm32"))]
             client: client_builder.build(),
-            // wasm client doesn't support extra options.
+            // wasm client is never cached
             #[cfg(target_arch = "wasm32")]
             client: client_uncached.clone(),
             client_uncached,

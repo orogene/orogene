@@ -3,11 +3,16 @@ name = "node-maintainer"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
+description = "NPM dependency tree resolver for Orogene."
+license = "Apache-2.0"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
 
 [dependencies]
-nassun = { path = "../nassun" }
-oro-common = { path = "../oro-common" }
-oro-package-spec = { path = "../oro-package-spec" }
+nassun = { version = "=0.1.0", path = "../nassun" }
+oro-common = { version = "=0.1.0", path = "../oro-common" }
+oro-package-spec = { version = "=0.1.0", path = "../oro-package-spec" }
 
 async-std = { workspace = true }
 futures = { workspace = true }
