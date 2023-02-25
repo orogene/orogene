@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use clap::{ArgMatches, CommandFactory, FromArgMatches as _, Parser, Subcommand};
@@ -84,11 +84,17 @@ impl Orogene {
 
     fn build_config(&self) -> Result<OroConfig> {
         let dirs = ProjectDirs::from("", "", "orogene");
+        let cwd = std::env::current_dir().into_diagnostic()?;
+        let root = if let Some(root) = pkg_root(&cwd) {
+            root
+        } else {
+            &cwd
+        };
 
         let mut cfg_builder = OroConfigOptions::new()
             .set_default("registry", "https://registry.npmjs.org")?
             .set_default("loglevel", "warn")?
-            .set_default("root", ".")?;
+            .set_default("root", &root.to_string_lossy())?;
         if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
             cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy())?;
         }
@@ -96,13 +102,12 @@ impl Orogene {
         let cfg = if let Some(file) = &self.config {
             cfg_builder.global_config_file(Some(file.clone())).load()?
         } else {
-            let cwd = std::env::current_dir().into_diagnostic()?;
             cfg_builder
                 .global_config_file(
                     dirs.as_ref()
                         .map(|d| d.config_dir().to_owned().join("ororc.toml")),
                 )
-                .pkg_root(self.root.clone().or(Some(cwd)))
+                .pkg_root(self.root.clone().or(Some(PathBuf::from(root))))
                 .load()?
         };
 
@@ -119,6 +124,20 @@ impl Orogene {
         tracing::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())
     }
+}
+
+fn pkg_root(start_dir: &Path) -> Option<&Path> {
+    for path in start_dir.ancestors() {
+        let node_modules = path.join("node_modules");
+        let pkg_json = path.join("package.json");
+        if node_modules.is_dir() {
+            return Some(path);
+        }
+        if pkg_json.is_file() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 #[derive(Debug, Subcommand)]

@@ -1993,10 +1993,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-pkg-root"
-version = "0.1.0"
-
-[[package]]
 name = "orogene"
 version = "0.1.0"
 dependencies = [
