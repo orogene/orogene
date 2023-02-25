@@ -1,0 +1,35 @@
+name: Web
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '11 7 * * 1,4'
+
+jobs:
+  web:
+    name: Build and deploy site and docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install oranda
+        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.0.1/oranda-v0.0.1-installer.sh | sh"
+
+      - name: Run oranda
+        run: oranda build
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          branch: gh-pages
+          folder: public
+          token: ${{ secrets.GITHUB_TOKEN }}
+          single-commit: true
