@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicUsize};
 
@@ -325,7 +325,7 @@ impl NodeMaintainer {
         // fetched dependencies. Thus we maintain a mapping from "name@spec" to
         // a vector of `NodeDependency`s. When we will fetch the package - we
         // will apply it to all dependencies that need it.
-        let fetches: HashMap<String, Vec<NodeDependency>> = HashMap::new();
+        let fetches: BTreeMap<String, Vec<NodeDependency>> = BTreeMap::new();
         let fetches = Arc::new(Mutex::new(fetches));
 
         let mut package_stream = package_stream

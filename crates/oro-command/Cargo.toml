@@ -1,9 +1,0 @@
-[package]
-name = "oro-command"
-version = "0.1.0"
-authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2021"
-
-[dependencies]
-async-trait = { workspace = true }
-miette = { workspace = true }

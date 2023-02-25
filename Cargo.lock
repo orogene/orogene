@@ -481,69 +481,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmd-ping"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "miette",
- "oro-client",
- "oro-command",
- "oro-config",
- "serde",
- "serde_json",
- "url",
-]
-
-[[package]]
-name = "cmd-resolve"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "miette",
- "node-maintainer",
- "oro-command",
- "oro-config",
- "url",
-]
-
-[[package]]
-name = "cmd-restore"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "miette",
- "node-maintainer",
- "oro-command",
- "oro-config",
- "url",
-]
-
-[[package]]
-name = "cmd-view"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "chrono-humanize",
- "clap",
- "colored",
- "humansize",
- "miette",
- "nassun",
- "oro-client",
- "oro-command",
- "oro-common",
- "oro-config",
- "serde_json",
- "term_grid",
- "term_size",
- "url",
-]
-
-[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1642,16 +1579,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
-name = "memmap"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6585fd95e7bb50d6cc31e20d4cf9afb4e2ba16c5846fc76793f11218da9c475b"
-dependencies = [
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "memmap2"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1981,14 +1908,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-command"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "miette",
-]
-
-[[package]]
 name = "oro-common"
 version = "0.1.0"
 dependencies = [
@@ -2041,38 +1960,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "oro-pkg-root"
-version = "0.1.0"
-
-[[package]]
-name = "oro-tree"
-version = "0.1.0"
-dependencies = [
- "memmap",
- "node-semver",
- "serde",
- "serde_json",
- "ssri",
- "thiserror",
- "url",
-]
-
-[[package]]
 name = "orogene"
 version = "0.1.0"
 dependencies = [
  "async-std",
  "async-trait",
+ "chrono",
+ "chrono-humanize",
  "clap",
- "cmd-ping",
- "cmd-resolve",
- "cmd-restore",
- "cmd-view",
+ "colored",
  "directories",
  "embed-resource",
+ "humansize",
  "miette",
- "oro-command",
+ "nassun",
+ "node-maintainer",
+ "oro-client",
+ "oro-common",
  "oro-config",
+ "serde",
+ "serde_json",
+ "term_grid",
+ "term_size",
  "tracing",
  "tracing-subscriber",
  "url",

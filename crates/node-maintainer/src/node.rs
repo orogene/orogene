@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use nassun::Package;
 use oro_common::CorgiManifest;
@@ -18,13 +18,13 @@ pub struct Node {
     /// Quick index back to this Node's [`Graph`]'s root Node.
     pub(crate) root: NodeIndex,
     /// Name-indexed map of outgoing [`crate::Edge`]s from this Node.
-    pub(crate) dependencies: HashMap<UniCase<String>, EdgeIndex>,
+    pub(crate) dependencies: BTreeMap<UniCase<String>, EdgeIndex>,
     /// Parent, if any, of this Node in the logical filesystem hierarchy.
     pub(crate) parent: Option<NodeIndex>,
     /// Children of this node in the logical filesystem hierarchy. These are
     /// not necessarily dependencies, and this Node's dependencies may not all
     /// be in this HashMap.
-    pub(crate) children: HashMap<UniCase<String>, NodeIndex>,
+    pub(crate) children: BTreeMap<UniCase<String>, NodeIndex>,
 }
 
 impl Node {
@@ -35,8 +35,8 @@ impl Node {
             idx: NodeIndex::new(0),
             root: NodeIndex::new(0),
             parent: None,
-            children: HashMap::new(),
-            dependencies: HashMap::new(),
+            children: BTreeMap::new(),
+            dependencies: BTreeMap::new(),
         }
     }
 

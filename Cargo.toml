@@ -12,31 +12,35 @@ build = "build.rs"
 rust-version = "1.67.0"
 
 [dependencies]
-# Commands
-cmd-ping = { path = "./commands/cmd-ping" }
-cmd-resolve = { path = "./commands/cmd-resolve" }
-cmd-restore = { path = "./commands/cmd-restore" }
-cmd-view = { path = "./commands/cmd-view" }
-
 # Workspace Deps
-oro-command = { path = "./crates/oro-command" }
+nassun = { path = "./crates/nassun" }
+node-maintainer = { path = "./crates/node-maintainer" }
+oro-client = { path = "./crates/oro-client" }
+oro-common = { path = "./crates/oro-common" }
 oro-config = { path = "./crates/oro-config" }
 
 # Regular deps
 async-std = { workspace = true, features = ["attributes", "tokio1", "unstable"] }
 async-trait = { workspace = true }
+chrono = { workspace = true }
+chrono-humanize = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+colored = { workspace = true }
+humansize = { workspace = true }
 directories = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+term_grid = { workspace = true }
+term_size = { workspace = true }
 tracing = { workspace = true}
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
 url = { workspace = true }
 
 [workspace]
 members = [
     ".",
     "crates/*",
-    "commands/*",
 ]
 
 [workspace.dependencies]
@@ -44,12 +48,15 @@ async-std = "1.12.0"
 async-trait = "0.1.64"
 cacache = "11.1.0"
 chrono = "0.4.23"
+chrono-humanize = "0.0.11"
 clap = "4.1.4"
+colored = "2.0.0"
 console_error_panic_hook = "0.1.7"
 directories = "4.0.1"
 flate2 = "1.0.25"
 futures = "0.3.26"
 indicatif = "0.17.3"
+humansize = "1.1.0"
 js-sys = "0.3.61"
 kdl = "5.0.0-alpha.0"
 maplit = "1.0.2"
@@ -65,8 +72,11 @@ serde-wasm-bindgen = "0.4.5"
 ssri = "8.0.0"
 tar = "0.4.38"
 tempfile = "3.3.0"
+term_grid = "0.1.7"
+term_size = "0.3.2"
 thiserror = "1.0.38"
 tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
 url = "2.3.1"
 wasm-bindgen = "0.2.84"
 wasm-bindgen-futures = "0.4.34"

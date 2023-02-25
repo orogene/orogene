@@ -1,20 +1,29 @@
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use clap::Args;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nassun::NassunOpts;
-use oro_command::OroCommand;
 use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use oro_config::OroConfigLayer;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
+use crate::commands::OroCommand;
+
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct ViewCmd {
     /// Registry to get package data from.
-    #[arg(default_value = "https://registry.npmjs.org", long)]
-    registry: Url,
+    #[arg(from_global)]
+    registry: Option<Url>,
+
+    #[clap(from_global)]
+    root: Option<PathBuf>,
+
+    #[clap(from_global)]
+    cache: Option<PathBuf>,
 
     /// Package spec to look up.
     #[arg()]
@@ -27,16 +36,17 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkg = NassunOpts::new()
-            .registry(self.registry)
-            .base_dir(
-                std::env::current_dir()
-                    .into_diagnostic()
-                    .wrap_err("view::nocwd")?,
-            )
-            .build()
-            .resolve(&self.pkg)
-            .await?;
+        let mut nassun_opts = NassunOpts::new();
+        if let Some(registry) = self.registry {
+            nassun_opts = nassun_opts.registry(registry);
+        }
+        if let Some(root) = self.root {
+            nassun_opts = nassun_opts.base_dir(root);
+        }
+        if let Some(cache) = dbg!(self.cache) {
+            nassun_opts = nassun_opts.cache(cache);
+        }
+        let pkg = nassun_opts.build().resolve(&self.pkg).await?;
         let packument = pkg.packument().await?;
         let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]
