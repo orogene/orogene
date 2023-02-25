@@ -46,10 +46,7 @@ impl OroCommand for ViewCmd {
         if let Some(cache) = dbg!(self.cache) {
             nassun_opts = nassun_opts.cache(cache);
         }
-        let pkg = nassun_opts
-            .build()
-            .resolve(&self.pkg)
-            .await?;
+        let pkg = nassun_opts.build().resolve(&self.pkg).await?;
         let packument = pkg.packument().await?;
         let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]

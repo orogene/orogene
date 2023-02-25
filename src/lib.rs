@@ -9,11 +9,7 @@ use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 use url::Url;
 
 use commands::{
-    OroCommand,
-    ping::PingCmd,
-    resolve::ResolveCmd,
-    restore::RestoreCmd,
-    view::ViewCmd,
+    ping::PingCmd, resolve::ResolveCmd, restore::RestoreCmd, view::ViewCmd, OroCommand,
 };
 
 mod commands;
