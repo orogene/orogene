@@ -1,0 +1,39 @@
+[tasks.changelog]
+workspace = false
+install_crate = "git-cliff"
+command = "git-cliff"
+args = ["--prepend", "CHANGELOG.md", "-u", "--tag", "${@}"]
+
+[tasks.prerelease]
+workspace = false
+dependencies = ["changelog", "readmes"]
+
+[tasks.release]
+workspace = false
+install_crate = "cargo-release"
+command = "cargo"
+args = ["release", "--workspace", "${@}"]
+
+[tasks.readmes]
+workspace = false
+dependencies = ["workspace-readmes", "root-readme"]
+
+[tasks.workspace-readmes]
+workspace = false
+env = { CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = ["."] }
+command = "cargo"
+args = ["make", "workspace-readmes-inner"]
+
+[tasks.workspace-readmes-inner]
+install_crate = "cargo-readme"
+command = "cargo"
+args = ["readme", "-t", "../../WORKSPACE_README.tpl", "-o", "README.md"]
+
+[tasks.root-readme]
+workspace = false
+install_crate = "cargo-readme"
+command = "cargo"
+args = ["readme", "-o", "README.md"]
+
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true

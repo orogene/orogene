@@ -23,12 +23,6 @@ pub enum OroClientError {
         err_loc: (usize, usize),
     },
 
-    #[cfg(target_arch = "wasm32")]
-    #[error(transparent)]
-    #[diagnostic(code(oro_client::request_error))]
-    RequestError(#[from] reqwest_wasm::Error),
-
-    #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     #[diagnostic(code(oro_client::request_error))]
     RequestError(#[from] reqwest::Error),

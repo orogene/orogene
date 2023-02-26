@@ -1,3 +1,5 @@
+//! Derive macro crate for `oro-config`.
+
 use darling::{ast, FromDeriveInput, FromField, ToTokens};
 use proc_macro2::TokenStream;
 use quote::quote;

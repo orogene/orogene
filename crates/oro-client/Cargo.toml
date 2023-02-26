@@ -3,16 +3,19 @@ name = "oro-client"
 version = "0.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
+description = "Generic client for the HTTP NPM api."
+license = "Apache-2.0"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-oro-common = { path = "../oro-common" }
+oro-common = { version = "=0.1.0", path = "../oro-common" }
 
 futures = { workspace = true, features = ["io-compat"] }
-http-cache-reqwest = "0.6.0"
 miette = { workspace = true }
-reqwest-middleware = "0.2.0"
+reqwest = { workspace = true, features = ["json", "gzip", "stream"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -20,10 +23,8 @@ tracing = { workspace = true }
 url = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reqwest = { version = "0.11.12", features = ["json", "gzip", "stream"] }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-reqwest-wasm = { git = "https://github.com/tmpfs/reqwest", branch = "wasm-bytes-stream", features = ["json", "gzip", "stream"], package = "reqwest"}
+http-cache-reqwest = { workspace = true }
+reqwest-middleware = { workspace = true }
 
 [dev-dependencies]
 async-std = { workspace = true, features = ["attributes", "tokio1"] }

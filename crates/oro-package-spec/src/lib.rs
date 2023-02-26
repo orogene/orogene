@@ -1,3 +1,6 @@
+//! NPM package specifier parser. This is the stuff that takes something like
+//! `foo@^1.2.3` and turns it into something meaningful.
+
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;

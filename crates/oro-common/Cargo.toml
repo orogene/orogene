@@ -1,10 +1,16 @@
 [package]
 name = "oro-common"
 version = "0.1.0"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
+description = "Common types and utilities for Orogene."
+license = "Apache-2.0"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
 
 [dependencies]
-derive_builder = "0.11.2"
+derive_builder = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
 nom = { workspace = true }

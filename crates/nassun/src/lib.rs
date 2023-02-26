@@ -1,3 +1,6 @@
+//! An NPM registry-compatible package interface. You can use it for
+//! resolving, fetching metadata for, and downloading individual packages.
+
 use futures::AsyncRead;
 pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 
