@@ -12,7 +12,7 @@ readme = "README.md"
 [dependencies]
 oro-common = { version = "=0.2.0", path = "../oro-common" }
 oro-client = { version = "=0.2.0", path = "../oro-client" }
-oro-package-spec = { version = "=0.1.0", path = "../oro-package-spec" }
+oro-package-spec = { version = "=0.2.0", path = "../oro-package-spec" }
 
 async-compression = { workspace = true, features = ["gzip", "futures-io"] }
 async-std = { workspace = true, features = ["attributes", "unstable"] }
