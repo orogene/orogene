@@ -49,6 +49,7 @@ wasm-bindgen-futures = { workspace = true }
 wasm-streams = { workspace = true }
 
 [lib]
+path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 # Temporary workaround. See https://github.com/rustwasm/wasm-pack/issues/864

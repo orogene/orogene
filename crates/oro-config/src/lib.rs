@@ -1,3 +1,5 @@
+//! Configuration loader for Orogene config files.
+
 use std::path::PathBuf;
 
 pub use clap::ArgMatches;

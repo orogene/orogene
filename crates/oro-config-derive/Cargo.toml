@@ -10,6 +10,7 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [lib]
+path = "src/lib.rs"
 proc-macro = true
 
 [dependencies]

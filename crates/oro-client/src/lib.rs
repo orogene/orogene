@@ -1,3 +1,5 @@
+//! A general-use client for interacting with NPM registry APIs.
+
 mod api;
 mod client;
 mod error;

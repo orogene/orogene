@@ -1,3 +1,6 @@
+//! An NPM dependency resolver for building `node_modules/` trees and
+//! extracting them to their final resting place.
+
 pub use edge::*;
 pub use error::*;
 pub use graph::*;
