@@ -27,7 +27,7 @@ args = ["make", "workspace-readmes-inner"]
 [tasks.workspace-readmes-inner]
 install_crate = "cargo-readme"
 command = "cargo"
-args = ["readme", "-t", "../README.tpl", "-o", "README.md"]
+args = ["readme", "-t", "../../WORKSPACE_README.tpl", "-o", "README.md"]
 
 [tasks.root-readme]
 workspace = false
