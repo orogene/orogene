@@ -10,7 +10,7 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-oro-common = { version = "=0.1.0", path = "../oro-common" }
+oro-common = { version = "=0.2.0", path = "../oro-common" }
 oro-client = { version = "=0.1.0", path = "../oro-client" }
 oro-package-spec = { version = "=0.1.0", path = "../oro-package-spec" }
 
