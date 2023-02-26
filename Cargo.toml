@@ -1,6 +1,6 @@
 [package]
 name = "orogene"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Orogene Maintainers and Contributors"]
 edition = "2021"
 description = "`node_modules/` package manager and utility toolkit."
