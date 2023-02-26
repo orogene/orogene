@@ -15,7 +15,7 @@ rust-version = "1.67.1"
 # Workspace Deps
 nassun = { version = "=0.1.0", path = "./crates/nassun" }
 node-maintainer = { version = "=0.1.0", path = "./crates/node-maintainer" }
-oro-client = { version = "=0.1.0", path = "./crates/oro-client" }
+oro-client = { version = "=0.2.0", path = "./crates/oro-client" }
 oro-common = { version = "=0.2.0", path = "./crates/oro-common" }
 oro-config = { version = "=0.1.0", path = "./crates/oro-config" }
 

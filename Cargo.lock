@@ -1860,7 +1860,7 @@ dependencies = [
 
 [[package]]
 name = "oro-client"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "async-std",
  "futures 0.3.26",
