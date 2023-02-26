@@ -12,10 +12,7 @@ build = "build.rs"
 rust-version = "1.67.1"
 
 [package.metadata.release]
-sign-commit = true
-sign-tag = true
-consolidate-commits = true
-shared-version = true
+tag = true
 
 [dependencies]
 # Workspace Deps

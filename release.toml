@@ -1,0 +1,5 @@
+tag = false
+sign-commit = true
+sign-tag = true
+consolidate-commits = true
+shared-version = true
