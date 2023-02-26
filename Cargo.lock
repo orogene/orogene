@@ -1646,6 +1646,7 @@ dependencies = [
  "async-trait",
  "bincode",
  "cacache",
+ "colored",
  "dashmap",
  "flate2",
  "futures 0.3.26",

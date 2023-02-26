@@ -27,6 +27,7 @@ serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+colored = { workspace = true }
 url = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
