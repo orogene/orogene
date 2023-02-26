@@ -1920,7 +1920,7 @@ dependencies = [
 
 [[package]]
 name = "oro-package-spec"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 dependencies = [
  "bytecount",
  "miette",
