@@ -208,7 +208,7 @@ impl NodeMaintainer {
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         #[cfg(not(target_arch = "wasm32"))]
         let pb = if self.progress_bar {
-            ProgressBar::new(self.graph.inner.edge_count() as u64).with_style(
+            ProgressBar::new(self.graph.inner.node_count() as u64 - 1).with_style(
                 ProgressStyle::default_bar()
                     .template("💾 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
                     .unwrap(),
