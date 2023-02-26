@@ -1,6 +1,6 @@
 [package]
 name = "oro-config"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Configuration management for Orogene."

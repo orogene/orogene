@@ -1896,7 +1896,7 @@ dependencies = [
 
 [[package]]
 name = "oro-config"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 dependencies = [
  "clap",
  "config",
