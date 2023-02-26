@@ -1910,7 +1910,7 @@ dependencies = [
 
 [[package]]
 name = "oro-config-derive"
-version = "0.2.0"
+version = "0.2.1-alpha.0"
 dependencies = [
  "darling 0.10.2",
  "proc-macro2",

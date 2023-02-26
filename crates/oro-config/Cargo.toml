@@ -10,7 +10,7 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-oro-config-derive = { version = "=0.2.0", path = "../oro-config-derive" }
+oro-config-derive = { version = "=0.2.1-alpha.0", path = "../oro-config-derive" }
 
 clap = { workspace = true, features = ["derive"] }
 config = { workspace = true, features = ["toml"] }
