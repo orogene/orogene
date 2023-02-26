@@ -1,6 +1,6 @@
 [package]
 name = "nassun"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "NPM package interface for resolving, fetching metadata, downloading, and extracting individual packages."

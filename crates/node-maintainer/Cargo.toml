@@ -10,7 +10,7 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-nassun = { version = "=0.1.0", path = "../nassun" }
+nassun = { version = "=0.2.0", path = "../nassun" }
 oro-common = { version = "=0.2.0", path = "../oro-common" }
 oro-package-spec = { version = "=0.2.0", path = "../oro-package-spec" }
 
