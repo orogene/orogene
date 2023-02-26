@@ -11,6 +11,12 @@ readme = "README.md"
 build = "build.rs"
 rust-version = "1.67.1"
 
+[package.metadata.release]
+sign-commit = true
+sign-tag = true
+consolidate-commits = true
+shared-version = true
+
 [dependencies]
 # Workspace Deps
 nassun = { version = "=0.2.1-alpha.0", path = "./crates/nassun" }
