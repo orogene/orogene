@@ -1,6 +1,5 @@
 use std::{fmt::Display, path::PathBuf, sync::Arc};
 
-use colored::*;
 use node_semver::{Range as SemVerRange, Version as SemVerVersion};
 use oro_common::CorgiPackument;
 use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
@@ -231,20 +230,6 @@ impl PackageResolver {
                 versions: packument.versions.keys().map(|k| k.to_string()).collect(),
             })
             .and_then(|v| {
-                if let Some(deprecated) = &v.deprecated {
-                    tracing::warn!(
-                        "{} {}@{}: {}",
-                        "deprecated".magenta(),
-                        name,
-                        v.manifest
-                            .version
-                            .as_ref()
-                            .map(|v| v.to_string())
-                            .unwrap_or_else(|| "unknown".into()),
-                        deprecated
-                    );
-                }
-
                 Ok(PackageResolution::Npm {
                     name: name.into(),
                     version: v

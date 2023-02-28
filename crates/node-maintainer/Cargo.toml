@@ -15,6 +15,7 @@ oro-common = { version = "=0.2.2", path = "../oro-common" }
 oro-package-spec = { version = "=0.2.2", path = "../oro-package-spec" }
 
 async-std = { workspace = true }
+colored = { workspace = true }
 futures = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true }
