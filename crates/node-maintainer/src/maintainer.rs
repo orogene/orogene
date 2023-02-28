@@ -6,11 +6,12 @@ use std::sync::atomic::{self, AtomicUsize};
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
+use colored::*;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 #[cfg(not(target_arch = "wasm32"))]
 use indicatif::{ProgressBar, ProgressStyle};
 use nassun::{Nassun, NassunOpts, Package, PackageSpec};
-use oro_common::CorgiManifest;
+use oro_common::{CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -459,7 +460,28 @@ impl NodeMaintainer {
 
                     if let Some(deps) = deps {
                         in_flight -= deps.len();
-                        let manifest = package.corgi_metadata().await?.manifest;
+
+                        let CorgiVersionMetadata {
+                            manifest,
+                            deprecated,
+                            ..
+                        } = &package.corgi_metadata().await?;
+
+                        if let Some(deprecated) = deprecated {
+                            pb.suspend(|| {
+                                tracing::warn!(
+                                    "{} {}@{}: {}",
+                                    "deprecated".magenta(),
+                                    manifest.name.as_ref().unwrap(),
+                                    manifest
+                                        .version
+                                        .as_ref()
+                                        .map(|v| v.to_string())
+                                        .unwrap_or_else(|| "unknown".into()),
+                                    deprecated
+                                );
+                            });
+                        }
 
                         for dep in deps {
                             if let Some(child_idx) =

@@ -74,6 +74,8 @@ pub struct CorgiVersionMetadata {
     pub has_shrinkwrap: Option<bool>,
     #[serde(flatten)]
     pub manifest: CorgiManifest,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deprecated: Option<String>,
 }
 
 /// A manifest for an individual package version.
@@ -111,6 +113,7 @@ impl From<VersionMetadata> for CorgiVersionMetadata {
             dist: value.dist.into(),
             has_shrinkwrap: value.has_shrinkwrap,
             manifest: value.manifest.into(),
+            deprecated: value.deprecated,
         }
     }
 }
