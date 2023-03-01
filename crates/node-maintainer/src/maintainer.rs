@@ -238,8 +238,8 @@ impl NodeMaintainer {
             })
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        #[cfg(not(target_arch = "wasm32"))]
         let pb = if self.progress_bar {
             ProgressBar::new(self.graph.inner.node_count() as u64 - 1).with_style(
                 ProgressStyle::default_bar()
@@ -252,7 +252,7 @@ impl NodeMaintainer {
 
         async fn inner(
             me: &NodeMaintainer,
-            #[cfg(not(target_arch = "wasm32"))] pb: &ProgressBar,
+            pb: &ProgressBar,
             path: &Path,
         ) -> Result<(), NodeMaintainerError> {
             let start = std::time::Instant::now();
@@ -290,11 +290,8 @@ impl NodeMaintainer {
                         async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir))
                             .await?;
 
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            pb.inc(1);
-                            pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
-                        };
+                        pb.inc(1);
+                        pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
 
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
@@ -313,7 +310,6 @@ impl NodeMaintainer {
                 total,
                 start.elapsed().as_millis()
             );
-            #[cfg(not(target_arch = "wasm32"))]
             if me.progress_bar {
                 pb.finish_and_clear();
                 println!("💾 Linked!");
@@ -322,7 +318,6 @@ impl NodeMaintainer {
         }
         inner(
             self,
-            #[cfg(not(target_arch = "wasm32"))]
             &pb,
             path.as_ref(),
         )
