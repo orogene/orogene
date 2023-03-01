@@ -25,6 +25,12 @@ use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 const DEFAULT_PARALLELISM: usize = 50;
 
 #[derive(Debug, Clone)]
+pub struct ModuleInfo {
+    pub package: Package,
+    pub module_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
     parallelism: usize,
@@ -204,6 +210,32 @@ impl NodeMaintainer {
 
     pub fn package_at_path(&self, path: &Path) -> Result<Option<Package>, NodeMaintainerError> {
         self.graph.package_at_path(path)
+    }
+
+    pub fn module_count(&self) -> usize {
+        self.graph.inner.node_count() - 1
+    }
+
+    pub fn iter_modules(&self) -> impl Iterator<Item = ModuleInfo> + '_ {
+        self.graph
+            .inner
+            .node_indices()
+            .filter(|idx| idx != &self.graph.root)
+            .map(|idx| {
+                let node = &self.graph.inner[idx];
+                let module_path = PathBuf::from(
+                    self.graph
+                        .node_path(idx)
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/"),
+                );
+                ModuleInfo {
+                    package: node.package.clone(),
+                    module_path,
+                }
+            })
     }
 
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
