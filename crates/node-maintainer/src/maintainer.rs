@@ -22,7 +22,7 @@ use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
 use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
-const DEFAULT_PARALLELISM: usize = 50;
+const DEFAULT_CONCURRENCY: usize = 50;
 
 #[derive(Debug, Clone)]
 pub struct ModuleInfo {
@@ -33,7 +33,7 @@ pub struct ModuleInfo {
 #[derive(Debug, Clone)]
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
-    parallelism: usize,
+    concurrency: usize,
     kdl_lock: Option<Lockfile>,
     npm_lock: Option<Lockfile>,
 
@@ -57,8 +57,8 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub fn parallelism(mut self, parallelism: usize) -> Self {
-        self.parallelism = parallelism;
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
         self
     }
 
@@ -103,7 +103,7 @@ impl NodeMaintainerOptions {
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            parallelism: DEFAULT_PARALLELISM,
+            concurrency: self.concurrency,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: self.progress_bar,
         };
@@ -124,7 +124,7 @@ impl NodeMaintainerOptions {
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            parallelism: DEFAULT_PARALLELISM,
+            concurrency: self.concurrency,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: self.progress_bar,
         };
@@ -142,7 +142,7 @@ impl Default for NodeMaintainerOptions {
     fn default() -> Self {
         NodeMaintainerOptions {
             nassun_opts: Default::default(),
-            parallelism: DEFAULT_PARALLELISM,
+            concurrency: DEFAULT_CONCURRENCY,
             kdl_lock: None,
             npm_lock: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -162,7 +162,7 @@ struct NodeDependency {
 pub struct NodeMaintainer {
     nassun: Nassun,
     graph: Graph,
-    parallelism: usize,
+    concurrency: usize,
     #[cfg(not(target_arch = "wasm32"))]
     progress_bar: bool,
 }
@@ -263,7 +263,7 @@ impl NodeMaintainer {
             stream
                 .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
                 .try_for_each_concurrent(
-                    me.parallelism,
+                    me.concurrency,
                     move |(child_idx, concurrent_count, total_completed)| async move {
                         if child_idx == me.graph.root {
                             return Ok(());
@@ -383,8 +383,8 @@ impl NodeMaintainer {
             })
             .filter_map(|maybe_spec| maybe_spec)
             .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
-            .buffer_unordered(self.parallelism)
-            .ready_chunks(self.parallelism);
+            .buffer_unordered(self.concurrency)
+            .ready_chunks(self.concurrency);
 
         // Start iterating over the queue. We'll be adding things to it as we find them.
         while !q.is_empty() || in_flight != 0 {
