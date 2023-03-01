@@ -24,6 +24,20 @@ use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
 const DEFAULT_CONCURRENCY: usize = 50;
 
+#[derive(Debug)]
+pub struct ModuleIterator<I>(I);
+
+impl<I> Iterator for ModuleIterator<I>
+where
+    I: Iterator<Item = ModuleInfo>,
+{
+    type Item = ModuleInfo;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ModuleInfo {
     pub package: Package,
@@ -216,8 +230,8 @@ impl NodeMaintainer {
         self.graph.inner.node_count() - 1
     }
 
-    pub fn iter_modules(&self) -> impl Iterator<Item = ModuleInfo> + '_ {
-        self.graph
+    pub fn iter_modules(&self) -> ModuleIterator<impl Iterator<Item = ModuleInfo> + '_> {
+        ModuleIterator(self.graph
             .inner
             .node_indices()
             .filter(|idx| idx != &self.graph.root)
@@ -235,7 +249,7 @@ impl NodeMaintainer {
                     package: node.package.clone(),
                     module_path,
                 }
-            })
+            }))
     }
 
     #[cfg(not(target_arch = "wasm32"))]
