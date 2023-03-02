@@ -231,25 +231,27 @@ impl NodeMaintainer {
     }
 
     pub fn iter_modules(&self) -> ModuleIterator<impl Iterator<Item = ModuleInfo> + '_> {
-        ModuleIterator(self.graph
-            .inner
-            .node_indices()
-            .filter(|idx| idx != &self.graph.root)
-            .map(|idx| {
-                let node = &self.graph.inner[idx];
-                let module_path = PathBuf::from(
-                    self.graph
-                        .node_path(idx)
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<_>>()
-                        .join("/node_modules/"),
-                );
-                ModuleInfo {
-                    package: node.package.clone(),
-                    module_path,
-                }
-            }))
+        ModuleIterator(
+            self.graph
+                .inner
+                .node_indices()
+                .filter(|idx| idx != &self.graph.root)
+                .map(|idx| {
+                    let node = &self.graph.inner[idx];
+                    let module_path = PathBuf::from(
+                        self.graph
+                            .node_path(idx)
+                            .iter()
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>()
+                            .join("/node_modules/"),
+                    );
+                    ModuleInfo {
+                        package: node.package.clone(),
+                        module_path,
+                    }
+                }),
+        )
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -330,12 +332,7 @@ impl NodeMaintainer {
             }
             Ok(())
         }
-        inner(
-            self,
-            &pb,
-            path.as_ref(),
-        )
-        .await?;
+        inner(self, &pb, path.as_ref()).await?;
         Ok(())
     }
 
