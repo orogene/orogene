@@ -43,7 +43,7 @@ impl OroCommand for ViewCmd {
         if let Some(root) = self.root {
             nassun_opts = nassun_opts.base_dir(root);
         }
-        if let Some(cache) = dbg!(self.cache) {
+        if let Some(cache) = self.cache {
             nassun_opts = nassun_opts.cache(cache);
         }
         let pkg = nassun_opts.build().resolve(&self.pkg).await?;
