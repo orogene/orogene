@@ -1,14 +1,21 @@
+use std::io::Read;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use std::time::Duration;
 
 use async_compression::futures::bufread::GzipDecoder;
 use async_std::io::BufReader;
 use async_tar_wasm::Archive;
+#[cfg(not(target_arch = "wasm32"))]
+use backon::{BlockingRetryable, ConstantBuilder};
+use cacache::WriteOpts;
 use futures::{AsyncRead, AsyncReadExt, StreamExt};
+#[cfg(not(target_arch = "wasm32"))]
+use ssri::IntegrityOpts;
 use ssri::{Integrity, IntegrityChecker};
 use tempfile::NamedTempFile;
 
@@ -21,13 +28,15 @@ const MAX_IN_MEMORY_TARBALL_SIZE: usize = 1024 * 1024 * 5;
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
     reader: TarballStream,
+    integrity: Option<Integrity>,
 }
 
 impl Tarball {
     pub(crate) fn new(reader: TarballStream, integrity: Integrity) -> Self {
         Self {
             reader,
-            checker: Some(IntegrityChecker::new(integrity)),
+            checker: Some(IntegrityChecker::new(integrity.clone())),
+            integrity: Some(integrity),
         }
     }
 
@@ -35,6 +44,7 @@ impl Tarball {
         Self {
             reader,
             checker: None,
+            integrity: None,
         }
     }
 
@@ -42,12 +52,24 @@ impl Tarball {
         self.reader
     }
 
-    /// Returns a temporarily downloaded version of the tarball. If the
-    /// tarball is small, it will be loaded into memory, otherwise it will be
-    /// written to a temporary file that will be deleted when the
-    /// [`TempTarball`] is dropped.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn to_temp(self) -> Result<TempTarball> {
+    pub(crate) async fn extract_from_tarball_data(
+        mut self,
+        dir: &Path,
+        cache: Option<&Path>,
+    ) -> Result<Integrity> {
+        let integrity = self.integrity.take();
+        let temp = self.into_temp().await?;
+        let dir = PathBuf::from(dir);
+        let cache = cache.map(PathBuf::from);
+        async_std::task::spawn_blocking(move || {
+            temp.extract_to_dir(&dir, integrity, cache.as_deref())
+        })
+        .await
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn into_temp(self) -> Result<TempTarball> {
         let mut reader = BufReader::new(self);
         let mut buf = [0u8; 1024 * 8];
         let mut vec = Vec::new();
@@ -74,17 +96,24 @@ impl Tarball {
     }
 
     /// A `Stream` of extracted entries from this tarball.
-    pub fn entries(self) -> Result<Entries> {
+    pub(crate) fn entries(self) -> Result<Entries> {
         let decoder = GzipDecoder::new(BufReader::new(self));
         let ar = Archive::new(decoder);
         Ok(Entries(
             ar.clone(),
             Box::new(
                 ar.entries()
-                    .map_err(|e| NassunError::ExtractIoError(e, None))?
+                    .map_err(|e| {
+                        NassunError::ExtractIoError(e, None, "getting archive entries".into())
+                    })?
                     .map(|res| {
-                        res.map(Entry)
-                            .map_err(|e| NassunError::ExtractIoError(e, None))
+                        res.map(Entry).map_err(|e| {
+                            NassunError::ExtractIoError(
+                                e,
+                                None,
+                                "reading entry from archive.".into(),
+                            )
+                        })
                     }),
             ),
         ))
@@ -124,52 +153,153 @@ impl AsyncRead for Tarball {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub enum TempTarball {
+pub(crate) enum TempTarball {
     File(NamedTempFile),
     Memory(std::io::Cursor<Vec<u8>>),
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 impl TempTarball {
-    pub fn extract_to_dir(self, dir: impl AsRef<Path>) -> Result<()> {
-        fn inner(me: TempTarball, dir: &Path) -> Result<()> {
-            let reader = std::io::BufReader::new(me);
-            let gz = std::io::BufReader::new(flate2::read::GzDecoder::new(reader));
-            let mut ar = tar::Archive::new(gz);
-            let files = ar.entries()?;
+    pub(crate) fn extract_to_dir(
+        self,
+        dir: &Path,
+        tarball_integrity: Option<Integrity>,
+        cache: Option<&Path>,
+    ) -> Result<Integrity> {
+        let mut file_index = serde_json::Map::new();
+        let mut drain_buf = [0u8; 1024 * 8];
 
-            std::fs::create_dir_all(dir)
-                .map_err(|e| NassunError::ExtractIoError(e, Some(PathBuf::from(dir))))?;
+        let mut reader = std::io::BufReader::new(self);
+        let mut integrity = IntegrityOpts::new().algorithm(ssri::Algorithm::Sha512);
+        let mut tee_reader = io_tee::TeeReader::new(&mut reader, &mut integrity);
+        let gz = std::io::BufReader::new(flate2::read::GzDecoder::new(&mut tee_reader));
+        let mut ar = tar::Archive::new(gz);
+        let files = ar.entries()?;
 
-            for file in files {
-                let file = file?;
-                let header = file.header();
-                let entry_path = header
-                    .path()
-                    .map_err(|e| NassunError::ExtractIoError(e, None))?;
-                let entry_subpath = strip_one(&entry_path).unwrap_or_else(|| entry_path.as_ref());
-                let path = dir.join(entry_subpath);
-                if let tar::EntryType::Regular = header.entry_type() {
-                    std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| {
-                        NassunError::ExtractIoError(e, Some(path.parent().unwrap().into()))
+        std::fs::create_dir_all(dir).map_err(|e| {
+            NassunError::ExtractIoError(
+                e,
+                Some(PathBuf::from(dir)),
+                "creating destination directory for tarball.".into(),
+            )
+        })?;
+
+        for file in files {
+            let mut file = file?;
+            let header = file.header();
+            let entry_path = header.path().map_err(|e| {
+                NassunError::ExtractIoError(e, None, "reading path from entry header.".into())
+            })?;
+            let entry_subpath = strip_one(&entry_path)
+                .unwrap_or_else(|| entry_path.as_ref())
+                .to_path_buf();
+            let path = dir.join(&entry_subpath);
+            if let tar::EntryType::Regular = header.entry_type() {
+                std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| {
+                    NassunError::ExtractIoError(
+                        e,
+                        Some(path.parent().unwrap().into()),
+                        "creating parent directory for entry.".into(),
+                    )
+                })?;
+
+                if let Some(cache) = cache {
+                    let mut writer = WriteOpts::new()
+                        .open_hash_sync(cache)
+                        .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
+
+                    std::io::copy(&mut file, &mut writer).map_err(|e| {
+                        NassunError::ExtractIoError(
+                            e,
+                            Some(path.clone()),
+                            "copying to cacache + node_modules".into(),
+                        )
                     })?;
 
+                    let sri = writer
+                        .commit()
+                        .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
+
+                    // HACK: This is horrible, but on wsl2 (at least), this
+                    // was sometimes crashing with an ENOENT (?!), which
+                    // really REALLY shouldn't happen. So we just retry a few
+                    // times and hope the problem goes away.
+                    let op = || {
+                        cacache::hard_link_hash_unchecked_sync(cache, &sri, &path)
+                            .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))
+                    };
+                    op.retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
+                        .notify(|err, wait| {
+                            tracing::debug!(
+                                "Error hard linking from cache: {}. Retrying after {}ms",
+                                err,
+                                wait.as_micros() / 1000
+                            )
+                        })
+                        .call()?;
+
+                    file_index.insert(
+                        entry_subpath.to_string_lossy().into(),
+                        sri.to_string().into(),
+                    );
+                } else {
                     let mut writer = std::fs::OpenOptions::new()
                         .write(true)
                         .create_new(true)
                         .open(&path)
-                        .map_err(|e| NassunError::ExtractIoError(e, Some(path.clone())))
+                        .map_err(|e| {
+                            NassunError::ExtractIoError(
+                                e,
+                                Some(path.clone()),
+                                "Opening destination file inside node_modules.".into(),
+                            )
+                        })
                         .map(std::io::BufWriter::new)?;
 
-                    let mut reader = std::io::BufReader::new(file);
-
-                    std::io::copy(&mut reader, &mut writer)
-                        .map_err(|e| NassunError::ExtractIoError(e, Some(path)))?;
+                    std::io::copy(&mut file, &mut writer).map_err(|e| {
+                        NassunError::ExtractIoError(
+                            e,
+                            Some(path),
+                            "Copying file to node_modules destination.".into(),
+                        )
+                    })?;
+                }
+            } else {
+                loop {
+                    let n = file.read(&mut drain_buf).map_err(|e| {
+                        NassunError::ExtractIoError(e, None, "draining file from tarball.".into())
+                    })?;
+                    if n == 0 {
+                        break;
+                    }
                 }
             }
-            Ok(())
         }
-        inner(self, dir.as_ref())
+
+        // Drain the rest of the tarball to make sure we have its full
+        // contents (there can be trailing data);
+        loop {
+            let n = tee_reader.read(&mut drain_buf)?;
+            if n == 0 {
+                break;
+            }
+        }
+
+        let integrity = tarball_integrity.unwrap_or_else(|| integrity.result());
+
+        if let Some(cache) = cache {
+            cacache::index::insert(
+                cache,
+                &tarball_key(&integrity),
+                WriteOpts::new()
+                    // This is just so the index entry is loadable.
+                    .integrity("sha256-deadbeef".parse().unwrap())
+                    .metadata(file_index.into()),
+            )
+            .map_err(|e| NassunError::ExtractCacheError(e, None))?;
+        }
+
+        Ok(integrity)
     }
 }
 
@@ -187,4 +317,8 @@ impl std::io::Read for TempTarball {
 fn strip_one(path: &Path) -> Option<&Path> {
     let mut comps = path.components();
     comps.next().map(|_| comps.as_path())
+}
+
+pub(crate) fn tarball_key(integrity: &Integrity) -> String {
+    format!("nassun::package::{integrity}")
 }

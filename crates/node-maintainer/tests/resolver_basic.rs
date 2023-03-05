@@ -40,7 +40,7 @@ async fn basic_flatten() -> Result<()> {
     "#;
     mocks_from_kdl(&mock_server, mock_data.parse()?).await;
     let nm = NodeMaintainer::builder()
-        .concurrency(1)
+        .parallelism(1)
         .registry(mock_server.uri().parse().into_diagnostic()?)
         .resolve_spec("a@^1")
         .await?;
@@ -116,7 +116,7 @@ async fn nesting_simple_conflict() -> Result<()> {
     "#;
     mocks_from_kdl(&mock_server, mock_data.parse()?).await;
     let nm = NodeMaintainer::builder()
-        .concurrency(1)
+        .parallelism(1)
         .registry(mock_server.uri().parse().into_diagnostic()?)
         .resolve_spec("a@^1")
         .await?;
@@ -198,7 +198,7 @@ async fn nesting_sibling_conflict() -> Result<()> {
     "#;
     mocks_from_kdl(&mock_server, mock_data.parse()?).await;
     let nm = NodeMaintainer::builder()
-        .concurrency(1)
+        .parallelism(1)
         .registry(mock_server.uri().parse().into_diagnostic()?)
         .resolve_spec("a@^1")
         .await?;

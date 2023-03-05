@@ -65,12 +65,16 @@ impl NassunOpts {
             .cloned()
             .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
         let mut client_builder = OroClient::builder().registry(registry);
-        if let Some(cache) = self.cache {
-            client_builder = client_builder.cache(cache);
-        }
+        let cache = if let Some(cache) = self.cache {
+            client_builder = client_builder.cache(cache.clone());
+            Arc::new(Some(cache))
+        } else {
+            Arc::new(None)
+        };
         let client = client_builder.build();
         Nassun {
-            // cache: self.cache,
+            #[cfg(not(target_arch = "wasm32"))]
+            cache,
             resolver: PackageResolver {
                 #[cfg(target_arch = "wasm32")]
                 base_dir: PathBuf::from("."),
@@ -96,7 +100,7 @@ impl NassunOpts {
 /// Toplevel client for making package requests.
 #[derive(Clone)]
 pub struct Nassun {
-    // cache: Option<PathBuf>,
+    cache: Arc<Option<PathBuf>>,
     resolver: PackageResolver,
     npm_fetcher: Arc<dyn PackageFetcher>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -194,7 +198,9 @@ impl Nassun {
         let spec = spec.as_ref().parse()?;
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, &self.resolver.base_dir).await?;
-        self.resolver.resolve(name, spec, fetcher).await
+        self.resolver
+            .resolve(name, spec, fetcher, self.cache.clone())
+            .await
     }
 
     /// Resolves a package directly from a previously-calculated
@@ -208,7 +214,8 @@ impl Nassun {
         resolved: PackageResolution,
     ) -> Package {
         let fetcher = self.pick_fetcher(&from);
-        self.resolver.resolve_from(name, from, resolved, fetcher)
+        self.resolver
+            .resolve_from(name, from, resolved, fetcher, self.cache.clone())
     }
 
     /// Creates a "resolved" package from a plain [`oro_common::Manifest`].
@@ -216,6 +223,7 @@ impl Nassun {
     /// projects.
     pub fn dummy_from_manifest(manifest: CorgiManifest) -> Package {
         Package {
+            cache: Arc::new(None),
             from: PackageSpec::Dir {
                 path: PathBuf::from("."),
             },
