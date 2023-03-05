@@ -22,32 +22,12 @@ use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
 use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
-const DEFAULT_CONCURRENCY: usize = 50;
-
-#[derive(Debug)]
-pub struct ModuleIterator<I>(I);
-
-impl<I> Iterator for ModuleIterator<I>
-where
-    I: Iterator<Item = ModuleInfo>,
-{
-    type Item = ModuleInfo;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ModuleInfo {
-    pub package: Package,
-    pub module_path: PathBuf,
-}
+const DEFAULT_PARALLELISM: usize = 50;
 
 #[derive(Debug, Clone)]
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
-    concurrency: usize,
+    parallelism: usize,
     kdl_lock: Option<Lockfile>,
     npm_lock: Option<Lockfile>,
 
@@ -71,8 +51,8 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+    pub fn parallelism(mut self, parallelism: usize) -> Self {
+        self.parallelism = parallelism;
         self
     }
 
@@ -117,7 +97,7 @@ impl NodeMaintainerOptions {
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            concurrency: self.concurrency,
+            parallelism: DEFAULT_PARALLELISM,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: self.progress_bar,
         };
@@ -138,7 +118,7 @@ impl NodeMaintainerOptions {
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            concurrency: self.concurrency,
+            parallelism: DEFAULT_PARALLELISM,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: self.progress_bar,
         };
@@ -156,7 +136,7 @@ impl Default for NodeMaintainerOptions {
     fn default() -> Self {
         NodeMaintainerOptions {
             nassun_opts: Default::default(),
-            concurrency: DEFAULT_CONCURRENCY,
+            parallelism: DEFAULT_PARALLELISM,
             kdl_lock: None,
             npm_lock: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -176,7 +156,7 @@ struct NodeDependency {
 pub struct NodeMaintainer {
     nassun: Nassun,
     graph: Graph,
-    concurrency: usize,
+    parallelism: usize,
     #[cfg(not(target_arch = "wasm32"))]
     progress_bar: bool,
 }
@@ -226,36 +206,8 @@ impl NodeMaintainer {
         self.graph.package_at_path(path)
     }
 
-    pub fn module_count(&self) -> usize {
-        self.graph.inner.node_count() - 1
-    }
-
-    pub fn iter_modules(&self) -> ModuleIterator<impl Iterator<Item = ModuleInfo> + '_> {
-        ModuleIterator(
-            self.graph
-                .inner
-                .node_indices()
-                .filter(|idx| idx != &self.graph.root)
-                .map(|idx| {
-                    let node = &self.graph.inner[idx];
-                    let module_path = PathBuf::from(
-                        self.graph
-                            .node_path(idx)
-                            .iter()
-                            .map(|x| x.to_string())
-                            .collect::<Vec<_>>()
-                            .join("/node_modules/"),
-                    );
-                    ModuleInfo {
-                        package: node.package.clone(),
-                        module_path,
-                    }
-                }),
-        )
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+        #[cfg(not(target_arch = "wasm32"))]
         let pb = if self.progress_bar {
             ProgressBar::new(self.graph.inner.node_count() as u64 - 1).with_style(
                 ProgressStyle::default_bar()
@@ -268,7 +220,7 @@ impl NodeMaintainer {
 
         async fn inner(
             me: &NodeMaintainer,
-            pb: &ProgressBar,
+            #[cfg(not(target_arch = "wasm32"))] pb: &ProgressBar,
             path: &Path,
         ) -> Result<(), NodeMaintainerError> {
             let start = std::time::Instant::now();
@@ -279,7 +231,7 @@ impl NodeMaintainer {
             stream
                 .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
                 .try_for_each_concurrent(
-                    me.concurrency,
+                    me.parallelism,
                     move |(child_idx, concurrent_count, total_completed)| async move {
                         if child_idx == me.graph.root {
                             return Ok(());
@@ -296,23 +248,22 @@ impl NodeMaintainer {
                         );
 
                         let start = std::time::Instant::now();
-                        let temp = me.graph[child_idx]
+
+                        me.graph[child_idx]
                             .package
-                            .tarball()
-                            .await?
-                            .to_temp()
-                            .await?;
-                        let dir_clone = target_dir.clone();
-                        async_std::task::spawn_blocking(move || temp.extract_to_dir(&target_dir))
+                            .extract_to_dir(&target_dir)
                             .await?;
 
-                        pb.inc(1);
-                        pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            pb.inc(1);
+                            pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
+                        };
 
                         tracing::debug!(
                             "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
                             me.graph[child_idx].package.name(),
-                            dir_clone.display(),
+                            target_dir.display(),
                             start.elapsed().as_millis(),
                             total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
                             concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
@@ -326,13 +277,20 @@ impl NodeMaintainer {
                 total,
                 start.elapsed().as_millis()
             );
+            #[cfg(not(target_arch = "wasm32"))]
             if me.progress_bar {
                 pb.finish_and_clear();
                 println!("💾 Linked!");
             }
             Ok(())
         }
-        inner(self, &pb, path.as_ref()).await?;
+        inner(
+            self,
+            #[cfg(not(target_arch = "wasm32"))]
+            &pb,
+            path.as_ref(),
+        )
+        .await?;
         Ok(())
     }
 
@@ -389,8 +347,8 @@ impl NodeMaintainer {
             })
             .filter_map(|maybe_spec| maybe_spec)
             .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
-            .buffer_unordered(self.concurrency)
-            .ready_chunks(self.concurrency);
+            .buffer_unordered(self.parallelism)
+            .ready_chunks(self.parallelism);
 
         // Start iterating over the queue. We'll be adding things to it as we find them.
         while !q.is_empty() || in_flight != 0 {

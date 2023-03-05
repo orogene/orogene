@@ -24,10 +24,7 @@ impl OroClient {
                 .bytes_stream()
                 .map(|r| match r {
                     Ok(bytes) => Ok(bytes),
-                    Err(_) => Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Error reading bytes",
-                    )),
+                    Err(err) => Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
                 })
                 .into_async_read(),
         ))

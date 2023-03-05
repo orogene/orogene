@@ -52,7 +52,7 @@ impl OroClientBuilder {
         let client_uncached = ClientBuilder::new()
             .user_agent("orogene")
             .pool_max_idle_per_host(20)
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(60 * 5))
             .build()
             .expect("Failed to build HTTP client.");
 

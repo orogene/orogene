@@ -1,5 +1,5 @@
 use std::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
@@ -7,7 +7,7 @@ use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 
 use crate::entries::Entries;
-use crate::error::Result;
+use crate::error::{NassunError, Result};
 use crate::fetch::PackageFetcher;
 use crate::resolver::PackageResolution;
 use crate::tarball::Tarball;
@@ -21,6 +21,7 @@ pub struct Package {
     pub(crate) resolved: PackageResolution,
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
     pub(crate) base_dir: PathBuf,
+    pub(crate) cache: Arc<Option<PathBuf>>,
 }
 
 impl Package {
@@ -79,12 +80,8 @@ impl Package {
     /// returned in case of integrity validation failure.
     pub async fn tarball(&self) -> Result<Tarball> {
         let data = self.fetcher.tarball(self).await?;
-        if let Some(integrity) = self.corgi_metadata().await?.dist.integrity {
-            if let Ok(integrity) = integrity.parse::<Integrity>() {
-                Ok(Tarball::new(data, integrity))
-            } else {
-                self.tarball_unchecked().await
-            }
+        if let Some(integrity) = self.resolved.integrity() {
+            Ok(Tarball::new(data, integrity.clone()))
         } else {
             self.tarball_unchecked().await
         }
@@ -118,6 +115,129 @@ impl Package {
     /// [`Integrity`]. See [`Package::tarball_checked`] for more information.
     pub async fn entries_checked(&self, integrity: Integrity) -> Result<Entries> {
         self.tarball_checked(integrity).await?.entries()
+    }
+
+    /// Extract tarball to a directory, optionally caching its contents. The
+    /// tarball stream will have its integrity validated based on package
+    /// metadata. See [`Package::tarball`] for more information.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn extract_to_dir(&self, dir: impl AsRef<Path>) -> Result<Integrity> {
+        async fn inner(me: &Package, dir: &Path) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, me.resolved.integrity()).await
+        }
+        inner(self, dir.as_ref()).await
+    }
+
+    /// Extract tarball to a directory, optionally caching its contents. The
+    /// tarball stream will NOT have its integrity validated. See
+    /// [`Package::tarball_unchecked`] for more information.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn extract_to_dir_unchecked(&self, dir: impl AsRef<Path>) -> Result<Integrity> {
+        async fn inner(me: &Package, dir: &Path) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, None).await
+        }
+        inner(self, dir.as_ref()).await
+    }
+
+    /// Extract tarball to a directory, optionally caching its contents. The
+    /// tarball stream will have its integrity validated based on
+    /// [`Integrity`]. See [`Package::tarball_checked`] for more information.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn extract_to_dir_checked(
+        &self,
+        dir: impl AsRef<Path>,
+        sri: Integrity,
+    ) -> Result<Integrity> {
+        async fn inner(me: &Package, dir: &Path, sri: Integrity) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, Some(&sri)).await
+        }
+        inner(self, dir.as_ref(), sri).await
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn extract_to_dir_inner(
+        &self,
+        dir: &Path,
+        integrity: Option<&Integrity>,
+    ) -> Result<Integrity> {
+        if let Some(sri) = integrity {
+            if let Some(cache) = self.cache.as_deref() {
+                if let Some(entry) = cacache::index::find(cache, &crate::tarball::tarball_key(sri))
+                    .map_err(|e| NassunError::ExtractCacheError(e, None))?
+                {
+                    let sri = sri.clone();
+                    // If extracting from the cache failed for some reason
+                    // (bad data, etc), then go ahead and do a network
+                    // extract.
+                    match self.extract_from_cache(dir, cache, entry).await {
+                        Ok(_) => return Ok(sri),
+                        Err(e) => {
+                            tracing::debug!("extract_from_cache failed: {}", e);
+                            return self
+                                .tarball_checked(sri)
+                                .await?
+                                .extract_from_tarball_data(dir, self.cache.as_deref())
+                                .await;
+                        }
+                    }
+                } else {
+                    return self
+                        .tarball_checked(sri.clone())
+                        .await?
+                        .extract_from_tarball_data(dir, self.cache.as_deref())
+                        .await;
+                }
+            }
+            self.tarball_checked(sri.clone())
+                .await?
+                .extract_from_tarball_data(dir, self.cache.as_deref())
+                .await
+        } else {
+            self.tarball_unchecked()
+                .await?
+                .extract_from_tarball_data(dir, self.cache.as_deref())
+                .await
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn extract_from_cache(
+        &self,
+        dir: &Path,
+        cache: &Path,
+        entry: cacache::Metadata,
+    ) -> Result<()> {
+        let dir = PathBuf::from(dir);
+        let cache = PathBuf::from(cache);
+        async_std::task::spawn_blocking(move || {
+            let mut created = std::collections::HashSet::new();
+            let map = entry
+                .metadata
+                .as_object()
+                .expect("how is this not an object?");
+            for (path, sri) in map {
+                let sri: Integrity = sri.as_str().expect("how is this not a string?").parse()?;
+                let path = dir.join(path);
+                let parent = PathBuf::from(path.parent().expect("this will always have a parent"));
+                if !created.contains(&parent) {
+                    std::fs::create_dir_all(path.parent().expect("this will always have a parent"))
+                        .map_err(|e| {
+                            NassunError::ExtractIoError(
+                                e,
+                                Some(PathBuf::from(path.parent().unwrap())),
+                                "creating destination directory for tarball.".into(),
+                            )
+                        })?;
+                    created.insert(parent);
+                }
+
+                cacache::hard_link_hash_unchecked_sync(&cache, &sri, &path)
+                    .map_err(move |e| NassunError::ExtractCacheError(e, Some(path)))?;
+            }
+            Ok::<_, NassunError>(())
+        })
+        .await?;
+        Ok(())
     }
 }
 

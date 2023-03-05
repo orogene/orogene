@@ -27,6 +27,16 @@ pub enum PackageResolution {
     },
 }
 
+impl PackageResolution {
+    pub fn integrity(&self) -> Option<&Integrity> {
+        use PackageResolution::*;
+        match self {
+            Npm { integrity, .. } => integrity.as_ref(),
+            Dir { .. } => None,
+            Git { .. } => None,
+        }
+    }
+}
 impl Display for PackageResolution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use PackageResolution::*;
@@ -98,12 +108,14 @@ impl PackageResolver {
         from: PackageSpec,
         resolved: PackageResolution,
         fetcher: Arc<dyn PackageFetcher>,
+        cache: Arc<Option<PathBuf>>,
     ) -> Package {
         Package {
             name,
             from,
             resolved,
             fetcher,
+            cache,
             base_dir: self.base_dir.clone(),
         }
     }
@@ -113,6 +125,7 @@ impl PackageResolver {
         name: String,
         wanted: PackageSpec,
         fetcher: Arc<dyn PackageFetcher>,
+        cache: Arc<Option<PathBuf>>,
     ) -> Result<Package, NassunError> {
         let packument = fetcher.corgi_packument(&wanted, &self.base_dir).await?;
         let resolved = self.get_resolution(&name, &wanted, &packument)?;
@@ -122,6 +135,7 @@ impl PackageResolver {
             resolved,
             fetcher,
             base_dir: self.base_dir.clone(),
+            cache,
         })
     }
 
@@ -246,7 +260,18 @@ impl PackageResolver {
                             Box::new(v.clone()),
                         ));
                     },
-                    integrity: v.dist.integrity.as_ref().map(|i| i.parse()).transpose()?,
+                    integrity: v
+                        .dist
+                        .integrity
+                        .as_ref()
+                        .map(|i| i.parse())
+                        .or_else(|| {
+                            v.dist
+                                .shasum
+                                .as_ref()
+                                .map(|s| format!("sha1-{}", s).parse())
+                        })
+                        .transpose()?,
                 })
             })
     }
