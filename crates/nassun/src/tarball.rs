@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, Seek};
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 #[cfg(not(target_arch = "wasm32"))]
@@ -185,13 +185,15 @@ pub(crate) enum TempTarball {
 #[cfg(not(target_arch = "wasm32"))]
 impl TempTarball {
     pub(crate) fn extract_to_dir(
-        self,
+        mut self,
         dir: &Path,
         tarball_integrity: Option<Integrity>,
         cache: Option<&Path>,
     ) -> Result<Integrity> {
         let mut file_index = serde_json::Map::new();
         let mut drain_buf = [0u8; 1024 * 8];
+
+        self.rewind()?;
 
         let mut reader = std::io::BufReader::new(self);
         let mut integrity = IntegrityOpts::new().algorithm(ssri::Algorithm::Sha512);
@@ -212,7 +214,7 @@ impl TempTarball {
 
         for file in files {
             let mut file = file.map_err(|e| {
-                NassunError::ExtractIoError(e, None, "reading entry from tarball".into())
+                NassunError::ExtractIoError(e, Some(PathBuf::from(dir)), "reading entry from tarball".into())
             })?;
             let header = file.header();
             let entry_path = header.path().map_err(|e| {
@@ -339,6 +341,16 @@ impl std::io::Read for TempTarball {
         match self {
             TempTarball::File(f) => f.read(buf),
             TempTarball::Memory(m) => m.read(buf),
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl std::io::Seek for TempTarball {
+    fn seek(&mut self, pos: std::io::SeekFrom) -> std::io::Result<u64> {
+        match self {
+            TempTarball::File(f) => f.seek(pos),
+            TempTarball::Memory(m) => m.seek(pos),
         }
     }
 }
