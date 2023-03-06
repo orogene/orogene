@@ -1,4 +1,12 @@
 # Orogene Release Changelog
+
+<a name="0.3.4"></a>
+## 0.3.4 (2023-03-06)
+
+### Bug Fixes
+
+* **error:** make IoErrors during extraction less vague ([318fd2d2](https://github.com/orogene/orogene/commit/318fd2d288353f22c18fddd8cfa8e9433acc1eb3))
+
 <a name="0.3.3"></a>
 ## 0.3.3 (2023-03-06)
 
