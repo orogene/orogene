@@ -1,6 +1,6 @@
-use std::io::{Read, Seek};
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
+use std::io::{Read, Seek};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -214,7 +214,11 @@ impl TempTarball {
 
         for file in files {
             let mut file = file.map_err(|e| {
-                NassunError::ExtractIoError(e, Some(PathBuf::from(dir)), "reading entry from tarball".into())
+                NassunError::ExtractIoError(
+                    e,
+                    Some(PathBuf::from(dir)),
+                    "reading entry from tarball".into(),
+                )
             })?;
             let header = file.header();
             let entry_path = header.path().map_err(|e| {
