@@ -1,6 +1,6 @@
 # Orogene Release Changelog
-<a name="0.3.0"></a>
-## 0.3.0 (2023-03-06)
+<a name="0.3.3"></a>
+## 0.3.3 (2023-03-06)
 
 ### Bug Fixes
 
