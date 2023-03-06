@@ -74,20 +74,44 @@ impl Tarball {
         let mut buf = [0u8; 1024 * 8];
         let mut vec = Vec::new();
         loop {
-            let n = reader.read(&mut buf).await?;
+            let n = reader.read(&mut buf).await.map_err(|e| {
+                NassunError::ExtractIoError(e, None, "reading from tarball stream".into())
+            })?;
             if n == 0 {
                 break;
             }
             if vec.len() + n > MAX_IN_MEMORY_TARBALL_SIZE {
-                let mut tempfile = tempfile::NamedTempFile::new()?;
-                tempfile.write_all(&vec)?;
-                tempfile.write_all(&buf[..n])?;
+                let mut tempfile = tempfile::NamedTempFile::new().map_err(|e| {
+                    NassunError::ExtractIoError(e, None, "creating tarball temp file.".into())
+                })?;
+                tempfile.write_all(&vec).map_err(|e| {
+                    NassunError::ExtractIoError(
+                        e,
+                        None,
+                        "writing tarball contents to temp file".into(),
+                    )
+                })?;
+                tempfile.write_all(&buf[..n]).map_err(|e| {
+                    NassunError::ExtractIoError(
+                        e,
+                        None,
+                        "writing tarball contents to temp file".into(),
+                    )
+                })?;
                 loop {
-                    let n = reader.read(&mut buf).await?;
+                    let n = reader.read(&mut buf).await.map_err(|e| {
+                        NassunError::ExtractIoError(e, None, "reading from tarball stream".into())
+                    })?;
                     if n == 0 {
                         return Ok(TempTarball::File(tempfile));
                     }
-                    tempfile.write_all(&buf[..n])?;
+                    tempfile.write_all(&buf[..n]).map_err(|e| {
+                        NassunError::ExtractIoError(
+                            e,
+                            None,
+                            "writing tarball contents to temp file".into(),
+                        )
+                    })?;
                 }
             }
             vec.extend_from_slice(&buf[..n]);
@@ -174,7 +198,9 @@ impl TempTarball {
         let mut tee_reader = io_tee::TeeReader::new(&mut reader, &mut integrity);
         let gz = std::io::BufReader::new(flate2::read::GzDecoder::new(&mut tee_reader));
         let mut ar = tar::Archive::new(gz);
-        let files = ar.entries()?;
+        let files = ar.entries().map_err(|e| {
+            NassunError::ExtractIoError(e, None, "getting tarball entries iterator".into())
+        })?;
 
         std::fs::create_dir_all(dir).map_err(|e| {
             NassunError::ExtractIoError(
@@ -185,7 +211,9 @@ impl TempTarball {
         })?;
 
         for file in files {
-            let mut file = file?;
+            let mut file = file.map_err(|e| {
+                NassunError::ExtractIoError(e, None, "reading entry from tarball".into())
+            })?;
             let header = file.header();
             let entry_path = header.path().map_err(|e| {
                 NassunError::ExtractIoError(e, None, "reading path from entry header.".into())
@@ -279,7 +307,9 @@ impl TempTarball {
         // Drain the rest of the tarball to make sure we have its full
         // contents (there can be trailing data);
         loop {
-            let n = tee_reader.read(&mut drain_buf)?;
+            let n = tee_reader.read(&mut drain_buf).map_err(|e| {
+                NassunError::ExtractIoError(e, None, "flushing out the rest of the tarball".into())
+            })?;
             if n == 0 {
                 break;
             }
