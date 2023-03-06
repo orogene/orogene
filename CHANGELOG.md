@@ -1,5 +1,14 @@
 # Orogene Release Changelog
 
+<a name="0.3.5"></a>
+## 0.3.5 (2023-03-06)
+
+### Bug Fixes
+
+* **tests:** remove debug leftover (#190) ([45ab7738](https://github.com/orogene/orogene/commit/45ab7738c8c0d7c4c223e29aa69bc717faea5f4c))
+* **extract:** need to rewind NamedTempFile before extraction ([eb8c0af5](https://github.com/orogene/orogene/commit/eb8c0af5222efb88e236c9d68b720f1a3a42ada4))
+
+
 <a name="0.3.4"></a>
 ## 0.3.4 (2023-03-06)
 
