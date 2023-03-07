@@ -1,5 +1,15 @@
 # Orogene Release Changelog
 
+<a name="0.3.7"></a>
+## 0.3.7 (2023-03-07)
+
+This release is also the first one to include a prebuilt macOS arm64/m1 binary.
+
+### Features
+
+* **log:** write verbose trace to a separate debug logfile ([62df490e](https://github.com/orogene/orogene/commit/62df490e33bf4c68d1a57b5ba345c2fadbc783ac))
+
+
 <a name="0.3.6"></a>
 ## 0.3.6 (2023-03-07)
 
