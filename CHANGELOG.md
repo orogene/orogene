@@ -1,5 +1,13 @@
 # Orogene Release Changelog
 
+<a name="0.3.6"></a>
+## 0.3.6 (2023-03-07)
+
+### Features
+
+* **cow:** prefer CoW on systems that support it. Also, fall back to copy when hard links fail. ([0e29632a](https://github.com/orogene/orogene/commit/0e29632a84fe21c83dc32ad7111bbef78f2789f0))
+
+
 <a name="0.3.5"></a>
 ## 0.3.5 (2023-03-06)
 
