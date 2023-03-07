@@ -101,7 +101,13 @@ use clap::{ArgMatches, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
-use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::{
+    filter::{Directive, LevelFilter, Targets},
+    fmt,
+    prelude::*,
+    EnvFilter,
+};
 use url::Url;
 
 use commands::{
@@ -109,6 +115,8 @@ use commands::{
 };
 
 mod commands;
+
+const MAX_RETAINED_LOGS: usize = 5;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -158,24 +166,59 @@ pub struct Orogene {
 }
 
 impl Orogene {
-    fn setup_logging(&self) -> Result<()> {
-        tracing_subscriber::registry()
-            .with(fmt::layer())
-            .with(
-                EnvFilter::builder()
-                    .with_default_directive(if self.quiet {
-                        LevelFilter::OFF.into()
-                    } else {
-                        self.loglevel
-                            .clone()
-                            .unwrap_or_else(|| "warn".to_owned())
-                            .parse()
-                            .into_diagnostic()?
-                    })
-                    .from_env_lossy(),
-            )
-            .init();
-        Ok(())
+    fn setup_logging(&self) -> Result<Option<WorkerGuard>> {
+        let builder = EnvFilter::builder();
+        let filter = if self.quiet {
+            builder
+                .with_default_directive(LevelFilter::OFF.into())
+                .from_env_lossy()
+        } else {
+            let dir_str = self.loglevel.clone().unwrap_or_else(|| "warn".to_owned());
+            let directives = dir_str
+                .split(',')
+                .filter(|s| !s.is_empty())
+                .filter_map(|s| {
+                    let dir: Result<Directive, _> = s.parse();
+                    match dir {
+                        Ok(dir) => Some(dir),
+                        Err(_) => None,
+                    }
+                });
+            let mut filter = builder.from_env_lossy();
+            for directive in directives {
+                filter = filter.add_directive(directive);
+            }
+            filter
+        };
+
+        let builder = tracing_subscriber::registry().with(fmt::layer().with_filter(filter));
+
+        if let Some(cache) = self.cache.as_deref() {
+            let targets = Targets::new()
+                .with_target("hyper", LevelFilter::WARN)
+                .with_target("reqwest", LevelFilter::WARN)
+                .with_target("tokio_util", LevelFilter::WARN)
+                .with_target("async_io", LevelFilter::WARN)
+                .with_target("want", LevelFilter::WARN)
+                .with_target("async_std", LevelFilter::WARN)
+                .with_target("mio", LevelFilter::WARN)
+                .with_default(LevelFilter::TRACE);
+
+            clean_old_logs(cache)?;
+
+            let file_appender =
+                tracing_appender::rolling::never(cache.join("_logs"), log_file_name());
+            let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+            builder
+                .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                .init();
+
+            Ok(Some(guard))
+        } else {
+            builder.init();
+            Ok(None)
+        }
     }
 
     fn build_config(&self) -> Result<OroConfig> {
@@ -199,10 +242,7 @@ impl Orogene {
             cfg_builder.global_config_file(Some(file.clone())).load()?
         } else {
             cfg_builder
-                .global_config_file(
-                    dirs.as_ref()
-                        .map(|d| d.config_dir().to_owned().join("ororc.toml")),
-                )
+                .global_config_file(dirs.map(|d| d.config_dir().to_owned().join("ororc.toml")))
                 .pkg_root(self.root.clone().or(Some(PathBuf::from(root))))
                 .load()?
         };
@@ -214,8 +254,9 @@ impl Orogene {
         let start = std::time::Instant::now();
         let matches = Orogene::command().get_matches();
         let mut oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
-        oro.layer_config(&matches, &oro.build_config()?)?;
-        oro.setup_logging()?;
+        let config = oro.build_config()?;
+        oro.layer_config(&matches, &config)?;
+        let _guard = oro.setup_logging()?;
         oro.execute().await?;
         tracing::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())
@@ -236,6 +277,43 @@ fn pkg_root(start_dir: &Path) -> Option<&Path> {
     None
 }
 
+fn log_file_name() -> PathBuf {
+    let now = chrono::Local::now();
+    let prefix = format!("oro-debug-{}", now.format("%Y-%m-%d-%H-%M-%S%.3f"));
+    for i in 0.. {
+        let name = PathBuf::from(format!("{}-{}.log", prefix, i));
+        if !name.exists() {
+            return name;
+        }
+    }
+    PathBuf::from(format!("{}-0.log", prefix))
+}
+
+fn clean_old_logs(cache: &Path) -> Result<()> {
+    if let Ok(readdir) = cache.join("_logs").read_dir() {
+        let mut logs = readdir.filter_map(|e| e.ok()).collect::<Vec<_>>();
+        logs.sort_by_key(|e| e.file_name());
+        while logs.len() >= MAX_RETAINED_LOGS {
+            let log = logs.remove(0);
+            std::fs::remove_file(log.path()).into_diagnostic()?;
+        }
+    }
+    Ok(())
+}
+
+fn log_command_line() {
+    let mut args = std::env::args();
+    let mut cmd = String::new();
+    if let Some(arg) = args.next() {
+        cmd.push_str(&arg);
+    }
+    for arg in args {
+        cmd.push(' ');
+        cmd.push_str(&arg);
+    }
+    tracing::info!("Running command: {cmd}");
+}
+
 #[derive(Debug, Subcommand)]
 pub enum OroCmd {
     /// Ping the registry.
@@ -254,7 +332,7 @@ pub enum OroCmd {
 #[async_trait]
 impl OroCommand for Orogene {
     async fn execute(self) -> Result<()> {
-        tracing::info!("Running command: {:#?}", self.subcommand);
+        log_command_line();
         match self.subcommand {
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Resolve(cmd) => cmd.execute().await,

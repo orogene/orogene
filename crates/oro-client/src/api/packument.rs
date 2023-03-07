@@ -12,6 +12,11 @@ impl OroClient {
         package_name: impl AsRef<str>,
     ) -> Result<Packument, OroClientError> {
         let url = self.registry.join(package_name.as_ref())?;
+        tracing::trace!(
+            "fetching packument for {} from {}",
+            package_name.as_ref(),
+            url
+        );
         let text = self.packument_impl(package_name, &url, false).await?;
         serde_json::from_str(&text)
             .map_err(move |e| OroClientError::from_json_err(e, url.to_string(), text))
