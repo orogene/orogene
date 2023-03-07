@@ -25,6 +25,7 @@ pub struct NassunOpts {
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
+    prefer_copy: bool,
 }
 
 impl NassunOpts {
@@ -34,6 +35,17 @@ impl NassunOpts {
 
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.cache = Some(PathBuf::from(cache.as_ref()));
+        self
+    }
+
+    /// When extracting tarballs, prefer to copy files to their destination as
+    /// separate, standalone files instead of hard linking them. Full copies
+    /// will still happen when hard linking fails. Furthermore, on filesystems
+    /// that support Copy-on-Write (zfs, btrfs, APFS (macOS), etc), this
+    /// option will use that feature for all copies.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn prefer_copy(mut self, prefer_copy: bool) -> Self {
+        self.prefer_copy = prefer_copy;
         self
     }
 
@@ -84,6 +96,10 @@ impl NassunOpts {
                     .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
                 default_tag: self.default_tag.unwrap_or_else(|| "latest".into()),
             },
+            #[cfg(not(target_arch = "wasm32"))]
+            prefer_copy: self.prefer_copy,
+            #[cfg(target_arch = "wasm32")]
+            prefer_copy: false,
             npm_fetcher: Arc::new(NpmFetcher::new(
                 #[allow(clippy::redundant_clone)]
                 client.clone(),
@@ -101,6 +117,7 @@ impl NassunOpts {
 #[derive(Clone)]
 pub struct Nassun {
     cache: Arc<Option<PathBuf>>,
+    prefer_copy: bool,
     resolver: PackageResolver,
     npm_fetcher: Arc<dyn PackageFetcher>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -199,7 +216,7 @@ impl Nassun {
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, &self.resolver.base_dir).await?;
         self.resolver
-            .resolve(name, spec, fetcher, self.cache.clone())
+            .resolve(name, spec, fetcher, self.cache.clone(), self.prefer_copy)
             .await
     }
 
@@ -214,8 +231,14 @@ impl Nassun {
         resolved: PackageResolution,
     ) -> Package {
         let fetcher = self.pick_fetcher(&from);
-        self.resolver
-            .resolve_from(name, from, resolved, fetcher, self.cache.clone())
+        self.resolver.resolve_from(
+            name,
+            from,
+            resolved,
+            fetcher,
+            self.cache.clone(),
+            self.prefer_copy,
+        )
     }
 
     /// Creates a "resolved" package from a plain [`oro_common::Manifest`].
@@ -227,6 +250,7 @@ impl Nassun {
             from: PackageSpec::Dir {
                 path: PathBuf::from("."),
             },
+            prefer_copy: false,
             name: manifest.name.clone().unwrap_or_else(|| "dummy".to_string()),
             resolved: PackageResolution::Dir {
                 name: manifest.name.clone().unwrap_or_else(|| "dummy".to_string()),

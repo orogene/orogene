@@ -22,6 +22,8 @@ pub struct Package {
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
     pub(crate) base_dir: PathBuf,
     pub(crate) cache: Arc<Option<PathBuf>>,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) prefer_copy: bool,
 }
 
 impl Package {
@@ -169,14 +171,21 @@ impl Package {
                     // If extracting from the cache failed for some reason
                     // (bad data, etc), then go ahead and do a network
                     // extract.
-                    match self.extract_from_cache(dir, cache, entry).await {
+                    match self
+                        .extract_from_cache(dir, cache, entry, self.prefer_copy)
+                        .await
+                    {
                         Ok(_) => return Ok(sri),
                         Err(e) => {
                             tracing::debug!("extract_from_cache failed: {}", e);
                             return self
                                 .tarball_checked(sri)
                                 .await?
-                                .extract_from_tarball_data(dir, self.cache.as_deref())
+                                .extract_from_tarball_data(
+                                    dir,
+                                    self.cache.as_deref(),
+                                    self.prefer_copy,
+                                )
                                 .await;
                         }
                     }
@@ -184,18 +193,18 @@ impl Package {
                     return self
                         .tarball_checked(sri.clone())
                         .await?
-                        .extract_from_tarball_data(dir, self.cache.as_deref())
+                        .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
                         .await;
                 }
             }
             self.tarball_checked(sri.clone())
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref())
+                .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
                 .await
         } else {
             self.tarball_unchecked()
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref())
+                .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
                 .await
         }
     }
@@ -206,6 +215,7 @@ impl Package {
         dir: &Path,
         cache: &Path,
         entry: cacache::Metadata,
+        prefer_copy: bool,
     ) -> Result<()> {
         let dir = PathBuf::from(dir);
         let cache = PathBuf::from(cache);
@@ -231,8 +241,7 @@ impl Package {
                     created.insert(parent);
                 }
 
-                cacache::hard_link_hash_unchecked_sync(&cache, &sri, &path)
-                    .map_err(move |e| NassunError::ExtractCacheError(e, Some(path)))?;
+                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy)?;
             }
             Ok::<_, NassunError>(())
         })

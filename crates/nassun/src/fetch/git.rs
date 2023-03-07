@@ -78,7 +78,7 @@ impl GitFetcher {
     async fn fetch_tarball(&self, dir: &Path, tarball: &Url) -> Result<()> {
         let tarball = self.client.stream_external(tarball).await?;
         Tarball::new_unchecked(tarball)
-            .extract_from_tarball_data(dir, None)
+            .extract_from_tarball_data(dir, None, false)
             .await?;
         Ok(())
     }

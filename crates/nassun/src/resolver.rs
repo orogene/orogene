@@ -109,6 +109,7 @@ impl PackageResolver {
         resolved: PackageResolution,
         fetcher: Arc<dyn PackageFetcher>,
         cache: Arc<Option<PathBuf>>,
+        prefer_copy: bool,
     ) -> Package {
         Package {
             name,
@@ -116,6 +117,7 @@ impl PackageResolver {
             resolved,
             fetcher,
             cache,
+            prefer_copy,
             base_dir: self.base_dir.clone(),
         }
     }
@@ -126,6 +128,7 @@ impl PackageResolver {
         wanted: PackageSpec,
         fetcher: Arc<dyn PackageFetcher>,
         cache: Arc<Option<PathBuf>>,
+        prefer_copy: bool,
     ) -> Result<Package, NassunError> {
         let packument = fetcher.corgi_packument(&wanted, &self.base_dir).await?;
         let resolved = self.get_resolution(&name, &wanted, &packument)?;
@@ -136,6 +139,7 @@ impl PackageResolver {
             fetcher,
             base_dir: self.base_dir.clone(),
             cache,
+            prefer_copy,
         })
     }
 
