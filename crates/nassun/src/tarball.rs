@@ -363,14 +363,26 @@ pub(crate) fn tarball_key(integrity: &Integrity) -> String {
 fn supports_reflink() -> bool {
     let tempdir = match tempfile::tempdir() {
         Ok(t) => t,
-        Err(_) => return false,
+        Err(e) => {
+            tracing::warn!("error creating temp dir while checking for reflink support: {e}.");
+            return false;
+        }
     };
     match std::fs::write(tempdir.path().join("a"), "a") {
         Ok(_) => {}
-        Err(_) => return false,
+        Err(e) => {
+            tracing::warn!("error writing to tempfile while checking for reflink support: {e}.");
+            return false;
+        }
     };
     let supports_reflink = reflink::reflink(tempdir.path().join("a"), tempdir.path().join("b"))
         .map(|_| true)
+        .map_err(|e| {
+            tracing::info!(
+                "reflink support check failed. Files will be hard linked or copied. ({e})"
+            );
+            e
+        })
         .unwrap_or(false);
 
     if supports_reflink {
