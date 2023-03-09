@@ -1,5 +1,19 @@
 # Orogene Release Changelog
 
+<a name="0.3.8"></a>
+## 0.3.8 (2023-03-09)
+
+### Bug Fixes
+
+* **reflink:** move reflink checks up to node-maintainer (#195) ([9506edc7](https://github.com/orogene/orogene/commit/9506edc7456eefb826aaa3850873f615be09136f))
+
+### Features
+
+* **log:** write verbose trace to a separate debug logfile (#192) ([8c995125](https://github.com/orogene/orogene/commit/8c995125e9d142547e8eadb712473d0cb09d9b36))
+* **log:** log a bit more detail about lack of reflink support ([545dff0c](https://github.com/orogene/orogene/commit/545dff0c9b82b69a663117ce1bdbb91214682ee2))
+* **docs:** add initial benchmark tables ([2bbd2616](https://github.com/orogene/orogene/commit/2bbd2616ed592486450d134dc4e8208b5de0a0a0))
+
+
 <a name="0.3.6"></a>
 ## 0.3.6 (2023-03-07)
 
