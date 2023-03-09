@@ -287,3 +287,50 @@ fn max_satisfying<'a>(
 ) -> Option<&'a SemVerVersion> {
     versions.filter(|v| range.satisfies(v)).max()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test_case("1.4.2", "1.4.2", true; "exact version match")]
+    #[test_case("1.4.2", "~1.4.0", true; "same minor version")]
+    #[test_case("1.4.2", "~1", true; "tilde same major version")]
+    #[test_case("1.4.2", "^1.0.0", true; "same major version")]
+    #[test_case("1.4.2", ">=1.0.0", true; "minimum version (same major)")]
+    #[test_case("2.4.2", ">=1.0.0", true; "minimum version (higher major)")]
+    #[test_case("1.4.2", "1.0.0 - 1.9.0", true; "in range")]
+    #[test_case("1.0.0-rc.10", ">=1.0.0-rc.5 <1.0.0", true; "pre-release in range")]
+    #[test_case("1.4.2", "1", true; "partial major version")]
+    #[test_case("1.4.2", "1.x", true; "x minor version")]
+    #[test_case("1.4.2", "1.4.x", true; "x patch version")]
+    #[test_case("1.4.2", "1.*", true; "star minor version")]
+    #[test_case("1.4.2", "1.4.*", true; "star patch version")]
+    // negative cases
+    #[test_case("1.4.3", "1.4.2", false; "mismatch exact version match")]
+    #[test_case("1.5.2", "~1.4.0", false; "mismatch same minor version")]
+    #[test_case("2.4.2", "~1", false; "mismatch tilde same major version")]
+    #[test_case("2.4.2", "^1.0.0", false; "mismatch same major version")]
+    #[test_case("1.4.2", ">=2.0.0", false; "mismatch minimum version (same major)")]
+    #[test_case("2.4.2", "1.0.0 - 1.9.0", false; "out of range")]
+    #[test_case("2.0.0-rc.10", ">=1.0.0-rc.5 <1.0.0", false; "pre-release out of range")]
+    #[test_case("2.4.2", "1", false; "mismatch partial major version")]
+    #[test_case("2.4.2", "1.x", false; "mismatch x minor version")]
+    #[test_case("1.5.2", "1.4.x", false; "mismatch x patch version")]
+    #[test_case("2.4.2", "1.*", false; "mismatch star minor version")]
+    #[test_case("1.5.2", "1.4.*", false; "mismatch star patch version")]
+    fn satisfies_npm_specs(package_version: &str, expected_version: &str, satifies: bool) {
+        let resolution = PackageResolution::Npm {
+            name: "oro-test-package".to_owned(),
+            version: SemVerVersion::parse(package_version).unwrap(),
+            tarball: Url::parse("https://example.com/npm/oro-test-package.tar.gz").unwrap(),
+            integrity: None,
+        };
+        let package_spec = PackageSpec::Npm {
+            scope: None,
+            name: "oro-test-package".to_owned(),
+            requested: Some(VersionSpec::Range(SemVerRange::parse(expected_version).unwrap())),
+        };
+        assert_eq!(resolution.satisfies(&package_spec).unwrap(), satifies);
+    }
+}
