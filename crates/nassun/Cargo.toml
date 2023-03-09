@@ -1,6 +1,6 @@
 [package]
 name = "nassun"
-version = "0.3.6"
+version = "0.3.8"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "NPM package interface for resolving, fetching metadata, downloading, and extracting individual packages."
@@ -10,9 +10,9 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-oro-common = { version = "=0.3.6", path = "../oro-common" }
-oro-client = { version = "=0.3.6", path = "../oro-client" }
-oro-package-spec = { version = "=0.3.6", path = "../oro-package-spec" }
+oro-common = { version = "=0.3.8", path = "../oro-common" }
+oro-client = { version = "=0.3.8", path = "../oro-client" }
+oro-package-spec = { version = "=0.3.8", path = "../oro-package-spec" }
 
 async-compression = { workspace = true, features = ["gzip", "futures-io"] }
 async-std = { workspace = true, features = ["attributes", "unstable"] }
