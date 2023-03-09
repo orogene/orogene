@@ -33,6 +33,10 @@ pub struct NodeMaintainerOptions {
 
     #[cfg(not(target_arch = "wasm32"))]
     progress_bar: bool,
+    #[allow(dead_code)]
+    cache: Option<PathBuf>,
+    #[allow(dead_code)]
+    prefer_copy: bool,
 }
 
 impl NodeMaintainerOptions {
@@ -48,6 +52,7 @@ impl NodeMaintainerOptions {
 
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.nassun_opts = self.nassun_opts.cache(PathBuf::from(cache.as_ref()));
+        self.cache = Some(PathBuf::from(cache.as_ref()));
         self
     }
 
@@ -88,6 +93,17 @@ impl NodeMaintainerOptions {
         self
     }
 
+    /// When extracting tarballs, prefer to copy files to their destination as
+    /// separate, standalone files instead of hard linking them. Full copies
+    /// will still happen when hard linking fails. Furthermore, on filesystems
+    /// that support Copy-on-Write (zfs, btrfs, APFS (macOS), etc), this
+    /// option will use that feature for all copies.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn prefer_copy(mut self, prefer_copy: bool) -> Self {
+        self.prefer_copy = prefer_copy;
+        self
+    }
+
     pub async fn resolve_manifest(
         self,
         root: CorgiManifest,
@@ -100,6 +116,8 @@ impl NodeMaintainerOptions {
             parallelism: DEFAULT_PARALLELISM,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: self.progress_bar,
+            cache: self.cache,
+            prefer_copy: self.prefer_copy,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
@@ -121,6 +139,8 @@ impl NodeMaintainerOptions {
             parallelism: DEFAULT_PARALLELISM,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: self.progress_bar,
+            cache: self.cache,
+            prefer_copy: self.prefer_copy,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
@@ -141,6 +161,8 @@ impl Default for NodeMaintainerOptions {
             npm_lock: None,
             #[cfg(not(target_arch = "wasm32"))]
             progress_bar: false,
+            cache: None,
+            prefer_copy: false,
         }
     }
 }
@@ -159,6 +181,8 @@ pub struct NodeMaintainer {
     parallelism: usize,
     #[cfg(not(target_arch = "wasm32"))]
     progress_bar: bool,
+    cache: Option<PathBuf>,
+    prefer_copy: bool,
 }
 
 impl NodeMaintainer {
@@ -228,6 +252,13 @@ impl NodeMaintainer {
             let concurrent_count = Arc::new(AtomicUsize::new(0));
             let total = me.graph.inner.node_count();
             let total_completed = Arc::new(AtomicUsize::new(0));
+            let node_modules = path.join("node_modules");
+            std::fs::create_dir_all(&node_modules)?;
+            let prefer_copy = me.prefer_copy
+                || match me.cache.as_deref() {
+                    Some(cache) => supports_reflink(cache, &node_modules),
+                    None => false,
+                };
             stream
                 .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
                 .try_for_each_concurrent(
@@ -251,7 +282,7 @@ impl NodeMaintainer {
 
                         me.graph[child_idx]
                             .package
-                            .extract_to_dir(&target_dir)
+                            .extract_to_dir(&target_dir, prefer_copy)
                             .await?;
 
                         #[cfg(not(target_arch = "wasm32"))]
@@ -736,4 +767,46 @@ impl NodeMaintainer {
             Box::new(deps)
         }
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
+    let temp = match tempfile::NamedTempFile::new_in(src_dir) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::info!("error creating tempfile while checking for reflink support: {e}.");
+            return false;
+        }
+    };
+    match std::fs::write(&temp, "a") {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::info!("error writing to tempfile while checking for reflink support: {e}.");
+            return false;
+        }
+    };
+    let tempdir = match tempfile::TempDir::new_in(dest_dir) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::info!(
+                "error creating destination tempdir while checking for reflink support: {e}."
+            );
+            return false;
+        }
+    };
+    let supports_reflink = reflink::reflink(temp.path(), tempdir.path().join("b"))
+        .map(|_| true)
+        .map_err(|e| {
+            tracing::info!(
+                "reflink support check failed. Files will be hard linked or copied. ({e})"
+            );
+            e
+        })
+        .unwrap_or(false);
+
+    if supports_reflink {
+        tracing::info!("Verified reflink support. Extracted data will use copy-on-write reflinks instead of hard links or full copies.")
+    }
+
+    supports_reflink
 }
