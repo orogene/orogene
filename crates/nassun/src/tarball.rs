@@ -25,10 +25,6 @@ use crate::TarballStream;
 
 const MAX_IN_MEMORY_TARBALL_SIZE: usize = 1024 * 1024 * 5;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) static SUPPORTS_REFLINK: once_cell::sync::Lazy<bool> =
-    once_cell::sync::Lazy::new(supports_reflink);
-
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
     reader: TarballStream,
@@ -359,46 +355,13 @@ pub(crate) fn tarball_key(integrity: &Integrity) -> String {
     format!("nassun::package::{integrity}")
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn supports_reflink() -> bool {
-    let tempdir = match tempfile::tempdir() {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::warn!("error creating temp dir while checking for reflink support: {e}.");
-            return false;
-        }
-    };
-    match std::fs::write(tempdir.path().join("a"), "a") {
-        Ok(_) => {}
-        Err(e) => {
-            tracing::warn!("error writing to tempfile while checking for reflink support: {e}.");
-            return false;
-        }
-    };
-    let supports_reflink = reflink::reflink(tempdir.path().join("a"), tempdir.path().join("b"))
-        .map(|_| true)
-        .map_err(|e| {
-            tracing::info!(
-                "reflink support check failed. Files will be hard linked or copied. ({e})"
-            );
-            e
-        })
-        .unwrap_or(false);
-
-    if supports_reflink {
-        tracing::info!("Filesystem supports reflinks, extracted data will use copy-on-write reflinks instead of hard links or full copies (unless cache in in a separate disk).")
-    }
-
-    supports_reflink
-}
-
 pub(crate) fn extract_from_cache(
     cache: &Path,
     sri: &Integrity,
     to: &Path,
     prefer_copy: bool,
 ) -> Result<()> {
-    if *SUPPORTS_REFLINK || prefer_copy {
+    if prefer_copy {
         cacache::copy_hash_unchecked_sync(cache, sri, to)
             .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     } else {

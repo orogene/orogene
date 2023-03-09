@@ -22,8 +22,6 @@ pub struct Package {
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
     pub(crate) base_dir: PathBuf,
     pub(crate) cache: Arc<Option<PathBuf>>,
-    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    pub(crate) prefer_copy: bool,
 }
 
 impl Package {
@@ -123,22 +121,31 @@ impl Package {
     /// tarball stream will have its integrity validated based on package
     /// metadata. See [`Package::tarball`] for more information.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir(&self, dir: impl AsRef<Path>) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, me.resolved.integrity()).await
+    pub async fn extract_to_dir(
+        &self,
+        dir: impl AsRef<Path>,
+        prefer_copy: bool,
+    ) -> Result<Integrity> {
+        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy)
+                .await
         }
-        inner(self, dir.as_ref()).await
+        inner(self, dir.as_ref(), prefer_copy).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
     /// tarball stream will NOT have its integrity validated. See
     /// [`Package::tarball_unchecked`] for more information.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir_unchecked(&self, dir: impl AsRef<Path>) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, None).await
+    pub async fn extract_to_dir_unchecked(
+        &self,
+        dir: impl AsRef<Path>,
+        prefer_copy: bool,
+    ) -> Result<Integrity> {
+        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, None, prefer_copy).await
         }
-        inner(self, dir.as_ref()).await
+        inner(self, dir.as_ref(), prefer_copy).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -149,11 +156,17 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         sri: Integrity,
+        prefer_copy: bool,
     ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, sri: Integrity) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, Some(&sri)).await
+        async fn inner(
+            me: &Package,
+            dir: &Path,
+            sri: Integrity,
+            prefer_copy: bool,
+        ) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy).await
         }
-        inner(self, dir.as_ref(), sri).await
+        inner(self, dir.as_ref(), sri, prefer_copy).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -161,6 +174,7 @@ impl Package {
         &self,
         dir: &Path,
         integrity: Option<&Integrity>,
+        prefer_copy: bool,
     ) -> Result<Integrity> {
         if let Some(sri) = integrity {
             if let Some(cache) = self.cache.as_deref() {
@@ -172,7 +186,7 @@ impl Package {
                     // (bad data, etc), then go ahead and do a network
                     // extract.
                     match self
-                        .extract_from_cache(dir, cache, entry, self.prefer_copy)
+                        .extract_from_cache(dir, cache, entry, prefer_copy)
                         .await
                     {
                         Ok(_) => return Ok(sri),
@@ -181,11 +195,7 @@ impl Package {
                             return self
                                 .tarball_checked(sri)
                                 .await?
-                                .extract_from_tarball_data(
-                                    dir,
-                                    self.cache.as_deref(),
-                                    self.prefer_copy,
-                                )
+                                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                                 .await;
                         }
                     }
@@ -193,18 +203,18 @@ impl Package {
                     return self
                         .tarball_checked(sri.clone())
                         .await?
-                        .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
+                        .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                         .await;
                 }
             }
             self.tarball_checked(sri.clone())
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
+                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                 .await
         } else {
             self.tarball_unchecked()
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
+                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                 .await
         }
     }

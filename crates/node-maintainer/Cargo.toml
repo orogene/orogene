@@ -30,7 +30,9 @@ unicase = "2.6.0"
 url = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reflink = { workspace = true }
 indicatif = { workspace = true }
+tempfile = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = { workspace = true }
