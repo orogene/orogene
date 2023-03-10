@@ -27,10 +27,11 @@ serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+tsify = { workspace = true, default-features = false, features = ["js"] }
 url = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-async-tar-wasm = { workspace = true }
+async-tar-wasm = "0.4.2-wasm.1"
 async-process = { workspace = true }
 async-std = { workspace = true, features = ["attributes", "std"] }
 backon = { workspace = true }
@@ -42,7 +43,10 @@ tempfile = { workspace = true }
 which = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-async-tar-wasm = { workspace = true, default-features = false }
+# NOTE: This async-tar-wasm version can't be configured at the workspace
+#       level, because otherwise the conditional features don't work.
+async-tar-wasm = { version = "0.4.2-wasm.1", default-features = false }
+console_error_panic_hook = { workspace = true }
 js-sys = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 wasm-bindgen = { workspace = true }

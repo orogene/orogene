@@ -64,7 +64,7 @@ impl OroClient {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod test {
     use maplit::{btreemap, hashmap};
     use miette::{IntoDiagnostic, Result};

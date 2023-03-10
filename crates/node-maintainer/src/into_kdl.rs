@@ -1,6 +1,6 @@
 use kdl::KdlDocument;
 
-use crate::NodeMaintainerError;
+use crate::error::NodeMaintainerError;
 
 pub trait IntoKdl: IntoKdlSealed {}
 

@@ -1,10 +1,12 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Seek};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
 use async_compression::futures::bufread::GzipDecoder;
@@ -12,22 +14,28 @@ use async_std::io::BufReader;
 use async_tar_wasm::Archive;
 #[cfg(not(target_arch = "wasm32"))]
 use backon::{BlockingRetryable, ConstantBuilder};
+#[cfg(not(target_arch = "wasm32"))]
 use cacache::WriteOpts;
-use futures::{AsyncRead, AsyncReadExt, StreamExt};
+#[cfg(not(target_arch = "wasm32"))]
+use futures::AsyncReadExt;
+use futures::{AsyncRead, StreamExt};
 #[cfg(not(target_arch = "wasm32"))]
 use ssri::IntegrityOpts;
 use ssri::{Integrity, IntegrityChecker};
+#[cfg(not(target_arch = "wasm32"))]
 use tempfile::NamedTempFile;
 
 use crate::entries::{Entries, Entry};
 use crate::error::{NassunError, Result};
 use crate::TarballStream;
 
+#[cfg(not(target_arch = "wasm32"))]
 const MAX_IN_MEMORY_TARBALL_SIZE: usize = 1024 * 1024 * 5;
 
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
     reader: TarballStream,
+    #[cfg(not(target_arch = "wasm32"))]
     integrity: Option<Integrity>,
 }
 
@@ -36,6 +44,7 @@ impl Tarball {
         Self {
             reader,
             checker: Some(IntegrityChecker::new(integrity.clone())),
+            #[cfg(not(target_arch = "wasm32"))]
             integrity: Some(integrity),
         }
     }
@@ -44,6 +53,7 @@ impl Tarball {
         Self {
             reader,
             checker: None,
+            #[cfg(not(target_arch = "wasm32"))]
             integrity: None,
         }
     }
@@ -351,6 +361,7 @@ fn strip_one(path: &Path) -> Option<&Path> {
     comps.next().map(|_| comps.as_path())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn tarball_key(integrity: &Integrity) -> String {
     format!("nassun::package::{integrity}")
 }

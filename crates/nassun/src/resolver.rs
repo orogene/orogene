@@ -6,7 +6,9 @@ use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
 use ssri::Integrity;
 use url::Url;
 
-use crate::{fetch::PackageFetcher, package::Package, NassunError};
+use crate::error::NassunError;
+use crate::fetch::PackageFetcher;
+use crate::package::Package;
 
 /// Represents a fully-resolved, specific version of a package as it would be fetched.
 #[derive(Clone, PartialEq, Eq)]
