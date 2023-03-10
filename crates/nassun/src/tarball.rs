@@ -362,14 +362,14 @@ pub(crate) fn extract_from_cache(
     prefer_copy: bool,
 ) -> Result<()> {
     if prefer_copy {
-        cacache::copy_hash_unchecked_sync(cache, sri, to)
+        cacache::copy_hash_sync(cache, sri, to)
             .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     } else {
         // HACK: This is horrible, but on wsl2 (at least), this
         // was sometimes crashing with an ENOENT (?!), which
         // really REALLY shouldn't happen. So we just retry a few
         // times and hope the problem goes away.
-        let op = || cacache::hard_link_hash_unchecked_sync(cache, sri, to);
+        let op = || cacache::hard_link_hash_sync(cache, sri, to);
         op.retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
             .notify(|err, wait| {
                 tracing::debug!(
@@ -379,7 +379,7 @@ pub(crate) fn extract_from_cache(
                 )
             })
             .call()
-            .or_else(|_| cacache::copy_hash_unchecked_sync(cache, sri, to))
+            .or_else(|_| cacache::copy_hash_sync(cache, sri, to).map(|_| ()))
             .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     }
     Ok(())
