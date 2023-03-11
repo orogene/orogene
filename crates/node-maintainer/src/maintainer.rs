@@ -37,6 +37,8 @@ pub struct NodeMaintainerOptions {
     cache: Option<PathBuf>,
     #[allow(dead_code)]
     prefer_copy: bool,
+    #[allow(dead_code)]
+    validate: bool,
 }
 
 impl NodeMaintainerOptions {
@@ -104,6 +106,16 @@ impl NodeMaintainerOptions {
         self
     }
 
+    /// When this is true, node-maintainer will validate integrity hashes for
+    /// all files extracted from the cache, as well as verify that any files
+    /// in the existing `node_modules` are unmodified. If verification fails,
+    /// the packages will be reinstalled.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn validate(mut self, validate: bool) -> Self {
+        self.validate = validate;
+        self
+    }
+
     pub async fn resolve_manifest(
         self,
         root: CorgiManifest,
@@ -118,6 +130,7 @@ impl NodeMaintainerOptions {
             progress_bar: self.progress_bar,
             cache: self.cache,
             prefer_copy: self.prefer_copy,
+            validate: self.validate,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
@@ -141,6 +154,7 @@ impl NodeMaintainerOptions {
             progress_bar: self.progress_bar,
             cache: self.cache,
             prefer_copy: self.prefer_copy,
+            validate: self.validate,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
@@ -163,6 +177,7 @@ impl Default for NodeMaintainerOptions {
             progress_bar: false,
             cache: None,
             prefer_copy: false,
+            validate: false,
         }
     }
 }
@@ -183,6 +198,7 @@ pub struct NodeMaintainer {
     progress_bar: bool,
     cache: Option<PathBuf>,
     prefer_copy: bool,
+    validate: bool,
 }
 
 impl NodeMaintainer {
@@ -259,6 +275,7 @@ impl NodeMaintainer {
                     Some(cache) => supports_reflink(cache, &node_modules),
                     None => false,
                 };
+            let validate = me.validate;
             stream
                 .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
                 .try_for_each_concurrent(
@@ -282,7 +299,7 @@ impl NodeMaintainer {
 
                         me.graph[child_idx]
                             .package
-                            .extract_to_dir(&target_dir, prefer_copy)
+                            .extract_to_dir(&target_dir, prefer_copy, validate)
                             .await?;
 
                         #[cfg(not(target_arch = "wasm32"))]

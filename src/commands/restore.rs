@@ -25,6 +25,28 @@ pub struct RestoreCmd {
 
     #[clap(from_global)]
     cache: Option<PathBuf>,
+
+    /// Prefer copying files over hard linking them.
+    ///
+    /// On filesystems that don't support copy-on-write/reflinks (usually NTFS
+    /// or ext4), orogene defaults to hard linking package files from a
+    /// centralized cache. As such, this can cause global effects if a file
+    /// inside a node_modules is modified, where other projects that have
+    /// installed that same file will see those modifications.
+    ///
+    /// In order to prevent this, you can use this flag to force orogene to
+    /// always copy files, at a performance cost.
+    #[arg(short, long)]
+    prefer_copy: bool,
+
+    /// Validate the integrity of installed files.
+    ///
+    /// When this is true, orogene will verify all files extracted from the
+    /// cache, as well as verify that any files in the existing `node_modules`
+    /// are unmodified. If verification fails, the packages will be
+    /// reinstalled.
+    #[arg(short, long)]
+    validate: bool,
 }
 
 #[async_trait]
@@ -34,7 +56,10 @@ impl OroCommand for RestoreCmd {
             .root
             .expect("root should've been set by global defaults");
         let mut nm = NodeMaintainerOptions::new();
-        nm = nm.progress_bar(true);
+        nm = nm
+            .progress_bar(true)
+            .prefer_copy(self.prefer_copy)
+            .validate(self.validate);
         if let Some(registry) = self.registry {
             nm = nm.registry(registry);
         }
