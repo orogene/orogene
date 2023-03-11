@@ -312,6 +312,19 @@ impl NodeMaintainer {
 
                         let start = std::time::Instant::now();
 
+                        if target_dir.exists() {
+                            for entry in std::fs::read_dir(&target_dir)? {
+                                let entry = entry?;
+                                if entry.file_name() == "node_modules" {
+                                    continue;
+                                } else if entry.file_type()?.is_dir() {
+                                    async_std::fs::remove_dir_all(entry.path()).await?;
+                                } else {
+                                    async_std::fs::remove_file(entry.path()).await?;
+                                }
+                            }
+                        }
+
                         me.graph[child_idx]
                             .package
                             .extract_to_dir(&target_dir, prefer_copy, validate)
