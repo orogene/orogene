@@ -130,12 +130,18 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         prefer_copy: bool,
+        validate: bool,
     ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy)
+        async fn inner(
+            me: &Package,
+            dir: &Path,
+            prefer_copy: bool,
+            validate: bool,
+        ) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy, validate)
                 .await
         }
-        inner(self, dir.as_ref(), prefer_copy).await
+        inner(self, dir.as_ref(), prefer_copy, validate).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -146,11 +152,18 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         prefer_copy: bool,
+        validate: bool,
     ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, None, prefer_copy).await
+        async fn inner(
+            me: &Package,
+            dir: &Path,
+            prefer_copy: bool,
+            validate: bool,
+        ) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, None, prefer_copy, validate)
+                .await
         }
-        inner(self, dir.as_ref(), prefer_copy).await
+        inner(self, dir.as_ref(), prefer_copy, validate).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -162,16 +175,19 @@ impl Package {
         dir: impl AsRef<Path>,
         sri: Integrity,
         prefer_copy: bool,
+        validate: bool,
     ) -> Result<Integrity> {
         async fn inner(
             me: &Package,
             dir: &Path,
             sri: Integrity,
             prefer_copy: bool,
+            validate: bool,
         ) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy).await
+            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy, validate)
+                .await
         }
-        inner(self, dir.as_ref(), sri, prefer_copy).await
+        inner(self, dir.as_ref(), sri, prefer_copy, validate).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -180,6 +196,7 @@ impl Package {
         dir: &Path,
         integrity: Option<&Integrity>,
         prefer_copy: bool,
+        validate: bool,
     ) -> Result<Integrity> {
         if let Some(sri) = integrity {
             if let Some(cache) = self.cache.as_deref() {
@@ -191,12 +208,19 @@ impl Package {
                     // (bad data, etc), then go ahead and do a network
                     // extract.
                     match self
-                        .extract_from_cache(dir, cache, entry, prefer_copy)
+                        .extract_from_cache(dir, cache, entry, prefer_copy, validate)
                         .await
                     {
                         Ok(_) => return Ok(sri),
                         Err(e) => {
-                            tracing::debug!("extract_from_cache failed: {}", e);
+                            tracing::warn!("extracting package {:?} from cache failed, possily due to cache corruption: {e}", self.resolved());
+                            if let Some(entry) =
+                                cacache::index::find(cache, &crate::tarball::tarball_key(&sri))
+                                    .map_err(|e| NassunError::ExtractCacheError(e, None))?
+                            {
+                                tracing::debug!("removing corrupted cache entry.");
+                                clean_from_cache(cache, &sri, entry)?;
+                            }
                             return self
                                 .tarball_checked(sri)
                                 .await?
@@ -231,6 +255,7 @@ impl Package {
         cache: &Path,
         entry: cacache::Metadata,
         prefer_copy: bool,
+        validate: bool,
     ) -> Result<()> {
         let dir = PathBuf::from(dir);
         let cache = PathBuf::from(cache);
@@ -256,7 +281,7 @@ impl Package {
                     created.insert(parent);
                 }
 
-                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy)?;
+                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, validate)?;
             }
             Ok::<_, NassunError>(())
         })
@@ -271,6 +296,29 @@ impl fmt::Debug for Package {
             .field("from", &self.from)
             .field("name", &self.name)
             .field("resolved", &self.resolved)
+            .field("base_dir", &self.resolved)
             .finish()
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn clean_from_cache(cache: &Path, sri: &Integrity, entry: cacache::Metadata) -> Result<()> {
+    let map = entry
+        .metadata
+        .as_object()
+        .expect("how is this not an object?");
+    for sri in map.values() {
+        let sri: Integrity = sri.as_str().expect("how is this not a string?").parse()?;
+        match cacache::remove_hash_sync(cache, &sri) {
+            Ok(_) => {}
+            // We don't care if the file doesn't exist.
+            Err(cacache::Error::IoError(e, _)) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                return Err(NassunError::ExtractCacheError(e, None));
+            }
+        }
+    }
+    cacache::remove_sync(cache, crate::tarball::tarball_key(sri))
+        .map_err(|e| NassunError::ExtractCacheError(e, None))?;
+    Ok(())
 }

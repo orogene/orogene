@@ -370,9 +370,9 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "cacache"
-version = "11.3.0"
+version = "11.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5602847e366a4c40858921bf1d48a6b0ad27fd9a97a3f1125fb7f4ef9c0153c"
+checksum = "ec5dc3e17f45b3392518abb1f4dbc21280ec6246f05f6cbcddcb161416b04441"
 dependencies = [
  "async-attributes",
  "async-std",

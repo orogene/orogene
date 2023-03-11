@@ -266,7 +266,7 @@ impl TempTarball {
                         .commit()
                         .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
 
-                    extract_from_cache(cache, &sri, &path, prefer_copy)?;
+                    extract_from_cache(cache, &sri, &path, prefer_copy, false)?;
 
                     file_index.insert(
                         entry_subpath.to_string_lossy().into(),
@@ -371,16 +371,16 @@ pub(crate) fn extract_from_cache(
     sri: &Integrity,
     to: &Path,
     prefer_copy: bool,
+    validate: bool,
 ) -> Result<()> {
     if prefer_copy {
-        cacache::copy_hash_unchecked_sync(cache, sri, to)
-            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+        copy_from_cache(cache, sri, to, validate)?;
     } else {
         // HACK: This is horrible, but on wsl2 (at least), this
         // was sometimes crashing with an ENOENT (?!), which
         // really REALLY shouldn't happen. So we just retry a few
         // times and hope the problem goes away.
-        let op = || cacache::hard_link_hash_unchecked_sync(cache, sri, to);
+        let op = || hard_link_from_cache(cache, sri, to, validate);
         op.retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
             .notify(|err, wait| {
                 tracing::debug!(
@@ -390,7 +390,30 @@ pub(crate) fn extract_from_cache(
                 )
             })
             .call()
-            .or_else(|_| cacache::copy_hash_unchecked_sync(cache, sri, to))
+            .or_else(|_| copy_from_cache(cache, sri, to, validate))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path, validate: bool) -> Result<()> {
+    if validate {
+        cacache::copy_hash_sync(cache, sri, to)
+            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    } else {
+        cacache::copy_hash_unchecked_sync(cache, sri, to)
+            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path, validate: bool) -> Result<()> {
+    if validate {
+        cacache::hard_link_hash_sync(cache, sri, to)
+            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    } else {
+        cacache::hard_link_hash_unchecked_sync(cache, sri, to)
             .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     }
     Ok(())
