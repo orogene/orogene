@@ -31,6 +31,7 @@ clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
 humansize = { workspace = true }
 directories = { workspace = true }
+indicatif = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -38,6 +39,7 @@ term_grid = { workspace = true }
 term_size = { workspace = true }
 tracing = { workspace = true}
 tracing-appender = { workspace = true }
+tracing-indicatif = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 url = { workspace = true }
 
@@ -97,6 +99,7 @@ term_size = "0.3.2"
 thiserror = "1.0.38"
 tracing = "0.1.37"
 tracing-appender = "0.2.2"
+tracing-indicatif = "0.3.0"
 tracing-subscriber = "0.3.16"
 tsify = "0.4.3"
 url = "2.3.1"
