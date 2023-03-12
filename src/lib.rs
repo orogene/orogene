@@ -102,6 +102,7 @@ use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{
     filter::{Directive, LevelFilter, Targets},
     fmt,
@@ -191,7 +192,14 @@ impl Orogene {
             filter
         };
 
-        let builder = tracing_subscriber::registry().with(fmt::layer().with_filter(filter));
+        let ilayer = IndicatifLayer::new();
+        let builder = tracing_subscriber::registry()
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .with_writer(ilayer.get_stderr_writer())
+                    .with_filter(filter),
+            )
+            .with(ilayer);
 
         if let Some(cache) = self.cache.as_deref() {
             let targets = Targets::new()
