@@ -1,5 +1,21 @@
 # Orogene Release Changelog
 
+<a name="0.3.9"></a>
+## 0.3.9 (2023-03-12)
+
+### Features
+
+* **wasm:** get nassun and node-maintainer working well in wasm (#131) ([16ad5bae](https://github.com/orogene/orogene/commit/16ad5bae83d15155571464c5dfca1c7de3544057))
+* **validate:** optionally validate cache contents during extraction (#197) ([0e22a5f4](https://github.com/orogene/orogene/commit/0e22a5f44d02423b9d4b49fe88254ae8bd90a699))
+* **extract:** remove existing modules as needed ([d3303b00](https://github.com/orogene/orogene/commit/d3303b007301fb668db3108af6d0ebd6dae7e7bf))
+* **prune:** check for an prune extraneous packages, and skip extracting valid ones (#200) ([544a2c5c](https://github.com/orogene/orogene/commit/544a2c5c3065041f351aeba46506e725eb6a769a))
+* **progress:** refactored progress bar out of node-maintainer (#201) ([e1908ad6](https://github.com/orogene/orogene/commit/e1908ad6bfa248b82b99fdf3bd75f2f7dff6d9a4))
+* **progresss:** add flags to disable progress bars ([f988a824](https://github.com/orogene/orogene/commit/f988a824a9202080ba7d592be67e04a8c11472ee))
+
+### Bug Fixes
+
+* **nassun:** use cfg_attr to reduce duplication ([f126d5ca](https://github.com/orogene/orogene/commit/f126d5ca0d32d76b35d93e65acda60d86e152852))
+
 <a name="0.3.8"></a>
 ## 0.3.8 (2023-03-09)
 
