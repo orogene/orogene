@@ -1764,6 +1764,7 @@ dependencies = [
  "tsify",
  "unicase",
  "url",
+ "walkdir",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wiremock",

@@ -57,6 +57,7 @@ impl OroCommand for RestoreCmd {
             .expect("root should've been set by global defaults");
         let mut nm = NodeMaintainerOptions::new();
         nm = nm
+            .root(root.clone())
             .progress_bar(true)
             .prefer_copy(self.prefer_copy)
             .validate(self.validate);
@@ -97,7 +98,7 @@ impl OroCommand for RestoreCmd {
         let resolved_nm = nm
             .resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
             .await?;
-        resolved_nm.extract_to(&root).await?;
+        resolved_nm.extract().await?;
         resolved_nm
             .write_lockfile(root.join("package-lock.kdl"))
             .await?;

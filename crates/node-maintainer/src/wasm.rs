@@ -155,11 +155,10 @@ impl NodeMaintainer {
     /// Given a path within node_modules, returns the package that the
     /// referenced file/directory belongs to.
     #[wasm_bindgen(js_name = "packageAtPath")]
-    pub fn package_at_path(&self, path: &str) -> Result<Option<Package>> {
-        Ok(self
-            .inner
-            .package_at_path(Path::new(path))?
-            .map(Package::from_core_package))
+    pub fn package_at_path(&self, path: &str) -> Option<Package> {
+        self.inner
+            .package_at_path(Path::new(path))
+            .map(Package::from_core_package)
     }
 }
 
