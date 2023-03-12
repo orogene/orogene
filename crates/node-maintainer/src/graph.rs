@@ -151,10 +151,7 @@ impl Graph {
         }
     }
 
-    pub(crate) fn package_at_path(
-        &self,
-        path: &Path,
-    ) -> Result<Option<Package>, NodeMaintainerError> {
+    pub(crate) fn node_at_path(&self, path: &Path) -> Option<&Node> {
         let mut current = Some(self.root);
         let mut in_nm = true;
         let slash = OsStr::new("/");
@@ -179,9 +176,14 @@ impl Graph {
             }
         }
         if current == Some(self.root) {
-            return Ok(None);
+            None
+        } else {
+            current.map(|idx| &self.inner[idx])
         }
-        Ok(current.map(|idx| self.inner[idx].package.clone()))
+    }
+
+    pub(crate) fn package_at_path(&self, path: &Path) -> Option<Package> {
+        Some(self.node_at_path(path)?.package.clone())
     }
 
     pub(crate) fn find_by_name(
@@ -264,7 +266,7 @@ impl Graph {
         Ok(())
     }
 
-    fn node_lockfile_node(
+    pub(crate) fn node_lockfile_node(
         &self,
         node: NodeIndex,
         is_root: bool,

@@ -31,6 +31,7 @@ use crate::error::NodeMaintainerError;
 use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
 const DEFAULT_CONCURRENCY: usize = 50;
+const META_FILE_NAME: &str = ".orogene-meta.kdl";
 
 #[derive(Debug, Clone)]
 pub struct NodeMaintainerOptions {
@@ -47,6 +48,8 @@ pub struct NodeMaintainerOptions {
     prefer_copy: bool,
     #[allow(dead_code)]
     validate: bool,
+    #[allow(dead_code)]
+    root: Option<PathBuf>,
 }
 
 impl NodeMaintainerOptions {
@@ -95,8 +98,9 @@ impl NodeMaintainerOptions {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn base_dir(mut self, path: impl AsRef<Path>) -> Self {
-        self.nassun_opts = self.nassun_opts.base_dir(path);
+    pub fn root(mut self, path: impl AsRef<Path>) -> Self {
+        self.nassun_opts = self.nassun_opts.base_dir(path.as_ref());
+        self.root = Some(PathBuf::from(path.as_ref()));
         self
     }
 
@@ -141,6 +145,8 @@ impl NodeMaintainerOptions {
             cache: self.cache,
             prefer_copy: self.prefer_copy,
             validate: self.validate,
+            root: self.root.unwrap_or_else(|| PathBuf::from(".")),
+            actual_tree: None,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
@@ -165,6 +171,8 @@ impl NodeMaintainerOptions {
             cache: self.cache,
             prefer_copy: self.prefer_copy,
             validate: self.validate,
+            root: self.root.unwrap_or_else(|| PathBuf::from(".")),
+            actual_tree: None,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
@@ -188,6 +196,7 @@ impl Default for NodeMaintainerOptions {
             cache: None,
             prefer_copy: false,
             validate: false,
+            root: None,
         }
     }
 }
@@ -209,6 +218,8 @@ pub struct NodeMaintainer {
     cache: Option<PathBuf>,
     prefer_copy: bool,
     validate: bool,
+    root: PathBuf,
+    actual_tree: Option<Lockfile>,
 }
 
 impl NodeMaintainer {
@@ -256,13 +267,148 @@ impl NodeMaintainer {
         self.graph.render()
     }
 
-    pub fn package_at_path(&self, path: &Path) -> Result<Option<Package>, NodeMaintainerError> {
+    pub fn package_at_path(&self, path: &Path) -> Option<Package> {
         self.graph.package_at_path(path)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        #[cfg(not(target_arch = "wasm32"))]
+    async fn prune(&self) -> Result<(), NodeMaintainerError> {
+        use walkdir::WalkDir;
+
+        let prefix = self.root.join("node_modules");
+
+        if !prefix.exists() {
+            return Ok(());
+        }
+
+        let start = std::time::Instant::now();
+
+        if self.actual_tree.is_none() {
+            // If there's no actual tree previously calculated, we can't trust
+            // *anything* inside node_modules, so everything is immediately
+            // extraneous and we wipe it all. Sorry.
+            let mut entries = async_std::fs::read_dir(&prefix).await?;
+            while let Some(entry) = entries.next().await {
+                let entry = entry?;
+                if entry.file_type().await?.is_dir() {
+                    async_std::fs::remove_dir_all(entry.path()).await?;
+                } else {
+                    async_std::fs::remove_file(entry.path()).await?;
+                }
+            }
+
+            tracing::info!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
+
+            return Ok(());
+        }
+
+        let nm_osstr = Some(std::ffi::OsStr::new("node_modules"));
+        let meta = prefix.join(META_FILE_NAME);
+        let mut extraneous_packages = 0;
+        let extraneous = &mut extraneous_packages;
+
+        for entry in WalkDir::new(&prefix)
+            .into_iter()
+            .filter_entry(move |entry| {
+                let entry_path = entry.path();
+
+                if entry_path == meta {
+                    // Skip the meta file
+                    return false;
+                }
+
+                if entry_path.file_name() == nm_osstr {
+                    // We don't want to skip node_modules themselves
+                    return true;
+                }
+
+                if entry_path
+                    .file_name()
+                    .expect("this should have a file name")
+                    .to_string_lossy()
+                    .starts_with('@')
+                {
+                    // Let scoped packages through.
+                    return true;
+                }
+
+                // See if we're looking at a package dir, presumably (or a straggler file).
+                if entry_path
+                    .parent()
+                    .expect("this must have a parent")
+                    .file_name()
+                    == nm_osstr
+                {
+                    let entry_subpath_path = entry_path
+                        .strip_prefix(&prefix)
+                        .expect("this should definitely be under the prefix");
+                    let entry_subpath =
+                        UniCase::from(entry_subpath_path.to_string_lossy().replace('\\', "/"));
+
+                    let actual = self
+                        .actual_tree
+                        .as_ref()
+                        .and_then(|tree| tree.packages.get(&entry_subpath));
+                    let ideal = self
+                        .graph
+                        .node_at_path(entry_subpath_path)
+                        .and_then(|node| self.graph.node_lockfile_node(node.idx, false).ok());
+                    // If the package is not in the actual tree, or it doesn't
+                    // match up with what the ideal tree wants, it's
+                    // extraneous. We want to return true for those so we
+                    // delete them later.
+                    if ideal.is_some()
+                        && self
+                            .actual_tree
+                            .as_ref()
+                            .map(|tree| tree.packages.contains_key(&entry_subpath))
+                            .unwrap_or(false)
+                        && actual == ideal.as_ref()
+                    {
+                        return false;
+                    } else {
+                        *extraneous += 1;
+                        return true;
+                    }
+                }
+
+                // We're not interested in any other files than the package dirs themselves.
+                false
+            })
+        {
+            let entry = entry?;
+            let entry_path = entry.path();
+            let file_name = entry_path.file_name();
+            if file_name == nm_osstr
+                || file_name
+                    .map(|s| s.to_string_lossy().starts_with('@'))
+                    .unwrap_or(false)
+            {
+                continue;
+            } else if entry.file_type().is_dir() {
+                async_std::fs::remove_dir_all(entry.path()).await?;
+            } else {
+                async_std::fs::remove_file(entry.path()).await?;
+            }
+        }
+
+        if extraneous_packages == 0 {
+            tracing::info!(
+                "Nothing to prune. Completed check in {}ms.",
+                start.elapsed().as_micros() / 1000
+            );
+        } else {
+            tracing::info!(
+                "Pruned {extraneous_packages} extraneous package{} in {}ms.",
+                start.elapsed().as_micros() / 1000,
+                if extraneous_packages == 1 { "" } else { "s" },
+            );
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn extract(&self) -> Result<(), NodeMaintainerError> {
         let pb = if self.progress_bar {
             ProgressBar::new(self.graph.inner.node_count() as u64 - 1).with_style(
                 ProgressStyle::default_bar()
@@ -273,100 +419,80 @@ impl NodeMaintainer {
             ProgressBar::hidden()
         };
 
-        async fn inner(
-            me: &NodeMaintainer,
-            #[cfg(not(target_arch = "wasm32"))] pb: &ProgressBar,
-            path: &Path,
-        ) -> Result<(), NodeMaintainerError> {
-            let start = std::time::Instant::now();
-            let stream = futures::stream::iter(me.graph.inner.node_indices());
-            let concurrent_count = Arc::new(AtomicUsize::new(0));
-            let total = me.graph.inner.node_count();
-            let total_completed = Arc::new(AtomicUsize::new(0));
-            let node_modules = path.join("node_modules");
-            std::fs::create_dir_all(&node_modules)?;
-            let prefer_copy = me.prefer_copy
-                || match me.cache.as_deref() {
-                    Some(cache) => supports_reflink(cache, &node_modules),
-                    None => false,
-                };
-            let validate = me.validate;
-            stream
-                .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
-                .try_for_each_concurrent(
-                    me.concurrency,
-                    move |(child_idx, concurrent_count, total_completed)| async move {
-                        if child_idx == me.graph.root {
-                            return Ok(());
-                        }
+        let start = std::time::Instant::now();
 
-                        concurrent_count.fetch_add(1, atomic::Ordering::SeqCst);
-                        let target_dir = path.join("node_modules").join(
-                            me.graph
-                                .node_path(child_idx)
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<_>>()
-                                .join("/node_modules/"),
-                        );
+        self.prune().await?;
 
-                        let start = std::time::Instant::now();
+        let root = &self.root;
+        let stream = futures::stream::iter(self.graph.inner.node_indices());
+        let concurrent_count = Arc::new(AtomicUsize::new(0));
+        let total = self.graph.inner.node_count();
+        let total_completed = Arc::new(AtomicUsize::new(0));
+        let node_modules = root.join("node_modules");
+        std::fs::create_dir_all(&node_modules)?;
+        let prefer_copy = self.prefer_copy
+            || match self.cache.as_deref() {
+                Some(cache) => supports_reflink(cache, &node_modules),
+                None => false,
+            };
+        let validate = self.validate;
+        let pbref = &pb;
+        stream
+            .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
+            .try_for_each_concurrent(
+                self.concurrency,
+                move |(child_idx, concurrent_count, total_completed)| async move {
+                    if child_idx == self.graph.root {
+                        return Ok(());
+                    }
 
-                        if target_dir.exists() {
-                            for entry in std::fs::read_dir(&target_dir)? {
-                                let entry = entry?;
-                                if entry.file_name() == "node_modules" {
-                                    continue;
-                                } else if entry.file_type()?.is_dir() {
-                                    async_std::fs::remove_dir_all(entry.path()).await?;
-                                } else {
-                                    async_std::fs::remove_file(entry.path()).await?;
-                                }
-                            }
-                        }
+                    concurrent_count.fetch_add(1, atomic::Ordering::SeqCst);
+                    let subdir = self
+                        .graph
+                        .node_path(child_idx)
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/");
+                    let target_dir = root.join("node_modules").join(&subdir);
 
-                        me.graph[child_idx]
+                    let start = std::time::Instant::now();
+
+                    if !target_dir.exists() {
+                        self.graph[child_idx]
                             .package
                             .extract_to_dir(&target_dir, prefer_copy, validate)
                             .await?;
+                    }
 
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            pb.inc(1);
-                            pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
-                        };
+                    pbref.inc(1);
+                    pbref.set_message(format!("{:?}", self.graph[child_idx].package.resolved()));
 
-                        tracing::debug!(
-                            "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
-                            me.graph[child_idx].package.name(),
-                            target_dir.display(),
-                            start.elapsed().as_millis(),
-                            total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
-                            concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
-                        );
-                        Ok::<_, NodeMaintainerError>(())
-                    },
-                )
-                .await?;
-            tracing::info!(
-                "Extracted {} packages in {}ms.",
-                total,
-                start.elapsed().as_millis()
-            );
-            #[cfg(not(target_arch = "wasm32"))]
-            if me.progress_bar {
-                pb.finish_and_clear();
-                println!("💾 Linked!");
-            }
-            Ok(())
+                    tracing::debug!(
+                        "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
+                        self.graph[child_idx].package.name(),
+                        target_dir.display(),
+                        start.elapsed().as_millis(),
+                        total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
+                        concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
+                    );
+                    Ok::<_, NodeMaintainerError>(())
+                },
+            )
+            .await?;
+        std::fs::write(
+            node_modules.join(META_FILE_NAME),
+            self.to_kdl()?.to_string(),
+        )?;
+        tracing::info!(
+            "Extracted {total} package{} in {}ms.",
+            if total == 1 { "" } else { "s" },
+            start.elapsed().as_millis(),
+        );
+        if self.progress_bar {
+            pb.finish_and_clear();
+            println!("💾 Linked!");
         }
-        inner(
-            self,
-            #[cfg(not(target_arch = "wasm32"))]
-            &pb,
-            path.as_ref(),
-        )
-        .await?;
         Ok(())
     }
 
@@ -386,6 +512,8 @@ impl NodeMaintainer {
         } else {
             ProgressBar::hidden()
         };
+
+        self.load_actual().await?;
 
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
@@ -474,7 +602,13 @@ impl NodeMaintainer {
                     else {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
-                        if let Some(kdl_lock) = &lockfile {
+                        let lock = if lockfile.is_some() {
+                            &lockfile
+                        } else {
+                            // Fall back to the actual tree lock if it's there.
+                            &self.actual_tree
+                        };
+                        if let Some(kdl_lock) = lock {
                             if let Some((package, lockfile_node)) = self
                                 .satisfy_from_lockfile(
                                     &self.graph,
@@ -815,6 +949,21 @@ impl NodeMaintainer {
         } else {
             Box::new(deps)
         }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn load_actual(&mut self) -> Result<(), NodeMaintainerError> {
+        let meta = self.root.join("node_modules").join(META_FILE_NAME);
+        self.actual_tree = async_std::fs::read_to_string(&meta)
+            .await
+            .ok()
+            .and_then(|lock| Lockfile::from_kdl(lock).ok());
+        if self.actual_tree.is_none() && meta.exists() {
+            // If anything went wrong, we go ahead and delete the meta file,
+            // if it exists, because it's probably corrupted.
+            async_std::fs::remove_file(meta).await?;
+        }
+        Ok(())
     }
 }
 

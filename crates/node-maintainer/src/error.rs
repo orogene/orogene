@@ -120,6 +120,11 @@ pub enum NodeMaintainerError {
     #[error("{0}")]
     #[diagnostic(code(node_maintainer::graph_error))]
     GraphValidationError(String),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error(transparent)]
+    #[diagnostic(code(node_maintainer::walkdir_error))]
+    WalkDirError(#[from] walkdir::Error),
 }
 
 impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {
