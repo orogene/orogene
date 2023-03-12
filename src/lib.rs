@@ -162,6 +162,10 @@ pub struct Orogene {
     #[arg(global = true, long)]
     json: bool,
 
+    /// Disable progress bar display.
+    #[arg(global = true, long)]
+    no_progress: bool,
+
     #[command(subcommand)]
     subcommand: OroCmd,
 }
@@ -193,13 +197,7 @@ impl Orogene {
         };
 
         let ilayer = IndicatifLayer::new();
-        let builder = tracing_subscriber::registry()
-            .with(
-                tracing_subscriber::fmt::layer()
-                    .with_writer(ilayer.get_stderr_writer())
-                    .with_filter(filter),
-            )
-            .with(ilayer);
+        let builder = tracing_subscriber::registry();
 
         if let Some(cache) = self.cache.as_deref() {
             let targets = Targets::new()
@@ -218,13 +216,39 @@ impl Orogene {
                 tracing_appender::rolling::never(cache.join("_logs"), log_file_name());
             let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-            builder
-                .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
-                .init();
+            if self.quiet || self.no_progress {
+                builder
+                    .with(tracing_subscriber::fmt::layer().with_filter(filter))
+                    .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                    .init();
+            } else {
+                builder
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_writer(ilayer.get_stderr_writer())
+                            .with_filter(filter),
+                    )
+                    .with(ilayer)
+                    .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                    .init();
+            };
 
             Ok(Some(guard))
         } else {
-            builder.init();
+            if self.quiet || self.no_progress {
+                builder
+                    .with(tracing_subscriber::fmt::layer().with_filter(filter))
+                    .init();
+            } else {
+                builder
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_writer(ilayer.get_stderr_writer())
+                            .with_filter(filter),
+                    )
+                    .with(ilayer)
+                    .init();
+            };
             Ok(None)
         }
     }
