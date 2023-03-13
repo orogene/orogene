@@ -6,6 +6,7 @@ use indicatif::ProgressStyle;
 use miette::{IntoDiagnostic, Result};
 use node_maintainer::{NodeMaintainer, NodeMaintainerOptions};
 use oro_config::OroConfigLayer;
+use rand::seq::IteratorRandom;
 use tracing::Span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use url::Url;
@@ -113,7 +114,11 @@ impl OroCommand for RestoreCmd {
         }
 
         if !self.quiet {
-            eprintln!("🎉 Done in {}s.", total_time.elapsed().as_millis() / 1000,);
+            eprintln!(
+                "🎉 Done in {}s. {}",
+                total_time.elapsed().as_millis() as f32 / 1000.0,
+                hackerish_encouragement()
+            );
         }
         Ok(())
     }
@@ -144,7 +149,7 @@ impl RestoreCmd {
             eprintln!(
                 "🔍 Resolved {} packages in {}s.",
                 resolved_nm.package_count(),
-                resolve_time.elapsed().as_millis() / 1000
+                resolve_time.elapsed().as_millis() as f32 / 1000.0
             );
         }
 
@@ -172,7 +177,7 @@ impl RestoreCmd {
         if !self.quiet {
             eprintln!(
                 "🧹 Pruned {pruned} packages in {}s.",
-                prune_time.elapsed().as_millis() / 1000
+                prune_time.elapsed().as_millis() as f32 / 1000.0
             );
         }
 
@@ -201,10 +206,32 @@ impl RestoreCmd {
             eprintln!(
                 "📦 Extracted {extracted} package{} in {}s.",
                 if extracted == 1 { "" } else { "s" },
-                extract_time.elapsed().as_millis() / 1000
+                extract_time.elapsed().as_millis() as f32 / 1000.0
             );
         }
 
         Ok(())
     }
+}
+
+// Inspired and brazenly taken from SLIME:
+// https://github.com/slime/slime/blob/e193bc5f3431a2f71f1d7a0e3f28e6dc4dd5de2d/slime.el#L1360-L1375
+fn hackerish_encouragement() -> &'static str {
+    let encouragements = [
+        "Let the hacking commence!",
+        "Hacks and glory await!",
+        "Hack and be merry!",
+        "Your hacking starts... NOW!",
+        "May the source be with you.",
+        "Hack the planet!",
+        "Hackuna Matata 🐛",
+        "Are we JavaScript yet?",
+        "[Scientifically-proven optimal words of hackerish encouragement here]",
+    ];
+
+    let mut rng = rand::thread_rng();
+    encouragements
+        .iter()
+        .choose(&mut rng)
+        .expect("Iterator should not be empty.")
 }
