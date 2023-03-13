@@ -194,7 +194,7 @@ impl Orogene {
             filter
         };
 
-        let ilayer = IndicatifLayer::new();
+        let ilayer = IndicatifLayer::new().with_max_progress_bars(1, None);
         let builder = tracing_subscriber::registry();
 
         if let Some(cache) = self.cache.as_deref() {
