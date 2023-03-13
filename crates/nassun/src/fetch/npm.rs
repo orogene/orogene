@@ -145,3 +145,150 @@ impl PackageFetcher for NpmFetcher {
         Ok(self.client.stream_external(url).await?)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use node_semver::{Range, Version};
+    use oro_package_spec::VersionSpec;
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn read_name() -> Result<()> {
+        let fetcher = NpmFetcher {
+            client: oro_client::OroClient::default(),
+            registries: HashMap::default(),
+            corgi_packuments: DashMap::default(),
+            packuments: DashMap::default(),
+        };
+        let spec = PackageSpec::Npm {
+            scope: None,
+            name: "npm".to_string(),
+            requested: Some(VersionSpec::Range(Range::parse(">1.0.0").unwrap())),
+        };
+        let cache_path = tempdir()?;
+        let name = fetcher.name(&spec, cache_path.path()).await?;
+        assert_eq!(name, "npm");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn read_packument() -> Result<()> {
+        let mut mock_server = mockito::Server::new();
+        let example_response = format!(
+            r#"{{
+            "_attachments": {{}},
+            "_id": "oro-test-example",
+            "_rev": "1-0da57asf9e977d423ed4a35aedc17d250",
+            "author": {{
+                "email": "oro-test@example.com",
+                "name": "Orogene Test"
+            }},
+            "description": "Example Orogene package",
+            "dist-tags": {{
+                "latest": "1.0.0"
+            }},
+            "license": "ISC",
+            "maintainers": [
+                {{
+                    "email": "oro-test@example.com",
+                    "name": "oro-test"
+                }}
+            ],
+            "name": "oro-test-example",
+            "readme": "Nothing much",
+            "readmeFilename": "README.md",
+            "time": {{
+                "1.0.0": "2023-03-13T12:33:00.044Z",
+                "created": "2023-03-13T12:33:00.045Z",
+                "modified": "2023-03-13T12:33:00.046Z"
+            }},
+            "versions": {{
+                "1.0.0": {{
+                    "_from": ".",
+                    "_id": "oro-test-example@1.0.0",
+                    "_nodeVersion": "1.5.0",
+                    "_npmUser": {{
+                        "email": "oro-test@example.com",
+                        "name": "oro-test"
+                    }},
+                    "_npmVersion": "2.7.0",
+                    "_shasum": "bbf102d5ae73afe2c553295e0fb02230216f65b1",
+                    "author": {{
+                        "email": "oro-test@example.com",
+                        "name": "oro-test"
+                    }},
+                    "description": "The first version of the Orogene Test Example",
+                    "directories": {{}},
+                    "dist": {{
+                        "shasum": "bbf102d5ae73afe2c553295e0fb02230216f65b1",
+                        "tarball": "{}/oro-test-example/-/oro-test-example-1.0.0.tgz"
+                    }},
+                    "license": "ISC",
+                    "main": "index.js",
+                    "maintainers": [
+                        {{
+                            "email": "oro-test@example.com",
+                            "name": "oro-test"
+                        }}
+                    ],
+                    "name": "oro-test-example",
+                    "scripts": {{
+                        "test": "echo \"Error: no test specified\" && exit 1"
+                    }},
+                    "version": "1.0.0"
+                }}
+            }}
+        }}"#,
+            mock_server.url()
+        );
+        mock_server
+            .mock("GET", "/oro-test-example")
+            .with_body(example_response)
+            .create_async()
+            .await;
+
+        let mut registries = HashMap::new();
+        registries.insert(None, Url::parse(mock_server.url().as_ref()).unwrap());
+
+        let fetcher = NpmFetcher {
+            client: oro_client::OroClient::default(),
+            registries: registries,
+            corgi_packuments: DashMap::default(),
+            packuments: DashMap::default(),
+        };
+        let spec = PackageSpec::Npm {
+            scope: None,
+            name: "oro-test-example".to_string(),
+            requested: Some(VersionSpec::Range(Range::parse(">=1.0.0").unwrap())),
+        };
+        let cache_path = tempdir()?;
+        let packument = fetcher.packument(&spec, cache_path.path()).await?;
+        assert!(packument
+            .versions
+            .contains_key(&Version::parse("1.0.0").unwrap()));
+        let mut tags = HashMap::new();
+        tags.insert("latest".to_string(), Version::parse("1.0.0").unwrap());
+        assert_eq!(packument.tags, tags);
+        assert_eq!(
+            packument
+                .versions
+                .get(&Version::parse("1.0.0").unwrap())
+                .unwrap()
+                .dist
+                .tarball,
+            Some(
+                Url::parse(
+                    format!(
+                        "{}/oro-test-example/-/oro-test-example-1.0.0.tgz",
+                        mock_server.url()
+                    )
+                    .as_str()
+                )
+                .unwrap()
+            )
+        );
+        Ok(())
+    }
+}

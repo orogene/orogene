@@ -234,3 +234,50 @@ impl Manifest {
         Ok(packument)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::{fs::File, io::Write, path::PathBuf};
+
+    use tempfile::{tempdir, TempDir};
+
+    fn setup_dirs() -> Result<(impl PackageFetcher, PackageSpec, TempDir, PathBuf, PathBuf)>
+    {
+        let tmp = tempdir()?;
+        let package_path = tmp.path().join("oro-test");
+        let cache_path = tmp.path().join("cache");
+        std::fs::create_dir_all(&package_path)?;
+        std::fs::create_dir_all(&cache_path)?;
+        let mut package_file = File::create(package_path.join("package.json"))?;
+        package_file.write_all(r#"{
+            "name": "oro-test",
+            "version": "1.4.2"
+        }"#.as_bytes())?;
+        let dir_fetcher = DirFetcher;
+
+        let package_spec = PackageSpec::Dir { path: PathBuf::new().join(&package_path) };
+
+        Ok((dir_fetcher, package_spec, tmp, package_path, cache_path))
+    }
+
+    #[tokio::test]
+    async fn read_name() -> Result<()>
+    {
+        let (fetcher, package_spec, _tmp, _package_path, cache_path) = setup_dirs()?;
+        let name = fetcher.name(&package_spec, &cache_path).await?;
+        assert_eq!(name, "oro-test");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn read_packument() -> Result<()>
+    {
+        let (fetcher, package_spec, _tmp, _package_path, cache_path) = setup_dirs()?;
+        let packument = fetcher.packument(&package_spec, &cache_path).await?;
+        assert_eq!(packument.versions.len(), 1);
+        assert!(packument.versions.contains_key(&Version::from((1,4,2))));
+        assert_eq!(packument.versions.get(&Version::from((1,4,2))).unwrap().dist.file_count, None);
+        Ok(())
+    }
+}
