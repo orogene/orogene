@@ -27,6 +27,7 @@ pub struct NassunOpts {
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
+    memoize_metadata: bool,
 }
 
 impl NassunOpts {
@@ -62,6 +63,15 @@ impl NassunOpts {
     /// Default tag to use when resolving package versions. Defaults to `latest`.
     pub fn default_tag(mut self, default_tag: impl AsRef<str>) -> Self {
         self.default_tag = Some(default_tag.as_ref().into());
+        self
+    }
+
+    /// Whether to memoize package metadata. This will keep any processed
+    /// packuments in memory for the lifetime of this `Nassun` instance.
+    /// Setting this to `true` may increase performance when fetching many
+    /// packages, at the cost of significant additional memory usage.
+    pub fn memoize_metadata(mut self, memoize: bool) -> Self {
+        self.memoize_metadata = memoize;
         self
     }
 
@@ -104,6 +114,7 @@ impl NassunOpts {
                 #[allow(clippy::redundant_clone)]
                 client.clone(),
                 self.registries,
+                self.memoize_metadata,
             )),
             #[cfg(not(target_arch = "wasm32"))]
             dir_fetcher: Arc::new(DirFetcher::new()),
