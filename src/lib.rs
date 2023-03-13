@@ -111,9 +111,7 @@ use tracing_subscriber::{
 };
 use url::Url;
 
-use commands::{
-    ping::PingCmd, resolve::ResolveCmd, restore::RestoreCmd, view::ViewCmd, OroCommand,
-};
+use commands::{ping::PingCmd, restore::RestoreCmd, view::ViewCmd, OroCommand};
 
 mod commands;
 
@@ -351,9 +349,6 @@ pub enum OroCmd {
     /// Ping the registry.
     Ping(PingCmd),
 
-    /// Resolve a package tree and save the lockfile to the project directory.
-    Resolve(ResolveCmd),
-
     /// Resolves and extracts a node_modules/ tree.
     Restore(RestoreCmd),
 
@@ -367,7 +362,6 @@ impl OroCommand for Orogene {
         log_command_line();
         match self.subcommand {
             OroCmd::Ping(cmd) => cmd.execute().await,
-            OroCmd::Resolve(cmd) => cmd.execute().await,
             OroCmd::Restore(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
         }
@@ -379,9 +373,6 @@ impl OroConfigLayer for Orogene {
         match self.subcommand {
             OroCmd::Ping(ref mut cmd) => {
                 cmd.layer_config(args.subcommand_matches("ping").unwrap(), conf)
-            }
-            OroCmd::Resolve(ref mut cmd) => {
-                cmd.layer_config(args.subcommand_matches("resolve").unwrap(), conf)
             }
             OroCmd::Restore(ref mut cmd) => {
                 cmd.layer_config(args.subcommand_matches("restore").unwrap(), conf)

@@ -33,6 +33,7 @@ const META_FILE_NAME: &str = ".orogene-meta.kdl";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
 pub type ProgressHandler = Arc<dyn Fn(&Package) + Send + Sync>;
+pub type PruneProgress = Arc<dyn Fn(&Path) + Send + Sync>;
 
 #[derive(Clone)]
 pub struct NodeMaintainerOptions {
@@ -53,6 +54,7 @@ pub struct NodeMaintainerOptions {
     // Intended for progress bars
     on_resolution_added: Option<ProgressAdded>,
     on_resolve_progress: Option<ProgressHandler>,
+    on_prune_progress: Option<PruneProgress>,
     on_extract_progress: Option<ProgressHandler>,
 }
 
@@ -144,6 +146,14 @@ impl NodeMaintainerOptions {
         self
     }
 
+    pub fn on_prune_progress<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Path) + Send + Sync + 'static,
+    {
+        self.on_prune_progress = Some(Arc::new(f));
+        self
+    }
+
     pub fn on_extract_progress<F>(mut self, f: F) -> Self
     where
         F: Fn(&Package) + Send + Sync + 'static,
@@ -152,10 +162,58 @@ impl NodeMaintainerOptions {
         self
     }
 
+    async fn get_lockfile(&self) -> Result<Option<Lockfile>, NodeMaintainerError> {
+        if let Some(kdl_lock) = &self.kdl_lock {
+            return Ok(Some(kdl_lock.clone()));
+        }
+        if let Some(npm_lock) = &self.npm_lock {
+            return Ok(Some(npm_lock.clone()));
+        }
+        if let Some(root) = &self.root {
+            let kdl_lock = root.join("package-lock.kdl");
+            if kdl_lock.exists() {
+                match async_std::fs::read_to_string(kdl_lock)
+                    .await
+                    .map_err(NodeMaintainerError::IoError)
+                    .and_then(Lockfile::from_kdl)
+                {
+                    Ok(lock) => return Ok(Some(lock)),
+                    Err(e) => tracing::debug!("Failed to parse existing package-lock.kdl: {}", e),
+                }
+            }
+            let npm_lock = root.join("package-lock.json");
+            if npm_lock.exists() {
+                match async_std::fs::read_to_string(npm_lock)
+                    .await
+                    .map_err(NodeMaintainerError::IoError)
+                    .and_then(Lockfile::from_npm)
+                {
+                    Ok(lock) => return Ok(Some(lock)),
+                    Err(e) => tracing::debug!("Failed to parse existing package-lock.json: {}", e),
+                }
+            }
+            let npm_lock = root.join("npm-shrinkwrap.json");
+            if npm_lock.exists() {
+                match async_std::fs::read_to_string(npm_lock)
+                    .await
+                    .map_err(NodeMaintainerError::IoError)
+                    .and_then(Lockfile::from_npm)
+                {
+                    Ok(lock) => return Ok(Some(lock)),
+                    Err(e) => {
+                        tracing::debug!("Failed to parse existing npm-shrinkwrap.json: {}", e)
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
     pub async fn resolve_manifest(
         self,
         root: CorgiManifest,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
+        let lockfile = self.get_lockfile().await?;
         let nassun = self.nassun_opts.build();
         let root_pkg = Nassun::dummy_from_manifest(root.clone());
         let mut nm = NodeMaintainer {
@@ -169,11 +227,12 @@ impl NodeMaintainerOptions {
             actual_tree: None,
             on_resolution_added: self.on_resolution_added,
             on_resolve_progress: self.on_resolve_progress,
+            on_prune_progress: self.on_prune_progress,
             on_extract_progress: self.on_extract_progress,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
-        nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
+        nm.run_resolver(lockfile).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -183,6 +242,7 @@ impl NodeMaintainerOptions {
         self,
         root_spec: impl AsRef<str>,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
+        let lockfile = self.get_lockfile().await?;
         let nassun = self.nassun_opts.build();
         let root_pkg = nassun.resolve(root_spec).await?;
         let mut nm = NodeMaintainer {
@@ -196,12 +256,13 @@ impl NodeMaintainerOptions {
             actual_tree: None,
             on_resolution_added: self.on_resolution_added,
             on_resolve_progress: self.on_resolve_progress,
+            on_prune_progress: self.on_prune_progress,
             on_extract_progress: self.on_extract_progress,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
-        nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
+        nm.run_resolver(lockfile).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -221,6 +282,7 @@ impl Default for NodeMaintainerOptions {
             root: None,
             on_resolution_added: None,
             on_resolve_progress: None,
+            on_prune_progress: None,
             on_extract_progress: None,
         }
     }
@@ -245,6 +307,7 @@ pub struct NodeMaintainer {
     actual_tree: Option<Lockfile>,
     on_resolution_added: Option<ProgressAdded>,
     on_resolve_progress: Option<ProgressHandler>,
+    on_prune_progress: Option<PruneProgress>,
     on_extract_progress: Option<ProgressHandler>,
 }
 
@@ -302,13 +365,13 @@ impl NodeMaintainer {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    async fn prune(&self) -> Result<(), NodeMaintainerError> {
+    pub async fn prune(&self) -> Result<usize, NodeMaintainerError> {
         use walkdir::WalkDir;
 
         let prefix = self.root.join("node_modules");
 
         if !prefix.exists() {
-            return Ok(());
+            return Ok(0);
         }
 
         let start = std::time::Instant::now();
@@ -329,7 +392,8 @@ impl NodeMaintainer {
 
             tracing::info!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
 
-            return Ok(());
+            // TODO: get an accurate count here?
+            return Ok(0);
         }
 
         let nm_osstr = Some(std::ffi::OsStr::new("node_modules"));
@@ -416,8 +480,14 @@ impl NodeMaintainer {
             {
                 continue;
             } else if entry.file_type().is_dir() {
+                if let Some(pb) = &self.on_prune_progress {
+                    pb(entry_path);
+                }
                 async_std::fs::remove_dir_all(entry.path()).await?;
             } else {
+                if let Some(pb) = &self.on_prune_progress {
+                    pb(entry_path);
+                }
                 async_std::fs::remove_file(entry.path()).await?;
             }
         }
@@ -434,18 +504,17 @@ impl NodeMaintainer {
                 if extraneous_packages == 1 { "" } else { "s" },
             );
         }
-        Ok(())
+        Ok(extraneous_packages)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract(&self) -> Result<(), NodeMaintainerError> {
+    pub async fn extract(&self) -> Result<usize, NodeMaintainerError> {
         let start = std::time::Instant::now();
-
-        self.prune().await?;
 
         let root = &self.root;
         let stream = futures::stream::iter(self.graph.inner.node_indices());
         let concurrent_count = Arc::new(AtomicUsize::new(0));
+        let actually_extracted = Arc::new(AtomicUsize::new(0));
         let total = self.graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
         let node_modules = root.join("node_modules");
@@ -457,10 +526,10 @@ impl NodeMaintainer {
             };
         let validate = self.validate;
         stream
-            .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
+            .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone(), actually_extracted.clone())))
             .try_for_each_concurrent(
                 self.concurrency,
-                move |(child_idx, concurrent_count, total_completed)| async move {
+                move |(child_idx, concurrent_count, total_completed, actually_extracted)| async move {
                     if child_idx == self.graph.root {
                         return Ok(());
                     }
@@ -482,6 +551,7 @@ impl NodeMaintainer {
                             .package
                             .extract_to_dir(&target_dir, prefer_copy, validate)
                             .await?;
+                        actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
                     }
 
                     if let Some(on_extract) = &self.on_extract_progress {
@@ -504,12 +574,13 @@ impl NodeMaintainer {
             node_modules.join(META_FILE_NAME),
             self.to_kdl()?.to_string(),
         )?;
+        let actually_extracted = actually_extracted.load(atomic::Ordering::SeqCst);
         tracing::info!(
-            "Extracted {total} package{} in {}ms.",
-            if total == 1 { "" } else { "s" },
+            "Extracted {actually_extracted} package{} in {}ms.",
+            if actually_extracted == 1 { "" } else { "s" },
             start.elapsed().as_millis(),
         );
-        Ok(())
+        Ok(actually_extracted)
     }
 
     async fn run_resolver(
