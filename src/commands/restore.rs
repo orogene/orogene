@@ -113,7 +113,7 @@ impl OroCommand for RestoreCmd {
         }
 
         if !self.quiet {
-            eprintln!("🎉 Done in {}ms.", total_time.elapsed().as_micros() / 1000,);
+            eprintln!("🎉 Done in {}s.", total_time.elapsed().as_millis() / 1000,);
         }
         Ok(())
     }
@@ -142,9 +142,9 @@ impl RestoreCmd {
         std::mem::drop(resolve_span);
         if !self.quiet {
             eprintln!(
-                "🔍 Resolved {} packages in {}ms.",
+                "🔍 Resolved {} packages in {}s.",
                 resolved_nm.package_count(),
-                resolve_time.elapsed().as_micros() / 1000
+                resolve_time.elapsed().as_millis() / 1000
             );
         }
 
@@ -171,8 +171,8 @@ impl RestoreCmd {
         std::mem::drop(prune_span);
         if !self.quiet {
             eprintln!(
-                "🧹 Pruned {pruned} packages in {}ms.",
-                prune_time.elapsed().as_micros() / 1000
+                "🧹 Pruned {pruned} packages in {}s.",
+                prune_time.elapsed().as_millis() / 1000
             );
         }
 
@@ -199,9 +199,9 @@ impl RestoreCmd {
         std::mem::drop(extract_span);
         if !self.quiet {
             eprintln!(
-                "📦 Extracted {extracted} package{} in {}ms.",
+                "📦 Extracted {extracted} package{} in {}s.",
                 if extracted == 1 { "" } else { "s" },
-                extract_time.elapsed().as_micros() / 1000
+                extract_time.elapsed().as_millis() / 1000
             );
         }
 
