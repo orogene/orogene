@@ -154,18 +154,13 @@ mod test {
 
     use super::*;
 
-    #[tokio::test]
+    #[async_std::test]
     async fn read_name() -> Result<()> {
-        let fetcher = NpmFetcher {
-            client: oro_client::OroClient::default(),
-            registries: HashMap::default(),
-            corgi_packuments: DashMap::default(),
-            packuments: DashMap::default(),
-        };
+        let fetcher = NpmFetcher::new(oro_client::OroClient::default(), HashMap::default());
         let spec = PackageSpec::Npm {
             scope: None,
             name: "npm".to_string(),
-            requested: Some(VersionSpec::Range(Range::parse(">1.0.0").unwrap())),
+            requested: Some(VersionSpec::Range(">1.0.0".parse()?)),
         };
         let cache_path = tempdir()?;
         let name = fetcher.name(&spec, cache_path.path()).await?;
@@ -173,7 +168,7 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[async_std::test]
     async fn read_packument() -> Result<()> {
         let mut mock_server = mockito::Server::new();
         let example_response = format!(
@@ -252,29 +247,24 @@ mod test {
         let mut registries = HashMap::new();
         registries.insert(None, Url::parse(mock_server.url().as_ref()).unwrap());
 
-        let fetcher = NpmFetcher {
-            client: oro_client::OroClient::default(),
-            registries: registries,
-            corgi_packuments: DashMap::default(),
-            packuments: DashMap::default(),
-        };
+        let fetcher = NpmFetcher::new(oro_client::OroClient::default(), registries);
         let spec = PackageSpec::Npm {
             scope: None,
             name: "oro-test-example".to_string(),
-            requested: Some(VersionSpec::Range(Range::parse(">=1.0.0").unwrap())),
+            requested: Some(VersionSpec::Range(">=1.0.0".parse()?)),
         };
         let cache_path = tempdir()?;
         let packument = fetcher.packument(&spec, cache_path.path()).await?;
         assert!(packument
             .versions
-            .contains_key(&Version::parse("1.0.0").unwrap()));
+            .contains_key(&"1.0.0".parse()?));
         let mut tags = HashMap::new();
-        tags.insert("latest".to_string(), Version::parse("1.0.0").unwrap());
+        tags.insert("latest".to_string(), "1.0.0".parse()?);
         assert_eq!(packument.tags, tags);
         assert_eq!(
             packument
                 .versions
-                .get(&Version::parse("1.0.0").unwrap())
+                .get(&"1.0.0".parse()?)
                 .unwrap()
                 .dist
                 .tarball,

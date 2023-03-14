@@ -261,7 +261,7 @@ mod test {
         Ok((dir_fetcher, package_spec, tmp, package_path, cache_path))
     }
 
-    #[tokio::test]
+    #[async_std::test]
     async fn read_name() -> Result<()>
     {
         let (fetcher, package_spec, _tmp, _package_path, cache_path) = setup_dirs()?;
@@ -270,14 +270,14 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[async_std::test]
     async fn read_packument() -> Result<()>
     {
         let (fetcher, package_spec, _tmp, _package_path, cache_path) = setup_dirs()?;
         let packument = fetcher.packument(&package_spec, &cache_path).await?;
         assert_eq!(packument.versions.len(), 1);
-        assert!(packument.versions.contains_key(&Version::from((1,4,2))));
-        assert_eq!(packument.versions.get(&Version::from((1,4,2))).unwrap().dist.file_count, None);
+        assert!(packument.versions.contains_key(&"1.4.2".parse()?));
+        assert_eq!(packument.versions.get(&"1.4.2".parse()?).unwrap().dist.file_count, None);
         Ok(())
     }
 }

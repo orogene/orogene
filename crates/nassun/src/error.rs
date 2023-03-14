@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use miette::Diagnostic;
-use node_semver::Version;
+use node_semver::{Version, SemverError};
 use oro_common::CorgiVersionMetadata;
 use oro_package_spec::PackageSpec;
 use thiserror::Error;
@@ -16,6 +16,10 @@ pub enum NassunError {
         help("Try using `oro view` to see what versions are available")
     )]
     MissingVersion(PackageSpec, Version),
+
+    /// Could not parse a version or version spec
+    #[error(transparent)]
+    VersionError(#[from] SemverError),
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]

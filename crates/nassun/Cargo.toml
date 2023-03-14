@@ -28,12 +28,10 @@ ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
-mockall = "0.11.3"
 
 [dev-dependencies]
-mockito = "1.0.0"
-test-case = "3.0.0"
-tokio = { version = "1.26.0", features = ["macros"] }
+mockito = { workspace = true }
+test-case = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 async-tar-wasm = { workspace = true }
