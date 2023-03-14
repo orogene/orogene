@@ -62,6 +62,7 @@ pub struct RestoreCmd {
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
         let total_time = std::time::Instant::now();
+        let emoji = Emoji::new();
         let root = self
             .root
             .as_deref()
@@ -96,13 +97,13 @@ impl OroCommand for RestoreCmd {
             nm = nm.cache(cache);
         }
 
-        let resolved_nm = self.resolve(root, nm).await?;
+        let resolved_nm = self.resolve(&emoji, root, nm).await?;
 
         if !self.lockfile_only {
-            self.prune(&resolved_nm).await?;
-            self.extract(&resolved_nm).await?;
+            self.prune(&emoji, &resolved_nm).await?;
+            self.extract(&emoji, &resolved_nm).await?;
         } else if !self.quiet {
-            eprintln!("📦 Skipping prune and extract, only writing lockfile");
+            eprintln!("{}Skipping prune and extract, only writing lockfile", emoji.package());
         }
 
         resolved_nm
@@ -110,12 +111,13 @@ impl OroCommand for RestoreCmd {
             .await?;
 
         if !self.quiet {
-            eprintln!("📝 Wrote lockfile to package-lock.kdl.");
+            eprintln!("{}Wrote lockfile to package-lock.kdl.", emoji.writing());
         }
 
         if !self.quiet {
             eprintln!(
-                "🎉 Done in {}s. {}",
+                "{}Done in {}s. {}",
+                emoji.tada(),
                 total_time.elapsed().as_millis() as f32 / 1000.0,
                 hackerish_encouragement()
             );
@@ -125,13 +127,22 @@ impl OroCommand for RestoreCmd {
 }
 
 impl RestoreCmd {
-    async fn resolve(&self, root: &Path, builder: NodeMaintainerOptions) -> Result<NodeMaintainer> {
+    async fn resolve(
+        &self,
+        emoji: &Emoji,
+        root: &Path,
+        builder: NodeMaintainerOptions,
+    ) -> Result<NodeMaintainer> {
         // Set up progress bar and timing stuff.
         let resolve_time = std::time::Instant::now();
         let resolve_span = tracing::info_span!("resolving");
         resolve_span.pb_set_style(
             &ProgressStyle::default_bar()
-                .template("🔍 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
+                .template(&format!(
+                    "{}{}",
+                    emoji.magnifying_glass(),
+                    "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
+                ))
                 .unwrap(),
         );
         resolve_span.pb_set_length(0);
@@ -147,7 +158,8 @@ impl RestoreCmd {
         std::mem::drop(resolve_span);
         if !self.quiet {
             eprintln!(
-                "🔍 Resolved {} packages in {}s.",
+                "{}Resolved {} packages in {}s.",
+                emoji.magnifying_glass(),
                 resolved_nm.package_count(),
                 resolve_time.elapsed().as_millis() as f32 / 1000.0
             );
@@ -156,13 +168,17 @@ impl RestoreCmd {
         Ok(resolved_nm)
     }
 
-    async fn prune(&self, maintainer: &NodeMaintainer) -> Result<()> {
+    async fn prune(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
         // Set up progress bar and timing stuff.
         let prune_time = std::time::Instant::now();
         let prune_span = tracing::info_span!("prune");
         prune_span.pb_set_style(
             &ProgressStyle::default_bar()
-                .template("🧹 {bar:40} [{pos}] {wide_msg:.dim}")
+                .template(&format!(
+                    "{}{}",
+                    emoji.broom(),
+                    "{bar:40} [{pos}] {wide_msg:.dim}"
+                ))
                 .unwrap(),
         );
         prune_span.pb_set_length(maintainer.package_count() as u64);
@@ -176,7 +192,8 @@ impl RestoreCmd {
         std::mem::drop(prune_span);
         if !self.quiet {
             eprintln!(
-                "🧹 Pruned {pruned} packages in {}s.",
+                "{}Pruned {pruned} packages in {}s.",
+                emoji.broom(),
                 prune_time.elapsed().as_millis() as f32 / 1000.0
             );
         }
@@ -184,13 +201,13 @@ impl RestoreCmd {
         Ok(())
     }
 
-    async fn extract(&self, maintainer: &NodeMaintainer) -> Result<()> {
+    async fn extract(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
         // Set up progress bar and timing stuff.
         let extract_time = std::time::Instant::now();
         let extract_span = tracing::info_span!("extract");
         extract_span.pb_set_style(
             &ProgressStyle::default_bar()
-                .template("📦 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
+                .template(&format!("{}{}", emoji.package(), "{bar:40} [{pos}/{len}] {wide_msg:.dim}"))
                 .unwrap(),
         );
         extract_span.pb_set_length(maintainer.package_count() as u64);
@@ -204,7 +221,8 @@ impl RestoreCmd {
         std::mem::drop(extract_span);
         if !self.quiet {
             eprintln!(
-                "📦 Extracted {extracted} package{} in {}s.",
+                "{}Extracted {extracted} package{} in {}s.",
+                emoji.package(),
                 if extracted == 1 { "" } else { "s" },
                 extract_time.elapsed().as_millis() as f32 / 1000.0
             );
@@ -224,7 +242,7 @@ fn hackerish_encouragement() -> &'static str {
         "Your hacking starts... NOW!",
         "May the source be with you.",
         "Hack the planet!",
-        "Hackuna Matata 🐛",
+        "Hackuna Matata~",
         "Are we JavaScript yet?",
         "[Scientifically-proven optimal words of hackerish encouragement here]",
     ];
@@ -234,4 +252,54 @@ fn hackerish_encouragement() -> &'static str {
         .iter()
         .choose(&mut rng)
         .expect("Iterator should not be empty.")
+}
+
+struct Emoji(bool);
+
+impl Emoji {
+    fn new() -> Self {
+        Self(supports_unicode::on(supports_unicode::Stream::Stderr))
+    }
+
+    const PACKAGE: &'static str = "📦 ";
+    const MAGNIFYING_GLASS: &'static str = "🔍 ";
+    const BROOM: &'static str = "🧹 ";
+    const WRITING: &'static str = "📝 ";
+    const TADA: &'static str = "🎉 ";
+
+    fn package(&self) -> &'static str {
+        Self::PACKAGE
+    }
+
+    fn magnifying_glass(&self) -> &'static str {
+        if self.0 {
+            Self::MAGNIFYING_GLASS
+        } else {
+            ""
+        }
+    }
+
+    fn broom(&self) -> &'static str {
+        if self.0 {
+            Self::BROOM
+        } else {
+            ""
+        }
+    }
+
+    fn writing(&self) -> &'static str {
+        if self.0 {
+            Self::WRITING
+        } else {
+            ""
+        }
+    }
+
+    fn tada(&self) -> &'static str {
+        if self.0 {
+            Self::TADA
+        } else {
+            ""
+        }
+    }
 }
