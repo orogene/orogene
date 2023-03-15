@@ -271,7 +271,7 @@ mod test {
     }
 
     #[async_std::test]
-    async fn read_packument() -> Result<()>
+    async fn read_packument() -> miette::Result<()>
     {
         let (fetcher, package_spec, _tmp, _package_path, cache_path) = setup_dirs()?;
         let packument = fetcher.packument(&package_spec, &cache_path).await?;

@@ -148,28 +148,27 @@ impl PackageFetcher for NpmFetcher {
 
 #[cfg(test)]
 mod test {
-    use node_semver::{Range, Version};
     use oro_package_spec::VersionSpec;
     use tempfile::tempdir;
 
     use super::*;
 
     #[async_std::test]
-    async fn read_name() -> Result<()> {
+    async fn read_name() -> miette::Result<()> {
         let fetcher = NpmFetcher::new(oro_client::OroClient::default(), HashMap::default());
         let spec = PackageSpec::Npm {
             scope: None,
             name: "npm".to_string(),
             requested: Some(VersionSpec::Range(">1.0.0".parse()?)),
         };
-        let cache_path = tempdir()?;
+        let cache_path = tempdir().unwrap();
         let name = fetcher.name(&spec, cache_path.path()).await?;
         assert_eq!(name, "npm");
         Ok(())
     }
 
     #[async_std::test]
-    async fn read_packument() -> Result<()> {
+    async fn read_packument() -> miette::Result<()> {
         let mut mock_server = mockito::Server::new();
         let example_response = format!(
             r#"{{
@@ -253,7 +252,7 @@ mod test {
             name: "oro-test-example".to_string(),
             requested: Some(VersionSpec::Range(">=1.0.0".parse()?)),
         };
-        let cache_path = tempdir()?;
+        let cache_path = tempdir().unwrap();
         let packument = fetcher.packument(&spec, cache_path.path()).await?;
         assert!(packument
             .versions

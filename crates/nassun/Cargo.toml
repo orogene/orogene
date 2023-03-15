@@ -15,7 +15,7 @@ oro-client = { version = "=0.3.6", path = "../oro-client" }
 oro-package-spec = { version = "=0.3.6", path = "../oro-package-spec" }
 
 async-compression = { workspace = true, features = ["gzip", "futures-io"] }
-async-std = { workspace = true, features = ["attributes", "unstable"] }
+async-std = { workspace = true, features = ["attributes", "unstable", "tokio1" ] }
 async-trait = { workspace = true }
 bincode = { workspace = true }
 dashmap = { workspace = true }

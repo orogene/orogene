@@ -50,7 +50,7 @@ members = [
 [workspace.dependencies]
 async-compression = "0.3.5"
 async-process = "1.0.1"
-async-std = { version = "1.12.0", features=["tokio1"] }
+async-std = "1.12.0"
 async-tar-wasm = "0.4.2-wasm.1"
 async-trait = "0.1.64"
 backon = "0.4.0"
