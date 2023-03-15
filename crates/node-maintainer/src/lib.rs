@@ -1,6 +1,10 @@
 //! An NPM dependency resolver for building `node_modules/` trees and
 //! extracting them to their final resting place.
 
+pub use nassun::Nassun;
+#[cfg(not(target_arch = "wasm32"))]
+pub use nassun::{NassunError, NassunOpts};
+
 pub use edge::*;
 pub use error::*;
 pub use graph::*;

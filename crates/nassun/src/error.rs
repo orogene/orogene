@@ -45,6 +45,7 @@ pub enum NassunError {
     #[diagnostic(code(nassun::io::extract))]
     ExtractIoError(#[source] std::io::Error, Option<PathBuf>, String),
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[error("Failed to extract tarball to cache. {0}{}", if let Some(path) = .1 {
         format!(" (file: {})", path.to_string_lossy())
     } else {
@@ -88,6 +89,11 @@ pub enum NassunError {
         spec: PackageSpec,
         versions: Vec<String>,
     },
+
+    #[cfg(target_arch = "wasm32")]
+    #[error(transparent)]
+    #[diagnostic(code(node_maintainer::serde_wasm_bindgen::error))]
+    SerdeWasmBindgenError(#[from] serde_wasm_bindgen::Error),
 
     #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]

@@ -7,7 +7,8 @@ use futures::{AsyncRead, Stream};
 
 pub use async_tar_wasm::Header;
 
-use crate::{error::Result, Tarball};
+use crate::error::Result;
+use crate::tarball::Tarball;
 
 #[cfg(not(target_arch = "wasm32"))]
 type EntriesStream = Box<dyn Stream<Item = Result<Entry>> + Unpin + Send + Sync>;

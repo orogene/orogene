@@ -53,6 +53,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "224afbd727c3d6e4b90103ece64b8d1b67fbb1973b1046c2281eed3f3803f800"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
+
+[[package]]
 name = "assert-json-diff"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -370,9 +376,9 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "cacache"
-version = "11.3.0"
+version = "11.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5602847e366a4c40858921bf1d48a6b0ad27fd9a97a3f1125fb7f4ef9c0153c"
+checksum = "ec5dc3e17f45b3392518abb1f4dbc21280ec6246f05f6cbcddcb161416b04441"
 dependencies = [
  "async-attributes",
  "async-std",
@@ -1125,6 +1131,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "gloo-utils"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8e8fc851e9c7b9852508bc6e3f690f452f474417e8545ec9857b7f7377036b5"
+dependencies = [
+ "js-sys",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1405,6 +1424,7 @@ dependencies = [
  "number_prefix",
  "portable-atomic",
  "unicode-width",
+ "vt100",
 ]
 
 [[package]]
@@ -1613,7 +1633,7 @@ dependencies = [
  "owo-colors",
  "supports-color",
  "supports-hyperlinks",
- "supports-unicode",
+ "supports-unicode 1.0.2",
  "terminal_size",
  "textwrap",
  "thiserror",
@@ -1696,7 +1716,7 @@ dependencies = [
 
 [[package]]
 name = "nassun"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "async-compression",
  "async-process",
@@ -1706,6 +1726,7 @@ dependencies = [
  "backon",
  "bincode",
  "cacache",
+ "console_error_panic_hook",
  "dashmap",
  "flate2",
  "futures 0.3.26",
@@ -1714,11 +1735,9 @@ dependencies = [
  "miette",
  "mockito",
  "node-semver",
- "once_cell",
  "oro-client",
  "oro-common",
  "oro-package-spec",
- "reflink",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -1728,6 +1747,7 @@ dependencies = [
  "test-case",
  "thiserror",
  "tracing",
+ "tsify",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -1755,7 +1775,7 @@ dependencies = [
 
 [[package]]
 name = "node-maintainer"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "async-std",
  "colored",
@@ -1772,14 +1792,18 @@ dependencies = [
  "oro-package-spec",
  "petgraph",
  "pretty_assertions",
+ "reflink",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
  "ssri",
+ "tempfile",
  "thiserror",
  "tracing",
+ "tsify",
  "unicase",
  "url",
+ "walkdir",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wiremock",
@@ -1925,7 +1949,7 @@ dependencies = [
 
 [[package]]
 name = "oro-client"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "async-std",
  "futures 0.3.26",
@@ -1946,7 +1970,7 @@ dependencies = [
 
 [[package]]
 name = "oro-common"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "derive_builder",
  "miette",
@@ -1961,7 +1985,7 @@ dependencies = [
 
 [[package]]
 name = "oro-config"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "clap",
  "config",
@@ -1975,7 +1999,7 @@ dependencies = [
 
 [[package]]
 name = "oro-config-derive"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "darling 0.10.2",
  "proc-macro2",
@@ -1985,7 +2009,7 @@ dependencies = [
 
 [[package]]
 name = "oro-package-spec"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "bytecount",
  "miette",
@@ -1998,7 +2022,7 @@ dependencies = [
 
 [[package]]
 name = "orogene"
-version = "0.3.6"
+version = "0.3.10"
 dependencies = [
  "async-std",
  "async-trait",
@@ -2009,18 +2033,22 @@ dependencies = [
  "directories",
  "embed-resource",
  "humansize",
+ "indicatif",
  "miette",
  "nassun",
  "node-maintainer",
  "oro-client",
  "oro-common",
  "oro-config",
+ "rand 0.8.5",
  "serde",
  "serde_json",
+ "supports-unicode 2.0.0",
  "term_grid",
  "term_size",
  "tracing",
  "tracing-appender",
+ "tracing-indicatif",
  "tracing-subscriber",
  "url",
 ]
@@ -2601,6 +2629,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_derive_internals"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85bf8229e7920a9f636479437026331ce11aa132b4dde37d121944a44d6e5f3c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "serde_json"
 version = "1.0.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2786,6 +2825,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8b945e45b417b125a8ec51f1b7df2f8df7920367700d1f98aedd21e5735f8b2"
 dependencies = [
  "atty",
+]
+
+[[package]]
+name = "supports-unicode"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b6c2cb240ab5dd21ed4906895ee23fe5a48acdbd15a3ce388e7b62a9b66baf7"
+dependencies = [
+ "is-terminal",
 ]
 
 [[package]]
@@ -3125,6 +3173,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-indicatif"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be4a5c90a233548de33c35a082c05b6fc91600d4f49765c31faf42b48f029ae8"
+dependencies = [
+ "indicatif",
+ "tracing",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-log"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3158,6 +3218,33 @@ name = "try-lock"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3528ecfd12c466c6f163363caf2d02a71161dd5e1cc6ae7b34207ea2d42d81ed"
+
+[[package]]
+name = "tsify"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfafeca19605f1239ad9a30b9f15b58e53abedfbf237390506276029329a32ee"
+dependencies = [
+ "gloo-utils",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "tsify-macros",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "tsify-macros"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d637b54262b1c6b8c2c88ce30fbef4e72613cb71c0e0b6fc09747052eb59a152"
+dependencies = [
+ "darling 0.14.3",
+ "proc-macro2",
+ "quote",
+ "serde_derive_internals",
+ "syn",
+]
 
 [[package]]
 name = "typenum"
@@ -3230,6 +3317,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "utf8parse"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
+
+[[package]]
 name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3275,6 +3368,39 @@ checksum = "d3b17ae1f6c8a2b28506cd96d412eebf83b4a0ff2cbefeeb952f2f9dfa44ba18"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "vt100"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84cd863bf0db7e392ba3bd04994be3473491b31e66340672af5d11943c6274de"
+dependencies = [
+ "itoa",
+ "log",
+ "unicode-width",
+ "vte",
+]
+
+[[package]]
+name = "vte"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aae21c12ad2ec2d168c236f369c38ff332bc1134f7246350dca641437365045"
+dependencies = [
+ "arrayvec",
+ "utf8parse",
+ "vte_generate_state_changes",
+]
+
+[[package]]
+name = "vte_generate_state_changes"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d257817081c7dffcdbab24b9e62d2def62e2ff7d00b1c20062551e6cccc145ff"
+dependencies = [
+ "proc-macro2",
+ "quote",
 ]
 
 [[package]]

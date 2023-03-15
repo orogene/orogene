@@ -22,24 +22,9 @@ mod dummy;
 mod git;
 mod npm;
 
-#[cfg(not(target_arch = "wasm32"))]
-#[async_trait]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 pub trait PackageFetcher: std::fmt::Debug + Send + Sync {
-    async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String>;
-    async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata>;
-    async fn packument(&self, pkg: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>>;
-    async fn corgi_metadata(&self, pkg: &Package) -> Result<CorgiVersionMetadata>;
-    async fn corgi_packument(
-        &self,
-        pkg: &PackageSpec,
-        base_dir: &Path,
-    ) -> Result<Arc<CorgiPackument>>;
-    async fn tarball(&self, pkg: &Package) -> Result<crate::TarballStream>;
-}
-
-#[async_trait(?Send)]
-#[cfg(target_arch = "wasm32")]
-pub trait PackageFetcher: std::fmt::Debug {
     async fn name(&self, spec: &PackageSpec, base_dir: &Path) -> Result<String>;
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata>;
     async fn packument(&self, pkg: &PackageSpec, base_dir: &Path) -> Result<Arc<Packument>>;

@@ -18,17 +18,23 @@ use crate::resolver::PackageResolution;
 pub(crate) struct NpmFetcher {
     client: OroClient,
     registries: HashMap<Option<String>, Url>,
+    cache_packuments: bool,
     packuments: DashMap<String, Arc<Packument>>,
     corgi_packuments: DashMap<String, Arc<CorgiPackument>>,
 }
 
 impl NpmFetcher {
-    pub(crate) fn new(client: OroClient, registries: HashMap<Option<String>, Url>) -> Self {
+    pub(crate) fn new(
+        client: OroClient,
+        registries: HashMap<Option<String>, Url>,
+        cache_packuments: bool,
+    ) -> Self {
         Self {
             client,
             registries,
             packuments: DashMap::new(),
             corgi_packuments: DashMap::new(),
+            cache_packuments,
         }
     }
 }
@@ -99,12 +105,16 @@ impl PackageFetcher for NpmFetcher {
         } = spec.target()
         {
             if let Some(packument) = self.corgi_packuments.get(name) {
-                return Ok(packument.value().clone());
+                if self.cache_packuments {
+                    return Ok(packument.value().clone());
+                }
             }
             let client = self.client.with_registry(self.pick_registry(scope));
             let packument = Arc::new(client.corgi_packument(&name).await?);
-            self.corgi_packuments
-                .insert(name.clone(), packument.clone());
+            if self.cache_packuments {
+                self.corgi_packuments
+                    .insert(name.clone(), packument.clone());
+            }
             Ok(packument)
         } else {
             unreachable!("How did a non-Npm resolution get here?");
@@ -126,11 +136,15 @@ impl PackageFetcher for NpmFetcher {
         } = pkg
         {
             if let Some(packument) = self.packuments.get(name) {
-                return Ok(packument.value().clone());
+                if self.cache_packuments {
+                    return Ok(packument.value().clone());
+                }
             }
             let client = self.client.with_registry(self.pick_registry(scope));
             let packument = Arc::new(client.packument(&name).await?);
-            self.packuments.insert(name.clone(), packument.clone());
+            if self.cache_packuments {
+                self.packuments.insert(name.clone(), packument.clone());
+            }
             Ok(packument)
         } else {
             unreachable!()

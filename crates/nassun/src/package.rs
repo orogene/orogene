@@ -1,5 +1,7 @@
 use std::fmt;
-use std::path::{Path, PathBuf};
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+use std::path::PathBuf;
 
 use async_std::sync::Arc;
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
@@ -7,7 +9,9 @@ use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 
 use crate::entries::Entries;
-use crate::error::{NassunError, Result};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::NassunError;
+use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::resolver::PackageResolution;
 use crate::tarball::Tarball;
@@ -21,9 +25,8 @@ pub struct Package {
     pub(crate) resolved: PackageResolution,
     pub(crate) fetcher: Arc<dyn PackageFetcher>,
     pub(crate) base_dir: PathBuf,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(crate) cache: Arc<Option<PathBuf>>,
-    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    pub(crate) prefer_copy: bool,
 }
 
 impl Package {
@@ -123,22 +126,44 @@ impl Package {
     /// tarball stream will have its integrity validated based on package
     /// metadata. See [`Package::tarball`] for more information.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir(&self, dir: impl AsRef<Path>) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, me.resolved.integrity()).await
+    pub async fn extract_to_dir(
+        &self,
+        dir: impl AsRef<Path>,
+        prefer_copy: bool,
+        validate: bool,
+    ) -> Result<Integrity> {
+        async fn inner(
+            me: &Package,
+            dir: &Path,
+            prefer_copy: bool,
+            validate: bool,
+        ) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy, validate)
+                .await
         }
-        inner(self, dir.as_ref()).await
+        inner(self, dir.as_ref(), prefer_copy, validate).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
     /// tarball stream will NOT have its integrity validated. See
     /// [`Package::tarball_unchecked`] for more information.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir_unchecked(&self, dir: impl AsRef<Path>) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, None).await
+    pub async fn extract_to_dir_unchecked(
+        &self,
+        dir: impl AsRef<Path>,
+        prefer_copy: bool,
+        validate: bool,
+    ) -> Result<Integrity> {
+        async fn inner(
+            me: &Package,
+            dir: &Path,
+            prefer_copy: bool,
+            validate: bool,
+        ) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, None, prefer_copy, validate)
+                .await
         }
-        inner(self, dir.as_ref()).await
+        inner(self, dir.as_ref(), prefer_copy, validate).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -149,11 +174,20 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         sri: Integrity,
+        prefer_copy: bool,
+        validate: bool,
     ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, sri: Integrity) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, Some(&sri)).await
+        async fn inner(
+            me: &Package,
+            dir: &Path,
+            sri: Integrity,
+            prefer_copy: bool,
+            validate: bool,
+        ) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy, validate)
+                .await
         }
-        inner(self, dir.as_ref(), sri).await
+        inner(self, dir.as_ref(), sri, prefer_copy, validate).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -161,6 +195,8 @@ impl Package {
         &self,
         dir: &Path,
         integrity: Option<&Integrity>,
+        prefer_copy: bool,
+        validate: bool,
     ) -> Result<Integrity> {
         if let Some(sri) = integrity {
             if let Some(cache) = self.cache.as_deref() {
@@ -172,20 +208,23 @@ impl Package {
                     // (bad data, etc), then go ahead and do a network
                     // extract.
                     match self
-                        .extract_from_cache(dir, cache, entry, self.prefer_copy)
+                        .extract_from_cache(dir, cache, entry, prefer_copy, validate)
                         .await
                     {
                         Ok(_) => return Ok(sri),
                         Err(e) => {
-                            tracing::debug!("extract_from_cache failed: {}", e);
+                            tracing::warn!("extracting package {:?} from cache failed, possily due to cache corruption: {e}", self.resolved());
+                            if let Some(entry) =
+                                cacache::index::find(cache, &crate::tarball::tarball_key(&sri))
+                                    .map_err(|e| NassunError::ExtractCacheError(e, None))?
+                            {
+                                tracing::debug!("removing corrupted cache entry.");
+                                clean_from_cache(cache, &sri, entry)?;
+                            }
                             return self
                                 .tarball_checked(sri)
                                 .await?
-                                .extract_from_tarball_data(
-                                    dir,
-                                    self.cache.as_deref(),
-                                    self.prefer_copy,
-                                )
+                                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                                 .await;
                         }
                     }
@@ -193,18 +232,18 @@ impl Package {
                     return self
                         .tarball_checked(sri.clone())
                         .await?
-                        .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
+                        .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                         .await;
                 }
             }
             self.tarball_checked(sri.clone())
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
+                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                 .await
         } else {
             self.tarball_unchecked()
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref(), self.prefer_copy)
+                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
                 .await
         }
     }
@@ -216,6 +255,7 @@ impl Package {
         cache: &Path,
         entry: cacache::Metadata,
         prefer_copy: bool,
+        validate: bool,
     ) -> Result<()> {
         let dir = PathBuf::from(dir);
         let cache = PathBuf::from(cache);
@@ -241,7 +281,7 @@ impl Package {
                     created.insert(parent);
                 }
 
-                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy)?;
+                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, validate)?;
             }
             Ok::<_, NassunError>(())
         })
@@ -256,6 +296,29 @@ impl fmt::Debug for Package {
             .field("from", &self.from)
             .field("name", &self.name)
             .field("resolved", &self.resolved)
+            .field("base_dir", &self.resolved)
             .finish()
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn clean_from_cache(cache: &Path, sri: &Integrity, entry: cacache::Metadata) -> Result<()> {
+    let map = entry
+        .metadata
+        .as_object()
+        .expect("how is this not an object?");
+    for sri in map.values() {
+        let sri: Integrity = sri.as_str().expect("how is this not a string?").parse()?;
+        match cacache::remove_hash_sync(cache, &sri) {
+            Ok(_) => {}
+            // We don't care if the file doesn't exist.
+            Err(cacache::Error::IoError(e, _)) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                return Err(NassunError::ExtractCacheError(e, None));
+            }
+        }
+    }
+    cacache::remove_sync(cache, crate::tarball::tarball_key(sri))
+        .map_err(|e| NassunError::ExtractCacheError(e, None))?;
+    Ok(())
 }

@@ -1,5 +1,50 @@
 # Orogene Release Changelog
 
+<a name="0.3.10"></a>
+## 0.3.10 (2023-03-13)
+
+### Features
+
+* **restore:** improvements to restore command, and removal of resolve command ([4e9940dd](https://github.com/orogene/orogene/commit/4e9940dd04e632ecbf5c7a1b2068b66638e80824))
+* **restore:** print timings in seconds ([608d3f59](https://github.com/orogene/orogene/commit/608d3f599bbaf8591193a917157f243ae81dab16))
+* **memory:** significantly reduce memory use during resolution (#203) ([f7fb85d6](https://github.com/orogene/orogene/commit/f7fb85d60a5839b218916d8d54a331f390527716))
+* **hax:** offer hackerish words of encouragement! ([cf467da4](https://github.com/orogene/orogene/commit/cf467da40e2b9daa8762d79a0c96d516b0447388))
+
+### Bug Fixes
+
+* **progress:** only show one progress bar at a time ([e36356c6](https://github.com/orogene/orogene/commit/e36356c64c61ccb5b4fd43c9d252578a36855362))
+
+
+<a name="0.3.9"></a>
+## 0.3.9 (2023-03-12)
+
+### Features
+
+* **wasm:** get nassun and node-maintainer working well in wasm (#131) ([16ad5bae](https://github.com/orogene/orogene/commit/16ad5bae83d15155571464c5dfca1c7de3544057))
+* **validate:** optionally validate cache contents during extraction (#197) ([0e22a5f4](https://github.com/orogene/orogene/commit/0e22a5f44d02423b9d4b49fe88254ae8bd90a699))
+* **extract:** remove existing modules as needed ([d3303b00](https://github.com/orogene/orogene/commit/d3303b007301fb668db3108af6d0ebd6dae7e7bf))
+* **prune:** check for an prune extraneous packages, and skip extracting valid ones (#200) ([544a2c5c](https://github.com/orogene/orogene/commit/544a2c5c3065041f351aeba46506e725eb6a769a))
+* **progress:** refactored progress bar out of node-maintainer (#201) ([e1908ad6](https://github.com/orogene/orogene/commit/e1908ad6bfa248b82b99fdf3bd75f2f7dff6d9a4))
+* **progresss:** add flags to disable progress bars ([f988a824](https://github.com/orogene/orogene/commit/f988a824a9202080ba7d592be67e04a8c11472ee))
+
+### Bug Fixes
+
+* **nassun:** use cfg_attr to reduce duplication ([f126d5ca](https://github.com/orogene/orogene/commit/f126d5ca0d32d76b35d93e65acda60d86e152852))
+
+<a name="0.3.8"></a>
+## 0.3.8 (2023-03-09)
+
+### Bug Fixes
+
+* **reflink:** move reflink checks up to node-maintainer (#195) ([9506edc7](https://github.com/orogene/orogene/commit/9506edc7456eefb826aaa3850873f615be09136f))
+
+### Features
+
+* **log:** write verbose trace to a separate debug logfile (#192) ([8c995125](https://github.com/orogene/orogene/commit/8c995125e9d142547e8eadb712473d0cb09d9b36))
+* **log:** log a bit more detail about lack of reflink support ([545dff0c](https://github.com/orogene/orogene/commit/545dff0c9b82b69a663117ce1bdbb91214682ee2))
+* **docs:** add initial benchmark tables ([2bbd2616](https://github.com/orogene/orogene/commit/2bbd2616ed592486450d134dc4e8208b5de0a0a0))
+
+
 <a name="0.3.6"></a>
 ## 0.3.6 (2023-03-07)
 

@@ -8,6 +8,7 @@ use url::Url;
 
 pub use oro_package_spec::{PackageSpec, VersionSpec};
 
+use crate::entries::Entries;
 use crate::error::Result;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::fetch::DirFetcher;
@@ -15,17 +16,18 @@ use crate::fetch::DirFetcher;
 use crate::fetch::GitFetcher;
 use crate::fetch::{DummyFetcher, NpmFetcher, PackageFetcher};
 use crate::package::Package;
-use crate::resolver::PackageResolver;
-use crate::{Entries, PackageResolution, Tarball};
+use crate::resolver::{PackageResolution, PackageResolver};
+use crate::tarball::Tarball;
 
 /// Build a new Nassun instance with specified options.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct NassunOpts {
+    #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
-    prefer_copy: bool,
+    memoize_metadata: bool,
 }
 
 impl NassunOpts {
@@ -33,19 +35,10 @@ impl NassunOpts {
         Default::default()
     }
 
+    /// Cache directory to use for requests.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.cache = Some(PathBuf::from(cache.as_ref()));
-        self
-    }
-
-    /// When extracting tarballs, prefer to copy files to their destination as
-    /// separate, standalone files instead of hard linking them. Full copies
-    /// will still happen when hard linking fails. Furthermore, on filesystems
-    /// that support Copy-on-Write (zfs, btrfs, APFS (macOS), etc), this
-    /// option will use that feature for all copies.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn prefer_copy(mut self, prefer_copy: bool) -> Self {
-        self.prefer_copy = prefer_copy;
         self
     }
 
@@ -54,29 +47,46 @@ impl NassunOpts {
         self
     }
 
+    /// Adds a registry to use for a specific scope.
     pub fn scope_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
         self.registries
             .insert(Some(scope.as_ref().into()), registry);
         self
     }
 
+    /// Base directory to use for resolving relative paths. Defaults to `"."`.
     pub fn base_dir(mut self, base_dir: impl AsRef<Path>) -> Self {
         self.base_dir = Some(PathBuf::from(base_dir.as_ref()));
         self
     }
 
+    /// Default tag to use when resolving package versions. Defaults to `latest`.
     pub fn default_tag(mut self, default_tag: impl AsRef<str>) -> Self {
         self.default_tag = Some(default_tag.as_ref().into());
         self
     }
 
+    /// Whether to memoize package metadata. This will keep any processed
+    /// packuments in memory for the lifetime of this `Nassun` instance.
+    /// Setting this to `true` may increase performance when fetching many
+    /// packages, at the cost of significant additional memory usage.
+    pub fn memoize_metadata(mut self, memoize: bool) -> Self {
+        self.memoize_metadata = memoize;
+        self
+    }
+
+    /// Build a new Nassun instance from this options object.
     pub fn build(self) -> Nassun {
         let registry = self
             .registries
             .get(&None)
             .cloned()
             .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
+        #[cfg(target_arch = "wasm32")]
+        let client_builder = OroClient::builder().registry(registry);
+        #[cfg(not(target_arch = "wasm32"))]
         let mut client_builder = OroClient::builder().registry(registry);
+        #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
             client_builder = client_builder.cache(cache.clone());
             Arc::new(Some(cache))
@@ -87,6 +97,8 @@ impl NassunOpts {
         Nassun {
             #[cfg(not(target_arch = "wasm32"))]
             cache,
+            #[cfg(target_arch = "wasm32")]
+            cache: Arc::new(None),
             resolver: PackageResolver {
                 #[cfg(target_arch = "wasm32")]
                 base_dir: PathBuf::from("."),
@@ -96,14 +108,13 @@ impl NassunOpts {
                     .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
                 default_tag: self.default_tag.unwrap_or_else(|| "latest".into()),
             },
-            #[cfg(not(target_arch = "wasm32"))]
-            prefer_copy: self.prefer_copy,
             #[cfg(target_arch = "wasm32")]
             prefer_copy: false,
             npm_fetcher: Arc::new(NpmFetcher::new(
                 #[allow(clippy::redundant_clone)]
                 client.clone(),
                 self.registries,
+                self.memoize_metadata,
             )),
             #[cfg(not(target_arch = "wasm32"))]
             dir_fetcher: Arc::new(DirFetcher::new()),
@@ -117,7 +128,6 @@ impl NassunOpts {
 #[derive(Clone)]
 pub struct Nassun {
     cache: Arc<Option<PathBuf>>,
-    prefer_copy: bool,
     resolver: PackageResolver,
     npm_fetcher: Arc<dyn PackageFetcher>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -216,7 +226,7 @@ impl Nassun {
         let fetcher = self.pick_fetcher(&spec);
         let name = fetcher.name(&spec, &self.resolver.base_dir).await?;
         self.resolver
-            .resolve(name, spec, fetcher, self.cache.clone(), self.prefer_copy)
+            .resolve(name, spec, fetcher, self.cache.clone())
             .await
     }
 
@@ -231,14 +241,8 @@ impl Nassun {
         resolved: PackageResolution,
     ) -> Package {
         let fetcher = self.pick_fetcher(&from);
-        self.resolver.resolve_from(
-            name,
-            from,
-            resolved,
-            fetcher,
-            self.cache.clone(),
-            self.prefer_copy,
-        )
+        self.resolver
+            .resolve_from(name, from, resolved, fetcher, self.cache.clone())
     }
 
     /// Creates a "resolved" package from a plain [`oro_common::Manifest`].
@@ -250,7 +254,6 @@ impl Nassun {
             from: PackageSpec::Dir {
                 path: PathBuf::from("."),
             },
-            prefer_copy: false,
             name: manifest.name.clone().unwrap_or_else(|| "dummy".to_string()),
             resolved: PackageResolution::Dir {
                 name: manifest.name.clone().unwrap_or_else(|| "dummy".to_string()),

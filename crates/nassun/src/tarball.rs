@@ -1,10 +1,12 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Seek};
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
 use async_compression::futures::bufread::GzipDecoder;
@@ -12,26 +14,28 @@ use async_std::io::BufReader;
 use async_tar_wasm::Archive;
 #[cfg(not(target_arch = "wasm32"))]
 use backon::{BlockingRetryable, ConstantBuilder};
+#[cfg(not(target_arch = "wasm32"))]
 use cacache::WriteOpts;
-use futures::{AsyncRead, AsyncReadExt, StreamExt};
+#[cfg(not(target_arch = "wasm32"))]
+use futures::AsyncReadExt;
+use futures::{AsyncRead, StreamExt};
 #[cfg(not(target_arch = "wasm32"))]
 use ssri::IntegrityOpts;
 use ssri::{Integrity, IntegrityChecker};
+#[cfg(not(target_arch = "wasm32"))]
 use tempfile::NamedTempFile;
 
 use crate::entries::{Entries, Entry};
 use crate::error::{NassunError, Result};
 use crate::TarballStream;
 
-const MAX_IN_MEMORY_TARBALL_SIZE: usize = 1024 * 1024 * 5;
-
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) static SUPPORTS_REFLINK: once_cell::sync::Lazy<bool> =
-    once_cell::sync::Lazy::new(supports_reflink);
+const MAX_IN_MEMORY_TARBALL_SIZE: usize = 1024 * 1024 * 5;
 
 pub struct Tarball {
     checker: Option<IntegrityChecker>,
     reader: TarballStream,
+    #[cfg(not(target_arch = "wasm32"))]
     integrity: Option<Integrity>,
 }
 
@@ -40,6 +44,7 @@ impl Tarball {
         Self {
             reader,
             checker: Some(IntegrityChecker::new(integrity.clone())),
+            #[cfg(not(target_arch = "wasm32"))]
             integrity: Some(integrity),
         }
     }
@@ -48,6 +53,7 @@ impl Tarball {
         Self {
             reader,
             checker: None,
+            #[cfg(not(target_arch = "wasm32"))]
             integrity: None,
         }
     }
@@ -260,7 +266,7 @@ impl TempTarball {
                         .commit()
                         .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
 
-                    extract_from_cache(cache, &sri, &path, prefer_copy)?;
+                    extract_from_cache(cache, &sri, &path, prefer_copy, false)?;
 
                     file_index.insert(
                         entry_subpath.to_string_lossy().into(),
@@ -355,29 +361,9 @@ fn strip_one(path: &Path) -> Option<&Path> {
     comps.next().map(|_| comps.as_path())
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn tarball_key(integrity: &Integrity) -> String {
     format!("nassun::package::{integrity}")
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn supports_reflink() -> bool {
-    let tempdir = match tempfile::tempdir() {
-        Ok(t) => t,
-        Err(_) => return false,
-    };
-    match std::fs::write(tempdir.path().join("a"), "a") {
-        Ok(_) => {}
-        Err(_) => return false,
-    };
-    let supports_reflink = reflink::reflink(tempdir.path().join("a"), tempdir.path().join("b"))
-        .map(|_| true)
-        .unwrap_or(false);
-
-    if supports_reflink {
-        tracing::info!("Filesystem supports reflinks, extracted data will use copy-on-write reflinks instead of hard links or full copies (unless cache in in a separate disk).")
-    }
-
-    supports_reflink
 }
 
 pub(crate) fn extract_from_cache(
@@ -385,16 +371,16 @@ pub(crate) fn extract_from_cache(
     sri: &Integrity,
     to: &Path,
     prefer_copy: bool,
+    validate: bool,
 ) -> Result<()> {
-    if *SUPPORTS_REFLINK || prefer_copy {
-        cacache::copy_hash_unchecked_sync(cache, sri, to)
-            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    if prefer_copy {
+        copy_from_cache(cache, sri, to, validate)?;
     } else {
         // HACK: This is horrible, but on wsl2 (at least), this
         // was sometimes crashing with an ENOENT (?!), which
         // really REALLY shouldn't happen. So we just retry a few
         // times and hope the problem goes away.
-        let op = || cacache::hard_link_hash_unchecked_sync(cache, sri, to);
+        let op = || hard_link_from_cache(cache, sri, to, validate);
         op.retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
             .notify(|err, wait| {
                 tracing::debug!(
@@ -404,7 +390,30 @@ pub(crate) fn extract_from_cache(
                 )
             })
             .call()
-            .or_else(|_| cacache::copy_hash_unchecked_sync(cache, sri, to))
+            .or_else(|_| copy_from_cache(cache, sri, to, validate))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path, validate: bool) -> Result<()> {
+    if validate {
+        cacache::copy_hash_sync(cache, sri, to)
+            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    } else {
+        cacache::copy_hash_unchecked_sync(cache, sri, to)
+            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path, validate: bool) -> Result<()> {
+    if validate {
+        cacache::hard_link_hash_sync(cache, sri, to)
+            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    } else {
+        cacache::hard_link_hash_unchecked_sync(cache, sri, to)
             .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     }
     Ok(())

@@ -1,6 +1,6 @@
 [package]
 name = "oro-config-derive"
-version = "0.3.6"
+version = "0.3.10"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Derive macros for configuration management for Orogene."

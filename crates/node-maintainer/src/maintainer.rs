@@ -1,16 +1,22 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet, VecDeque};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::PathBuf;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{self, AtomicUsize};
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
 use async_std::sync::{Arc, Mutex};
-use colored::*;
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
 #[cfg(not(target_arch = "wasm32"))]
-use indicatif::{ProgressBar, ProgressStyle};
-use nassun::{Nassun, NassunOpts, Package, PackageSpec};
+use colored::*;
+#[cfg(not(target_arch = "wasm32"))]
+use futures::TryStreamExt;
+use futures::{StreamExt, TryFutureExt};
+use nassun::client::{Nassun, NassunOpts};
+use nassun::package::Package;
+use nassun::PackageSpec;
 use oro_common::{CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -22,17 +28,34 @@ use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
 use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
-const DEFAULT_PARALLELISM: usize = 50;
+const DEFAULT_CONCURRENCY: usize = 50;
+const META_FILE_NAME: &str = ".orogene-meta.kdl";
 
-#[derive(Debug, Clone)]
+pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
+pub type ProgressHandler = Arc<dyn Fn(&Package) + Send + Sync>;
+pub type PruneProgress = Arc<dyn Fn(&Path) + Send + Sync>;
+
+#[derive(Clone)]
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
-    parallelism: usize,
+    concurrency: usize,
     kdl_lock: Option<Lockfile>,
     npm_lock: Option<Lockfile>,
 
-    #[cfg(not(target_arch = "wasm32"))]
-    progress_bar: bool,
+    #[allow(dead_code)]
+    cache: Option<PathBuf>,
+    #[allow(dead_code)]
+    prefer_copy: bool,
+    #[allow(dead_code)]
+    validate: bool,
+    #[allow(dead_code)]
+    root: Option<PathBuf>,
+
+    // Intended for progress bars
+    on_resolution_added: Option<ProgressAdded>,
+    on_resolve_progress: Option<ProgressHandler>,
+    on_prune_progress: Option<PruneProgress>,
+    on_extract_progress: Option<ProgressHandler>,
 }
 
 impl NodeMaintainerOptions {
@@ -41,18 +64,14 @@ impl NodeMaintainerOptions {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn progress_bar(mut self, progress_bar: bool) -> Self {
-        self.progress_bar = progress_bar;
-        self
-    }
-
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.nassun_opts = self.nassun_opts.cache(PathBuf::from(cache.as_ref()));
+        self.cache = Some(PathBuf::from(cache.as_ref()));
         self
     }
 
-    pub fn parallelism(mut self, parallelism: usize) -> Self {
-        self.parallelism = parallelism;
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
         self
     }
 
@@ -78,8 +97,10 @@ impl NodeMaintainerOptions {
         self
     }
 
-    pub fn base_dir(mut self, path: impl AsRef<Path>) -> Self {
-        self.nassun_opts = self.nassun_opts.base_dir(path);
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn root(mut self, path: impl AsRef<Path>) -> Self {
+        self.nassun_opts = self.nassun_opts.base_dir(path.as_ref());
+        self.root = Some(PathBuf::from(path.as_ref()));
         self
     }
 
@@ -88,22 +109,130 @@ impl NodeMaintainerOptions {
         self
     }
 
+    /// When extracting tarballs, prefer to copy files to their destination as
+    /// separate, standalone files instead of hard linking them. Full copies
+    /// will still happen when hard linking fails. Furthermore, on filesystems
+    /// that support Copy-on-Write (zfs, btrfs, APFS (macOS), etc), this
+    /// option will use that feature for all copies.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn prefer_copy(mut self, prefer_copy: bool) -> Self {
+        self.prefer_copy = prefer_copy;
+        self
+    }
+
+    /// When this is true, node-maintainer will validate integrity hashes for
+    /// all files extracted from the cache, as well as verify that any files
+    /// in the existing `node_modules` are unmodified. If verification fails,
+    /// the packages will be reinstalled.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn validate(mut self, validate: bool) -> Self {
+        self.validate = validate;
+        self
+    }
+
+    pub fn on_resolution_added<F>(mut self, f: F) -> Self
+    where
+        F: Fn() + Send + Sync + 'static,
+    {
+        self.on_resolution_added = Some(Arc::new(f));
+        self
+    }
+
+    pub fn on_resolve_progress<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Package) + Send + Sync + 'static,
+    {
+        self.on_resolve_progress = Some(Arc::new(f));
+        self
+    }
+
+    pub fn on_prune_progress<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Path) + Send + Sync + 'static,
+    {
+        self.on_prune_progress = Some(Arc::new(f));
+        self
+    }
+
+    pub fn on_extract_progress<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Package) + Send + Sync + 'static,
+    {
+        self.on_extract_progress = Some(Arc::new(f));
+        self
+    }
+
+    async fn get_lockfile(&self) -> Result<Option<Lockfile>, NodeMaintainerError> {
+        if let Some(kdl_lock) = &self.kdl_lock {
+            return Ok(Some(kdl_lock.clone()));
+        }
+        if let Some(npm_lock) = &self.npm_lock {
+            return Ok(Some(npm_lock.clone()));
+        }
+        if let Some(root) = &self.root {
+            let kdl_lock = root.join("package-lock.kdl");
+            if kdl_lock.exists() {
+                match async_std::fs::read_to_string(kdl_lock)
+                    .await
+                    .map_err(NodeMaintainerError::IoError)
+                    .and_then(Lockfile::from_kdl)
+                {
+                    Ok(lock) => return Ok(Some(lock)),
+                    Err(e) => tracing::debug!("Failed to parse existing package-lock.kdl: {}", e),
+                }
+            }
+            let npm_lock = root.join("package-lock.json");
+            if npm_lock.exists() {
+                match async_std::fs::read_to_string(npm_lock)
+                    .await
+                    .map_err(NodeMaintainerError::IoError)
+                    .and_then(Lockfile::from_npm)
+                {
+                    Ok(lock) => return Ok(Some(lock)),
+                    Err(e) => tracing::debug!("Failed to parse existing package-lock.json: {}", e),
+                }
+            }
+            let npm_lock = root.join("npm-shrinkwrap.json");
+            if npm_lock.exists() {
+                match async_std::fs::read_to_string(npm_lock)
+                    .await
+                    .map_err(NodeMaintainerError::IoError)
+                    .and_then(Lockfile::from_npm)
+                {
+                    Ok(lock) => return Ok(Some(lock)),
+                    Err(e) => {
+                        tracing::debug!("Failed to parse existing npm-shrinkwrap.json: {}", e)
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
     pub async fn resolve_manifest(
         self,
         root: CorgiManifest,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
+        let lockfile = self.get_lockfile().await?;
         let nassun = self.nassun_opts.build();
         let root_pkg = Nassun::dummy_from_manifest(root.clone());
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            parallelism: DEFAULT_PARALLELISM,
-            #[cfg(not(target_arch = "wasm32"))]
-            progress_bar: self.progress_bar,
+            concurrency: DEFAULT_CONCURRENCY,
+            cache: self.cache,
+            prefer_copy: self.prefer_copy,
+            validate: self.validate,
+            root: self.root.unwrap_or_else(|| PathBuf::from(".")),
+            actual_tree: None,
+            on_resolution_added: self.on_resolution_added,
+            on_resolve_progress: self.on_resolve_progress,
+            on_prune_progress: self.on_prune_progress,
+            on_extract_progress: self.on_extract_progress,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
-        nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
+        nm.run_resolver(lockfile).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -113,19 +242,27 @@ impl NodeMaintainerOptions {
         self,
         root_spec: impl AsRef<str>,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
+        let lockfile = self.get_lockfile().await?;
         let nassun = self.nassun_opts.build();
         let root_pkg = nassun.resolve(root_spec).await?;
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            parallelism: DEFAULT_PARALLELISM,
-            #[cfg(not(target_arch = "wasm32"))]
-            progress_bar: self.progress_bar,
+            concurrency: DEFAULT_CONCURRENCY,
+            cache: self.cache,
+            prefer_copy: self.prefer_copy,
+            validate: self.validate,
+            root: self.root.unwrap_or_else(|| PathBuf::from(".")),
+            actual_tree: None,
+            on_resolution_added: self.on_resolution_added,
+            on_resolve_progress: self.on_resolve_progress,
+            on_prune_progress: self.on_prune_progress,
+            on_extract_progress: self.on_extract_progress,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
         nm.graph[node].root = node;
-        nm.run_resolver(self.kdl_lock.or(self.npm_lock)).await?;
+        nm.run_resolver(lockfile).await?;
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -136,11 +273,17 @@ impl Default for NodeMaintainerOptions {
     fn default() -> Self {
         NodeMaintainerOptions {
             nassun_opts: Default::default(),
-            parallelism: DEFAULT_PARALLELISM,
+            concurrency: DEFAULT_CONCURRENCY,
             kdl_lock: None,
             npm_lock: None,
-            #[cfg(not(target_arch = "wasm32"))]
-            progress_bar: false,
+            cache: None,
+            prefer_copy: false,
+            validate: false,
+            root: None,
+            on_resolution_added: None,
+            on_resolve_progress: None,
+            on_prune_progress: None,
+            on_extract_progress: None,
         }
     }
 }
@@ -156,9 +299,16 @@ struct NodeDependency {
 pub struct NodeMaintainer {
     nassun: Nassun,
     graph: Graph,
-    parallelism: usize,
-    #[cfg(not(target_arch = "wasm32"))]
-    progress_bar: bool,
+    concurrency: usize,
+    cache: Option<PathBuf>,
+    prefer_copy: bool,
+    validate: bool,
+    root: PathBuf,
+    actual_tree: Option<Lockfile>,
+    on_resolution_added: Option<ProgressAdded>,
+    on_resolve_progress: Option<ProgressHandler>,
+    on_prune_progress: Option<PruneProgress>,
+    on_extract_progress: Option<ProgressHandler>,
 }
 
 impl NodeMaintainer {
@@ -166,12 +316,14 @@ impl NodeMaintainer {
         NodeMaintainerOptions::new()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn resolve_manifest(
         root: CorgiManifest,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
         Self::builder().resolve_manifest(root).await
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn resolve_spec(
         root_spec: impl AsRef<str>,
     ) -> Result<NodeMaintainer, NodeMaintainerError> {
@@ -190,6 +342,7 @@ impl NodeMaintainer {
         Ok(())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn to_lockfile(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
         self.graph.to_lockfile()
     }
@@ -198,117 +351,246 @@ impl NodeMaintainer {
         self.graph.to_kdl()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn render(&self) -> String {
         self.graph.render()
     }
 
-    pub fn package_at_path(&self, path: &Path) -> Result<Option<Package>, NodeMaintainerError> {
+    pub fn package_at_path(&self, path: &Path) -> Option<Package> {
         self.graph.package_at_path(path)
     }
 
-    pub async fn extract_to(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        #[cfg(not(target_arch = "wasm32"))]
-        let pb = if self.progress_bar {
-            ProgressBar::new(self.graph.inner.node_count() as u64 - 1).with_style(
-                ProgressStyle::default_bar()
-                    .template("💾 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
-                    .unwrap(),
-            )
-        } else {
-            ProgressBar::hidden()
-        };
+    pub fn package_count(&self) -> usize {
+        self.graph.inner.node_count()
+    }
 
-        async fn inner(
-            me: &NodeMaintainer,
-            #[cfg(not(target_arch = "wasm32"))] pb: &ProgressBar,
-            path: &Path,
-        ) -> Result<(), NodeMaintainerError> {
-            let start = std::time::Instant::now();
-            let stream = futures::stream::iter(me.graph.inner.node_indices());
-            let concurrent_count = Arc::new(AtomicUsize::new(0));
-            let total = me.graph.inner.node_count();
-            let total_completed = Arc::new(AtomicUsize::new(0));
-            stream
-                .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone())))
-                .try_for_each_concurrent(
-                    me.parallelism,
-                    move |(child_idx, concurrent_count, total_completed)| async move {
-                        if child_idx == me.graph.root {
-                            return Ok(());
-                        }
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn prune(&self) -> Result<usize, NodeMaintainerError> {
+        use walkdir::WalkDir;
 
-                        concurrent_count.fetch_add(1, atomic::Ordering::SeqCst);
-                        let target_dir = path.join("node_modules").join(
-                            me.graph
-                                .node_path(child_idx)
-                                .iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<_>>()
-                                .join("/node_modules/"),
-                        );
+        let prefix = self.root.join("node_modules");
 
-                        let start = std::time::Instant::now();
-
-                        me.graph[child_idx]
-                            .package
-                            .extract_to_dir(&target_dir)
-                            .await?;
-
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            pb.inc(1);
-                            pb.set_message(format!("{:?}", me.graph[child_idx].package.resolved()));
-                        };
-
-                        tracing::debug!(
-                            "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
-                            me.graph[child_idx].package.name(),
-                            target_dir.display(),
-                            start.elapsed().as_millis(),
-                            total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
-                            concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
-                        );
-                        Ok::<_, NodeMaintainerError>(())
-                    },
-                )
-                .await?;
-            tracing::info!(
-                "Extracted {} packages in {}ms.",
-                total,
-                start.elapsed().as_millis()
-            );
-            #[cfg(not(target_arch = "wasm32"))]
-            if me.progress_bar {
-                pb.finish_and_clear();
-                println!("💾 Linked!");
-            }
-            Ok(())
+        if !prefix.exists() {
+            return Ok(0);
         }
-        inner(
-            self,
-            #[cfg(not(target_arch = "wasm32"))]
-            &pb,
-            path.as_ref(),
-        )
-        .await?;
-        Ok(())
+
+        let start = std::time::Instant::now();
+
+        if self.actual_tree.is_none() {
+            // If there's no actual tree previously calculated, we can't trust
+            // *anything* inside node_modules, so everything is immediately
+            // extraneous and we wipe it all. Sorry.
+            let mut entries = async_std::fs::read_dir(&prefix).await?;
+            while let Some(entry) = entries.next().await {
+                let entry = entry?;
+                if entry.file_type().await?.is_dir() {
+                    async_std::fs::remove_dir_all(entry.path()).await?;
+                } else {
+                    async_std::fs::remove_file(entry.path()).await?;
+                }
+            }
+
+            tracing::info!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
+
+            // TODO: get an accurate count here?
+            return Ok(0);
+        }
+
+        let nm_osstr = Some(std::ffi::OsStr::new("node_modules"));
+        let meta = prefix.join(META_FILE_NAME);
+        let mut extraneous_packages = 0;
+        let extraneous = &mut extraneous_packages;
+
+        for entry in WalkDir::new(&prefix)
+            .into_iter()
+            .filter_entry(move |entry| {
+                let entry_path = entry.path();
+
+                if entry_path == meta {
+                    // Skip the meta file
+                    return false;
+                }
+
+                if entry_path.file_name() == nm_osstr {
+                    // We don't want to skip node_modules themselves
+                    return true;
+                }
+
+                if entry_path
+                    .file_name()
+                    .expect("this should have a file name")
+                    .to_string_lossy()
+                    .starts_with('@')
+                {
+                    // Let scoped packages through.
+                    return true;
+                }
+
+                // See if we're looking at a package dir, presumably (or a straggler file).
+                if entry_path
+                    .parent()
+                    .expect("this must have a parent")
+                    .file_name()
+                    == nm_osstr
+                {
+                    let entry_subpath_path = entry_path
+                        .strip_prefix(&prefix)
+                        .expect("this should definitely be under the prefix");
+                    let entry_subpath =
+                        UniCase::from(entry_subpath_path.to_string_lossy().replace('\\', "/"));
+
+                    let actual = self
+                        .actual_tree
+                        .as_ref()
+                        .and_then(|tree| tree.packages.get(&entry_subpath));
+                    let ideal = self
+                        .graph
+                        .node_at_path(entry_subpath_path)
+                        .and_then(|node| self.graph.node_lockfile_node(node.idx, false).ok());
+                    // If the package is not in the actual tree, or it doesn't
+                    // match up with what the ideal tree wants, it's
+                    // extraneous. We want to return true for those so we
+                    // delete them later.
+                    if ideal.is_some()
+                        && self
+                            .actual_tree
+                            .as_ref()
+                            .map(|tree| tree.packages.contains_key(&entry_subpath))
+                            .unwrap_or(false)
+                        && actual == ideal.as_ref()
+                    {
+                        return false;
+                    } else {
+                        *extraneous += 1;
+                        return true;
+                    }
+                }
+
+                // We're not interested in any other files than the package dirs themselves.
+                false
+            })
+        {
+            let entry = entry?;
+            let entry_path = entry.path();
+            let file_name = entry_path.file_name();
+            if file_name == nm_osstr
+                || file_name
+                    .map(|s| s.to_string_lossy().starts_with('@'))
+                    .unwrap_or(false)
+            {
+                continue;
+            } else if entry.file_type().is_dir() {
+                if let Some(pb) = &self.on_prune_progress {
+                    pb(entry_path);
+                }
+                async_std::fs::remove_dir_all(entry.path()).await?;
+            } else {
+                if let Some(pb) = &self.on_prune_progress {
+                    pb(entry_path);
+                }
+                async_std::fs::remove_file(entry.path()).await?;
+            }
+        }
+
+        if extraneous_packages == 0 {
+            tracing::info!(
+                "Nothing to prune. Completed check in {}ms.",
+                start.elapsed().as_micros() / 1000
+            );
+        } else {
+            tracing::info!(
+                "Pruned {extraneous_packages} extraneous package{} in {}ms.",
+                start.elapsed().as_micros() / 1000,
+                if extraneous_packages == 1 { "" } else { "s" },
+            );
+        }
+        Ok(extraneous_packages)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn extract(&self) -> Result<usize, NodeMaintainerError> {
+        let start = std::time::Instant::now();
+
+        let root = &self.root;
+        let stream = futures::stream::iter(self.graph.inner.node_indices());
+        let concurrent_count = Arc::new(AtomicUsize::new(0));
+        let actually_extracted = Arc::new(AtomicUsize::new(0));
+        let total = self.graph.inner.node_count();
+        let total_completed = Arc::new(AtomicUsize::new(0));
+        let node_modules = root.join("node_modules");
+        std::fs::create_dir_all(&node_modules)?;
+        let prefer_copy = self.prefer_copy
+            || match self.cache.as_deref() {
+                Some(cache) => supports_reflink(cache, &node_modules),
+                None => false,
+            };
+        let validate = self.validate;
+        stream
+            .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone(), actually_extracted.clone())))
+            .try_for_each_concurrent(
+                self.concurrency,
+                move |(child_idx, concurrent_count, total_completed, actually_extracted)| async move {
+                    if child_idx == self.graph.root {
+                        return Ok(());
+                    }
+
+                    concurrent_count.fetch_add(1, atomic::Ordering::SeqCst);
+                    let subdir = self
+                        .graph
+                        .node_path(child_idx)
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/");
+                    let target_dir = root.join("node_modules").join(&subdir);
+
+                    let start = std::time::Instant::now();
+
+                    if !target_dir.exists() {
+                        self.graph[child_idx]
+                            .package
+                            .extract_to_dir(&target_dir, prefer_copy, validate)
+                            .await?;
+                        actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
+                    }
+
+                    if let Some(on_extract) = &self.on_extract_progress {
+                        on_extract(&self.graph[child_idx].package);
+                    }
+
+                    tracing::debug!(
+                        "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
+                        self.graph[child_idx].package.name(),
+                        target_dir.display(),
+                        start.elapsed().as_millis(),
+                        total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
+                        concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
+                    );
+                    Ok::<_, NodeMaintainerError>(())
+                },
+            )
+            .await?;
+        std::fs::write(
+            node_modules.join(META_FILE_NAME),
+            self.to_kdl()?.to_string(),
+        )?;
+        let actually_extracted = actually_extracted.load(atomic::Ordering::SeqCst);
+        tracing::info!(
+            "Extracted {actually_extracted} package{} in {}ms.",
+            if actually_extracted == 1 { "" } else { "s" },
+            start.elapsed().as_millis(),
+        );
+        Ok(actually_extracted)
     }
 
     async fn run_resolver(
         &mut self,
         lockfile: Option<Lockfile>,
     ) -> Result<(), NodeMaintainerError> {
-        let start = std::time::Instant::now();
         #[cfg(not(target_arch = "wasm32"))]
-        let pb = if self.progress_bar {
-            ProgressBar::new(0).with_style(
-                ProgressStyle::default_bar()
-                    .template("🔍 {bar:40} [{pos}/{len}] {wide_msg:.dim}")
-                    .unwrap(),
-            )
-        } else {
-            ProgressBar::hidden()
-        };
+        let start = std::time::Instant::now();
+
+        self.load_actual().await?;
 
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
         let mut q = VecDeque::new();
@@ -347,8 +629,8 @@ impl NodeMaintainer {
             })
             .filter_map(|maybe_spec| maybe_spec)
             .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
-            .buffer_unordered(self.parallelism)
-            .ready_chunks(self.parallelism);
+            .buffer_unordered(self.concurrency)
+            .ready_chunks(self.concurrency);
 
         // Start iterating over the queue. We'll be adding things to it as we find them.
         while !q.is_empty() || in_flight != 0 {
@@ -376,20 +658,16 @@ impl NodeMaintainer {
                         node_idx,
                     };
 
-                    #[cfg(not(target_arch = "wasm32"))]
-                    pb.inc_length(1);
+                    if let Some(handler) = &self.on_resolution_added {
+                        handler();
+                    }
 
                     let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
 
-                    if let Some(child_idx) = Self::satisfy_dependency(&mut self.graph, &dep)? {
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            pb.inc(1);
-                            pb.set_message(format!(
-                                "{:?}",
-                                self.graph[child_idx].package.resolved()
-                            ));
-                        };
+                    if let Some(_child_idx) = Self::satisfy_dependency(&mut self.graph, &dep)? {
+                        if let Some(handler) = &self.on_resolve_progress {
+                            handler(&self.graph[_child_idx].package);
+                        }
                     }
                     // Walk up the current hierarchy to see if we find a
                     // dependency that already satisfies this request. If so,
@@ -397,7 +675,13 @@ impl NodeMaintainer {
                     else {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
-                        if let Some(kdl_lock) = &lockfile {
+                        let lock = if lockfile.is_some() {
+                            &lockfile
+                        } else {
+                            // Fall back to the actual tree lock if it's there.
+                            &self.actual_tree
+                        };
+                        if let Some(kdl_lock) = lock {
                             if let Some((package, lockfile_node)) = self
                                 .satisfy_from_lockfile(
                                     &self.graph,
@@ -422,14 +706,9 @@ impl NodeMaintainer {
                                 .await?;
                                 q.push_back(child_idx);
 
-                                #[cfg(not(target_arch = "wasm32"))]
-                                {
-                                    pb.inc(1);
-                                    pb.set_message(format!(
-                                        "{:?}",
-                                        self.graph[child_idx].package.resolved()
-                                    ));
-                                };
+                                if let Some(handler) = &self.on_resolve_progress {
+                                    handler(&self.graph[child_idx].package);
+                                }
                                 continue;
                             }
                         }
@@ -459,38 +738,32 @@ impl NodeMaintainer {
 
                         let CorgiVersionMetadata {
                             manifest,
+                            #[cfg(not(target_arch = "wasm32"))]
                             deprecated,
                             ..
                         } = &package.corgi_metadata().await?;
 
                         if let Some(deprecated) = deprecated {
-                            pb.suspend(|| {
-                                tracing::warn!(
-                                    "{} {}@{}: {}",
-                                    "deprecated".magenta(),
-                                    manifest.name.as_ref().unwrap(),
-                                    manifest
-                                        .version
-                                        .as_ref()
-                                        .map(|v| v.to_string())
-                                        .unwrap_or_else(|| "unknown".into()),
-                                    deprecated
-                                );
-                            });
+                            tracing::warn!(
+                                "{} {}@{}: {}",
+                                "deprecated".magenta(),
+                                manifest.name.as_ref().unwrap(),
+                                manifest
+                                    .version
+                                    .as_ref()
+                                    .map(|v| v.to_string())
+                                    .unwrap_or_else(|| "unknown".into()),
+                                deprecated
+                            );
                         }
 
                         for dep in deps {
-                            if let Some(child_idx) =
+                            if let Some(_child_idx) =
                                 Self::satisfy_dependency(&mut self.graph, &dep)?
                             {
-                                #[cfg(not(target_arch = "wasm32"))]
-                                {
-                                    pb.inc(1);
-                                    pb.set_message(format!(
-                                        "{:?}",
-                                        self.graph[child_idx].package.resolved()
-                                    ));
-                                };
+                                if let Some(handler) = &self.on_resolve_progress {
+                                    handler(&self.graph[_child_idx].package);
+                                }
                                 continue;
                             }
 
@@ -509,13 +782,8 @@ impl NodeMaintainer {
 
                             q.push_back(child_idx);
 
-                            #[cfg(not(target_arch = "wasm32"))]
-                            if self.progress_bar {
-                                pb.inc(1);
-                                pb.set_message(format!(
-                                    "{:?}",
-                                    self.graph[child_idx].package.resolved()
-                                ));
+                            if let Some(handler) = &self.on_resolve_progress {
+                                handler(&self.graph[child_idx].package);
                             }
                         }
                     }
@@ -533,12 +801,6 @@ impl NodeMaintainer {
                 })
             }
         }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            pb.finish_and_clear();
-            println!("🔍 Resolved!");
-        };
 
         tracing::info!(
             "Resolved graph of {} nodes in {}ms",
@@ -736,4 +998,61 @@ impl NodeMaintainer {
             Box::new(deps)
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    async fn load_actual(&mut self) -> Result<(), NodeMaintainerError> {
+        let meta = self.root.join("node_modules").join(META_FILE_NAME);
+        self.actual_tree = async_std::fs::read_to_string(&meta)
+            .await
+            .ok()
+            .and_then(|lock| Lockfile::from_kdl(lock).ok());
+        if self.actual_tree.is_none() && meta.exists() {
+            // If anything went wrong, we go ahead and delete the meta file,
+            // if it exists, because it's probably corrupted.
+            async_std::fs::remove_file(meta).await?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
+    let temp = match tempfile::NamedTempFile::new_in(src_dir) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::info!("error creating tempfile while checking for reflink support: {e}.");
+            return false;
+        }
+    };
+    match std::fs::write(&temp, "a") {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::info!("error writing to tempfile while checking for reflink support: {e}.");
+            return false;
+        }
+    };
+    let tempdir = match tempfile::TempDir::new_in(dest_dir) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::info!(
+                "error creating destination tempdir while checking for reflink support: {e}."
+            );
+            return false;
+        }
+    };
+    let supports_reflink = reflink::reflink(temp.path(), tempdir.path().join("b"))
+        .map(|_| true)
+        .map_err(|e| {
+            tracing::info!(
+                "reflink support check failed. Files will be hard linked or copied. ({e})"
+            );
+            e
+        })
+        .unwrap_or(false);
+
+    if supports_reflink {
+        tracing::info!("Verified reflink support. Extracted data will use copy-on-write reflinks instead of hard links or full copies.")
+    }
+
+    supports_reflink
 }

@@ -6,14 +6,15 @@ use std::{
 };
 
 use kdl::KdlDocument;
-use nassun::{Package, PackageResolution};
+use nassun::{package::Package, PackageResolution};
 use petgraph::{
     dot::Dot,
     stable_graph::{EdgeIndex, NodeIndex, StableGraph},
 };
 use unicase::UniCase;
 
-use crate::{DepType, Edge, Lockfile, LockfileNode, Node, NodeMaintainerError};
+use crate::{error::NodeMaintainerError, DepType, Edge, Lockfile, LockfileNode, Node};
+
 #[cfg(debug_assertions)]
 use NodeMaintainerError::GraphValidationError;
 
@@ -150,10 +151,7 @@ impl Graph {
         }
     }
 
-    pub(crate) fn package_at_path(
-        &self,
-        path: &Path,
-    ) -> Result<Option<Package>, NodeMaintainerError> {
+    pub(crate) fn node_at_path(&self, path: &Path) -> Option<&Node> {
         let mut current = Some(self.root);
         let mut in_nm = true;
         let slash = OsStr::new("/");
@@ -177,7 +175,15 @@ impl Graph {
                 break;
             }
         }
-        Ok(current.map(|idx| self.inner[idx].package.clone()))
+        if current == Some(self.root) {
+            None
+        } else {
+            current.map(|idx| &self.inner[idx])
+        }
+    }
+
+    pub(crate) fn package_at_path(&self, path: &Path) -> Option<Package> {
+        Some(self.node_at_path(path)?.package.clone())
     }
 
     pub(crate) fn find_by_name(
@@ -260,7 +266,7 @@ impl Graph {
         Ok(())
     }
 
-    fn node_lockfile_node(
+    pub(crate) fn node_lockfile_node(
         &self,
         node: NodeIndex,
         is_root: bool,

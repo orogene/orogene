@@ -1,6 +1,6 @@
 [package]
 name = "nassun"
-version = "0.3.6"
+version = "0.3.10"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "NPM package interface for resolving, fetching metadata, downloading, and extracting individual packages."
@@ -10,9 +10,9 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-oro-common = { version = "=0.3.6", path = "../oro-common" }
-oro-client = { version = "=0.3.6", path = "../oro-client" }
-oro-package-spec = { version = "=0.3.6", path = "../oro-package-spec" }
+oro-common = { version = "=0.3.10", path = "../oro-common" }
+oro-client = { version = "=0.3.10", path = "../oro-client" }
+oro-package-spec = { version = "=0.3.10", path = "../oro-package-spec" }
 
 async-compression = { workspace = true, features = ["gzip", "futures-io"] }
 async-std = { workspace = true, features = ["attributes", "unstable", "tokio1" ] }
@@ -27,6 +27,7 @@ serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+tsify = { workspace = true, default-features = false, features = ["js"] }
 url = { workspace = true }
 
 [dev-dependencies]
@@ -34,21 +35,22 @@ mockito = { workspace = true }
 test-case = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-async-tar-wasm = { workspace = true }
+async-tar-wasm = "0.4.2-wasm.1"
 async-process = { workspace = true }
 async-std = { workspace = true, features = ["attributes", "std"] }
 backon = { workspace = true }
 cacache = { workspace = true }
 flate2 = { workspace = true }
 io_tee = { workspace = true }
-once_cell = { workspace = true }
-reflink = { workspace = true }
 tar = { workspace = true }
 tempfile = { workspace = true }
 which = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-async-tar-wasm = { workspace = true, default-features = false }
+# NOTE: This async-tar-wasm version can't be configured at the workspace
+#       level, because otherwise the conditional features don't work.
+async-tar-wasm = { version = "0.4.2-wasm.1", default-features = false }
+console_error_panic_hook = { workspace = true }
 js-sys = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 wasm-bindgen = { workspace = true }

@@ -102,6 +102,7 @@ use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
 use tracing_appender::non_blocking::WorkerGuard;
+use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{
     filter::{Directive, LevelFilter, Targets},
     fmt,
@@ -110,9 +111,7 @@ use tracing_subscriber::{
 };
 use url::Url;
 
-use commands::{
-    ping::PingCmd, resolve::ResolveCmd, restore::RestoreCmd, view::ViewCmd, OroCommand,
-};
+use commands::{ping::PingCmd, restore::RestoreCmd, view::ViewCmd, OroCommand};
 
 mod commands;
 
@@ -161,6 +160,10 @@ pub struct Orogene {
     #[arg(global = true, long)]
     json: bool,
 
+    /// Disable progress bar display.
+    #[arg(global = true, long)]
+    no_progress: bool,
+
     #[command(subcommand)]
     subcommand: OroCmd,
 }
@@ -191,7 +194,8 @@ impl Orogene {
             filter
         };
 
-        let builder = tracing_subscriber::registry().with(fmt::layer().with_filter(filter));
+        let ilayer = IndicatifLayer::new().with_max_progress_bars(1, None);
+        let builder = tracing_subscriber::registry();
 
         if let Some(cache) = self.cache.as_deref() {
             let targets = Targets::new()
@@ -210,13 +214,39 @@ impl Orogene {
                 tracing_appender::rolling::never(cache.join("_logs"), log_file_name());
             let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-            builder
-                .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
-                .init();
+            if self.quiet || self.no_progress {
+                builder
+                    .with(tracing_subscriber::fmt::layer().with_filter(filter))
+                    .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                    .init();
+            } else {
+                builder
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_writer(ilayer.get_stderr_writer())
+                            .with_filter(filter),
+                    )
+                    .with(ilayer)
+                    .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                    .init();
+            };
 
             Ok(Some(guard))
         } else {
-            builder.init();
+            if self.quiet || self.no_progress {
+                builder
+                    .with(tracing_subscriber::fmt::layer().with_filter(filter))
+                    .init();
+            } else {
+                builder
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .with_writer(ilayer.get_stderr_writer())
+                            .with_filter(filter),
+                    )
+                    .with(ilayer)
+                    .init();
+            };
             Ok(None)
         }
     }
@@ -319,9 +349,6 @@ pub enum OroCmd {
     /// Ping the registry.
     Ping(PingCmd),
 
-    /// Resolve a package tree and save the lockfile to the project directory.
-    Resolve(ResolveCmd),
-
     /// Resolves and extracts a node_modules/ tree.
     Restore(RestoreCmd),
 
@@ -335,7 +362,6 @@ impl OroCommand for Orogene {
         log_command_line();
         match self.subcommand {
             OroCmd::Ping(cmd) => cmd.execute().await,
-            OroCmd::Resolve(cmd) => cmd.execute().await,
             OroCmd::Restore(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
         }
@@ -347,9 +373,6 @@ impl OroConfigLayer for Orogene {
         match self.subcommand {
             OroCmd::Ping(ref mut cmd) => {
                 cmd.layer_config(args.subcommand_matches("ping").unwrap(), conf)
-            }
-            OroCmd::Resolve(ref mut cmd) => {
-                cmd.layer_config(args.subcommand_matches("resolve").unwrap(), conf)
             }
             OroCmd::Restore(ref mut cmd) => {
                 cmd.layer_config(args.subcommand_matches("restore").unwrap(), conf)
