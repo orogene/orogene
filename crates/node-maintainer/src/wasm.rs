@@ -37,11 +37,11 @@ impl From<NodeMaintainerError> for JsValue {
         let obj = js_sys::Object::new();
         let msg = format!("{e}");
         js_sys::Reflect::set(&obj, &"message".into(), &JsValue::from_str(&msg))
-            .expect(&format!("failed to set error message: {e}"));
+            .unwrap_or_else(|_| panic!("failed to set error message: {e}"));
         if let Some(code) = e.code() {
             let code = format!("{code}");
             js_sys::Reflect::set(&obj, &"code".into(), &JsValue::from_str(&code))
-                .expect(&format!("failed to set error code: {e:#?}"));
+                .unwrap_or_else(|_| panic!("failed to set error code: {e:#?}"));
         }
         obj.into()
     }

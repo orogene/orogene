@@ -108,8 +108,6 @@ impl NassunOpts {
                     .unwrap_or_else(|| std::env::current_dir().expect("failed to get cwd.")),
                 default_tag: self.default_tag.unwrap_or_else(|| "latest".into()),
             },
-            #[cfg(target_arch = "wasm32")]
-            prefer_copy: false,
             npm_fetcher: Arc::new(NpmFetcher::new(
                 #[allow(clippy::redundant_clone)]
                 client.clone(),
