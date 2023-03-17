@@ -16,83 +16,80 @@
 //! > considered much more than a tech demo or proof of concept. Do not use in
 //! > production yet.
 //!
-//! ## Building
+//! ## Benchmarks
 //!
-//! ### Requirements
+//! Even at this early stage, orogene is **very** fast. These benchmarks are
+//! all on ubuntu linux running under wsl2, with an ext4 filesystem.
 //!
-//! You will need a Rust toolchain installed. See [the official Rust docs for
-//! instructions](https://www.rust-lang.org/tools/install). And
-//! [git](https://git-scm.com/downloads). Next, get a checkout of the source:
+//! All benchmarks are ordered from fastest to slowest (lower is better):
 //!
-//! ```text
-//! git clone https://github.com/orogene/orogene.git
-//! cd orogene
-//! ```
+//! ### Warm Cache
 //!
-//! ### Building
+//! This test shows performance when running off a warm cache, with an
+//! existing lockfile. This scenario is common in CI scenarios with caching
+//! enabled, as well as local scenarios where `node_modules` is wiped out in
+//! order to "start over" (and potentially when switching branches).
 //!
-//! Your first build:
+//! Of note here is the contrast between the subsecond (!) installation by
+//! orogene, versus the much more noticeable install times of literally
+//! everything else.
 //!
-//! ```text
-//! cargo build
-//! ```
+//! | Package Manager | Mean [ms] | Min [ms] | Max [ms] | Relative |
+//! |:---|---:|---:|---:|---:|
+//! | `orogene` | 417.3 ± 43.3 | 374.6 | 524.8 | 1.00 |
+//! | `bun` | 1535.2 ± 72.5 | 1442.3 | 1628.9 | 3.68 ± 0.42 |
+//! | `pnpm` | 8285.1 ± 529.0 | 7680.4 | 9169.9 | 19.85 ± 2.42 |
+//! | `yarn` | 20616.7 ± 1726.5 | 18928.6 | 24401.5 | 49.41 ± 6.59 |
+//! | `npm` | 29132.0 ± 4569.2 | 25113.4 | 38634.2 | 69.81 ± 13.13 |
 //!
-//! The first time you run this, this downloads all the dependencies you will
-//! need to build orogene automatically. This step might take a minute or two,
-//! but it will only be run once.
+//! ### Cold Cache
 //!
-//! Then it compiles all the dependencies as well as the orogene source files.
+//! This test shows performance when running off a cold cache, but with an
+//! existing lockfile. This scenario is common in CI scenarios that don't
+//! cache the package manager caches between runs, and for initial installs by
+//! teammates on relatively "clean" machines.
 //!
-//! It should end with something like:
+//! | Package Manager | Mean [s] | Min [s] | Max [s] | Relative |
+//! |:---|---:|---:|---:|---:|
+//! | `bun` | 5.203 ± 1.926 | 3.555 | 9.616 | 1.00 |
+//! | `orogene` | 8.346 ± 0.416 | 7.938 | 9.135 | 1.60 ± 0.60 |
+//! | `pnpm` | 27.653 ± 0.467 | 26.915 | 28.294 | 5.31 ± 1.97 |
+//! | `npm` | 31.613 ± 0.464 | 30.930 | 32.192 | 6.08 ± 2.25 |
+//! | `yarn` | 72.815 ± 1.285 | 71.275 | 74.932 | 13.99 ± 5.19 |
 //!
-//! ```text
-//! …
-//! Finished dev [unoptimized + debuginfo] target(s) in 1m 22s
-//! ```
+//! ## Memory Usage
 //!
-//! When you’ve made changes to the orogene source code, run `cargo build`
-//! again, and it will only compile the changed files quickly:
+//! Another big advantage of Orogene is significantly lower memory usage
+//! compared to other package managers, with each scenario below showing the
+//! peak memory usage (resident set size) for each scenario (collected with
+//! /usr/bin/time -v):
 //!
-//! ```text
-//! cargo build
-//!    Compiling orogene v0.1.0 (/Users/jan/Work/rust/orogene)
-//!     Finished dev [unoptimized + debuginfo] target(s) in 2.41s
-//! ```
+//! | Package Manager | no lockfile, no cache | lockfile, cold cache | lockfile, warm cache | existing node_modules |
+//! |:---|---:|----:|---:|----:|
+//! | `orogene` | 266.8 mb | 155.2 mb | 38.6 mb | 35.5 mb |
+//! | `bun` | 2,708.7 mb | 792.1 mb | 34.5 mb | 25.8 mb |
+//! | `pnpm` | 950.9 mb | 638.4 mb | 260.1 mb | 168.7 mb |
+//! | `npm` | 1,048.9 mb | 448.2 mb | 833.7 mb | 121.7 mb |
+//! | `yarn` | 751.1 mb | 334.4 mb | 251.9 mb | 129.3 mb |
 //!
-//! ### Running
+//! ### Caveat Emptor
 //!
-//! After building successfully, you can run your build with `cargo run`. In
-//! the default configuration, this will run an `oro` executable built for
-//! your local system in `./target/debug`. When you run it, it shows you a
-//! helpful page of instructions of what you can do with it. Give it a try:
+//! At the speeds at which orogene operates, these benchmarks can vary widely
+//! because they depend on the underlying filesystem's performance. For
+//! example, the gaps might be much smaller on Windows or (sometimes) macOS.
+//! They may even vary between different filesystems on Linux/FreeBSD. Note
+//! that orogene uses different installation strategies based on support for
+//! e.g. reflinking (btrfs, APFS, xfs).
 //!
-//! ```text
-//!     Finished dev [unoptimized + debuginfo] target(s) in 0.14s
-//!      Running `target/debug/oro`
-//! `node_modules/` package manager and utility toolkit.
+//! ## Contributing
 //!
-//! Usage: oro [OPTIONS] <COMMAND>
+//! For information and help on how to contribute to Orogene, please see
+//! [CONTRIBUTING.md](https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md).
 //!
-//! Commands:
-//!   ping     Ping the registry
-//!   resolve  Resolve a package tree and save the lockfile to the project directory
-//!   restore  Resolves and extracts a node_modules/ tree
-//!   view     Get information about a package
-//!   help     Print this message or the help of the given subcommand(s)
+//! ## License
 //!
-//! Options:
-//!       --root <ROOT>          Package path to operate on
-//!       --registry <REGISTRY>  Registry used for unscoped packages
-//!       --cache <CACHE>        Location of disk cache
-//!       --config <CONFIG>      File to read configuration values from
-//!       --loglevel <LOGLEVEL>  Log output level/directive
-//!   -q, --quiet                Disable all output
-//!       --json                 Format output as JSON
-//!   -h, --help                 Print help (see more with '--help')
-//!   -V, --version              Print version
-//! ```
-//!
-//! That’s it for now, happy hacking!
+//! Orogene and all its sub-crates are licensed under the terms of the [Apache
+//! 2.0 License](https://github.com/orogene/orogene/blob/main/LICENSE).
 
 use std::path::{Path, PathBuf};
 
