@@ -1,4 +1,7 @@
 {
     "additional_pages": ["./CHANGELOG.md", "./CONTRIBUTING.md"],
-    "md_book": "./book/book"
+    "md_book": "./book/book",
+    "artifacts": {
+        "cargo_dist": true
+    }
 }
