@@ -169,7 +169,7 @@ mod test {
 
     #[async_std::test]
     async fn read_name() -> miette::Result<()> {
-        let fetcher = NpmFetcher::new(oro_client::OroClient::default(), HashMap::default());
+        let fetcher = NpmFetcher::new(oro_client::OroClient::default(), HashMap::default(), false);
         let spec = PackageSpec::Npm {
             scope: None,
             name: "npm".to_string(),
@@ -260,7 +260,7 @@ mod test {
         let mut registries = HashMap::new();
         registries.insert(None, Url::parse(mock_server.url().as_ref()).unwrap());
 
-        let fetcher = NpmFetcher::new(oro_client::OroClient::default(), registries);
+        let fetcher = NpmFetcher::new(oro_client::OroClient::default(), registries, false);
         let spec = PackageSpec::Npm {
             scope: None,
             name: "oro-test-example".to_string(),
