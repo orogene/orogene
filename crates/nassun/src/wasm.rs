@@ -321,60 +321,58 @@ impl Package {
     /// includes integrity information.
     pub async fn entries(&self) -> Result<wasm_streams::readable::sys::ReadableStream> {
         let entries = self.package.entries().await?.then(|entry| async move {
-            entry
-                .map_err(|e| e.into())
-                .and_then(
-                    |entry: crate::entries::Entry| -> std::result::Result<JsValue, JsValue> {
-                        let header = entry.header();
-                        let obj = js_sys::Object::new();
-                        js_sys::Reflect::set(
-                            &obj,
-                            &"type".into(),
-                            &header.entry_type().as_byte().into(),
-                        )?;
-                        js_sys::Reflect::set(
-                            &obj,
-                            &"mtime".into(),
-                            &header
-                                .mtime()
-                                .map(|mut x| {
-                                    if x > (u32::MAX as u64) {
-                                        x = u32::MAX as u64;
-                                    }
-                                    x as u32
-                                })
-                                .map_err(|e| -> NassunError { e.into() })?
-                                .into(),
-                        )?;
-                        js_sys::Reflect::set(
-                            &obj,
-                            &"size".into(),
-                            &header
-                                .entry_size()
-                                .map(|mut x| {
-                                    if x > (u32::MAX as u64) {
-                                        x = u32::MAX as u64;
-                                    }
-                                    x as u32
-                                })
-                                .map_err(|e| -> NassunError { e.into() })?
-                                .into(),
-                        )?;
-                        js_sys::Reflect::set(
-                            &obj,
-                            &"path".into(),
-                            &entry.path()?.to_string_lossy().into_owned().into(),
-                        )?;
-                        js_sys::Reflect::set(
-                            &obj,
-                            &"contents".into(),
-                            &ReadableStream::from_async_read(entry, 1024)
-                                .into_raw()
-                                .into(),
-                        )?;
-                        Ok(obj.into())
-                    },
-                )
+            entry.map_err(|e| e.into()).and_then(
+                |entry: crate::entries::Entry| -> std::result::Result<JsValue, JsValue> {
+                    let header = entry.header();
+                    let obj = js_sys::Object::new();
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"type".into(),
+                        &header.entry_type().as_byte().into(),
+                    )?;
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"mtime".into(),
+                        &header
+                            .mtime()
+                            .map(|mut x| {
+                                if x > (u32::MAX as u64) {
+                                    x = u32::MAX as u64;
+                                }
+                                x as u32
+                            })
+                            .map_err(|e| -> NassunError { e.into() })?
+                            .into(),
+                    )?;
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"size".into(),
+                        &header
+                            .entry_size()
+                            .map(|mut x| {
+                                if x > (u32::MAX as u64) {
+                                    x = u32::MAX as u64;
+                                }
+                                x as u32
+                            })
+                            .map_err(|e| -> NassunError { e.into() })?
+                            .into(),
+                    )?;
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"path".into(),
+                        &entry.path()?.to_string_lossy().into_owned().into(),
+                    )?;
+                    js_sys::Reflect::set(
+                        &obj,
+                        &"contents".into(),
+                        &ReadableStream::from_async_read(entry, 1024)
+                            .into_raw()
+                            .into(),
+                    )?;
+                    Ok(obj.into())
+                },
+            )
         });
         Ok(ReadableStream::from_stream(entries).into_raw())
     }

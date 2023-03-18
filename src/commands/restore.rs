@@ -103,7 +103,10 @@ impl OroCommand for RestoreCmd {
             self.prune(&emoji, &resolved_nm).await?;
             self.extract(&emoji, &resolved_nm).await?;
         } else if !self.quiet {
-            eprintln!("{}Skipping prune and extract, only writing lockfile", emoji.package());
+            eprintln!(
+                "{}Skipping prune and extract, only writing lockfile",
+                emoji.package()
+            );
         }
 
         resolved_nm
@@ -207,7 +210,11 @@ impl RestoreCmd {
         let extract_span = tracing::info_span!("extract");
         extract_span.pb_set_style(
             &ProgressStyle::default_bar()
-                .template(&format!("{}{}", emoji.package(), "{bar:40} [{pos}/{len}] {wide_msg:.dim}"))
+                .template(&format!(
+                    "{}{}",
+                    emoji.package(),
+                    "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
+                ))
                 .unwrap(),
         );
         extract_span.pb_set_length(maintainer.package_count() as u64);
