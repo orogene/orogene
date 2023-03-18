@@ -1,2 +1,4 @@
 {
+    "additional_pages": ["./CHANGELOG.md", "./CONTRIBUTING.md"],
+    "md_book": "./book/book"
 }

@@ -94,7 +94,7 @@
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use clap::{ArgMatches, CommandFactory, FromArgMatches as _, Parser, Subcommand};
+use clap::{ArgMatches, Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
@@ -119,26 +119,26 @@ const MAX_RETAINED_LOGS: usize = 5;
 #[command(propagate_version = true)]
 pub struct Orogene {
     /// Package path to operate on.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     root: Option<PathBuf>,
 
     /// Registry used for unscoped packages.
     ///
     /// Defaults to https://registry.npmjs.org.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     registry: Option<Url>,
 
     /// Location of disk cache.
     ///
     /// Default location varies by platform.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     cache: Option<PathBuf>,
 
     /// File to read configuration values from.
     ///
     /// When specified, global configuration loading is disabled and
     /// configuration values will only be read from this location.
-    #[arg(global = true, long)]
+    #[clap(help_heading = "Global Options", global = true, long)]
     config: Option<PathBuf>,
 
     /// Log output level/directive.
@@ -146,19 +146,19 @@ pub struct Orogene {
     /// Supports plain loglevels (off, error, warn, info, debug, trace) as
     /// well as more advanced directives in the format
     /// `target[span{field=value}]=level`.
-    #[clap(global = true, long)]
+    #[clap(help_heading = "Global Options", global = true, long)]
     loglevel: Option<String>,
 
     /// Disable all output.
-    #[arg(global = true, long, short)]
+    #[arg(help_heading = "Global Options", global = true, long, short)]
     quiet: bool,
 
     /// Format output as JSON.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     json: bool,
 
     /// Disable progress bar display.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     no_progress: bool,
 
     #[command(subcommand)]
@@ -351,6 +351,9 @@ pub enum OroCmd {
 
     /// Get information about a package.
     View(ViewCmd),
+
+    #[clap(hide = true)]
+    HelpMarkdown(HelpMarkdownCmd),
 }
 
 #[async_trait]
@@ -361,6 +364,7 @@ impl OroCommand for Orogene {
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Restore(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
+            OroCmd::HelpMarkdown(cmd) => cmd.execute().await,
         }
     }
 }
@@ -377,6 +381,84 @@ impl OroConfigLayer for Orogene {
             OroCmd::View(ref mut cmd) => {
                 cmd.layer_config(args.subcommand_matches("view").unwrap(), conf)
             }
+            OroCmd::HelpMarkdown(ref mut cmd) => {
+                cmd.layer_config(args.subcommand_matches("help-markdown").unwrap(), conf)
+            }
         }
+    }
+}
+
+#[derive(Debug, Args, OroConfigLayer)]
+pub struct HelpMarkdownCmd {
+    #[arg()]
+    command_name: String,
+}
+
+#[async_trait]
+impl OroCommand for HelpMarkdownCmd {
+    // Based on:
+    // https://github.com/axodotdev/cargo-dist/blob/b79a12e0942021ec304c5dcbf5e0cfcda3e6a4bb/cargo-dist/src/main.rs#L320
+    async fn execute(self) -> Result<()> {
+        let mut app = Orogene::command();
+
+        // HACK: This is a hack that forces clap to print global options for
+        // subcommands when calling `write_long_help` on them.
+        let mut _help_buf = Vec::new();
+        app.write_long_help(&mut _help_buf).into_diagnostic()?;
+
+        for subcmd in app.get_subcommands_mut() {
+            let name = subcmd.get_name();
+
+            if name != self.command_name {
+                continue;
+            }
+
+            println!("# oro {name}");
+            println!();
+
+            let mut help_buf = Vec::new();
+            subcmd.write_long_help(&mut help_buf).into_diagnostic()?;
+            let help = String::from_utf8(help_buf).into_diagnostic()?;
+
+            for line in help.lines() {
+                if let Some(usage) = line.strip_prefix("Usage: ") {
+                    println!("### Usage:");
+                    println!();
+                    println!("```");
+                    println!("oro {usage}");
+                    println!("```");
+                    continue;
+                }
+
+                if let Some(heading) = line.strip_suffix(':') {
+                    if !line.starts_with(' ') {
+                        println!("### {heading}");
+                        println!();
+                        continue;
+                    }
+                }
+
+                let line = line.trim();
+
+                if line.starts_with("- ") {
+                } else if line.starts_with('-') || line.starts_with('<') {
+                    println!("#### `{line}`");
+                    println!();
+                    continue;
+                }
+
+                if line.starts_with('[') {
+                    println!("\\{line}  ");
+                    continue;
+                }
+
+                println!("{line}");
+            }
+
+            println!();
+
+            return Ok(());
+        }
+        Err(miette::miette!("Command not found: {self.command_name}"))
     }
 }

@@ -1,0 +1,6 @@
+[book]
+authors = ["Kat Marchán"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Orogene"
