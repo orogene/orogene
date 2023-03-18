@@ -1,0 +1,88 @@
+---
+source: tests/help.rs
+expression: "sub_md(\"restore\")"
+---
+stderr:
+
+stdout:
+# oro restore
+
+Resolves and extracts a node_modules/ tree
+
+### Usage:
+
+```
+oro restore [OPTIONS]
+```
+
+### Options
+
+#### `-p, --prefer-copy`
+
+Prefer copying files over hard linking them.
+
+On filesystems that don't support copy-on-write/reflinks (usually NTFS or ext4), orogene defaults to hard linking package files from a centralized cache. As such, this can cause global effects if a file inside a node_modules is modified, where other projects that have installed that same file will see those modifications.
+
+In order to prevent this, you can use this flag to force orogene to always copy files, at a performance cost.
+
+#### `-v, --validate`
+
+Validate the integrity of installed files.
+
+When this is true, orogene will verify all files extracted from the cache, as well as verify that any files in the existing `node_modules` are unmodified. If verification fails, the packages will be reinstalled.
+
+#### `--lockfile-only`
+
+Whether to skip restoring packages into `node_modules` and just resolve the tree and write the lockfile
+
+#### `-h, --help`
+
+Print help (see a summary with '-h')
+
+#### `-V, --version`
+
+Print version
+
+### Global Options
+
+#### `--root <ROOT>`
+
+Package path to operate on
+
+#### `--registry <REGISTRY>`
+
+Registry used for unscoped packages.
+
+Defaults to https://registry.npmjs.org.
+
+#### `--cache <CACHE>`
+
+Location of disk cache.
+
+Default location varies by platform.
+
+#### `--config <CONFIG>`
+
+File to read configuration values from.
+
+When specified, global configuration loading is disabled and configuration values will only be read from this location.
+
+#### `--loglevel <LOGLEVEL>`
+
+Log output level/directive.
+
+Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format `target[span{field=value}]=level`.
+
+#### `-q, --quiet`
+
+Disable all output
+
+#### `--json`
+
+Format output as JSON
+
+#### `--no-progress`
+
+Disable progress bar display
+
+
