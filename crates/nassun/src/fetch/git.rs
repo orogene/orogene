@@ -224,6 +224,7 @@ impl PackageFetcher for GitFetcher {
 mod test {
     use std::{fs::File, io::Write, process};
 
+    use node_semver::Range;
     use oro_client::OroClient;
     use oro_package_spec::{GitInfo, PackageSpec};
     use tempfile::tempdir;
@@ -260,10 +261,39 @@ mod test {
             .status()
             .expect("Could not add package.json to git repo");
         process::Command::new("git")
-            .args(["commit", "-m", "First version"])
+            .args(["commit", "-m", "First version", "--no-gpg-sign"])
             .current_dir(&git_dir)
             .status()
             .expect("Could not commit first version");
+        process::Command::new("git")
+            .args(["tag", "--no-sign", "1.0.0"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not tag first version");
+
+        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        package_file
+            .write_all(
+                r#"{
+            "name": "oro-test",
+            "version": "1.2.0"
+        }"#
+                .as_bytes(),
+            )
+            .unwrap();
+        drop(package_file);
+
+        // commit the second version
+        process::Command::new("git")
+            .args(["commit", "-a", "-m", "Second version", "--no-gpg-sign"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not commit second version");
+        process::Command::new("git")
+            .args(["tag", "--no-sign", "1.2.0"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not tag first version");
 
         let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
         package_file
@@ -277,9 +307,9 @@ mod test {
             .unwrap();
         drop(package_file);
 
-        // commit the second version
+        // commit the third version
         process::Command::new("git")
-            .args(["commit", "-a", "-m", "Second version"])
+            .args(["commit", "-a", "-m", "Second version", "--no-gpg-sign"])
             .current_dir(&git_dir)
             .status()
             .expect("Could not commit second version");
@@ -299,6 +329,7 @@ mod test {
         let git_dir = setup_git_dir()?;
         let fetcher = GitFetcher::new(OroClient::default());
         let tmp = tempdir().unwrap();
+        // get last commit
         let packument = fetcher
             .packument(
                 &PackageSpec::Git(GitInfo::Url {
@@ -311,6 +342,19 @@ mod test {
             .await?;
         assert!(packument.versions.contains_key(&"1.5.0".parse()?));
         assert_eq!(packument.versions.get(&"1.5.0".parse()?).unwrap().dist.file_count, None);
+        // get specific commit (by tag in that case)
+        let packument = fetcher
+            .packument(
+                &PackageSpec::Git(GitInfo::Url {
+                    url: format!("file://{}", git_dir.path().to_str().unwrap()).parse().unwrap(),
+                    committish: Some("1.0.0".to_string()),
+                    semver: None,
+                }),
+                tmp.path(),
+            )
+            .await?;
+        assert!(packument.versions.contains_key(&"1.0.0".parse()?));
+        assert_eq!(packument.versions.get(&"1.0.0".parse()?).unwrap().dist.file_count, None);
         Ok(())
     }
 }
