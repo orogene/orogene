@@ -248,6 +248,7 @@ fn hackerish_encouragement() -> &'static str {
         "Hack and be merry!",
         "Your hacking starts... NOW!",
         "May the source be with you.",
+        "Fasterthanlime-fame is but a hack away!",
         "Hack the planet!",
         "Hackuna Matata~",
         "Are we JavaScript yet?",
