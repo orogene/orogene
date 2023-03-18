@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use async_process::{Command, Stdio};
-use async_std::sync::{Arc, Mutex};
+use async_std::sync::Arc;
 use async_trait::async_trait;
+use once_cell::sync::OnceCell;
 use oro_client::{self, OroClient};
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use oro_package_spec::{GitInfo, PackageSpec};
@@ -19,7 +20,7 @@ use crate::tarball::Tarball;
 pub(crate) struct GitFetcher {
     client: OroClient,
     dir_fetcher: DirFetcher,
-    git: Arc<Mutex<Option<PathBuf>>>,
+    git: OnceCell<PathBuf>,
 }
 
 impl GitFetcher {
@@ -27,7 +28,7 @@ impl GitFetcher {
         Self {
             client,
             dir_fetcher: DirFetcher::new(),
-            git: Arc::new(Mutex::new(None)),
+            git: OnceCell::new(),
         }
     }
 
@@ -90,15 +91,10 @@ impl GitFetcher {
         committish: &Option<String>,
     ) -> Result<()> {
         let repo = repo.as_ref();
-        let git = if let Some(git) = self.git.lock().await.as_ref() {
-            git.clone()
-        } else {
-            let git = which::which("git").map_err(NassunError::WhichGit)?;
-            let mut selfgit = self.git.lock().await;
-            *selfgit = Some(git.clone());
-            git
-        };
-        Command::new(&git)
+        let git = self
+            .git
+            .get_or_try_init(|| which::which("git").map_err(NassunError::WhichGit))?;
+        Command::new(git)
             .arg("clone")
             .arg(repo)
             .arg("package")
@@ -117,7 +113,7 @@ impl GitFetcher {
                 }
             })?;
         if let Some(committish) = committish {
-            Command::new(&git)
+            Command::new(git)
                 .arg("checkout")
                 .arg(committish)
                 .current_dir(dir.join("package"))
