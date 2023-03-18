@@ -35,5 +35,12 @@ install_crate = "cargo-readme"
 command = "cargo"
 args = ["readme", "-o", "README.md"]
 
+# NOTE: This is meant to be run on *nix systems only.
+[tasks.benchmark-graphs]
+workspace = false
+install_crate = "hyperfine"
+command = "cargo"
+args = ["run", "--release", "--example", "render-benchmarks"]
+
 [env]
 CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
