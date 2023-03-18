@@ -43,9 +43,9 @@ impl Tarball {
     pub(crate) fn new(reader: TarballStream, integrity: Integrity) -> Self {
         Self {
             reader,
-            checker: Some(IntegrityChecker::new(integrity.clone())),
             #[cfg(not(target_arch = "wasm32"))]
-            integrity: Some(integrity),
+            integrity: Some(integrity.clone()),
+            checker: Some(IntegrityChecker::new(integrity)),
         }
     }
 
@@ -366,6 +366,7 @@ pub(crate) fn tarball_key(integrity: &Integrity) -> String {
     format!("nassun::package::{integrity}")
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn extract_from_cache(
     cache: &Path,
     sri: &Integrity,

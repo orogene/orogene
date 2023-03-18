@@ -1,8 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet, VecDeque};
-use std::path::Path;
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{self, AtomicUsize};
 
@@ -29,6 +27,7 @@ use crate::error::NodeMaintainerError;
 use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
 const DEFAULT_CONCURRENCY: usize = 50;
+#[allow(dead_code)]
 const META_FILE_NAME: &str = ".orogene-meta.kdl";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
@@ -146,6 +145,7 @@ impl NodeMaintainerOptions {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn on_prune_progress<F>(mut self, f: F) -> Self
     where
         F: Fn(&Path) + Send + Sync + 'static,
@@ -154,6 +154,7 @@ impl NodeMaintainerOptions {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn on_extract_progress<F>(mut self, f: F) -> Self
     where
         F: Fn(&Package) + Send + Sync + 'static,
@@ -169,6 +170,7 @@ impl NodeMaintainerOptions {
         if let Some(npm_lock) = &self.npm_lock {
             return Ok(Some(npm_lock.clone()));
         }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(root) = &self.root {
             let kdl_lock = root.join("package-lock.kdl");
             if kdl_lock.exists() {
@@ -300,14 +302,20 @@ pub struct NodeMaintainer {
     nassun: Nassun,
     graph: Graph,
     concurrency: usize,
+    #[allow(dead_code)]
     cache: Option<PathBuf>,
+    #[allow(dead_code)]
     prefer_copy: bool,
+    #[allow(dead_code)]
     validate: bool,
+    #[allow(dead_code)]
     root: PathBuf,
     actual_tree: Option<Lockfile>,
     on_resolution_added: Option<ProgressAdded>,
     on_resolve_progress: Option<ProgressHandler>,
+    #[allow(dead_code)]
     on_prune_progress: Option<PruneProgress>,
+    #[allow(dead_code)]
     on_extract_progress: Option<ProgressHandler>,
 }
 
@@ -590,6 +598,7 @@ impl NodeMaintainer {
         #[cfg(not(target_arch = "wasm32"))]
         let start = std::time::Instant::now();
 
+        #[cfg(not(target_arch = "wasm32"))]
         self.load_actual().await?;
 
         let (package_sink, package_stream) = futures::channel::mpsc::unbounded();
@@ -743,6 +752,7 @@ impl NodeMaintainer {
                             ..
                         } = &package.corgi_metadata().await?;
 
+                        #[cfg(not(target_arch = "wasm32"))]
                         if let Some(deprecated) = deprecated {
                             tracing::warn!(
                                 "{} {}@{}: {}",
@@ -802,6 +812,7 @@ impl NodeMaintainer {
             }
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         tracing::info!(
             "Resolved graph of {} nodes in {}ms",
             self.graph.inner.node_count(),

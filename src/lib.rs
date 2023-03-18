@@ -16,88 +16,29 @@
 //! > considered much more than a tech demo or proof of concept. Do not use in
 //! > production yet.
 //!
-//! ## Building
+//! ### Performance
 //!
-//! ### Requirements
+//! Orogene is pretty fast and uses fewer resources than other package
+//! managers! For details and benchmarks, see [the benchmarks]
 //!
-//! You will need a Rust toolchain installed. See [the official Rust docs for
-//! instructions](https://www.rust-lang.org/tools/install). And
-//! [git](https://git-scm.com/downloads). Next, get a checkout of the source:
+//! ## Contributing
 //!
-//! ```text
-//! git clone https://github.com/orogene/orogene.git
-//! cd orogene
-//! ```
+//! For information and help on how to contribute to Orogene, please see
+//! [CONTRIBUTING.md].
 //!
-//! ### Building
+//! ## License
 //!
-//! Your first build:
+//! Orogene and all its sub-crates are licensed under the terms of the [Apache
+//! 2.0 License].
 //!
-//! ```text
-//! cargo build
-//! ```
-//!
-//! The first time you run this, this downloads all the dependencies you will
-//! need to build orogene automatically. This step might take a minute or two,
-//! but it will only be run once.
-//!
-//! Then it compiles all the dependencies as well as the orogene source files.
-//!
-//! It should end with something like:
-//!
-//! ```text
-//! …
-//! Finished dev [unoptimized + debuginfo] target(s) in 1m 22s
-//! ```
-//!
-//! When you’ve made changes to the orogene source code, run `cargo build`
-//! again, and it will only compile the changed files quickly:
-//!
-//! ```text
-//! cargo build
-//!    Compiling orogene v0.1.0 (/Users/jan/Work/rust/orogene)
-//!     Finished dev [unoptimized + debuginfo] target(s) in 2.41s
-//! ```
-//!
-//! ### Running
-//!
-//! After building successfully, you can run your build with `cargo run`. In
-//! the default configuration, this will run an `oro` executable built for
-//! your local system in `./target/debug`. When you run it, it shows you a
-//! helpful page of instructions of what you can do with it. Give it a try:
-//!
-//! ```text
-//!     Finished dev [unoptimized + debuginfo] target(s) in 0.14s
-//!      Running `target/debug/oro`
-//! `node_modules/` package manager and utility toolkit.
-//!
-//! Usage: oro [OPTIONS] <COMMAND>
-//!
-//! Commands:
-//!   ping     Ping the registry
-//!   resolve  Resolve a package tree and save the lockfile to the project directory
-//!   restore  Resolves and extracts a node_modules/ tree
-//!   view     Get information about a package
-//!   help     Print this message or the help of the given subcommand(s)
-//!
-//! Options:
-//!       --root <ROOT>          Package path to operate on
-//!       --registry <REGISTRY>  Registry used for unscoped packages
-//!       --cache <CACHE>        Location of disk cache
-//!       --config <CONFIG>      File to read configuration values from
-//!       --loglevel <LOGLEVEL>  Log output level/directive
-//!   -q, --quiet                Disable all output
-//!       --json                 Format output as JSON
-//!   -h, --help                 Print help (see more with '--help')
-//!   -V, --version              Print version
-//! ```
-//!
-//! That’s it for now, happy hacking!
+//! [the benchmarks]: https://orogene.dev/BENCHMARKS.html
+//! [CONTRIBUTING.md]: https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
+//! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use clap::{ArgMatches, CommandFactory, FromArgMatches as _, Parser, Subcommand};
+use clap::{ArgMatches, Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
@@ -122,26 +63,26 @@ const MAX_RETAINED_LOGS: usize = 5;
 #[command(propagate_version = true)]
 pub struct Orogene {
     /// Package path to operate on.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     root: Option<PathBuf>,
 
     /// Registry used for unscoped packages.
     ///
     /// Defaults to https://registry.npmjs.org.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     registry: Option<Url>,
 
     /// Location of disk cache.
     ///
     /// Default location varies by platform.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     cache: Option<PathBuf>,
 
     /// File to read configuration values from.
     ///
     /// When specified, global configuration loading is disabled and
     /// configuration values will only be read from this location.
-    #[arg(global = true, long)]
+    #[clap(help_heading = "Global Options", global = true, long)]
     config: Option<PathBuf>,
 
     /// Log output level/directive.
@@ -149,19 +90,19 @@ pub struct Orogene {
     /// Supports plain loglevels (off, error, warn, info, debug, trace) as
     /// well as more advanced directives in the format
     /// `target[span{field=value}]=level`.
-    #[clap(global = true, long)]
+    #[clap(help_heading = "Global Options", global = true, long)]
     loglevel: Option<String>,
 
     /// Disable all output.
-    #[arg(global = true, long, short)]
+    #[arg(help_heading = "Global Options", global = true, long, short)]
     quiet: bool,
 
     /// Format output as JSON.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     json: bool,
 
     /// Disable progress bar display.
-    #[arg(global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     no_progress: bool,
 
     #[command(subcommand)]
@@ -354,6 +295,9 @@ pub enum OroCmd {
 
     /// Get information about a package.
     View(ViewCmd),
+
+    #[clap(hide = true)]
+    HelpMarkdown(HelpMarkdownCmd),
 }
 
 #[async_trait]
@@ -364,6 +308,7 @@ impl OroCommand for Orogene {
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Restore(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
+            OroCmd::HelpMarkdown(cmd) => cmd.execute().await,
         }
     }
 }
@@ -380,6 +325,84 @@ impl OroConfigLayer for Orogene {
             OroCmd::View(ref mut cmd) => {
                 cmd.layer_config(args.subcommand_matches("view").unwrap(), conf)
             }
+            OroCmd::HelpMarkdown(ref mut cmd) => {
+                cmd.layer_config(args.subcommand_matches("help-markdown").unwrap(), conf)
+            }
         }
+    }
+}
+
+#[derive(Debug, Args, OroConfigLayer)]
+pub struct HelpMarkdownCmd {
+    #[arg()]
+    command_name: String,
+}
+
+#[async_trait]
+impl OroCommand for HelpMarkdownCmd {
+    // Based on:
+    // https://github.com/axodotdev/cargo-dist/blob/b79a12e0942021ec304c5dcbf5e0cfcda3e6a4bb/cargo-dist/src/main.rs#L320
+    async fn execute(self) -> Result<()> {
+        let mut app = Orogene::command();
+
+        // HACK: This is a hack that forces clap to print global options for
+        // subcommands when calling `write_long_help` on them.
+        let mut _help_buf = Vec::new();
+        app.write_long_help(&mut _help_buf).into_diagnostic()?;
+
+        for subcmd in app.get_subcommands_mut() {
+            let name = subcmd.get_name();
+
+            if name != self.command_name {
+                continue;
+            }
+
+            println!("# oro {name}");
+            println!();
+
+            let mut help_buf = Vec::new();
+            subcmd.write_long_help(&mut help_buf).into_diagnostic()?;
+            let help = String::from_utf8(help_buf).into_diagnostic()?;
+
+            for line in help.lines() {
+                if let Some(usage) = line.strip_prefix("Usage: ") {
+                    println!("### Usage:");
+                    println!();
+                    println!("```");
+                    println!("oro {usage}");
+                    println!("```");
+                    continue;
+                }
+
+                if let Some(heading) = line.strip_suffix(':') {
+                    if !line.starts_with(' ') {
+                        println!("### {heading}");
+                        println!();
+                        continue;
+                    }
+                }
+
+                let line = line.trim();
+
+                if line.starts_with("- ") {
+                } else if line.starts_with('-') || line.starts_with('<') {
+                    println!("#### `{line}`");
+                    println!();
+                    continue;
+                }
+
+                if line.starts_with('[') {
+                    println!("\\{line}  ");
+                    continue;
+                }
+
+                println!("{line}");
+            }
+
+            println!();
+
+            return Ok(());
+        }
+        Err(miette::miette!("Command not found: {self.command_name}"))
     }
 }

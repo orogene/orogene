@@ -1,0 +1,76 @@
+---
+source: tests/help.rs
+expression: "sub_md(\"view\")"
+---
+stderr:
+
+stdout:
+# oro view
+
+Get information about a package
+
+### Usage:
+
+```
+oro view [OPTIONS] <PKG>
+```
+
+### Arguments
+
+#### `<PKG>`
+
+Package spec to look up
+
+### Options
+
+#### `-h, --help`
+
+Print help (see a summary with '-h')
+
+#### `-V, --version`
+
+Print version
+
+### Global Options
+
+#### `--root <ROOT>`
+
+Package path to operate on
+
+#### `--registry <REGISTRY>`
+
+Registry used for unscoped packages.
+
+Defaults to https://registry.npmjs.org.
+
+#### `--cache <CACHE>`
+
+Location of disk cache.
+
+Default location varies by platform.
+
+#### `--config <CONFIG>`
+
+File to read configuration values from.
+
+When specified, global configuration loading is disabled and configuration values will only be read from this location.
+
+#### `--loglevel <LOGLEVEL>`
+
+Log output level/directive.
+
+Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format `target[span{field=value}]=level`.
+
+#### `-q, --quiet`
+
+Disable all output
+
+#### `--json`
+
+Format output as JSON
+
+#### `--no-progress`
+
+Disable progress bar display
+
+

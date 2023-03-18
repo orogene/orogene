@@ -22,6 +22,7 @@ dashmap = { workspace = true }
 futures = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
+once_cell = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 ssri = { workspace = true }

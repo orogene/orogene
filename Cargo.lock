@@ -1434,6 +1434,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64e9829a50b42bb782c1df523f78d332fe371b10c661e78b7a3c34b0198e9fac"
 
 [[package]]
+name = "insta"
+version = "1.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea5b3894afe466b4bcf0388630fc15e11938a6074af0cd637c825ba2ec8a099"
+dependencies = [
+ "console",
+ "lazy_static",
+ "linked-hash-map",
+ "serde",
+ "similar",
+ "yaml-rust",
+]
+
+[[package]]
 name = "instant"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1735,6 +1749,7 @@ dependencies = [
  "miette",
  "mockito",
  "node-semver",
+ "once_cell",
  "oro-client",
  "oro-common",
  "oro-package-spec",
@@ -2034,6 +2049,7 @@ dependencies = [
  "embed-resource",
  "humansize",
  "indicatif",
+ "insta",
  "miette",
  "nassun",
  "node-maintainer",
