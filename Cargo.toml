@@ -76,6 +76,7 @@ indicatif = "0.17.3"
 io_tee = "0.1.1"
 http-cache-reqwest = "0.6.0"
 humansize = "1.1.0"
+insta = "1.28.0"
 js-sys = "0.3.61"
 kdl = "5.0.0-alpha.0"
 maplit = "1.0.2"
@@ -84,6 +85,7 @@ node-semver = "2.1.0"
 nom = "7.1.3"
 once_cell = "1.17.1"
 percent-encoding = "2.1.0"
+poloto = "17.1.0"
 pretty_assertions = "1.3.0"
 proc-macro2 = "1.0.18"
 quote = "1.0.7"
@@ -147,8 +149,8 @@ inherits = "release"
 
 [dev-dependencies]
 backon = { workspace = true }
-insta = { version = "1.28.0", features = ["yaml"] }
-poloto = "17.1.0"
+insta = { workspace = true, features = ["yaml"] }
+poloto = { workspace = true }
 resvg = { workspace = true }
 tempfile = { workspace = true }
 
