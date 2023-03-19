@@ -30,6 +30,9 @@ pub struct RestoreCmd {
     #[clap(from_global)]
     cache: Option<PathBuf>,
 
+    #[clap(from_global)]
+    no_emoji: bool,
+
     /// Prefer copying files over hard linking them.
     ///
     /// On filesystems that don't support copy-on-write/reflinks (usually NTFS
@@ -62,7 +65,7 @@ pub struct RestoreCmd {
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
         let total_time = std::time::Instant::now();
-        let emoji = Emoji::new();
+        let emoji = Emoji::new(!self.no_emoji);
         let root = self
             .root
             .as_deref()
@@ -265,8 +268,8 @@ fn hackerish_encouragement() -> &'static str {
 struct Emoji(bool);
 
 impl Emoji {
-    fn new() -> Self {
-        Self(supports_unicode::on(supports_unicode::Stream::Stderr))
+    fn new(use_emoji: bool) -> Self {
+        Self(use_emoji)
     }
 
     const PACKAGE: &'static str = "📦 ";
@@ -276,7 +279,11 @@ impl Emoji {
     const TADA: &'static str = "🎉 ";
 
     fn package(&self) -> &'static str {
-        Self::PACKAGE
+        if self.0 {
+            Self::PACKAGE
+        } else {
+            ""
+        }
     }
 
     fn magnifying_glass(&self) -> &'static str {

@@ -105,6 +105,10 @@ pub struct Orogene {
     #[arg(help_heading = "Global Options", global = true, long)]
     no_progress: bool,
 
+    /// Disables all emoji usage.
+    #[arg(help_heading = "Global Options", global = true, long)]
+    no_emoji: bool,
+
     #[command(subcommand)]
     subcommand: OroCmd,
 }
@@ -204,6 +208,10 @@ impl Orogene {
         let mut cfg_builder = OroConfigOptions::new()
             .set_default("registry", "https://registry.npmjs.org")?
             .set_default("loglevel", "warn")?
+            .set_default(
+                "no_emoji",
+                &format!("{}", !supports_unicode::on(supports_unicode::Stream::Stderr)),
+            )?
             .set_default("root", &root.to_string_lossy())?;
         if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
             cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy())?;

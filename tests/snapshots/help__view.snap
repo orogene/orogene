@@ -73,4 +73,8 @@ Format output as JSON
 
 Disable progress bar display
 
+#### `--no-emoji`
+
+Disables all emoji usage
+
 
