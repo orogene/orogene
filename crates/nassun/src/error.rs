@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use miette::Diagnostic;
-use node_semver::{Version};
+use node_semver::Version;
 use oro_common::CorgiVersionMetadata;
 use oro_package_spec::PackageSpec;
 use thiserror::Error;

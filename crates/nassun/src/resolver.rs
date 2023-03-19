@@ -327,7 +327,9 @@ mod tests {
         let package_spec = PackageSpec::Npm {
             scope: None,
             name: "oro-test-package".to_owned(),
-            requested: Some(VersionSpec::Range(SemVerRange::parse(expected_version).unwrap())),
+            requested: Some(VersionSpec::Range(
+                SemVerRange::parse(expected_version).unwrap(),
+            )),
         };
         assert_eq!(resolution.satisfies(&package_spec).unwrap(), satifies);
     }

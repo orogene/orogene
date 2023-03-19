@@ -224,7 +224,6 @@ impl PackageFetcher for GitFetcher {
 mod test {
     use std::{fs::File, io::Write, process};
 
-    use node_semver::Range;
     use oro_client::OroClient;
     use oro_package_spec::{GitInfo, PackageSpec};
     use tempfile::tempdir;
@@ -320,7 +319,17 @@ mod test {
     #[async_std::test]
     async fn read_name() -> miette::Result<()> {
         let git_dir = setup_git_dir()?;
-        // assert_eq!(name, "oro-test");
+        let fetcher = GitFetcher::new(OroClient::default());
+        let spec = PackageSpec::Git(GitInfo::Url {
+            url: format!("file://{}", git_dir.path().to_str().unwrap())
+                .parse()
+                .unwrap(),
+            committish: None,
+            semver: None,
+        });
+        let cache_path = tempdir().unwrap();
+        let name = fetcher.name(&spec, cache_path.path()).await?;
+        assert_eq!(name, "oro-test");
         Ok(())
     }
 
@@ -333,7 +342,9 @@ mod test {
         let packument = fetcher
             .packument(
                 &PackageSpec::Git(GitInfo::Url {
-                    url: format!("file://{}", git_dir.path().to_str().unwrap()).parse().unwrap(),
+                    url: format!("file://{}", git_dir.path().to_str().unwrap())
+                        .parse()
+                        .unwrap(),
                     committish: None,
                     semver: None,
                 }),
@@ -341,12 +352,22 @@ mod test {
             )
             .await?;
         assert!(packument.versions.contains_key(&"1.5.0".parse()?));
-        assert_eq!(packument.versions.get(&"1.5.0".parse()?).unwrap().dist.file_count, None);
+        assert_eq!(
+            packument
+                .versions
+                .get(&"1.5.0".parse()?)
+                .unwrap()
+                .dist
+                .file_count,
+            None
+        );
         // get specific commit (by tag in that case)
         let packument = fetcher
             .packument(
                 &PackageSpec::Git(GitInfo::Url {
-                    url: format!("file://{}", git_dir.path().to_str().unwrap()).parse().unwrap(),
+                    url: format!("file://{}", git_dir.path().to_str().unwrap())
+                        .parse()
+                        .unwrap(),
                     committish: Some("1.0.0".to_string()),
                     semver: None,
                 }),
@@ -354,7 +375,15 @@ mod test {
             )
             .await?;
         assert!(packument.versions.contains_key(&"1.0.0".parse()?));
-        assert_eq!(packument.versions.get(&"1.0.0".parse()?).unwrap().dist.file_count, None);
+        assert_eq!(
+            packument
+                .versions
+                .get(&"1.0.0".parse()?)
+                .unwrap()
+                .dist
+                .file_count,
+            None
+        );
         Ok(())
     }
 }

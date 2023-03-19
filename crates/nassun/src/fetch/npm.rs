@@ -268,9 +268,7 @@ mod test {
         };
         let cache_path = tempdir().unwrap();
         let packument = fetcher.packument(&spec, cache_path.path()).await?;
-        assert!(packument
-            .versions
-            .contains_key(&"1.0.0".parse()?));
+        assert!(packument.versions.contains_key(&"1.0.0".parse()?));
         let mut tags = HashMap::new();
         tags.insert("latest".to_string(), "1.0.0".parse()?);
         assert_eq!(packument.tags, tags);
