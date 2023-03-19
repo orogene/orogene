@@ -210,7 +210,10 @@ impl Orogene {
             .set_default("loglevel", "warn")?
             .set_default(
                 "no_emoji",
-                &format!("{}", !supports_unicode::on(supports_unicode::Stream::Stderr)),
+                &format!(
+                    "{}",
+                    !supports_unicode::on(supports_unicode::Stream::Stderr)
+                ),
             )?
             .set_default("root", &root.to_string_lossy())?;
         if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
