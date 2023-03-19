@@ -1,5 +1,25 @@
 # Orogene Release Changelog
 
+<a name="0.3.11"></a>
+## 0.3.11 (2023-03-19)
+
+Most of this release was docs (which are available through [the Orogene
+site!](https://orogene.dev/book)), but there's some emoji-related stuff fixed,
+too that might be handy.
+
+### Features
+
+* **msg:** fasterthanlime is basically the lemonodor of rust, no? ([fcc5a256](https://github.com/orogene/orogene/commit/fcc5a2565622317aad5ce4c669813cbeef44a1cf))
+* **docs:** initial mdbook setup and hookup to oranda (#205) ([b66a66e0](https://github.com/orogene/orogene/commit/b66a66e0567fdb4993a6c03b848ef4d9ab0d4f45))
+* **emoji:** add global flag to disable emoji display ([bafbe802](https://github.com/orogene/orogene/commit/bafbe802f3c3014525c79a39a182f0e89b8c6487))
+
+
+### Bug Fixes
+
+* **emoji:** don't print emoji when unicode isn't supported ([e8a8af79](https://github.com/orogene/orogene/commit/e8a8af791a9974c7eb29547700d336bbe37b47ce))
+* **wasm:** missed a couple of wasm spots after recent changes ([0e4d8b03](https://github.com/orogene/orogene/commit/0e4d8b030724599172dfc1d3ce0437271fef8336))
+* **git:** use once_cell instead of mutexes for git cache path ([5961dfbc](https://github.com/orogene/orogene/commit/5961dfbc03fc93fe458f98057af266b4f2ee240f))
+
 <a name="0.3.10"></a>
 ## 0.3.10 (2023-03-13)
 
