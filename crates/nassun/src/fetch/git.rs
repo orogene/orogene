@@ -236,27 +236,22 @@ mod test {
         let git_dir = tempdir().unwrap();
 
         process::Command::new("git")
-            .args(["config", "--global", "user.name", "Orogene Tester"])
-            .current_dir(&git_dir)
-            .status()
-            .expect("Could not set user name");
-
-        process::Command::new("git")
-            .args([
-                "config",
-                "--global",
-                "user.email",
-                "orogene.tester@example.com",
-            ])
-            .current_dir(&git_dir)
-            .status()
-            .expect("Could not set user name");
-
-        process::Command::new("git")
             .args(["init", "--initial-branch", "main"])
             .current_dir(&git_dir)
             .status()
             .expect("Could not init git test directory");
+
+        process::Command::new("git")
+            .args(["config", "user.name", "Orogene Tester"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not set user name");
+
+        process::Command::new("git")
+            .args(["config", "user.email", "orogene.tester@example.com"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not set user name");
 
         let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
         package_file
