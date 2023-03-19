@@ -25,7 +25,7 @@ your workflows such that you never have to worry about whether your
 #### Performance
 
 Orogene is pretty fast and uses fewer resources than other package
-managers! For details and benchmarks, see [the benchmarks](../BENCHMARKS.md)
+managers! For details and benchmarks, see [the benchmarks]
 
 ### Contributing
 
