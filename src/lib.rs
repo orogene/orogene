@@ -56,6 +56,10 @@ use commands::{ping::PingCmd, restore::RestoreCmd, view::ViewCmd, OroCommand};
 
 mod commands;
 
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 const MAX_RETAINED_LOGS: usize = 5;
 
 #[derive(Debug, Parser)]
