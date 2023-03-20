@@ -253,7 +253,7 @@ mod test {
             .status()
             .expect("Could not set user name");
 
-        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        let mut package_file = File::create(git_dir.path().join("package.json")).unwrap();
         package_file
             .write_all(
                 r#"{
@@ -282,7 +282,7 @@ mod test {
             .status()
             .expect("Could not tag first version");
 
-        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        let mut package_file = File::create(git_dir.path().join("package.json")).unwrap();
         package_file
             .write_all(
                 r#"{
@@ -306,7 +306,7 @@ mod test {
             .status()
             .expect("Could not tag first version");
 
-        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        let mut package_file = File::create(git_dir.path().join("package.json")).unwrap();
         package_file
             .write_all(
                 r#"{
@@ -325,7 +325,7 @@ mod test {
             .status()
             .expect("Could not commit second version");
 
-        return Ok(git_dir);
+        Ok(git_dir)
     }
 
     #[async_std::test]
