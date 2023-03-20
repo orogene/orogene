@@ -219,3 +219,183 @@ impl PackageFetcher for GitFetcher {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use std::{fs::File, io::Write, process};
+
+    use oro_client::OroClient;
+    use oro_package_spec::{GitInfo, PackageSpec};
+    use tempfile::tempdir;
+
+    use crate::fetch::PackageFetcher;
+
+    use super::GitFetcher;
+
+    fn setup_git_dir() -> miette::Result<tempfile::TempDir> {
+        let git_dir = tempdir().unwrap();
+
+        process::Command::new("git")
+            .args(["init", "--initial-branch", "main"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not init git test directory");
+
+        process::Command::new("git")
+            .args(["config", "user.name", "Orogene Tester"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not set user name");
+
+        process::Command::new("git")
+            .args(["config", "user.email", "orogene.tester@example.com"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not set user name");
+
+        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        package_file
+            .write_all(
+                r#"{
+            "name": "oro-test",
+            "version": "1.0.0"
+        }"#
+                .as_bytes(),
+            )
+            .unwrap();
+        drop(package_file);
+
+        // commit the first version
+        process::Command::new("git")
+            .args(["add", "package.json"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not add package.json to git repo");
+        process::Command::new("git")
+            .args(["commit", "-m", "First version", "--no-gpg-sign"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not commit first version");
+        process::Command::new("git")
+            .args(["tag", "--no-sign", "1.0.0"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not tag first version");
+
+        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        package_file
+            .write_all(
+                r#"{
+            "name": "oro-test",
+            "version": "1.2.0"
+        }"#
+                .as_bytes(),
+            )
+            .unwrap();
+        drop(package_file);
+
+        // commit the second version
+        process::Command::new("git")
+            .args(["commit", "-a", "-m", "Second version", "--no-gpg-sign"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not commit second version");
+        process::Command::new("git")
+            .args(["tag", "--no-sign", "1.2.0"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not tag first version");
+
+        let mut package_file = File::create(&git_dir.path().join("package.json")).unwrap();
+        package_file
+            .write_all(
+                r#"{
+            "name": "oro-test",
+            "version": "1.5.0"
+        }"#
+                .as_bytes(),
+            )
+            .unwrap();
+        drop(package_file);
+
+        // commit the third version
+        process::Command::new("git")
+            .args(["commit", "-a", "-m", "Second version", "--no-gpg-sign"])
+            .current_dir(&git_dir)
+            .status()
+            .expect("Could not commit second version");
+
+        return Ok(git_dir);
+    }
+
+    #[async_std::test]
+    async fn read_name() -> miette::Result<()> {
+        let git_dir = setup_git_dir()?;
+        let fetcher = GitFetcher::new(OroClient::default());
+        let spec = PackageSpec::Git(GitInfo::Url {
+            url: format!("file://{}", git_dir.path().to_str().unwrap())
+                .parse()
+                .unwrap(),
+            committish: None,
+            semver: None,
+        });
+        let cache_path = tempdir().unwrap();
+        let name = fetcher.name(&spec, cache_path.path()).await?;
+        assert_eq!(name, "oro-test");
+        Ok(())
+    }
+
+    #[async_std::test]
+    async fn read_packument() -> miette::Result<()> {
+        let git_dir = setup_git_dir()?;
+        let fetcher = GitFetcher::new(OroClient::default());
+        let tmp = tempdir().unwrap();
+        // get last commit
+        let packument = fetcher
+            .packument(
+                &PackageSpec::Git(GitInfo::Url {
+                    url: format!("file://{}", git_dir.path().to_str().unwrap())
+                        .parse()
+                        .unwrap(),
+                    committish: None,
+                    semver: None,
+                }),
+                tmp.path(),
+            )
+            .await?;
+        assert!(packument.versions.contains_key(&"1.5.0".parse()?));
+        assert_eq!(
+            packument
+                .versions
+                .get(&"1.5.0".parse()?)
+                .unwrap()
+                .dist
+                .file_count,
+            None
+        );
+        // get specific commit (by tag in that case)
+        let packument = fetcher
+            .packument(
+                &PackageSpec::Git(GitInfo::Url {
+                    url: format!("file://{}", git_dir.path().to_str().unwrap())
+                        .parse()
+                        .unwrap(),
+                    committish: Some("1.0.0".to_string()),
+                    semver: None,
+                }),
+                tmp.path(),
+            )
+            .await?;
+        assert!(packument.versions.contains_key(&"1.0.0".parse()?));
+        assert_eq!(
+            packument
+                .versions
+                .get(&"1.0.0".parse()?)
+                .unwrap()
+                .dist
+                .file_count,
+            None
+        );
+        Ok(())
+    }
+}
