@@ -31,6 +31,10 @@ impl Lockfile {
         &self.packages
     }
 
+    pub fn to_json(&self) -> serde_json::Value {
+        unimplemented!()
+    }
+
     pub fn to_kdl(&self) -> KdlDocument {
         let mut doc = KdlDocument::new();
         doc.set_leading(

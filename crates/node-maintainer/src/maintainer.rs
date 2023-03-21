@@ -440,7 +440,10 @@ impl NodeMaintainer {
 
     /// Writes the contents of a `package-lock.kdl` file to the file path.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+    pub async fn write_kdl_lockfile(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<(), NodeMaintainerError> {
         let path = path.as_ref();
         fs::write(path, self.graph.to_kdl()?.to_string())
             .await
@@ -448,7 +451,21 @@ impl NodeMaintainer {
         Ok(())
     }
 
+    /// Writes the contents of a `package-lock.json` file to the file path.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn write_json_lockfile(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<(), NodeMaintainerError> {
+        let path = path.as_ref();
+        fs::write(path, self.graph.to_json()?.to_string())
+            .await
+            .io_context(|| format!("Failed to write lockfile to {}", path.display()))?;
+        Ok(())
+    }
+
     /// Returns a [`crate::Lockfile`] representation of the current resolved graph.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn to_lockfile(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
         self.graph.to_lockfile()
     }

@@ -217,6 +217,10 @@ impl Graph {
         Ok(self.to_lockfile()?.to_kdl())
     }
 
+    pub fn to_json(&self) -> Result<serde_json::Value, NodeMaintainerError> {
+        Ok(self.to_lockfile()?.to_json())
+    }
+
     pub(crate) fn node_parent_iter(&self, idx: NodeIndex) -> NodeParentIterator {
         NodeParentIterator {
             graph: self,
