@@ -398,7 +398,7 @@ impl NodeMaintainer {
                 }
             }
 
-            tracing::info!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
+            tracing::debug!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
 
             // TODO: get an accurate count here?
             return Ok(0);
@@ -501,12 +501,12 @@ impl NodeMaintainer {
         }
 
         if extraneous_packages == 0 {
-            tracing::info!(
+            tracing::debug!(
                 "Nothing to prune. Completed check in {}ms.",
                 start.elapsed().as_micros() / 1000
             );
         } else {
-            tracing::info!(
+            tracing::debug!(
                 "Pruned {extraneous_packages} extraneous package{} in {}ms.",
                 start.elapsed().as_micros() / 1000,
                 if extraneous_packages == 1 { "" } else { "s" },
@@ -566,13 +566,13 @@ impl NodeMaintainer {
                         on_extract(&self.graph[child_idx].package);
                     }
 
-                    tracing::debug!(
-                        "Extracted {} to {} in {:?}ms. {}/{total} done. {} in flight.",
+                    tracing::trace!(
+                        in_flight = concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1,
+                        "Extracted {} to {} in {:?}ms. {}/{total} done.",
                         self.graph[child_idx].package.name(),
                         target_dir.display(),
                         start.elapsed().as_millis(),
                         total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
-                        concurrent_count.fetch_sub(1, atomic::Ordering::SeqCst) - 1
                     );
                     Ok::<_, NodeMaintainerError>(())
                 },
@@ -583,7 +583,7 @@ impl NodeMaintainer {
             self.to_kdl()?.to_string(),
         )?;
         let actually_extracted = actually_extracted.load(atomic::Ordering::SeqCst);
-        tracing::info!(
+        tracing::debug!(
             "Extracted {actually_extracted} package{} in {}ms.",
             if actually_extracted == 1 { "" } else { "s" },
             start.elapsed().as_millis(),
@@ -813,7 +813,7 @@ impl NodeMaintainer {
         }
 
         #[cfg(not(target_arch = "wasm32"))]
-        tracing::info!(
+        tracing::debug!(
             "Resolved graph of {} nodes in {}ms",
             self.graph.inner.node_count(),
             start.elapsed().as_millis()
@@ -1031,21 +1031,21 @@ fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
     let temp = match tempfile::NamedTempFile::new_in(src_dir) {
         Ok(t) => t,
         Err(e) => {
-            tracing::info!("error creating tempfile while checking for reflink support: {e}.");
+            tracing::debug!("error creating tempfile while checking for reflink support: {e}.");
             return false;
         }
     };
     match std::fs::write(&temp, "a") {
         Ok(_) => {}
         Err(e) => {
-            tracing::info!("error writing to tempfile while checking for reflink support: {e}.");
+            tracing::debug!("error writing to tempfile while checking for reflink support: {e}.");
             return false;
         }
     };
     let tempdir = match tempfile::TempDir::new_in(dest_dir) {
         Ok(t) => t,
         Err(e) => {
-            tracing::info!(
+            tracing::debug!(
                 "error creating destination tempdir while checking for reflink support: {e}."
             );
             return false;
@@ -1054,7 +1054,7 @@ fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
     let supports_reflink = reflink::reflink(temp.path(), tempdir.path().join("b"))
         .map(|_| true)
         .map_err(|e| {
-            tracing::info!(
+            tracing::debug!(
                 "reflink support check failed. Files will be hard linked or copied. ({e})"
             );
             e
@@ -1062,7 +1062,7 @@ fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
         .unwrap_or(false);
 
     if supports_reflink {
-        tracing::info!("Verified reflink support. Extracted data will use copy-on-write reflinks instead of hard links or full copies.")
+        tracing::debug!("Verified reflink support. Extracted data will use copy-on-write reflinks instead of hard links or full copies.")
     }
 
     supports_reflink

@@ -18,9 +18,6 @@ pub struct PingCmd {
 
     #[clap(from_global)]
     json: bool,
-
-    #[clap(from_global)]
-    quiet: bool,
 }
 
 #[async_trait]
@@ -30,15 +27,11 @@ impl OroCommand for PingCmd {
         let registry = self
             .registry
             .unwrap_or_else(|| "https://registry.npmjs.org".parse().unwrap());
-        if !self.quiet && !self.json {
-            eprintln!("ping: {registry}");
-        }
+        tracing::info!("ping: {registry}");
         let client = OroClient::new(registry.clone());
         let payload = client.ping().await?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
-        if !self.quiet && !self.json {
-            eprintln!("pong: {time}ms");
-        }
+        tracing::info!("pong: {time}ms");
         if self.json {
             let details: Value = serde_json::from_str(&payload)
                 .into_diagnostic()
@@ -50,11 +43,9 @@ impl OroCommand for PingCmd {
             }))
             .into_diagnostic()
             .wrap_err("ping::serialize")?;
-            if !self.quiet {
-                println!("{output}");
-            }
-        } else if !self.quiet {
-            eprintln!("payload: {payload}");
+            println!("{output}");
+        } else {
+            tracing::info!("payload: {payload}");
         }
         Ok(())
     }

@@ -114,14 +114,14 @@ pub struct Orogene {
 }
 
 impl Orogene {
-    fn setup_logging(&self) -> Result<Option<WorkerGuard>> {
+    fn setup_logging(&self, log_file: Option<&Path>) -> Result<Option<WorkerGuard>> {
         let builder = EnvFilter::builder();
         let filter = if self.quiet {
             builder
                 .with_default_directive(LevelFilter::OFF.into())
                 .from_env_lossy()
         } else {
-            let dir_str = self.loglevel.clone().unwrap_or_else(|| "warn".to_owned());
+            let dir_str = self.loglevel.clone().unwrap_or_else(|| "info".to_owned());
             let directives = dir_str
                 .split(',')
                 .filter(|s| !s.is_empty())
@@ -139,10 +139,10 @@ impl Orogene {
             filter
         };
 
-        let ilayer = IndicatifLayer::new().with_max_progress_bars(1, None);
+        let ilayer = IndicatifLayer::new();
         let builder = tracing_subscriber::registry();
 
-        if let Some(cache) = self.cache.as_deref() {
+        if let Some(log_file) = &log_file {
             let targets = Targets::new()
                 .with_target("hyper", LevelFilter::WARN)
                 .with_target("reqwest", LevelFilter::WARN)
@@ -151,28 +151,49 @@ impl Orogene {
                 .with_target("want", LevelFilter::WARN)
                 .with_target("async_std", LevelFilter::WARN)
                 .with_target("mio", LevelFilter::WARN)
+                .with_target("polling", LevelFilter::WARN)
                 .with_default(LevelFilter::TRACE);
 
-            clean_old_logs(cache)?;
+            let logs_dir = log_file.parent().expect("must have parent");
+            clean_old_logs(logs_dir)?;
 
-            let file_appender =
-                tracing_appender::rolling::never(cache.join("_logs"), log_file_name());
+            let file_appender = tracing_appender::rolling::never(
+                logs_dir,
+                log_file.file_name().expect("must have file name"),
+            );
             let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
             if self.quiet || self.no_progress {
                 builder
-                    .with(tracing_subscriber::fmt::layer().with_filter(filter))
-                    .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .without_time()
+                            .with_target(false)
+                            .with_filter(filter),
+                    )
+                    .with(
+                        fmt::layer()
+                            .with_timer(tracing_subscriber::fmt::time::uptime())
+                            .with_writer(non_blocking)
+                            .with_filter(targets),
+                    )
                     .init();
             } else {
                 builder
                     .with(
                         tracing_subscriber::fmt::layer()
+                            .without_time()
+                            .with_target(false)
                             .with_writer(ilayer.get_stderr_writer())
                             .with_filter(filter),
                     )
-                    .with(ilayer)
-                    .with(fmt::layer().with_writer(non_blocking).with_filter(targets))
+                    .with(ilayer.with_filter(LevelFilter::DEBUG))
+                    .with(
+                        fmt::layer()
+                            .with_timer(tracing_subscriber::fmt::time::uptime())
+                            .with_writer(non_blocking)
+                            .with_filter(targets),
+                    )
                     .init();
             };
 
@@ -180,12 +201,19 @@ impl Orogene {
         } else {
             if self.quiet || self.no_progress {
                 builder
-                    .with(tracing_subscriber::fmt::layer().with_filter(filter))
+                    .with(
+                        tracing_subscriber::fmt::layer()
+                            .without_time()
+                            .with_target(false)
+                            .with_filter(filter),
+                    )
                     .init();
             } else {
                 builder
                     .with(
                         tracing_subscriber::fmt::layer()
+                            .without_time()
+                            .with_target(false)
                             .with_writer(ilayer.get_stderr_writer())
                             .with_filter(filter),
                     )
@@ -207,7 +235,7 @@ impl Orogene {
 
         let mut cfg_builder = OroConfigOptions::new()
             .set_default("registry", "https://registry.npmjs.org")?
-            .set_default("loglevel", "warn")?
+            .set_default("loglevel", "info")?
             .set_default(
                 "no_emoji",
                 &format!(
@@ -238,9 +266,19 @@ impl Orogene {
         let mut oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
         let config = oro.build_config()?;
         oro.layer_config(&matches, &config)?;
-        let _guard = oro.setup_logging()?;
-        oro.execute().await?;
-        tracing::info!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
+        let log_file = oro
+            .cache
+            .clone()
+            .or_else(|| config.get::<String>("cache").ok().map(PathBuf::from))
+            .map(|c| c.join("_logs").join(log_file_name()));
+        let _guard = oro.setup_logging(log_file.as_deref())?;
+        oro.execute().await.map_err(|e| {
+            if let Some(log_file) = log_file.as_deref() {
+                tracing::error!("A debug log was written to {}", log_file.display());
+            }
+            e
+        })?;
+        tracing::debug!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())
     }
 }
@@ -271,8 +309,8 @@ fn log_file_name() -> PathBuf {
     PathBuf::from(format!("{}-0.log", prefix))
 }
 
-fn clean_old_logs(cache: &Path) -> Result<()> {
-    if let Ok(readdir) = cache.join("_logs").read_dir() {
+fn clean_old_logs(logs_dir: &Path) -> Result<()> {
+    if let Ok(readdir) = logs_dir.read_dir() {
         let mut logs = readdir.filter_map(|e| e.ok()).collect::<Vec<_>>();
         logs.sort_by_key(|e| e.file_name());
         while logs.len() >= MAX_RETAINED_LOGS {
@@ -293,7 +331,7 @@ fn log_command_line() {
         cmd.push(' ');
         cmd.push_str(&arg);
     }
-    tracing::info!("Running command: {cmd}");
+    tracing::debug!("Running command: {cmd}");
 }
 
 #[derive(Debug, Subcommand)]

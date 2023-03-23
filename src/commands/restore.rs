@@ -22,9 +22,6 @@ pub struct RestoreCmd {
     json: bool,
 
     #[clap(from_global)]
-    quiet: bool,
-
-    #[clap(from_global)]
     root: Option<PathBuf>,
 
     #[clap(from_global)]
@@ -105,8 +102,8 @@ impl OroCommand for RestoreCmd {
         if !self.lockfile_only {
             self.prune(&emoji, &resolved_nm).await?;
             self.extract(&emoji, &resolved_nm).await?;
-        } else if !self.quiet {
-            eprintln!(
+        } else {
+            tracing::info!(
                 "{}Skipping prune and extract, only writing lockfile",
                 emoji.package()
             );
@@ -116,18 +113,14 @@ impl OroCommand for RestoreCmd {
             .write_lockfile(root.join("package-lock.kdl"))
             .await?;
 
-        if !self.quiet {
-            eprintln!("{}Wrote lockfile to package-lock.kdl.", emoji.writing());
-        }
+        tracing::info!("{}Wrote lockfile to package-lock.kdl.", emoji.writing());
 
-        if !self.quiet {
-            eprintln!(
-                "{}Done in {}s. {}",
-                emoji.tada(),
-                total_time.elapsed().as_millis() as f32 / 1000.0,
-                hackerish_encouragement()
-            );
-        }
+        tracing::info!(
+            "{}Done in {}s. {}",
+            emoji.tada(),
+            total_time.elapsed().as_millis() as f32 / 1000.0,
+            hackerish_encouragement()
+        );
         Ok(())
     }
 }
@@ -141,11 +134,11 @@ impl RestoreCmd {
     ) -> Result<NodeMaintainer> {
         // Set up progress bar and timing stuff.
         let resolve_time = std::time::Instant::now();
-        let resolve_span = tracing::info_span!("resolving");
+        let resolve_span = tracing::debug_span!("resolving");
         resolve_span.pb_set_style(
             &ProgressStyle::default_bar()
                 .template(&format!(
-                    "{}{}",
+                    "{}Resolving {}",
                     emoji.magnifying_glass(),
                     "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
                 ))
@@ -162,14 +155,12 @@ impl RestoreCmd {
         // Wrap up progress bar and print messages.
         std::mem::drop(resolve_span_enter);
         std::mem::drop(resolve_span);
-        if !self.quiet {
-            eprintln!(
-                "{}Resolved {} packages in {}s.",
-                emoji.magnifying_glass(),
-                resolved_nm.package_count(),
-                resolve_time.elapsed().as_millis() as f32 / 1000.0
-            );
-        }
+        tracing::info!(
+            "{}Resolved {} packages in {}s.",
+            emoji.magnifying_glass(),
+            resolved_nm.package_count(),
+            resolve_time.elapsed().as_millis() as f32 / 1000.0
+        );
 
         Ok(resolved_nm)
     }
@@ -177,11 +168,11 @@ impl RestoreCmd {
     async fn prune(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
         // Set up progress bar and timing stuff.
         let prune_time = std::time::Instant::now();
-        let prune_span = tracing::info_span!("prune");
+        let prune_span = tracing::debug_span!("prune");
         prune_span.pb_set_style(
             &ProgressStyle::default_bar()
                 .template(&format!(
-                    "{}{}",
+                    "{}Pruning extraneous {}",
                     emoji.broom(),
                     "{bar:40} [{pos}] {wide_msg:.dim}"
                 ))
@@ -196,13 +187,11 @@ impl RestoreCmd {
         // Wrap up progress bar and message.
         std::mem::drop(prune_span_enter);
         std::mem::drop(prune_span);
-        if !self.quiet {
-            eprintln!(
-                "{}Pruned {pruned} packages in {}s.",
-                emoji.broom(),
-                prune_time.elapsed().as_millis() as f32 / 1000.0
-            );
-        }
+        tracing::info!(
+            "{}Pruned {pruned} packages in {}s.",
+            emoji.broom(),
+            prune_time.elapsed().as_millis() as f32 / 1000.0
+        );
 
         Ok(())
     }
@@ -210,11 +199,11 @@ impl RestoreCmd {
     async fn extract(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
         // Set up progress bar and timing stuff.
         let extract_time = std::time::Instant::now();
-        let extract_span = tracing::info_span!("extract");
+        let extract_span = tracing::debug_span!("extract");
         extract_span.pb_set_style(
             &ProgressStyle::default_bar()
                 .template(&format!(
-                    "{}{}",
+                    "{}Extracting {}",
                     emoji.package(),
                     "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
                 ))
@@ -229,14 +218,12 @@ impl RestoreCmd {
         // Wrap up progress bar and message.
         std::mem::drop(extract_span_enter);
         std::mem::drop(extract_span);
-        if !self.quiet {
-            eprintln!(
-                "{}Extracted {extracted} package{} in {}s.",
-                emoji.package(),
-                if extracted == 1 { "" } else { "s" },
-                extract_time.elapsed().as_millis() as f32 / 1000.0
-            );
-        }
+        tracing::info!(
+            "{}Extracted {extracted} package{} in {}s.",
+            emoji.package(),
+            if extracted == 1 { "" } else { "s" },
+            extract_time.elapsed().as_millis() as f32 / 1000.0
+        );
 
         Ok(())
     }
