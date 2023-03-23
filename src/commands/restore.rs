@@ -15,21 +15,6 @@ use crate::commands::OroCommand;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct RestoreCmd {
-    #[clap(from_global)]
-    registry: Option<Url>,
-
-    #[clap(from_global)]
-    json: bool,
-
-    #[clap(from_global)]
-    root: Option<PathBuf>,
-
-    #[clap(from_global)]
-    cache: Option<PathBuf>,
-
-    #[clap(from_global)]
-    no_emoji: bool,
-
     /// Prefer copying files over hard linking them.
     ///
     /// On filesystems that don't support copy-on-write/reflinks (usually NTFS
@@ -56,6 +41,21 @@ pub struct RestoreCmd {
     /// resolve the tree and write the lockfile.
     #[arg(long)]
     lockfile_only: bool,
+
+    #[arg(from_global)]
+    registry: Option<Url>,
+
+    #[arg(from_global)]
+    json: bool,
+
+    #[arg(from_global)]
+    root: Option<PathBuf>,
+
+    #[arg(from_global)]
+    cache: Option<PathBuf>,
+
+    #[arg(from_global)]
+    no_emoji: bool,
 }
 
 #[async_trait]

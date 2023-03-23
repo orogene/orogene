@@ -12,11 +12,10 @@ use crate::commands::OroCommand;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct PingCmd {
-    /// Registry to ping.
     #[arg(from_global)]
     registry: Option<Url>,
 
-    #[clap(from_global)]
+    #[arg(from_global)]
     json: bool,
 }
 
@@ -26,7 +25,7 @@ impl OroCommand for PingCmd {
         let start = Instant::now();
         let registry = self
             .registry
-            .unwrap_or_else(|| "https://registry.npmjs.org".parse().unwrap());
+            .expect("Registry should've already been defaulted");
         tracing::info!("ping: {registry}");
         let client = OroClient::new(registry.clone());
         let payload = client.ping().await?;

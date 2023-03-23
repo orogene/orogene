@@ -15,19 +15,18 @@ use crate::commands::OroCommand;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct ViewCmd {
-    /// Registry to get package data from.
-    #[arg(from_global)]
-    registry: Option<Url>,
-
-    #[clap(from_global)]
-    root: Option<PathBuf>,
-
-    #[clap(from_global)]
-    cache: Option<PathBuf>,
-
     /// Package spec to look up.
     #[arg()]
     pkg: String,
+
+    #[arg(from_global)]
+    registry: Option<Url>,
+
+    #[arg(from_global)]
+    root: Option<PathBuf>,
+
+    #[arg(from_global)]
+    cache: Option<PathBuf>,
 
     #[arg(from_global)]
     json: bool,

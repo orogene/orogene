@@ -82,7 +82,7 @@ pub struct Orogene {
     ///
     /// When specified, global configuration loading is disabled and
     /// configuration values will only be read from this location.
-    #[clap(help_heading = "Global Options", global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     config: Option<PathBuf>,
 
     /// Log output level/directive.
@@ -90,7 +90,7 @@ pub struct Orogene {
     /// Supports plain loglevels (off, error, warn, info, debug, trace) as
     /// well as more advanced directives in the format
     /// `target[span{field=value}]=level`.
-    #[clap(help_heading = "Global Options", global = true, long)]
+    #[arg(help_heading = "Global Options", global = true, long)]
     loglevel: Option<String>,
 
     /// Disable all output.
