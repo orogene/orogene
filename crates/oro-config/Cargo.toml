@@ -1,6 +1,6 @@
 [package]
 name = "oro-config"
-version = "0.3.11"
+version = "0.3.12"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Configuration management for Orogene."
@@ -10,7 +10,7 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-oro-config-derive = { version = "=0.3.11", path = "../oro-config-derive" }
+oro-config-derive = { version = "=0.3.12", path = "../oro-config-derive" }
 
 clap = { workspace = true, features = ["derive"] }
 config = { workspace = true, features = ["toml"] }
