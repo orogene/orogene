@@ -1,4 +1,13 @@
 # Orogene Release Changelog
+
+<a name="0.3.13"></a>
+## 0.3.13 (2023-03-25)
+
+### Security
+
+* **deps:** bump openssl from 0.10.45 to 0.10.48 (#211) ([e87243c2](https://github.com/orogene/orogene/commit/e87243c2e22bbbffd8e3d30782c48fe6994c9416))
+
+
 <a name="0.3.12"></a>
 ## 0.3.12 (2023-03-25)
 
