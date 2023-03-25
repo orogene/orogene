@@ -38,7 +38,7 @@ cd orogene
 
 Additionally, some tools are required to compile/build orogene:
 
-1. An available OpenSSL installation: https://docs.rs/openssl/latest/openssl/#automatic
+1. (Linux only) An available OpenSSL installation: https://docs.rs/openssl/latest/openssl/#automatic
 2. Cargo, which can be installed using [rustup](https://rustup.rs/)
 3. Clippy, which is a component that should be added through rustup.
 
@@ -56,8 +56,8 @@ If you plan on builing wasm packages for orogene sub-crates, you'll also need:
 You can build the CLI using a plain `cargo build` (optionally with
 `--release`), and binaries will be available in your local
 `./target/{debug,release}/oro[.exe]` directory. The `oro`/`oro.exe` is a
-standalone binary, but does require a valid installation of `openssl 1`
-installed on the system in order to run.
+standalone binary but, **on Linux**, does require a valid installation of
+`openssl 1` installed on the system in order to run.
 
 ### Building WASM packages
 
