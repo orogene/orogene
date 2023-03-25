@@ -1,4 +1,15 @@
 # Orogene Release Changelog
+<a name="0.3.12"></a>
+## 0.3.12 (2023-03-25)
+
+### Features
+
+* **log:** improved logging/output by changing levels and formatting ([e1cafd0c](https://github.com/orogene/orogene/commit/e1cafd0cce46d989f1ee913a1d18f41c8097162d))
+* **gitinfo:** add a FromStr impl for GitInfo ([308d9ab7](https://github.com/orogene/orogene/commit/308d9ab7b08c9d143efe6fd3466b93b67bb58c40))
+
+### Bug Fixes
+
+* **tests:** Nassun baseline tests (#196) ([58e76853](https://github.com/orogene/orogene/commit/58e768535e86f6b9aef81d92fa8b69a95f0aaf69))
 
 <a name="0.3.11"></a>
 ## 0.3.11 (2023-03-19)
