@@ -2,9 +2,13 @@ use std::fmt;
 use std::str::FromStr;
 
 use node_semver::Range;
+use nom::combinator::all_consuming;
+use nom::Err;
 use url::Url;
 
 use crate::error::{PackageSpecError, SpecErrorKind};
+use crate::parsers::git;
+use crate::PackageSpec;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GitHost {
@@ -220,9 +224,77 @@ impl fmt::Display for GitInfo {
     }
 }
 
+impl FromStr for GitInfo {
+    type Err = PackageSpecError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_gitinfo(s)
+    }
+}
+
+fn parse_gitinfo<I>(input: I) -> Result<GitInfo, PackageSpecError>
+where
+    I: AsRef<str>,
+{
+    let input = input.as_ref();
+    match all_consuming(git::git_spec)(input) {
+        Ok((_, PackageSpec::Git(arg))) => Ok(arg),
+        Ok(_) => unreachable!("This should only return git specs"),
+        Err(err) => Err(match err {
+            Err::Error(e) | Err::Failure(e) => PackageSpecError {
+                input: input.into(),
+                offset: e.input.as_ptr() as usize - input.as_ptr() as usize,
+                kind: if let Some(kind) = e.kind {
+                    kind
+                } else if let Some(ctx) = e.context {
+                    SpecErrorKind::Context(ctx)
+                } else {
+                    SpecErrorKind::Other
+                },
+            },
+            Err::Incomplete(_) => PackageSpecError {
+                input: input.into(),
+                offset: input.len() - 1,
+                kind: SpecErrorKind::IncompleteInput,
+            },
+        }),
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn from_str() {
+        let info_url = GitInfo::Url {
+            url: "https://foo.com/hello.git".parse().unwrap(),
+            committish: Some("deadbeef".into()),
+            semver: None,
+        };
+        let parsed_url: GitInfo = "git+https://foo.com/hello.git#deadbeef".parse().unwrap();
+        assert_eq!(parsed_url, info_url);
+
+        let info_ssh = GitInfo::Ssh {
+            ssh: "git@foo.com:here.git".into(),
+            committish: None,
+            semver: Some("^1.2.3".parse().unwrap()),
+        };
+        let parsed_ssh: GitInfo = "git+ssh://git@foo.com:here.git#semver:>=1.2.3 <2.0.0-0"
+            .parse()
+            .unwrap();
+        assert_eq!(parsed_ssh, info_ssh);
+
+        let info_hosted = GitInfo::Hosted {
+            owner: "foo".into(),
+            repo: "bar".into(),
+            host: GitHost::GitHub,
+            committish: None,
+            semver: None,
+            requested: None,
+        };
+        let parsed_hosted: GitInfo = "github:foo/bar".parse().unwrap();
+        assert_eq!(parsed_hosted, info_hosted);
+    }
 
     #[test]
     fn display_url() {

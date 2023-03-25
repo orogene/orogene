@@ -136,7 +136,7 @@ impl fmt::Display for VersionSpec {
     }
 }
 
-pub fn parse_package_spec<I>(input: I) -> Result<PackageSpec, PackageSpecError>
+fn parse_package_spec<I>(input: I) -> Result<PackageSpec, PackageSpecError>
 where
     I: AsRef<str>,
 {
