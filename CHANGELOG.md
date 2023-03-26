@@ -1,5 +1,12 @@
 # Orogene Release Changelog
 
+<a name="0.3.14"></a>
+## 0.3.14 (2023-03-26)
+
+### Features
+
+* **build:** link bins (#212) ([e8ed3ff5](https://github.com/orogene/orogene/commit/e8ed3ff5a83d56dcb347f2734ac63738ae15bd91))
+
 <a name="0.3.13"></a>
 ## 0.3.13 (2023-03-25)
 
