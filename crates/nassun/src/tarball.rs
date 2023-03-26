@@ -374,6 +374,9 @@ pub(crate) fn extract_from_cache(
     prefer_copy: bool,
     validate: bool,
 ) -> Result<()> {
+    // TODO: enable `prefer_copy` if the package has install scripts. Maybe
+    // this can be cached as part of tarball caching, right in the object, and
+    // we make the determination at that point.
     if prefer_copy {
         copy_from_cache(cache, sri, to, validate)?;
     } else {

@@ -35,6 +35,10 @@ When this is true, orogene will verify all files extracted from the cache, as we
 
 Whether to skip restoring packages into `node_modules` and just resolve the tree and write the lockfile
 
+#### `--ignore-scripts`
+
+Skip running install scripts
+
 #### `-h, --help`
 
 Print help (see a summary with '-h')

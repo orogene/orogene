@@ -859,6 +859,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0688c2a7f92e427f44895cd63841bff7b29f8d7a1648b9e7e07a4a365b2e1257"
 
 [[package]]
+name = "dunce"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bd4b30a6560bbd9b4620f4de34c3f14f60848e58a9b7216801afcb4c7b31c3c"
+
+[[package]]
 name = "either"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1903,6 +1909,7 @@ dependencies = [
  "node-semver",
  "oro-common",
  "oro-package-spec",
+ "oro-script",
  "oro-shim-bin",
  "pathdiff",
  "petgraph",
@@ -2135,6 +2142,21 @@ dependencies = [
  "percent-encoding",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "oro-script"
+version = "0.3.14"
+dependencies = [
+ "dunce",
+ "miette",
+ "oro-common",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "which",
 ]
 
 [[package]]
