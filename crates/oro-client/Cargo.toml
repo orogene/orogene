@@ -1,6 +1,6 @@
 [package]
 name = "oro-client"
-version = "0.3.13"
+version = "0.3.14"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Generic client for the HTTP NPM api."
@@ -11,7 +11,7 @@ readme = "README.md"
 
 
 [dependencies]
-oro-common = { version = "=0.3.13", path = "../oro-common" }
+oro-common = { version = "=0.3.14", path = "../oro-common" }
 
 futures = { workspace = true, features = ["io-compat"] }
 miette = { workspace = true }
