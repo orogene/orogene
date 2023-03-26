@@ -1,0 +1,18 @@
+[package]
+name = "oro-shim-bin"
+version = "0.3.13"
+edition = "2021"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+license = "ISC"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
+
+[dependencies]
+once_cell = { workspace = true }
+pathdiff = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }
+tempfile = { workspace = true }

@@ -1,6 +1,7 @@
-# `oro-config-derive`
+# `oro-shim-bin`
 
-Derive macro crate for `oro-config`.
+Creates shims for package bins on Windows. Basically a Rust port of
+https://github.com/npm/cmd-shim.
 
 ## Orogene
 

@@ -101,10 +101,12 @@ impl OroCommand for RestoreCmd {
 
         if !self.lockfile_only {
             self.prune(&emoji, &resolved_nm).await?;
-            self.extract(&emoji, &resolved_nm).await?;
+            if self.extract(&emoji, &resolved_nm).await? > 0 {
+                self.link_bins(&emoji, &resolved_nm).await?;
+            }
         } else {
             tracing::info!(
-                "{}Skipping prune and extract, only writing lockfile",
+                "{}Skipping installing node_modules/, only writing lockfile.",
                 emoji.package()
             );
         }
@@ -165,7 +167,7 @@ impl RestoreCmd {
         Ok(resolved_nm)
     }
 
-    async fn prune(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
+    async fn prune(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<usize> {
         // Set up progress bar and timing stuff.
         let prune_time = std::time::Instant::now();
         let prune_span = tracing::debug_span!("prune");
@@ -193,10 +195,10 @@ impl RestoreCmd {
             prune_time.elapsed().as_millis() as f32 / 1000.0
         );
 
-        Ok(())
+        Ok(pruned)
     }
 
-    async fn extract(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
+    async fn extract(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<usize> {
         // Set up progress bar and timing stuff.
         let extract_time = std::time::Instant::now();
         let extract_span = tracing::debug_span!("extract");
@@ -223,6 +225,19 @@ impl RestoreCmd {
             emoji.package(),
             if extracted == 1 { "" } else { "s" },
             extract_time.elapsed().as_millis() as f32 / 1000.0
+        );
+
+        Ok(extracted)
+    }
+
+    async fn link_bins(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
+        let link_time = std::time::Instant::now();
+        let linked = maintainer.link_bins().await?;
+        tracing::info!(
+            "{}Linked {linked} package bin{} in {}s.",
+            emoji.link(),
+            if linked == 1 { "" } else { "s" },
+            link_time.elapsed().as_millis() as f32 / 1000.0
         );
 
         Ok(())
@@ -259,11 +274,20 @@ impl Emoji {
         Self(use_emoji)
     }
 
+    const LINK: &'static str = "🔗 ";
     const PACKAGE: &'static str = "📦 ";
     const MAGNIFYING_GLASS: &'static str = "🔍 ";
     const BROOM: &'static str = "🧹 ";
     const WRITING: &'static str = "📝 ";
     const TADA: &'static str = "🎉 ";
+
+    fn link(&self) -> &'static str {
+        if self.0 {
+            Self::LINK
+        } else {
+            ""
+        }
+    }
 
     fn package(&self) -> &'static str {
         if self.0 {

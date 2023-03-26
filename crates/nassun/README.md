@@ -15,5 +15,5 @@ repository](https://github.com/orogene/orogene).
 
 ## License
 
-This project is distributed under the [Apache 2.0
-License](https://github.com/orogene/orogene/blob/main/LICENSE)
+For licensing information, please check [the LICENSE file in the Orogene
+repository](https://github.com/orogene/orogene/blob/main/LICENSE).
