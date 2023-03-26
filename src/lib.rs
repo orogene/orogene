@@ -66,6 +66,7 @@ pub struct Orogene {
     #[arg(help_heading = "Global Options", global = true, long)]
     root: Option<PathBuf>,
 
+    #[allow(rustdoc::bare_urls)]
     /// Registry used for unscoped packages.
     ///
     /// Defaults to https://registry.npmjs.org.
