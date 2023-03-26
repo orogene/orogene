@@ -7,7 +7,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
-use crate::{Bin, Directories};
+use crate::{Bin, Directories, Manifest};
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,12 +41,26 @@ pub struct BuildManifest {
 }
 
 impl BuildManifest {
-    /// Create a new [`BuildManifest`] from a given path, normalizing its bin
-    /// field (or its `directories.bin`) into a plain HashMap.
+    /// Create a new [`BuildManifest`] from a given path to a full manifest (package.json),
+    /// normalizing its bin field (or its `directories.bin`) into a plain HashMap.
     pub fn from_path(path: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = path.as_ref();
         let pkg_str = std::fs::read_to_string(path)?;
         let raw: RawBuildManifest = serde_json::from_str(&pkg_str)?;
+        Self::normalize(raw)
+    }
+
+    /// Create a new [`BuildManifest`] from an already fully loaded [`Manifest`],
+    /// normalizing its bin field (or its `directories.bin`) into a plain HashMap.
+    pub fn from_manifest(manifest: &Manifest) -> std::io::Result<Self> {
+        // This is a bit ineffecient but honestly it's not a big deal,
+        // we already did a bunch of I/O to get the Manifest.
+        let raw = RawBuildManifest {
+            name: manifest.name.clone(),
+            bin: manifest.bin.clone(),
+            directories: manifest.directories.clone(),
+            scripts: manifest.scripts.clone(),
+        };
         Self::normalize(raw)
     }
 

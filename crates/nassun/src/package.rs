@@ -70,7 +70,7 @@ impl Package {
         self.fetcher.corgi_metadata(self).await
     }
 
-    /// [`AsyncRead`] of the raw tarball data for this package. The data will
+    /// `AsyncRead` of the raw tarball data for this package. The data will
     /// not be checked for integrity based on the current `Package`'s
     /// [`Integrity`]. That is, bad or incomplete data may be returned.
     pub async fn tarball_unchecked(&self) -> Result<Tarball> {
@@ -78,7 +78,7 @@ impl Package {
         Ok(Tarball::new_unchecked(data))
     }
 
-    /// [`AsyncRead`] of the raw tarball data for this package. The data will
+    /// `AsyncRead` of the raw tarball data for this package. The data will
     /// be checked for integrity based on the current `Package`'s
     /// [`Integrity`], if present in its [`Package::metadata`]. An
     /// [`std::io::Error`] with [`std::io::ErrorKind::InvalidData`] will be
@@ -92,7 +92,7 @@ impl Package {
         }
     }
 
-    /// [`AsyncRead`] of the raw tarball data for this package. The data will
+    /// `AsyncRead` of the raw tarball data for this package. The data will
     /// be checked for integrity based on the given [`Integrity`].  An
     /// [`std::io::Error`] with [`std::io::ErrorKind::InvalidData`] will be
     /// returned in case of integrity validation failure.

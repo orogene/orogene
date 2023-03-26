@@ -1,5 +1,5 @@
 //! Creates shims for package bins on Windows. Basically a Rust port of
-//! https://github.com/npm/cmd-shim.
+//! <https://github.com/npm/cmd-shim>.
 
 // The original project is licensed as follows:
 //
