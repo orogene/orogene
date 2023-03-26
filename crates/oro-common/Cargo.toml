@@ -14,10 +14,12 @@ derive_builder = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
 nom = { workspace = true }
+pathdiff = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 url = { workspace = true, features = ["serde"] }
+walkdir = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

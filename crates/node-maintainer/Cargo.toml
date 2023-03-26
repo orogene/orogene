@@ -13,6 +13,7 @@ readme = "README.md"
 nassun = { version = "=0.3.13", path = "../nassun" }
 oro-common = { version = "=0.3.13", path = "../oro-common" }
 oro-package-spec = { version = "=0.3.13", path = "../oro-package-spec" }
+oro-shim-bin = { version = "=0.3.13", path = "../oro-shim-bin" }
 
 async-std = { workspace = true }
 colored = { workspace = true }
@@ -32,6 +33,7 @@ url = { workspace = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 reflink = { workspace = true }
 indicatif = { workspace = true }
+pathdiff = { workspace = true }
 tempfile = { workspace = true }
 walkdir = { workspace = true }
 
@@ -46,6 +48,7 @@ wasm-bindgen-futures = { workspace = true }
 
 [dev-dependencies]
 async-std = { workspace = true, features = ["attributes", "tokio1"] }
+insta = { workspace = true }
 maplit = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 pretty_assertions = { workspace = true }

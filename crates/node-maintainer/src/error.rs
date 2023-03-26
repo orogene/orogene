@@ -125,6 +125,11 @@ pub enum NodeMaintainerError {
     #[error(transparent)]
     #[diagnostic(code(node_maintainer::walkdir_error))]
     WalkDirError(#[from] walkdir::Error),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error("Failed to read manifest during build step, at {}", .0.display())]
+    #[diagnostic(code(node_maintainer::build_manifest_read_error))]
+    BuildManifestReadError(std::path::PathBuf, #[source] std::io::Error),
 }
 
 impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {

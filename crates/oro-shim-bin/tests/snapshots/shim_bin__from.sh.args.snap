@@ -1,0 +1,17 @@
+---
+source: crates/node-maintainer/tests/shim_bin.rs
+expression: "std::fs::read_to_string(&to).unwrap().replace('\\r', \"\\\\r\")"
+---
+#!/bin/sh
+basedir = $(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+
+case `uname` in
+    *CYGWIN*|*MINGW*|*MSYS*) basedir=`cygpath -w "$basedir"`;;
+esac
+
+if [ -x "$basedir//usr/bin/sh" ]; then
+  exec "$basedir//usr/bin/sh"  -x "$basedir/../from.sh.args" "$@"
+else 
+  exec /usr/bin/sh  -x "$basedir/../from.sh.args" "$@"
+fi
+

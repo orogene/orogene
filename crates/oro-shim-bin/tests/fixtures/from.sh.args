@@ -1,0 +1,2 @@
+#!/usr/bin/sh -x
+echo hi

@@ -137,6 +137,13 @@ impl OroCommand for ViewCmd {
                 let bins = match bin {
                     Bin::Str(_) => vec![name.clone().unwrap_or_else(|| String::from(""))],
                     Bin::Hash(bins) => bins.keys().cloned().collect::<Vec<String>>(),
+                    Bin::Array(bins) => bins
+                        .iter()
+                        .filter_map(|bin| {
+                            bin.file_name()
+                                .map(|name| name.to_string_lossy().to_string())
+                        })
+                        .collect::<Vec<String>>(),
                 };
                 println!(
                     "bins: {}\n",

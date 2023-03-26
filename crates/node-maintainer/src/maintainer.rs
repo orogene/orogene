@@ -1,12 +1,14 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{self, AtomicUsize};
+use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
-use async_std::sync::{Arc, Mutex};
+use async_std::sync::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use colored::*;
 #[cfg(not(target_arch = "wasm32"))]
@@ -15,7 +17,7 @@ use futures::{StreamExt, TryFutureExt};
 use nassun::client::{Nassun, NassunOpts};
 use nassun::package::Package;
 use nassun::PackageSpec;
-use oro_common::{CorgiManifest, CorgiVersionMetadata};
+use oro_common::{BuildManifest, CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -405,6 +407,7 @@ impl NodeMaintainer {
         }
 
         let nm_osstr = Some(std::ffi::OsStr::new("node_modules"));
+        let bin_osstr = Some(std::ffi::OsStr::new(".bin"));
         let meta = prefix.join(META_FILE_NAME);
         let mut extraneous_packages = 0;
         let extraneous = &mut extraneous_packages;
@@ -419,13 +422,18 @@ impl NodeMaintainer {
                     return false;
                 }
 
-                if entry_path.file_name() == nm_osstr {
+                let file_name = entry_path.file_name();
+
+                if file_name == nm_osstr {
                     // We don't want to skip node_modules themselves
                     return true;
                 }
 
-                if entry_path
-                    .file_name()
+                if file_name == bin_osstr {
+                    return false;
+                }
+
+                if file_name
                     .expect("this should have a file name")
                     .to_string_lossy()
                     .starts_with('@')
@@ -482,6 +490,7 @@ impl NodeMaintainer {
             let entry_path = entry.path();
             let file_name = entry_path.file_name();
             if file_name == nm_osstr
+                || file_name == bin_osstr
                 || file_name
                     .map(|s| s.to_string_lossy().starts_with('@'))
                     .unwrap_or(false)
@@ -491,11 +500,13 @@ impl NodeMaintainer {
                 if let Some(pb) = &self.on_prune_progress {
                     pb(entry_path);
                 }
+                tracing::trace!("Pruning extraneous directory: {}", entry.path().display());
                 async_std::fs::remove_dir_all(entry.path()).await?;
             } else {
                 if let Some(pb) = &self.on_prune_progress {
                     pb(entry_path);
                 }
+                tracing::trace!("Pruning extraneous file: {}", entry.path().display());
                 async_std::fs::remove_file(entry.path()).await?;
             }
         }
@@ -517,6 +528,7 @@ impl NodeMaintainer {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn extract(&self) -> Result<usize, NodeMaintainerError> {
+        tracing::debug!("Extracting node_modules/...");
         let start = std::time::Instant::now();
 
         let root = &self.root;
@@ -589,6 +601,111 @@ impl NodeMaintainer {
             start.elapsed().as_millis(),
         );
         Ok(actually_extracted)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn run_scripts(&self) -> Result<(), NodeMaintainerError> {
+        tracing::debug!("Running lifecycle scripts...");
+        let start = std::time::Instant::now();
+        tracing::debug!(
+            "Ran lifecycle scripts in {}ms.",
+            start.elapsed().as_millis()
+        );
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn link_bins(&self) -> Result<usize, NodeMaintainerError> {
+        use walkdir::WalkDir;
+
+        tracing::debug!("Linking bins...");
+        let start = std::time::Instant::now();
+        let root = &self.root;
+        let linked = Arc::new(AtomicUsize::new(0));
+        let bin_file_name = Some(OsStr::new(".bin"));
+        let nm_file_name = Some(OsStr::new("node_modules"));
+        for entry in WalkDir::new(root.join("node_modules"))
+            .into_iter()
+            .filter_entry(|e| {
+                let path = e.path().file_name();
+                path == bin_file_name || path == nm_file_name
+            })
+        {
+            let entry = entry?;
+            if entry.path().file_name() == bin_file_name {
+                async_std::fs::remove_dir_all(entry.path()).await?;
+            }
+        }
+        futures::stream::iter(self.graph.inner.node_indices())
+            .map(|idx| Ok((idx, linked.clone())))
+            .try_for_each_concurrent(self.concurrency, move |(idx, linked)| async move {
+                if idx == self.graph.root {
+                    return Ok(());
+                }
+
+                let subdir = self
+                    .graph
+                    .node_path(idx)
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join("/node_modules/");
+                let package_dir = root.join("node_modules").join(subdir);
+                let parent = package_dir.parent().expect("must have parent");
+                let target_dir = if parent.file_name() == Some(OsStr::new("node_modules")) {
+                    parent.join(".bin")
+                } else {
+                    // Scoped
+                    parent.parent().expect("must have parent").join(".bin")
+                };
+
+                let build_mani = BuildManifest::from_path(package_dir.join("package.json"))
+                    .map_err(|e| {
+                        NodeMaintainerError::BuildManifestReadError(
+                            package_dir.join("package.json"),
+                            e,
+                        )
+                    })?;
+
+                for (name, path) in &build_mani.bin {
+                    let target_dir = target_dir.clone();
+                    let to = target_dir.join(name);
+                    let from = package_dir.join(path);
+                    let name = name.clone();
+                    async_std::task::spawn_blocking(move || {
+                        // We only create a symlink if the target bin exists.
+                        if from.symlink_metadata().is_ok() {
+                            std::fs::create_dir_all(target_dir)?;
+                            // TODO: use a DashMap here to prevent race conditions, maybe?
+                            if let Ok(meta) = to.symlink_metadata() {
+                                if meta.is_dir() {
+                                    std::fs::remove_dir_all(&to)?;
+                                } else {
+                                    std::fs::remove_file(&to)?;
+                                }
+                            }
+                            link_bin(&from, &to)?;
+                            tracing::trace!(
+                                "Linked bin for {} from {} to {}",
+                                name,
+                                from.display(),
+                                to.display()
+                            );
+                        }
+                        Ok::<_, NodeMaintainerError>(())
+                    })
+                    .await?;
+                    linked.fetch_add(1, atomic::Ordering::SeqCst);
+                }
+                Ok::<_, NodeMaintainerError>(())
+            })
+            .await?;
+        let linked = linked.load(atomic::Ordering::SeqCst);
+        tracing::debug!(
+            "Linked {linked} package bins in {}ms.",
+            start.elapsed().as_millis()
+        );
+        Ok(linked)
     }
 
     async fn run_resolver(
@@ -1066,4 +1183,14 @@ fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
     }
 
     supports_reflink
+}
+
+fn link_bin(from: &Path, to: &Path) -> Result<(), NodeMaintainerError> {
+    #[cfg(windows)]
+    oro_shim_bin::shim_bin(from, to)?;
+    #[cfg(not(windows))]
+    {
+        std::os::unix::fs::symlink(from, to)?;
+    }
+    Ok(())
 }

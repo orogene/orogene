@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+};
 
 use derive_builder::Builder;
 use node_semver::{Range, Version};
@@ -273,15 +276,16 @@ pub struct Person {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Directories {
-    pub bin: Option<String>,
-    pub man: Option<String>,
+    pub bin: Option<PathBuf>,
+    pub man: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Bin {
     Str(String),
-    Hash(HashMap<String, String>),
+    Hash(HashMap<String, PathBuf>),
+    Array(Vec<PathBuf>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
