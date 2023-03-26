@@ -32,10 +32,18 @@ pub struct CorgiManifest {
 #[derive(Builder, Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
+    /// The name of the package.
+    ///
+    /// If this is missing, it usually indicates that this package exists only to
+    /// describe a workspace, similar to Cargo's notion of a "virtual manifest".
     #[builder(setter(into, strip_option), default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 
+    /// The version of the package.
+    ///
+    /// Package managers generally require this to be populated to actually publish
+    /// the package, but will tolerate its absence during local development.
     #[builder(setter(strip_option), default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<Version>,
@@ -60,6 +68,10 @@ pub struct Manifest {
     #[builder(default)]
     pub keywords: Vec<String>,
 
+    /// Information about the names and locations of binaries this package provides.
+    ///
+    /// Use [`crate::BuildManifest::from_manifest`][] to get a normalized version
+    /// of this field (and other related fields).
     #[builder(setter(strip_option), default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bin: Option<Bin>,
@@ -100,10 +112,19 @@ pub struct Manifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub imports: Option<Imports>,
 
+    /// Information about the repository this project is hosted in.
+    ///
+    /// [`Repository::Str`][] can contain many different formats (or plain garbage),
+    /// we recommend trying to `.parse()` it as oro-package-spec's GitInfo type,
+    /// as it understands most of the relevant formats.
     #[builder(setter(strip_option), default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<Repository>,
 
+    /// Information about build scripts the package uses.
+    ///
+    /// Use [`crate::BuildManifest::from_manifest`][] to get a normalized version
+    /// of this field (and other related fields).
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
     pub scripts: HashMap<String, String>,
