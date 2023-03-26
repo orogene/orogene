@@ -112,7 +112,7 @@ fn write_cmd_shim(
     .to_string();
 
     let target = format!(
-        "\"%dp0%\\{target}\" %*\r\n",
+        "\"%dp0%\\{target}\"",
         target = from.display().to_string().replace('/', "\\")
     );
     if let Some(prog) = prog {
@@ -134,9 +134,9 @@ fn write_cmd_shim(
         cmd.push_str(")\r\n");
         cmd.push_str("\r\n");
         cmd.push_str("endLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & ");
-        cmd.push_str(&format!("\"%_prog%\" {args} \"%dp0%\\{target}\" %*\r\n",));
+        cmd.push_str(&format!("\"%_prog%\" {args} {target} %*\r\n",));
     } else {
-        cmd.push_str(&format!("\"%dp0%\\{target}\" %*\r\n",));
+        cmd.push_str(&format!("{target} %*\r\n",));
     }
 
     std::fs::write(to.with_extension("cmd"), cmd)?;
