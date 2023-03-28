@@ -14,15 +14,7 @@ use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
 use petgraph::Direction;
 use unicase::UniCase;
 
-<<<<<<< main
-use crate::{error::NodeMaintainerError, Lockfile, LockfileNode};
-||||||| ancestor
-use crate::{error::NodeMaintainerError, DepType, Edge, Lockfile, LockfileNode, Node};
-=======
-use crate::{
-    error::NodeMaintainerError, DepType, Edge, JsonDocument, Lockfile, LockfileNode, Node,
-};
->>>>>>> add: json lockfile  serialization
+use crate::{error::NodeMaintainerError, JsonDocument, Lockfile, LockfileNode};
 
 #[cfg(debug_assertions)]
 use NodeMaintainerError::GraphValidationError;

@@ -385,7 +385,7 @@ async fn nesting_simple_conflict_json() -> Result<()> {
     }
     "#;
     mocks_from_kdl(&mock_server, mock_data.parse()?).await;
-    let nm = NodeMaintainer::builder()
+    let _nm = NodeMaintainer::builder()
         .concurrency(1)
         .registry(mock_server.uri().parse().into_diagnostic()?)
         .resolve_spec("a@^1")
@@ -467,7 +467,7 @@ async fn nesting_sibling_conflict_json() -> Result<()> {
     }
     "#;
     mocks_from_kdl(&mock_server, mock_data.parse()?).await;
-    let nm = NodeMaintainer::builder()
+    let _nm = NodeMaintainer::builder()
         .concurrency(1)
         .registry(mock_server.uri().parse().into_diagnostic()?)
         .resolve_spec("a@^1")

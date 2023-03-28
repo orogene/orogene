@@ -1,13 +1,4 @@
-<<<<<<< main
 use indexmap::IndexMap;
-||||||| ancestor
-use std::collections::BTreeMap;
-
-=======
-use std::collections::BTreeMap;
-
-use indexmap::IndexMap;
->>>>>>> add: json lockfile  serialization
 use kdl::{KdlDocument, KdlNode};
 use nassun::{client::Nassun, package::Package, PackageResolution};
 use node_semver::Version;
@@ -480,7 +471,7 @@ impl LockfileNode {
     fn to_json_deps(
         &self,
         dep_type: &DepType,
-        deps: &BTreeMap<String, String>,
+        deps: &IndexMap<String, String>,
     ) -> (&str, JsonDocument) {
         use DepType::*;
         let type_name = match dep_type {
