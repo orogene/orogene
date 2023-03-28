@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet, VecDeque};
+#[cfg(not(target_arch = "wasm32"))]
 use std::ffi::OsStr;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 #[cfg(not(target_arch = "wasm32"))]
@@ -18,7 +20,10 @@ use futures::{StreamExt, TryFutureExt};
 use nassun::client::{Nassun, NassunOpts};
 use nassun::package::Package;
 use nassun::PackageSpec;
-use oro_common::{BuildManifest, CorgiManifest, CorgiVersionMetadata};
+#[cfg(not(target_arch = "wasm32"))]
+use oro_common::BuildManifest;
+use oro_common::{CorgiManifest, CorgiVersionMetadata};
+#[cfg(not(target_arch = "wasm32"))]
 use oro_script::OroScript;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -332,7 +337,7 @@ struct NodeDependency {
 
 pub struct NodeMaintainer {
     nassun: Nassun,
-    graph: Graph,
+    pub(crate) graph: Graph,
     concurrency: usize,
     #[allow(dead_code)]
     cache: Option<PathBuf>,
@@ -1328,6 +1333,7 @@ fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
     supports_reflink
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn link_bin(from: &Path, to: &Path) -> Result<(), NodeMaintainerError> {
     #[cfg(windows)]
     oro_shim_bin::shim_bin(from, to)?;

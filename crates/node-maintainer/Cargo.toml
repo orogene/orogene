@@ -13,8 +13,6 @@ readme = "README.md"
 nassun = { version = "=0.3.15", path = "../nassun" }
 oro-common = { version = "=0.3.15", path = "../oro-common" }
 oro-package-spec = { version = "=0.3.15", path = "../oro-package-spec" }
-oro-script = { version = "=0.3.15", path = "../oro-script" }
-oro-shim-bin = { version = "=0.3.15", path = "../oro-shim-bin" }
 
 async-std = { workspace = true }
 colored = { workspace = true }
@@ -32,6 +30,9 @@ unicase = "2.6.0"
 url = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+oro-script = { version = "=0.3.15", path = "../oro-script" }
+oro-shim-bin = { version = "=0.3.15", path = "../oro-shim-bin" }
+
 reflink = { workspace = true }
 indicatif = { workspace = true }
 pathdiff = { workspace = true }
