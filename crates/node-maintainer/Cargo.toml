@@ -19,13 +19,18 @@ oro-package-spec = { version = "=0.3.27", path = "../oro-package-spec" }
 async-std = { workspace = true }
 colored = { workspace = true }
 futures = { workspace = true }
+<<<<<<< main
 indexmap = { workspace = true }
+||||||| ancestor
+=======
+indexmap = {version = "1.9.3", features = ["serde"] }
+>>>>>>> add: json lockfile  serialization
 kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
 petgraph = { version = "0.6.2", default-features = false, features = ["stable_graph"] }
 serde = { workspace = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }

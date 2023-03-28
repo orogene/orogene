@@ -47,7 +47,7 @@ miette = { workspace = true, features = ["fancy"] }
 rand = { workspace = true, default_features = false }
 sentry = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["preserve_order"] }
 supports-unicode = { workspace = true }
 term_grid = { workspace = true }
 term_size = { workspace = true }

@@ -2018,8 +2018,15 @@ dependencies = [
  "async-std",
  "colored",
  "console_error_panic_hook",
+<<<<<<< main
  "futures 0.3.28",
  "indexmap",
+||||||| ancestor
+ "futures 0.3.26",
+=======
+ "futures 0.3.26",
+ "indexmap",
+>>>>>>> add: json lockfile  serialization
  "indicatif",
  "insta",
  "js-sys",

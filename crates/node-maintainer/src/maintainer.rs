@@ -11,12 +11,18 @@ use url::Url;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::IoContext;
 use crate::error::NodeMaintainerError;
+<<<<<<< main
 use crate::graph::{Graph, Node};
 use crate::linkers::Linker;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::linkers::LinkerOptions;
 use crate::resolver::Resolver;
 use crate::{IntoKdl, Lockfile};
+||||||| ancestor
+use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
+=======
+use crate::{Graph, IntoKdl, JsonDocument, Lockfile, LockfileNode, Node};
+>>>>>>> add: json lockfile  serialization
 
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;
@@ -475,9 +481,27 @@ impl NodeMaintainer {
         self.graph.to_kdl()
     }
 
+<<<<<<< main
     /// Returns a [`Package`] for the given package spec, if it is present in
     /// the dependency tree. The path should be relative to the root of the
     /// project, and can optionally start with `"node_modules/"`.
+||||||| ancestor
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn render(&self) -> String {
+        self.graph.render()
+    }
+
+=======
+    pub fn to_json(&self) -> Result<JsonDocument, NodeMaintainerError> {
+        self.graph.to_json()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn render(&self) -> String {
+        self.graph.render()
+    }
+
+>>>>>>> add: json lockfile  serialization
     pub fn package_at_path(&self, path: &Path) -> Option<Package> {
         self.graph.package_at_path(path)
     }

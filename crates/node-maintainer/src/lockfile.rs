@@ -1,14 +1,39 @@
+<<<<<<< main
 use indexmap::IndexMap;
+||||||| ancestor
+use std::collections::BTreeMap;
+
+=======
+use std::collections::BTreeMap;
+
+use indexmap::IndexMap;
+>>>>>>> add: json lockfile  serialization
 use kdl::{KdlDocument, KdlNode};
 use nassun::{client::Nassun, package::Package, PackageResolution};
 use node_semver::Version;
 use oro_common::CorgiManifest;
 use oro_package_spec::PackageSpec;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use ssri::Integrity;
 use unicase::UniCase;
 
 use crate::{error::NodeMaintainerError, graph::DepType, IntoKdl};
+
+#[derive(Serialize)]
+pub struct JsonDocument(serde_json::Value);
+
+impl From<JsonDocument> for serde_json::Value {
+    fn from(val: JsonDocument) -> serde_json::Value {
+        val.0
+    }
+}
+
+impl std::fmt::Display for JsonDocument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string_pretty(&self.0).unwrap())
+    }
+}
 
 /// A representation of a resolved lockfile.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -31,8 +56,25 @@ impl Lockfile {
         &self.packages
     }
 
-    pub fn to_json(&self) -> serde_json::Value {
-        unimplemented!()
+    pub fn to_json(&self) -> JsonDocument {
+        let mut doc = json!({});
+        doc["name"] = json!(self.root.name.as_ref());
+        doc["version"] = json!(self.root.version);
+        doc["lockfileVersion"] = json!(self.version);
+        doc["requires"] = json!(true);
+        let mut packages = self.packages.iter().collect::<Vec<_>>();
+        packages.sort_by(|(a, _), (b, _)| a.cmp(b));
+        let mut deps_v1 = IndexMap::new();
+        let mut deps = IndexMap::new();
+        deps.insert("".to_string(), self.root.to_json());
+        for (name, pkg) in packages {
+            deps.insert("node_modules/".to_string() + name.as_str(), pkg.to_json());
+            deps_v1.insert(name.as_ref(), pkg.to_json_v1());
+        }
+        doc["packages"] = json!(deps);
+        doc["dependencies"] = json!(deps_v1);
+
+        JsonDocument(doc)
     }
 
     pub fn to_kdl(&self) -> KdlDocument {
@@ -376,6 +418,86 @@ impl LockfileNode {
             .nodes_mut()
             .sort_by_key(|n| n.name().value().to_string());
         deps_node
+    }
+
+    fn to_json(&self) -> JsonDocument {
+        let mut doc = json!({"name": self.name.as_ref()});
+
+        if let Some(ref version) = self.version {
+            doc["version"] = json!(version);
+        }
+        if let Some(resolved) = &self.resolved {
+            if !self.is_root {
+                doc["resolved"] = json!(resolved);
+
+                if let Some(integrity) = &self.integrity {
+                    doc["integrity"] = json!(integrity)
+                }
+            }
+        }
+        if !self.dependencies.is_empty() {
+            let (key, value) = self.to_json_deps(&DepType::Prod, &self.dependencies);
+            doc[key] = value.into()
+        }
+        if !self.dev_dependencies.is_empty() {
+            let (key, value) = self.to_json_deps(&DepType::Dev, &self.dev_dependencies);
+            doc[key] = value.into()
+        }
+        if !self.peer_dependencies.is_empty() {
+            let (key, value) = self.to_json_deps(&DepType::Peer, &self.peer_dependencies);
+            doc[key] = value.into()
+        }
+        if !self.optional_dependencies.is_empty() {
+            let (key, value) = self.to_json_deps(&DepType::Opt, &self.optional_dependencies);
+            doc[key] = value.into()
+        }
+
+        JsonDocument(doc)
+    }
+
+    fn to_json_v1(&self) -> JsonDocument {
+        let mut doc = json!({"name": self.name.as_ref()});
+        if let Some(ref version) = self.version {
+            doc["version"] = json!(version);
+        }
+        if let Some(resolved) = &self.resolved {
+            if !self.is_root {
+                doc["resolved"] = json!(resolved);
+
+                if let Some(integrity) = &self.integrity {
+                    doc["integrity"] = json!(integrity)
+                }
+            }
+        }
+        if !self.dependencies.is_empty() {
+            let (_, value) = self.to_json_deps(&DepType::Prod, &self.dependencies);
+            doc["requires"] = value.into()
+        }
+
+        JsonDocument(doc)
+    }
+
+    fn to_json_deps(
+        &self,
+        dep_type: &DepType,
+        deps: &BTreeMap<String, String>,
+    ) -> (&str, JsonDocument) {
+        use DepType::*;
+        let type_name = match dep_type {
+            Prod => "dependencies",
+            Dev => "dev-dependencies",
+            Peer => "peer-dependencies",
+            Opt => "optional-dependencies",
+        };
+        let mut doc = json!({});
+
+        let mut deps = deps.iter().collect::<Vec<_>>();
+        deps.sort_by_key(|n| n.0);
+
+        for (name, requested) in deps {
+            doc[name] = json!(requested)
+        }
+        (type_name, JsonDocument(doc))
     }
 
     fn from_npm(path_str: &str, npm: &NpmPackageLockEntry) -> Result<Self, NodeMaintainerError> {
