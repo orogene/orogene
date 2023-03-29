@@ -41,7 +41,7 @@ impl GitFetcher {
                 semver,
                 ..
             } => {
-                self.fetch_clone(dir, url.to_string(), committish, semver)
+                self.fetch_clone(dir, url.to_string(), committish, semver, info)
                     .await?;
             }
             GitInfo::Ssh {
@@ -50,7 +50,7 @@ impl GitFetcher {
                 semver,
                 ..
             } => {
-                self.fetch_clone(dir, ssh, committish, semver).await?;
+                self.fetch_clone(dir, ssh, committish, semver, info).await?;
             }
             hosted @ GitInfo::Hosted { .. } => match &hosted {
                 GitInfo::Hosted {
@@ -60,7 +60,8 @@ impl GitFetcher {
                     ..
                 } => {
                     if let Some(requested) = requested {
-                        self.fetch_clone(dir, requested, committish, semver).await?;
+                        self.fetch_clone(dir, requested, committish, semver, info)
+                            .await?;
                     } else if let (Some(tarball), Some(https), Some(ssh)) =
                         (hosted.tarball(), hosted.https(), hosted.ssh())
                     {
@@ -68,12 +69,13 @@ impl GitFetcher {
                             Ok(_) => {}
                             Err(_) => {
                                 match self
-                                    .fetch_clone(dir, https.to_string(), committish, semver)
+                                    .fetch_clone(dir, https.to_string(), committish, semver, info)
                                     .await
                                 {
                                     Ok(_) => {}
                                     Err(_) => {
-                                        self.fetch_clone(dir, ssh, committish, semver).await?;
+                                        self.fetch_clone(dir, ssh, committish, semver, info)
+                                            .await?;
                                     }
                                 }
                             }
@@ -102,6 +104,7 @@ impl GitFetcher {
         repo: impl AsRef<str>,
         committish: &Option<String>,
         semver: &Option<Range>,
+        info: &GitInfo,
     ) -> Result<()> {
         let repo = repo.as_ref();
         let git = self
@@ -152,7 +155,11 @@ impl GitFetcher {
                     .iter()
                     .filter(|v| range.satisfies(v))
                     .max()
-                    .ok_or_else(|| NassunError::MiscError("<todo> missing version".to_owned()))?
+                    .ok_or_else(|| NassunError::NoVersion {
+                        name: repo.to_string(),
+                        spec: PackageSpec::Git(info.clone()),
+                        versions: versions.iter().map(|v| v.to_string()).collect(),
+                    })?
                     .to_string(),
             )
         } else {
