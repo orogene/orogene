@@ -125,7 +125,7 @@ impl GitFetcher {
                     Err(NassunError::GitCloneError(String::from(repo)))
                 }
             })?;
-        if let Some(range) = semver {
+        let checkout_ref = if let Some(range) = semver {
             let refs_output = Command::new(git)
                 .arg("show-ref")
                 .arg("--tags")
@@ -147,14 +147,21 @@ impl GitFetcher {
                         .flatten()
                 })
                 .collect();
-            let best_version = versions
-                .iter()
-                .filter(|v| range.satisfies(v))
-                .max()
-                .ok_or_else(|| NassunError::MiscError("<todo> missing version".to_owned()))?;
+            Some(
+                versions
+                    .iter()
+                    .filter(|v| range.satisfies(v))
+                    .max()
+                    .ok_or_else(|| NassunError::MiscError("<todo> missing version".to_owned()))?
+                    .to_string(),
+            )
+        } else {
+            committish.clone()
+        };
+        if let Some(checkout_ref) = checkout_ref {
             Command::new(git)
                 .arg("checkout")
-                .arg(best_version.to_string())
+                .arg(&checkout_ref)
                 .current_dir(dir.join("package"))
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -168,29 +175,7 @@ impl GitFetcher {
                     } else {
                         Err(NassunError::GitCheckoutError(
                             String::from(repo),
-                            best_version.to_string(),
-                        ))
-                    }
-                })?;
-        }
-        if let Some(committish) = committish {
-            Command::new(git)
-                .arg("checkout")
-                .arg(committish)
-                .current_dir(dir.join("package"))
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status()
-                .await
-                .map_err(NassunError::GitIoError)
-                .and_then(|status| {
-                    if status.success() {
-                        Ok(())
-                    } else {
-                        Err(NassunError::GitCheckoutError(
-                            String::from(repo),
-                            committish.clone(),
+                            checkout_ref.clone(),
                         ))
                     }
                 })?;
