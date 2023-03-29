@@ -140,14 +140,13 @@ impl GitFetcher {
                 .map_err(NassunError::GitIoError)?;
             let versions: Vec<Version> = String::from_utf8(refs_output.stdout)
                 .map_err(|e| {
-                    NassunError::MiscError("Could not decode git output as UTF-8".to_string())
+                    NassunError::MiscError(format!("Could not decode git output as UTF-8. {}", e))
                 })?
                 .lines()
                 .filter_map(|line| {
-                    line.split("/")
+                    line.split('/')
                         .last()
-                        .map(|tag| Version::parse(tag).ok())
-                        .flatten()
+                        .and_then(|tag| Version::parse(tag).ok())
                 })
                 .collect();
             Some(
