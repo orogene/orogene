@@ -109,12 +109,10 @@ impl BuildManifest {
                 bin_map.insert(base.to_string_lossy().to_string(), bin_target);
             }
         } else if let Some(Bin::Str(bin)) = raw.bin {
-            let mut bin_map = HashMap::new();
             if let Some(name) = raw.name {
                 bin_map.insert(name, PathBuf::from(bin));
             }
         } else if let Some(Bin::Array(bins)) = raw.bin {
-            let mut bin_map = HashMap::new();
             for bin in bins {
                 let name = bin
                     .as_path()
