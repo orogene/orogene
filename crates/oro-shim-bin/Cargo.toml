@@ -1,6 +1,6 @@
 [package]
 name = "oro-shim-bin"
-version = "0.3.14"
+version = "0.3.15"
 edition = "2021"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 description = "Generates shims for NPM bins"

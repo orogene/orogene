@@ -1,6 +1,6 @@
 [package]
 name = "oro-script"
-version = "0.3.14"
+version = "0.3.15"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Execute scripts for NPM packages."
@@ -10,7 +10,7 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-oro-common = { version = "=0.3.14", path = "../oro-common" }
+oro-common = { version = "=0.3.15", path = "../oro-common" }
 
 dunce = { workspace = true }
 miette = { workspace = true }

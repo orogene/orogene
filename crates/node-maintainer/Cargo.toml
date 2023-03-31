@@ -1,6 +1,6 @@
 [package]
 name = "node-maintainer"
-version = "0.3.14"
+version = "0.3.15"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "NPM dependency tree resolver for Orogene."
@@ -10,11 +10,11 @@ homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
 
 [dependencies]
-nassun = { version = "=0.3.14", path = "../nassun" }
-oro-common = { version = "=0.3.14", path = "../oro-common" }
-oro-package-spec = { version = "=0.3.14", path = "../oro-package-spec" }
-oro-script = { version = "=0.3.14", path = "../oro-script" }
-oro-shim-bin = { version = "=0.3.14", path = "../oro-shim-bin" }
+nassun = { version = "=0.3.15", path = "../nassun" }
+oro-common = { version = "=0.3.15", path = "../oro-common" }
+oro-package-spec = { version = "=0.3.15", path = "../oro-package-spec" }
+oro-script = { version = "=0.3.15", path = "../oro-script" }
+oro-shim-bin = { version = "=0.3.15", path = "../oro-shim-bin" }
 
 async-std = { workspace = true }
 colored = { workspace = true }

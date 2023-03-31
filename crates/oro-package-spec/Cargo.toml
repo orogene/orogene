@@ -1,6 +1,6 @@
 [package]
 name = "oro-package-spec"
-version = "0.3.14"
+version = "0.3.15"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "NPM package specification parsing and manipulation."
