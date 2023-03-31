@@ -1,5 +1,19 @@
 # Orogene Release Changelog
 
+<a name="0.3.15"></a>
+## 0.3.15 (2023-03-31)
+
+### Bug Fixes
+
+* **shim:** fix .cmd shim targets ([020d96cf](https://github.com/orogene/orogene/commit/020d96cf9537f56982c53cfa9768691edf6207d3))
+* **manifest:** unshadow the actual output of BuildManifest::normalize (#216) ([e5c8d4bb](https://github.com/orogene/orogene/commit/e5c8d4bbb9ee08d1e75f032550ac5eed4522edff))
+
+### Features
+
+* **manifests:** add a from_manifest method to BuildManifest and do some drive-by docs work (#213) ([2e9c4f51](https://github.com/orogene/orogene/commit/2e9c4f51008456e34dda7d3be3465702a433180e))
+* **scripts:** run lifecycle scripts (#209) ([48392c3e](https://github.com/orogene/orogene/commit/48392c3e62cdf244a960a3fb1e83cda0f320f198))
+
+
 <a name="0.3.14"></a>
 ## 0.3.14 (2023-03-26)
 
