@@ -13,6 +13,7 @@ readme = "README.md"
 nassun = { version = "=0.3.14", path = "../nassun" }
 oro-common = { version = "=0.3.14", path = "../oro-common" }
 oro-package-spec = { version = "=0.3.14", path = "../oro-package-spec" }
+oro-script = { version = "=0.3.14", path = "../oro-script" }
 oro-shim-bin = { version = "=0.3.14", path = "../oro-shim-bin" }
 
 async-std = { workspace = true }

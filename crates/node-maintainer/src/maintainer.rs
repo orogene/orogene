@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::ffi::OsStr;
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{self, AtomicUsize};
@@ -18,6 +19,7 @@ use nassun::client::{Nassun, NassunOpts};
 use nassun::package::Package;
 use nassun::PackageSpec;
 use oro_common::{BuildManifest, CorgiManifest, CorgiVersionMetadata};
+use oro_script::OroScript;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
@@ -35,6 +37,8 @@ const META_FILE_NAME: &str = ".orogene-meta.kdl";
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
 pub type ProgressHandler = Arc<dyn Fn(&Package) + Send + Sync>;
 pub type PruneProgress = Arc<dyn Fn(&Path) + Send + Sync>;
+pub type ScriptStartHandler = Arc<dyn Fn(&Package, &str) + Send + Sync>;
+pub type ScriptLineHandler = Arc<dyn Fn(&str) + Send + Sync>;
 
 #[derive(Clone)]
 pub struct NodeMaintainerOptions {
@@ -57,6 +61,8 @@ pub struct NodeMaintainerOptions {
     on_resolve_progress: Option<ProgressHandler>,
     on_prune_progress: Option<PruneProgress>,
     on_extract_progress: Option<ProgressHandler>,
+    on_script_start: Option<ScriptStartHandler>,
+    on_script_line: Option<ScriptLineHandler>,
 }
 
 impl NodeMaintainerOptions {
@@ -165,6 +171,24 @@ impl NodeMaintainerOptions {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn on_script_start<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&Package, &str) + Send + Sync + 'static,
+    {
+        self.on_script_start = Some(Arc::new(f));
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn on_script_line<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&str) + Send + Sync + 'static,
+    {
+        self.on_script_line = Some(Arc::new(f));
+        self
+    }
+
     async fn get_lockfile(&self) -> Result<Option<Lockfile>, NodeMaintainerError> {
         if let Some(kdl_lock) = &self.kdl_lock {
             return Ok(Some(kdl_lock.clone()));
@@ -233,6 +257,8 @@ impl NodeMaintainerOptions {
             on_resolve_progress: self.on_resolve_progress,
             on_prune_progress: self.on_prune_progress,
             on_extract_progress: self.on_extract_progress,
+            on_script_start: self.on_script_start,
+            on_script_line: self.on_script_line,
         };
         let node = nm.graph.inner.add_node(Node::new(root_pkg, root));
         nm.graph[node].root = node;
@@ -262,6 +288,8 @@ impl NodeMaintainerOptions {
             on_resolve_progress: self.on_resolve_progress,
             on_prune_progress: self.on_prune_progress,
             on_extract_progress: self.on_extract_progress,
+            on_script_start: self.on_script_start,
+            on_script_line: self.on_script_line,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = nm.graph.inner.add_node(Node::new(root_pkg, corgi));
@@ -288,6 +316,8 @@ impl Default for NodeMaintainerOptions {
             on_resolve_progress: None,
             on_prune_progress: None,
             on_extract_progress: None,
+            on_script_start: None,
+            on_script_line: None,
         }
     }
 }
@@ -319,6 +349,10 @@ pub struct NodeMaintainer {
     on_prune_progress: Option<PruneProgress>,
     #[allow(dead_code)]
     on_extract_progress: Option<ProgressHandler>,
+    #[allow(dead_code)]
+    on_script_start: Option<ScriptStartHandler>,
+    #[allow(dead_code)]
+    on_script_line: Option<ScriptLineHandler>,
 }
 
 impl NodeMaintainer {
@@ -604,17 +638,6 @@ impl NodeMaintainer {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn run_scripts(&self) -> Result<(), NodeMaintainerError> {
-        tracing::debug!("Running lifecycle scripts...");
-        let start = std::time::Instant::now();
-        tracing::debug!(
-            "Ran lifecycle scripts in {}ms.",
-            start.elapsed().as_millis()
-        );
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
     pub async fn link_bins(&self) -> Result<usize, NodeMaintainerError> {
         use walkdir::WalkDir;
 
@@ -706,6 +729,126 @@ impl NodeMaintainer {
             start.elapsed().as_millis()
         );
         Ok(linked)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn rebuild(&self, ignore_scripts: bool) -> Result<(), NodeMaintainerError> {
+        tracing::debug!("Running lifecycle scripts...");
+        let start = std::time::Instant::now();
+        if !ignore_scripts {
+            self.run_scripts("preinstall").await?;
+        }
+        self.link_bins().await?;
+        if !ignore_scripts {
+            self.run_scripts("install").await?;
+            self.run_scripts("postinstall").await?;
+        }
+        tracing::debug!(
+            "Ran lifecycle scripts in {}ms.",
+            start.elapsed().as_millis()
+        );
+        Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn run_scripts(&self, event: impl AsRef<str>) -> Result<(), NodeMaintainerError> {
+        async fn inner(me: &NodeMaintainer, event: &str) -> Result<(), NodeMaintainerError> {
+            tracing::debug!("Running {event} lifecycle scripts");
+            let start = std::time::Instant::now();
+            let root = &me.root;
+            futures::stream::iter(me.graph.inner.node_indices())
+                .map(Ok)
+                .try_for_each_concurrent(6, move |idx| async move {
+                    if idx == me.graph.root {
+                        return Ok::<_, NodeMaintainerError>(());
+                    }
+
+                    let subdir = me
+                        .graph
+                        .node_path(idx)
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/");
+                    let package_dir = root.join("node_modules").join(subdir);
+
+                    let build_mani = BuildManifest::from_path(package_dir.join("package.json"))
+                        .map_err(|e| {
+                            NodeMaintainerError::BuildManifestReadError(
+                                package_dir.join("package.json"),
+                                e,
+                            )
+                        })?;
+
+                    let name = me.graph[idx].package.name().to_string();
+                    if build_mani.scripts.contains_key(event) {
+                        let package_dir = package_dir.clone();
+                        let root = root.clone();
+                        let event = event.to_owned();
+                        let span = tracing::info_span!("script::{name}::{event}");
+                        let _span_enter = span.enter();
+                        if let Some(on_script_start) = &me.on_script_start {
+                            on_script_start(&me.graph[idx].package, &event);
+                        }
+                        std::mem::drop(_span_enter);
+                        let mut script = async_std::task::spawn_blocking(move || {
+                            OroScript::new(package_dir, event)?
+                                .workspace_path(root)
+                                .spawn()
+                        })
+                        .await?;
+                        let stdout = script.stdout.take();
+                        let stderr = script.stderr.take();
+                        let stdout_name = name.clone();
+                        let stderr_name = name.clone();
+                        let stdout_on_line = me.on_script_line.clone();
+                        let stderr_on_line = me.on_script_line.clone();
+                        let stdout_span = span;
+                        let stderr_span = stdout_span.clone();
+                        futures::try_join!(
+                            async_std::task::spawn_blocking(move || {
+                                let _enter = stdout_span.enter();
+                                if let Some(stdout) = stdout {
+                                    for line in BufReader::new(stdout).lines() {
+                                        let line = line?;
+                                        tracing::debug!("stdout::{stdout_name}: {}", line);
+                                        if let Some(on_script_line) = &stdout_on_line {
+                                            on_script_line(&line);
+                                        }
+                                    }
+                                }
+                                Ok::<_, NodeMaintainerError>(())
+                            }),
+                            async_std::task::spawn_blocking(move || {
+                                let _enter = stderr_span.enter();
+                                if let Some(stderr) = stderr {
+                                    for line in BufReader::new(stderr).lines() {
+                                        let line = line?;
+                                        tracing::debug!("stderr::{stderr_name}: {}", line);
+                                        if let Some(on_script_line) = &stderr_on_line {
+                                            on_script_line(&line);
+                                        }
+                                    }
+                                }
+                                Ok::<_, NodeMaintainerError>(())
+                            }),
+                            async_std::task::spawn_blocking(move || {
+                                script.wait()?;
+                                Ok::<_, NodeMaintainerError>(())
+                            }),
+                        )?;
+                    }
+
+                    Ok::<_, NodeMaintainerError>(())
+                })
+                .await?;
+            tracing::debug!(
+                "Ran lifecycle scripts for {event} in {}ms.",
+                start.elapsed().as_millis()
+            );
+            Ok(())
+        }
+        inner(self, event.as_ref()).await
     }
 
     async fn run_resolver(

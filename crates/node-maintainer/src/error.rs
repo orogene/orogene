@@ -130,6 +130,11 @@ pub enum NodeMaintainerError {
     #[error("Failed to read manifest during build step, at {}", .0.display())]
     #[diagnostic(code(node_maintainer::build_manifest_read_error))]
     BuildManifestReadError(std::path::PathBuf, #[source] std::io::Error),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    OroScriptError(#[from] oro_script::OroScriptError),
 }
 
 impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {

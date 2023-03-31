@@ -7,7 +7,7 @@ use miette::{IntoDiagnostic, Result};
 use node_maintainer::{NodeMaintainer, NodeMaintainerOptions};
 use oro_config::OroConfigLayer;
 use rand::seq::IteratorRandom;
-use tracing::Span;
+use tracing::{Instrument, Span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use url::Url;
 
@@ -41,6 +41,10 @@ pub struct RestoreCmd {
     /// resolve the tree and write the lockfile.
     #[arg(long)]
     lockfile_only: bool,
+
+    /// Skip running install scripts.
+    #[arg(long)]
+    ignore_scripts: bool,
 
     #[arg(from_global)]
     registry: Option<Url>,
@@ -88,7 +92,23 @@ impl OroCommand for RestoreCmd {
             .on_extract_progress(move |pkg| {
                 let span = Span::current();
                 span.pb_inc(1);
-                span.pb_set_message(&format!("{:?}", pkg.resolved()));
+                span.pb_set_message(&format!("{:?}", pkg.resolved()))
+            })
+            .on_script_start(|pkg, event| {
+                let span = Span::current();
+                span.pb_set_style(
+                    &ProgressStyle::default_bar()
+                        .template(&format!(
+                            "{{span_child_prefix}}{{spinner}} {}::{event} ({{elapsed}}): {{wide_msg:.dim}}",
+                            pkg.name(),
+                        ))
+                        .unwrap(),
+                );
+            })
+            .on_script_line(|line| {
+                let span = Span::current();
+                span.pb_inc(1);
+                span.pb_set_message(line);
             });
         if let Some(registry) = self.registry.as_ref() {
             nm = nm.registry(registry.clone());
@@ -101,9 +121,8 @@ impl OroCommand for RestoreCmd {
 
         if !self.lockfile_only {
             self.prune(&emoji, &resolved_nm).await?;
-            if self.extract(&emoji, &resolved_nm).await? > 0 {
-                self.link_bins(&emoji, &resolved_nm).await?;
-            }
+            self.extract(&emoji, &resolved_nm).await?;
+            self.rebuild(&emoji, &resolved_nm).await?;
         } else {
             tracing::info!(
                 "{}Skipping installing node_modules/, only writing lockfile.",
@@ -230,16 +249,26 @@ impl RestoreCmd {
         Ok(extracted)
     }
 
-    async fn link_bins(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
-        let link_time = std::time::Instant::now();
-        let linked = maintainer.link_bins().await?;
-        tracing::info!(
-            "{}Linked {linked} package bin{} in {}s.",
-            emoji.link(),
-            if linked == 1 { "" } else { "s" },
-            link_time.elapsed().as_millis() as f32 / 1000.0
+    async fn rebuild(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
+        let script_time = std::time::Instant::now();
+        let script_span = tracing::info_span!("Building");
+        script_span.pb_set_style(
+            &ProgressStyle::default_bar()
+                .template(&format!(
+                    "{{spinner}} {}Running scripts {{wide_msg:.dim}}",
+                    emoji.run(),
+                ))
+                .unwrap(),
         );
-
+        maintainer
+            .rebuild(self.ignore_scripts)
+            .instrument(script_span)
+            .await?;
+        tracing::info!(
+            "{}Ran lifecycle scripts in {}s.",
+            emoji.run(),
+            script_time.elapsed().as_millis() as f32 / 1000.0
+        );
         Ok(())
     }
 }
@@ -274,16 +303,16 @@ impl Emoji {
         Self(use_emoji)
     }
 
-    const LINK: &'static str = "🔗 ";
+    const RUN: &'static str = "🏃 ";
     const PACKAGE: &'static str = "📦 ";
     const MAGNIFYING_GLASS: &'static str = "🔍 ";
     const BROOM: &'static str = "🧹 ";
     const WRITING: &'static str = "📝 ";
     const TADA: &'static str = "🎉 ";
 
-    fn link(&self) -> &'static str {
+    fn run(&self) -> &'static str {
         if self.0 {
-            Self::LINK
+            Self::RUN
         } else {
             ""
         }

@@ -1,0 +1,22 @@
+[package]
+name = "oro-script"
+version = "0.3.14"
+authors = ["Kat Marchán <kzm@zkat.tech>"]
+edition = "2021"
+description = "Execute scripts for NPM packages."
+license = "Apache-2.0"
+repository = "https://github.com/orogene/orogene"
+homepage = "https://github.com/orogene/orogene"
+readme = "README.md"
+
+[dependencies]
+oro-common = { version = "=0.3.14", path = "../oro-common" }
+
+dunce = { workspace = true }
+miette = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+which = { workspace = true }
