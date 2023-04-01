@@ -1,6 +1,6 @@
 [package]
 name = "oro-common"
-version = "0.3.15"
+version = "0.3.16"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Common types and utilities for Orogene."
