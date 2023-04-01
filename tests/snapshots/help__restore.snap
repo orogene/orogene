@@ -17,13 +17,11 @@ oro restore [OPTIONS]
 
 ### Options
 
-#### `-p, --prefer-copy`
+#### `--prefer-copy`
 
-Prefer copying files over hard linking them.
+When extracting packages, prefer to copy files files instead of linking them.
 
-On filesystems that don't support copy-on-write/reflinks (usually NTFS or ext4), orogene defaults to hard linking package files from a centralized cache. As such, this can cause global effects if a file inside a node_modules is modified, where other projects that have installed that same file will see those modifications.
-
-In order to prevent this, you can use this flag to force orogene to always copy files, at a performance cost.
+This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).
 
 #### `-v, --validate`
 
@@ -38,6 +36,26 @@ Whether to skip restoring packages into `node_modules` and just resolve the tree
 #### `--ignore-scripts`
 
 Skip running install scripts
+
+#### `--default-tag <DEFAULT_TAG>`
+
+Default dist-tag to use when resolving package versions
+
+#### `--concurrency <CONCURRENCY>`
+
+Controls number of concurrent operations during various restore steps (resolution fetches, extractions, etc).
+
+Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).
+
+#### `--script-concurrency <SCRIPT_CONCURRENCY>`
+
+Controls number of concurrent script executions while running `run_script`.
+
+This option is separate from `concurrency` because executing concurrent scripts is a much heavier operation.
+
+#### `--no-lockfile`
+
+Skip writing the lockfile
 
 #### `-h, --help`
 
