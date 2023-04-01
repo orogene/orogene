@@ -35,9 +35,9 @@ use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
 use crate::{graph::Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
-const DEFAULT_CONCURRENCY: usize = 50;
-#[allow(dead_code)]
-const META_FILE_NAME: &str = ".orogene-meta.kdl";
+pub const DEFAULT_CONCURRENCY: usize = 50;
+pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;
+pub const META_FILE_NAME: &str = ".orogene-meta.kdl";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
 pub type ProgressHandler = Arc<dyn Fn(&Package) + Send + Sync>;
@@ -52,6 +52,8 @@ pub struct NodeMaintainerOptions {
     kdl_lock: Option<Lockfile>,
     npm_lock: Option<Lockfile>,
 
+    #[allow(dead_code)]
+    script_concurrency: usize,
     #[allow(dead_code)]
     cache: Option<PathBuf>,
     #[allow(dead_code)]
@@ -89,6 +91,14 @@ impl NodeMaintainerOptions {
     /// memory usage.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
+        self
+    }
+
+    /// Controls number of concurrent script executions while running
+    /// `run_script`. This option is separate from `concurrency` because
+    /// executing concurrent scripts is a much heavier operation.
+    pub fn script_concurrency(mut self, concurrency: usize) -> Self {
+        self.script_concurrency = concurrency;
         self
     }
 
@@ -275,7 +285,8 @@ impl NodeMaintainerOptions {
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            concurrency: DEFAULT_CONCURRENCY,
+            concurrency: self.concurrency,
+            script_concurrency: self.script_concurrency,
             cache: self.cache,
             prefer_copy: self.prefer_copy,
             validate: self.validate,
@@ -308,7 +319,8 @@ impl NodeMaintainerOptions {
         let mut nm = NodeMaintainer {
             nassun,
             graph: Default::default(),
-            concurrency: DEFAULT_CONCURRENCY,
+            concurrency: self.concurrency,
+            script_concurrency: self.script_concurrency,
             cache: self.cache,
             prefer_copy: self.prefer_copy,
             validate: self.validate,
@@ -338,6 +350,7 @@ impl Default for NodeMaintainerOptions {
             concurrency: DEFAULT_CONCURRENCY,
             kdl_lock: None,
             npm_lock: None,
+            script_concurrency: DEFAULT_SCRIPT_CONCURRENCY,
             cache: None,
             prefer_copy: false,
             validate: false,
@@ -365,6 +378,8 @@ pub struct NodeMaintainer {
     nassun: Nassun,
     pub(crate) graph: Graph,
     concurrency: usize,
+    #[allow(dead_code)]
+    script_concurrency: usize,
     #[allow(dead_code)]
     cache: Option<PathBuf>,
     #[allow(dead_code)]
@@ -803,7 +818,7 @@ impl NodeMaintainer {
             let root = &me.root;
             futures::stream::iter(me.graph.inner.node_indices())
                 .map(Ok)
-                .try_for_each_concurrent(6, move |idx| async move {
+                .try_for_each_concurrent(me.script_concurrency, move |idx| async move {
                     if idx == me.graph.root {
                         return Ok::<_, NodeMaintainerError>(());
                     }

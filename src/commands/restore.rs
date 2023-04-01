@@ -47,10 +47,24 @@ pub struct RestoreCmd {
     default_tag: Option<String>,
 
     /// Controls number of concurrent operations during various restore steps
-    /// (resolution fetches, extractions, etc). Tuning this might help reduce
-    /// memory usage.
+    /// (resolution fetches, extractions, etc).
+    ///
+    /// Tuning this might help reduce memory usage (if lowered), or improve
+    /// performance (if increased).
     #[arg(long)]
     concurrency: Option<usize>,
+
+    /// Controls number of concurrent script executions while running
+    /// `run_script`.
+    ///
+    /// This option is separate from `concurrency` because executing
+    /// concurrent scripts is a much heavier operation.
+    #[arg(long)]
+    script_concurrency: Option<usize>,
+
+    /// Skip writing the lockfile.
+    #[arg(long)]
+    no_lockfile: bool,
 
     #[arg(from_global)]
     registry: Option<Url>,
@@ -72,7 +86,46 @@ pub struct RestoreCmd {
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
         let total_time = std::time::Instant::now();
-        let emoji = Emoji::new(!self.no_emoji);
+        let root = self
+            .root
+            .as_deref()
+            .expect("root should've been set by global defaults");
+        let maintainer = self.resolve(root, self.configured_maintainer()).await?;
+
+        if !self.lockfile_only {
+            self.prune(&maintainer).await?;
+            self.extract(&maintainer).await?;
+            self.rebuild(&maintainer).await?;
+        } else {
+            tracing::info!(
+                "{}Skipping installing node_modules/, only writing lockfile.",
+                self.emoji_package()
+            );
+        }
+
+        if !self.no_lockfile {
+            maintainer
+                .write_lockfile(root.join("package-lock.kdl"))
+                .await?;
+        }
+
+        tracing::info!(
+            "{}Wrote lockfile to package-lock.kdl.",
+            self.emoji_writing()
+        );
+
+        tracing::info!(
+            "{}Done in {}s. {}",
+            self.emoji_tada(),
+            total_time.elapsed().as_millis() as f32 / 1000.0,
+            hackerish_encouragement()
+        );
+        Ok(())
+    }
+}
+
+impl RestoreCmd {
+    fn configured_maintainer(&self) -> NodeMaintainerOptions {
         let root = self
             .root
             .as_deref()
@@ -128,43 +181,14 @@ impl OroCommand for RestoreCmd {
         if let Some(concurrency) = self.concurrency {
             nm = nm.concurrency(concurrency);
         }
-
-        let resolved_nm = self.resolve(&emoji, root, nm).await?;
-
-        if !self.lockfile_only {
-            self.prune(&emoji, &resolved_nm).await?;
-            self.extract(&emoji, &resolved_nm).await?;
-            self.rebuild(&emoji, &resolved_nm).await?;
-        } else {
-            tracing::info!(
-                "{}Skipping installing node_modules/, only writing lockfile.",
-                emoji.package()
-            );
+        if let Some(script_concurrency) = self.script_concurrency {
+            nm = nm.script_concurrency(script_concurrency);
         }
 
-        resolved_nm
-            .write_lockfile(root.join("package-lock.kdl"))
-            .await?;
-
-        tracing::info!("{}Wrote lockfile to package-lock.kdl.", emoji.writing());
-
-        tracing::info!(
-            "{}Done in {}s. {}",
-            emoji.tada(),
-            total_time.elapsed().as_millis() as f32 / 1000.0,
-            hackerish_encouragement()
-        );
-        Ok(())
+        nm
     }
-}
 
-impl RestoreCmd {
-    async fn resolve(
-        &self,
-        emoji: &Emoji,
-        root: &Path,
-        builder: NodeMaintainerOptions,
-    ) -> Result<NodeMaintainer> {
+    async fn resolve(&self, root: &Path, builder: NodeMaintainerOptions) -> Result<NodeMaintainer> {
         // Set up progress bar and timing stuff.
         let resolve_time = std::time::Instant::now();
         let resolve_span = tracing::debug_span!("resolving");
@@ -172,7 +196,7 @@ impl RestoreCmd {
             &ProgressStyle::default_bar()
                 .template(&format!(
                     "{}Resolving {}",
-                    emoji.magnifying_glass(),
+                    self.emoji_magnifying_glass(),
                     "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
                 ))
                 .unwrap(),
@@ -190,7 +214,7 @@ impl RestoreCmd {
         std::mem::drop(resolve_span);
         tracing::info!(
             "{}Resolved {} packages in {}s.",
-            emoji.magnifying_glass(),
+            self.emoji_magnifying_glass(),
             resolved_nm.package_count(),
             resolve_time.elapsed().as_millis() as f32 / 1000.0
         );
@@ -198,7 +222,7 @@ impl RestoreCmd {
         Ok(resolved_nm)
     }
 
-    async fn prune(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<usize> {
+    async fn prune(&self, maintainer: &NodeMaintainer) -> Result<usize> {
         // Set up progress bar and timing stuff.
         let prune_time = std::time::Instant::now();
         let prune_span = tracing::debug_span!("prune");
@@ -206,7 +230,7 @@ impl RestoreCmd {
             &ProgressStyle::default_bar()
                 .template(&format!(
                     "{}Pruning extraneous {}",
-                    emoji.broom(),
+                    self.emoji_broom(),
                     "{bar:40} [{pos}] {wide_msg:.dim}"
                 ))
                 .unwrap(),
@@ -222,14 +246,14 @@ impl RestoreCmd {
         std::mem::drop(prune_span);
         tracing::info!(
             "{}Pruned {pruned} packages in {}s.",
-            emoji.broom(),
+            self.emoji_broom(),
             prune_time.elapsed().as_millis() as f32 / 1000.0
         );
 
         Ok(pruned)
     }
 
-    async fn extract(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<usize> {
+    async fn extract(&self, maintainer: &NodeMaintainer) -> Result<usize> {
         // Set up progress bar and timing stuff.
         let extract_time = std::time::Instant::now();
         let extract_span = tracing::debug_span!("extract");
@@ -237,7 +261,7 @@ impl RestoreCmd {
             &ProgressStyle::default_bar()
                 .template(&format!(
                     "{}Extracting {}",
-                    emoji.package(),
+                    self.emoji_package(),
                     "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
                 ))
                 .unwrap(),
@@ -253,7 +277,7 @@ impl RestoreCmd {
         std::mem::drop(extract_span);
         tracing::info!(
             "{}Extracted {extracted} package{} in {}s.",
-            emoji.package(),
+            self.emoji_package(),
             if extracted == 1 { "" } else { "s" },
             extract_time.elapsed().as_millis() as f32 / 1000.0
         );
@@ -261,14 +285,14 @@ impl RestoreCmd {
         Ok(extracted)
     }
 
-    async fn rebuild(&self, emoji: &Emoji, maintainer: &NodeMaintainer) -> Result<()> {
+    async fn rebuild(&self, maintainer: &NodeMaintainer) -> Result<()> {
         let script_time = std::time::Instant::now();
         let script_span = tracing::info_span!("Building");
         script_span.pb_set_style(
             &ProgressStyle::default_bar()
                 .template(&format!(
                     "{{spinner}} {}Running scripts {{wide_msg:.dim}}",
-                    emoji.run(),
+                    self.emoji_run(),
                 ))
                 .unwrap(),
         );
@@ -278,10 +302,42 @@ impl RestoreCmd {
             .await?;
         tracing::info!(
             "{}Ran lifecycle scripts in {}s.",
-            emoji.run(),
+            self.emoji_run(),
             script_time.elapsed().as_millis() as f32 / 1000.0
         );
         Ok(())
+    }
+
+    fn emoji_run(&self) -> &'static str {
+        self.maybe_emoji("🏃 ")
+    }
+
+    fn emoji_package(&self) -> &'static str {
+        self.maybe_emoji("📦 ")
+    }
+
+    fn emoji_magnifying_glass(&self) -> &'static str {
+        self.maybe_emoji("🔍 ")
+    }
+
+    fn emoji_broom(&self) -> &'static str {
+        self.maybe_emoji("🧹 ")
+    }
+
+    fn emoji_writing(&self) -> &'static str {
+        self.maybe_emoji("📝 ")
+    }
+
+    fn emoji_tada(&self) -> &'static str {
+        self.maybe_emoji("🎉 ")
+    }
+
+    fn maybe_emoji(&self, emoji: &'static str) -> &'static str {
+        if self.no_emoji {
+            ""
+        } else {
+            emoji
+        }
     }
 }
 
@@ -306,67 +362,4 @@ fn hackerish_encouragement() -> &'static str {
         .iter()
         .choose(&mut rng)
         .expect("Iterator should not be empty.")
-}
-
-struct Emoji(bool);
-
-impl Emoji {
-    fn new(use_emoji: bool) -> Self {
-        Self(use_emoji)
-    }
-
-    const RUN: &'static str = "🏃 ";
-    const PACKAGE: &'static str = "📦 ";
-    const MAGNIFYING_GLASS: &'static str = "🔍 ";
-    const BROOM: &'static str = "🧹 ";
-    const WRITING: &'static str = "📝 ";
-    const TADA: &'static str = "🎉 ";
-
-    fn run(&self) -> &'static str {
-        if self.0 {
-            Self::RUN
-        } else {
-            ""
-        }
-    }
-
-    fn package(&self) -> &'static str {
-        if self.0 {
-            Self::PACKAGE
-        } else {
-            ""
-        }
-    }
-
-    fn magnifying_glass(&self) -> &'static str {
-        if self.0 {
-            Self::MAGNIFYING_GLASS
-        } else {
-            ""
-        }
-    }
-
-    fn broom(&self) -> &'static str {
-        if self.0 {
-            Self::BROOM
-        } else {
-            ""
-        }
-    }
-
-    fn writing(&self) -> &'static str {
-        if self.0 {
-            Self::WRITING
-        } else {
-            ""
-        }
-    }
-
-    fn tada(&self) -> &'static str {
-        if self.0 {
-            Self::TADA
-        } else {
-            ""
-        }
-    }
 }
