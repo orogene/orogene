@@ -5,7 +5,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Lit, LitStr};
 
-#[proc_macro_derive(OroConfigLayer, attributes(oro_config))]
+#[proc_macro_derive(OroConfigLayer, attributes(oro_config, clap, arg))]
 pub fn derive_oro_command(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let cmd = OroConfigLayer::from_derive_input(&input).unwrap();
@@ -47,9 +47,11 @@ fn inner_type_of_option(ty: &syn::Type) -> Option<&syn::Type> {
 
 fn oro_ignored(attr: &syn::Attribute) -> bool {
     if let Ok(syn::Meta::List(meta_list)) = attr.parse_meta() {
-        if meta_list.path.get_ident().unwrap() == "oro_config" {
+        let ident = meta_list.path.get_ident().unwrap();
+        if ident == "oro_config" || ident == "arg" || ident == "clap" {
             if let Some(syn::NestedMeta::Meta(syn::Meta::Path(p))) = meta_list.nested.first() {
-                return p.get_ident().unwrap() == "ignore";
+                let ident = p.get_ident().unwrap();
+                return ident == "ignore" || ident == "skip";
             }
         }
     }
