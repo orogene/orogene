@@ -38,12 +38,28 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
+          target: wasm32-unknown-unknown
           components: clippy
           override: true
       - name: Clippy
         run: cargo clippy --all -- -D warnings
       - name: Run tests
         run: cargo test --all --verbose
+
+  build_wasm:
+    name: Build Wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          override: true
+      - name: Check node-maintainer builds on wasm32
+        run: cargo build -p node-maintainer --target wasm32-unknown-unknown
 
   # TODO: Re-enable someday. For now, mio is making this test fail, and it's
   # not even mio's fault.
