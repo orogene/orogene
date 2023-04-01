@@ -33,7 +33,7 @@ use url::Url;
 
 use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
-use crate::{Graph, IntoKdl, Lockfile, LockfileNode, Node};
+use crate::{graph::Graph, IntoKdl, Lockfile, LockfileNode, Node};
 
 const DEFAULT_CONCURRENCY: usize = 50;
 #[allow(dead_code)]
@@ -71,10 +71,12 @@ pub struct NodeMaintainerOptions {
 }
 
 impl NodeMaintainerOptions {
+    /// Create a new builder for NodeMaintainer.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Configure the cache location that NodeMaintainer will use.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.nassun_opts = self.nassun_opts.cache(PathBuf::from(cache.as_ref()));
@@ -82,33 +84,51 @@ impl NodeMaintainerOptions {
         self
     }
 
+    /// Controls number of concurrent operations during various restore steps
+    /// (resolution fetches, extractions, etc). Tuning this might help reduce
+    /// memory usage.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
         self
     }
 
+    /// Configure the KDL lockfile that NodeMaintainer will use.
+    ///
+    /// If this option is not specified, NodeMaintainer will try to read the
+    /// lockfile from `<root>/package-lock.kdl`.
     pub fn kdl_lock(mut self, kdl_lock: impl IntoKdl) -> Result<Self, NodeMaintainerError> {
         let lock = Lockfile::from_kdl(kdl_lock)?;
         self.kdl_lock = Some(lock);
         Ok(self)
     }
 
+    /// Configure the NPM lockfile that NodeMaintainer will use.
+    ///
+    /// If this option is not specified, NodeMaintainer will try to read the
+    /// lockfile from `<root>/package-lock.json`.
     pub fn npm_lock(mut self, npm_lock: impl AsRef<str>) -> Result<Self, NodeMaintainerError> {
         let lock = Lockfile::from_npm(npm_lock)?;
         self.npm_lock = Some(lock);
         Ok(self)
     }
 
+    /// Registry used for unscoped packages.
+    ///
+    /// Defaults to https://registry.npmjs.org.
     pub fn registry(mut self, registry: Url) -> Self {
         self.nassun_opts = self.nassun_opts.registry(registry);
         self
     }
 
+    /// Registry to use for a given `@scope`. That is, what registry to use
+    /// when looking up a package like `@foo/pkg`. This option can be provided
+    /// multiple times.
     pub fn scope_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
         self.nassun_opts = self.nassun_opts.scope_registry(scope, registry);
         self
     }
 
+    /// Root directory of the project.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn root(mut self, path: impl AsRef<Path>) -> Self {
         self.nassun_opts = self.nassun_opts.base_dir(path.as_ref());
@@ -116,16 +136,18 @@ impl NodeMaintainerOptions {
         self
     }
 
+    /// Default dist-tag to use when resolving package versions.
     pub fn default_tag(mut self, tag: impl AsRef<str>) -> Self {
         self.nassun_opts = self.nassun_opts.default_tag(tag);
         self
     }
 
-    /// When extracting tarballs, prefer to copy files to their destination as
-    /// separate, standalone files instead of hard linking them. Full copies
-    /// will still happen when hard linking fails. Furthermore, on filesystems
-    /// that support Copy-on-Write (zfs, btrfs, APFS (macOS), etc), this
-    /// option will use that feature for all copies.
+    /// When extracting packages, prefer to copy files files instead of
+    /// linking them.
+    ///
+    /// This option has no effect if hard linking fails (for example, if the
+    /// cache is on a different drive), or if the project is on a filesystem
+    /// that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn prefer_copy(mut self, prefer_copy: bool) -> Self {
         self.prefer_copy = prefer_copy;
@@ -242,6 +264,7 @@ impl NodeMaintainerOptions {
         Ok(None)
     }
 
+    /// Resolves a [`NodeMaintainer`] using an existing [`CorgiManifest`].
     pub async fn resolve_manifest(
         self,
         root: CorgiManifest,
@@ -273,6 +296,8 @@ impl NodeMaintainerOptions {
         Ok(nm)
     }
 
+    /// Resolves a [`NodeMaintainer`] using a particular package spec (for
+    /// example, `foo@1.2.3` or `./root`) as its "root" package.
     pub async fn resolve_spec(
         self,
         root_spec: impl AsRef<str>,
@@ -335,6 +360,7 @@ struct NodeDependency {
     node_idx: NodeIndex,
 }
 
+/// Resolves and manages `node_modules` for a given project.
 pub struct NodeMaintainer {
     nassun: Nassun,
     pub(crate) graph: Graph,
@@ -361,10 +387,13 @@ pub struct NodeMaintainer {
 }
 
 impl NodeMaintainer {
+    /// Create a new [`NodeMaintainerOptions`] builder to use toconfigure a
+    /// [`NodeMaintainer`].
     pub fn builder() -> NodeMaintainerOptions {
         NodeMaintainerOptions::new()
     }
 
+    /// Resolves a [`NodeMaintainer`] using an existing [`CorgiManifest`].
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn resolve_manifest(
         root: CorgiManifest,
@@ -372,6 +401,8 @@ impl NodeMaintainer {
         Self::builder().resolve_manifest(root).await
     }
 
+    /// Resolves a [`NodeMaintainer`] using a particular package spec (for
+    /// example, `foo@1.2.3` or `./root`) as its "root" package.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn resolve_spec(
         root_spec: impl AsRef<str>,
@@ -379,40 +410,38 @@ impl NodeMaintainer {
         Self::builder().resolve_spec(root_spec).await
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub async fn render_to_file(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(path.as_ref(), self.graph.render()).await?;
-        Ok(())
-    }
-
+    /// Writes the contents of a `package-lock.kdl` file to the file path.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
         fs::write(path.as_ref(), self.graph.to_kdl()?.to_string()).await?;
         Ok(())
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    /// Returns a [`crate::Lockfile`] representation of the current resolved graph.
     pub fn to_lockfile(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
         self.graph.to_lockfile()
     }
 
+    /// Returns a [`kdl::KdlDocument`] representation of the current resolved graph.
     pub fn to_kdl(&self) -> Result<kdl::KdlDocument, NodeMaintainerError> {
         self.graph.to_kdl()
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn render(&self) -> String {
-        self.graph.render()
-    }
-
+    /// Returns a [`Package`] for the given package spec, if it is present in
+    /// the dependency tree. The path should be relative to the root of the
+    /// project, and can optionally start with `"node_modules/"`.
     pub fn package_at_path(&self, path: &Path) -> Option<Package> {
         self.graph.package_at_path(path)
     }
 
+    /// Number of unique packages in the dependency tree.
     pub fn package_count(&self) -> usize {
         self.graph.inner.node_count()
     }
 
+    /// Scans the `node_modules` directory and removes any extraneous files or
+    /// directories, including previously-installed packages that are no
+    /// longer valid.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn prune(&self) -> Result<usize, NodeMaintainerError> {
         use walkdir::WalkDir;
@@ -565,6 +594,10 @@ impl NodeMaintainer {
         Ok(extraneous_packages)
     }
 
+    /// Extracts the `node_modules/` directory to the project root,
+    /// downloading packages as needed. Whether this method creates files or
+    /// hard links depends on the current filesystem and the `cache` and
+    /// `prefer_copy` options.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn extract(&self) -> Result<usize, NodeMaintainerError> {
         tracing::debug!("Extracting node_modules/...");
@@ -642,6 +675,9 @@ impl NodeMaintainer {
         Ok(actually_extracted)
     }
 
+    /// Links package binaries to their corresponding `node_modules/.bin`
+    /// directories. On Windows, this will create `.cmd`, `.ps1`, and `sh`
+    /// shims instead of link directly to the bins.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn link_bins(&self) -> Result<usize, NodeMaintainerError> {
         use walkdir::WalkDir;
@@ -736,6 +772,8 @@ impl NodeMaintainer {
         Ok(linked)
     }
 
+    /// Runs the `preinstall`, `install`, and `postinstall` lifecycle scripts,
+    /// as well as linking the package bins as needed.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn rebuild(&self, ignore_scripts: bool) -> Result<(), NodeMaintainerError> {
         tracing::debug!("Running lifecycle scripts...");
@@ -755,6 +793,8 @@ impl NodeMaintainer {
         Ok(())
     }
 
+    /// Concurrently executes the lifecycle scripts for the given event across
+    /// all packages in the graph.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn run_scripts(&self, event: impl AsRef<str>) -> Result<(), NodeMaintainerError> {
         async fn inner(me: &NodeMaintainer, event: &str) -> Result<(), NodeMaintainerError> {

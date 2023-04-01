@@ -7,7 +7,6 @@ pub use nassun::{NassunError, NassunOpts};
 
 pub use edge::*;
 pub use error::*;
-pub use graph::*;
 pub use into_kdl::IntoKdl;
 pub use lockfile::*;
 pub use maintainer::*;

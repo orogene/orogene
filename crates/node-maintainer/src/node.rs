@@ -5,7 +5,7 @@ use oro_common::CorgiManifest;
 use petgraph::stable_graph::{EdgeIndex, NodeIndex};
 use unicase::UniCase;
 
-use crate::Graph;
+use crate::graph::Graph;
 
 #[derive(Debug, Clone)]
 pub struct Node {

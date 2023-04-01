@@ -7,10 +7,7 @@ use std::{
 
 use kdl::KdlDocument;
 use nassun::{package::Package, PackageResolution};
-use petgraph::{
-    dot::Dot,
-    stable_graph::{EdgeIndex, NodeIndex, StableGraph},
-};
+use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
 use unicase::UniCase;
 
 use crate::{error::NodeMaintainerError, DepType, Edge, Lockfile, LockfileNode, Node};
@@ -31,7 +28,7 @@ pub(crate) struct DemotionTarget {
 }
 
 #[derive(Debug, Default)]
-pub struct Graph {
+pub(crate) struct Graph {
     pub(crate) root: NodeIndex,
     pub(crate) inner: StableGraph<Node, Edge>,
 }
@@ -108,40 +105,6 @@ impl Graph {
 
     pub fn to_kdl(&self) -> Result<KdlDocument, NodeMaintainerError> {
         Ok(self.to_lockfile()?.to_kdl())
-    }
-
-    pub fn render(&self) -> String {
-        format!(
-            "{:?}",
-            Dot::new(&self.inner.map(
-                |_, mut node| {
-                    let resolved = node.package.resolved();
-                    let mut label = node.package.name().to_string();
-                    while let Some(node_idx) = &node.parent {
-                        node = &self.inner[*node_idx];
-                        let name = node.package.name();
-                        label = format!("{name}/node_modules/{label}");
-                    }
-                    format!("{resolved:?} @ {label}")
-                },
-                |_, edge| { format!("{}", edge.requested) }
-            ))
-        )
-    }
-
-    pub fn render_tree(&self) -> String {
-        let mut res = Vec::new();
-        res.push("digraph {".into());
-        for node in self.inner.node_weights() {
-            let label = format!("{:?} @ {}", node.package.resolved(), node.package.name());
-            res.push(format!("  {} [label={:?}]", node.idx.index(), label));
-
-            if let Some(parent) = node.parent {
-                res.push(format!("  {} -> {}", parent.index(), node.idx.index()));
-            }
-        }
-        res.push("}".into());
-        res.join("\n")
     }
 
     pub(crate) fn node_parent_iter(&self, idx: NodeIndex) -> NodeParentIterator {

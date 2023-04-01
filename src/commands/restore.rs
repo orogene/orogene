@@ -15,17 +15,13 @@ use crate::commands::OroCommand;
 
 #[derive(Debug, Args, OroConfigLayer)]
 pub struct RestoreCmd {
-    /// Prefer copying files over hard linking them.
+    /// When extracting packages, prefer to copy files files instead of
+    /// linking them.
     ///
-    /// On filesystems that don't support copy-on-write/reflinks (usually NTFS
-    /// or ext4), orogene defaults to hard linking package files from a
-    /// centralized cache. As such, this can cause global effects if a file
-    /// inside a node_modules is modified, where other projects that have
-    /// installed that same file will see those modifications.
-    ///
-    /// In order to prevent this, you can use this flag to force orogene to
-    /// always copy files, at a performance cost.
-    #[arg(short, long)]
+    /// This option has no effect if hard linking fails (for example, if the
+    /// cache is on a different drive), or if the project is on a filesystem
+    /// that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).
+    #[arg(long)]
     prefer_copy: bool,
 
     /// Validate the integrity of installed files.
@@ -45,6 +41,16 @@ pub struct RestoreCmd {
     /// Skip running install scripts.
     #[arg(long)]
     ignore_scripts: bool,
+
+    /// Default dist-tag to use when resolving package versions.
+    #[arg(long)]
+    default_tag: Option<String>,
+
+    /// Controls number of concurrent operations during various restore steps
+    /// (resolution fetches, extractions, etc). Tuning this might help reduce
+    /// memory usage.
+    #[arg(long)]
+    concurrency: Option<usize>,
 
     #[arg(from_global)]
     registry: Option<Url>,
@@ -115,6 +121,12 @@ impl OroCommand for RestoreCmd {
         }
         if let Some(cache) = self.cache.as_deref() {
             nm = nm.cache(cache);
+        }
+        if let Some(tag) = self.default_tag.as_deref() {
+            nm = nm.default_tag(tag);
+        }
+        if let Some(concurrency) = self.concurrency {
+            nm = nm.concurrency(concurrency);
         }
 
         let resolved_nm = self.resolve(&emoji, root, nm).await?;
