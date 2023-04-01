@@ -154,17 +154,31 @@ impl Graph {
     pub(crate) fn node_at_path(&self, path: &Path) -> Option<&Node> {
         let mut current = Some(self.root);
         let mut in_nm = true;
+        let mut scope = None;
         let slash = OsStr::new("/");
         let backslash = OsStr::new("\\");
         let nm = UniCase::new("node_modules".to_owned());
         for raw_segment in path {
-            let segment = UniCase::new(raw_segment.to_string_lossy().into());
-            if segment == nm || slash == raw_segment || backslash == raw_segment {
+            let str_segment = raw_segment.to_string_lossy().to_string();
+            let segment = UniCase::new(str_segment.clone());
+            if (segment == nm && scope.is_none())
+                || slash == raw_segment
+                || backslash == raw_segment
+            {
                 in_nm = true;
                 continue;
             } else if let Some(curr_idx) = current {
                 if !in_nm {
                     break;
+                } else if segment.starts_with('@') {
+                    scope = Some(segment.to_string());
+                } else if let Some(curr_scope) = scope.as_deref() {
+                    let scoped_seg = UniCase::new(format!("{curr_scope}/{segment}"));
+                    if let Some(child) = self.inner[curr_idx].children.get(&scoped_seg) {
+                        current = Some(*child);
+                    }
+                    in_nm = false;
+                    scope = None;
                 } else if let Some(child) = self.inner[curr_idx].children.get(&segment) {
                     current = Some(*child);
                     in_nm = false;

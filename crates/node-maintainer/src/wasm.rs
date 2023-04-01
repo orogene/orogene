@@ -1,10 +1,13 @@
 use std::{collections::HashMap, path::Path};
 
+use futures::{StreamExt, TryStreamExt};
+use js_sys::Promise;
 use miette::Diagnostic;
 use nassun::Package;
 use serde::Deserialize;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
 
 use crate::error::NodeMaintainerError;
 
@@ -159,6 +162,42 @@ impl NodeMaintainer {
         self.inner
             .package_at_path(Path::new(path))
             .map(Package::from_core_package)
+    }
+
+    /// Concurrently over all packages in the tree, calling `f` on each.
+    #[wasm_bindgen(js_name = "forEachPackage")]
+    pub async fn for_each_package(&self, f: &js_sys::Function) -> std::result::Result<(), JsValue> {
+        futures::stream::iter(self.inner.graph.inner.node_indices())
+            .map(Ok)
+            .try_for_each_concurrent(10, move |idx| async move {
+                if idx == self.inner.graph.root {
+                    return Ok(());
+                }
+
+                let node = &self.inner.graph.inner[idx];
+                let pkg = &node.package;
+                let path = self
+                    .inner
+                    .graph
+                    .node_path(idx)
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join("/node_modules/");
+                let promise: Option<Promise> = f
+                    .call2(
+                        &JsValue::NULL,
+                        &Package::from_core_package(pkg.clone()).into(),
+                        &(&path).into(),
+                    )?
+                    .dyn_into()
+                    .ok();
+                if let Some(promise) = promise {
+                    JsFuture::from(promise).await?;
+                }
+                Ok::<_, JsValue>(())
+            })
+            .await
     }
 }
 
