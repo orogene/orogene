@@ -1,5 +1,22 @@
 # Orogene Release Changelog
 
+<a name="0.3.16"></a>
+## 0.3.16 (2023-04-01)
+
+### Bug Fixes
+
+* **deps:** bump deps/miette/etc ([b987939e](https://github.com/orogene/orogene/commit/b987939ea78902bf63f14f8d6dbd109d20872d35))
+* **node-maintainer:** improve api docs and remove some undesirable APIs in node-maintainer ([2dea36c0](https://github.com/orogene/orogene/commit/2dea36c05eeacd5467108e7b7d6ae629723188a0))
+* **docs:** update CLI docs ([bd0d7fda](https://github.com/orogene/orogene/commit/bd0d7fda76a52d77d994c628fecd8b14c515448b))
+* **ci:** add rust-versions and re-enable minimal version checks ([b509cc20](https://github.com/orogene/orogene/commit/b509cc2042884ac373f57d25705a615772ded3d8))
+
+### Features
+
+* **wasm:** more wasm fixes + expose iteration functionality (#218) ([03dce2e9](https://github.com/orogene/orogene/commit/03dce2e92a7f05dd0e0700286f343a9b14e718d7))
+* **restore:** allow configuring script concurrency and whether to write lockfiles ([a681e64a](https://github.com/orogene/orogene/commit/a681e64a6cb8d38a9e7396b7f5ec5cc4326906dc))
+* **config:** have OroLayerConfig obey `#[arg(skip)]` ([fc5f53ae](https://github.com/orogene/orogene/commit/fc5f53ae7eed8f78dd08dfb77f4833d97d92612d))
+
+
 <a name="0.3.15"></a>
 ## 0.3.15 (2023-03-31)
 
