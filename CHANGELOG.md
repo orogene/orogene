@@ -1,5 +1,18 @@
 # Orogene Release Changelog
 
+<a name="0.3.17"></a>
+## 0.3.17 (2023-04-03)
+
+### Bug Fixes
+
+* **log:** go back to not displaying targets for terminal logs ([5cb06a75](https://github.com/orogene/orogene/commit/5cb06a75613c670fd1bc05bc8226a3223de5fdb7))
+
+### Features
+
+* **config:** add support for `--no-<conf>` and overhaul config fallbacks ([868a42b5](https://github.com/orogene/orogene/commit/868a42b5bb30654b150f3b2dfec3438c8db8b301))
+* **config:** config files are now kdl-based ([09e81bd9](https://github.com/orogene/orogene/commit/09e81bd9260b79f1e7a1d94aef4766d29f0f5582))
+
+
 <a name="0.3.16"></a>
 ## 0.3.16 (2023-04-01)
 
