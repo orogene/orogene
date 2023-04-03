@@ -196,12 +196,14 @@ impl Orogene {
                     .with(
                         tracing_subscriber::fmt::layer()
                             .without_time()
+                            .with_target(false)
                             .with_filter(filter),
                     )
                     .with(
                         fmt::layer()
                             .with_timer(tracing_subscriber::fmt::time::uptime())
                             .with_writer(non_blocking)
+                            .with_target(false)
                             .with_filter(targets),
                     )
                     .init();
@@ -211,6 +213,7 @@ impl Orogene {
                         tracing_subscriber::fmt::layer()
                             .without_time()
                             .with_writer(ilayer.get_stderr_writer())
+                            .with_target(false)
                             .with_filter(filter),
                     )
                     .with(ilayer.with_filter(LevelFilter::DEBUG))
@@ -218,6 +221,7 @@ impl Orogene {
                         fmt::layer()
                             .with_timer(tracing_subscriber::fmt::time::uptime())
                             .with_writer(non_blocking)
+                            .with_target(false)
                             .with_filter(targets),
                     )
                     .init();
