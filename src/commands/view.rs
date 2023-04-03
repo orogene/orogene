@@ -7,20 +7,19 @@ use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
 use nassun::NassunOpts;
 use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
-use oro_config::OroConfigLayer;
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 use url::Url;
 
 use crate::commands::OroCommand;
 
-#[derive(Debug, Args, OroConfigLayer)]
+#[derive(Debug, Args)]
 pub struct ViewCmd {
     /// Package spec to look up.
     #[arg()]
     pkg: String,
 
     #[arg(from_global)]
-    registry: Option<Url>,
+    registry: Url,
 
     #[arg(from_global)]
     root: Option<PathBuf>,
@@ -35,14 +34,11 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let mut nassun_opts = NassunOpts::new();
-        if let Some(registry) = self.registry {
-            nassun_opts = nassun_opts.registry(registry);
-        }
+        let mut nassun_opts = NassunOpts::new().registry(self.registry);
         if let Some(root) = self.root {
             nassun_opts = nassun_opts.base_dir(root);
         }
-        if let Some(cache) = self.cache {
+        if let Some(cache) = dbg!(self.cache) {
             nassun_opts = nassun_opts.cache(cache);
         }
         let pkg = nassun_opts.build().resolve(&self.pkg).await?;

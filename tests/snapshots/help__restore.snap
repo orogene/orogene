@@ -7,7 +7,7 @@ stderr:
 stdout:
 # oro restore
 
-Resolves and extracts a node_modules/ tree
+Resolves and extracts a `node_modules/` tree
 
 ### Usage:
 
@@ -41,17 +41,23 @@ Skip running install scripts
 
 Default dist-tag to use when resolving package versions
 
+\[default: latest]
+
 #### `--concurrency <CONCURRENCY>`
 
 Controls number of concurrent operations during various restore steps (resolution fetches, extractions, etc).
 
 Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).
 
+\[default: 50]
+
 #### `--script-concurrency <SCRIPT_CONCURRENCY>`
 
 Controls number of concurrent script executions while running `run_script`.
 
 This option is separate from `concurrency` because executing concurrent scripts is a much heavier operation.
+
+\[default: 6]
 
 #### `--no-lockfile`
 
@@ -69,13 +75,17 @@ Print version
 
 #### `--root <ROOT>`
 
-Package path to operate on
+Path to the project to operate on.
+
+By default, Orogene will look up from the current working directory until it finds a directory with a `package.json` file or a `node_modules/` directory.
+
+\[default: .]
 
 #### `--registry <REGISTRY>`
 
-Registry used for unscoped packages.
+Registry used for unscoped packages
 
-Defaults to https://registry.npmjs.org.
+\[default: https://registry.npmjs.org]
 
 #### `--cache <CACHE>`
 
@@ -95,6 +105,8 @@ Log output level/directive.
 
 Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format `target[span{field=value}]=level`.
 
+\[default: info]
+
 #### `-q, --quiet`
 
 Disable all output
@@ -103,12 +115,14 @@ Disable all output
 
 Format output as JSON
 
-#### `--no-progress`
+#### `--progress`
 
-Disable progress bar display
+Whether to display a progress bar for long operations. Use `--no-progress` to disable
 
-#### `--no-emoji`
+#### `--emoji`
 
-Disables all emoji usage
+Whether to display emoji. Use `--no-emoji` to disable.
+
+By default, this will show emoji when outputting to a TTY that supports unicode.
 
 

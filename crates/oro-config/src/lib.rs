@@ -1,18 +1,72 @@
 //! Configuration loader for Orogene config files.
 
-use std::path::PathBuf;
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf, ffi::OsString,
+};
 
-pub use clap::ArgMatches;
+pub use clap::{ArgMatches, Command};
 pub use config::Config as OroConfig;
 use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File};
 use miette::{Diagnostic, Result};
 use thiserror::Error;
 
-pub use oro_config_derive::*;
+pub trait OroConfigLayerExt {
+    fn with_negations(self) -> Self;
+    fn layered_matches(self, config: &OroConfig) -> Result<ArgMatches>;
+}
 
-pub trait OroConfigLayer {
-    fn layer_config(&mut self, _matches: &ArgMatches, _config: &OroConfig) -> Result<()> {
-        Ok(())
+impl OroConfigLayerExt for Command {
+    fn with_negations(self) -> Self {
+        let negated = self
+            .get_arguments()
+            .filter(|opt| opt.get_long().is_some())
+            .map(|opt| format!("no-{}", opt.get_long().expect("long option")))
+            .collect::<Vec<_>>();
+        let negations = self
+            .get_arguments()
+            .filter(|opt| opt.get_long().is_some())
+            .zip(negated)
+            .map(|(opt, negated)| {
+                clap::Arg::new(negated.clone())
+                    .long(negated)
+                    .global(opt.is_global_set())
+                    .hide(true)
+                    .action(clap::ArgAction::SetTrue)
+                    .overrides_with(opt.get_id())
+            })
+            .collect::<Vec<_>>();
+        // Add the negations
+        self.args(negations)
+    }
+
+    fn layered_matches(mut self, config: &OroConfig) -> Result<ArgMatches> {
+        // Add the negations
+        self = self.with_negations();
+        let mut short_opts = HashMap::new();
+        let mut long_opts = HashSet::new();
+        for opt in self.get_arguments() {
+            if let Some(short) = opt.get_short() {
+                short_opts.insert(short, (*opt).clone());
+            }
+            if let Some(long) = opt.get_long() {
+                long_opts.insert(long.to_string());
+            }
+        }
+        let mut args = std::env::args_os().collect::<Vec<_>>();
+        let matches = self.clone().get_matches_from(&args);
+        for opt in long_opts {
+            if matches.value_source(&opt) != Some(clap::parser::ValueSource::CommandLine) {
+                if let Ok(value) = config.get_string(&opt) {
+                    if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                        args.push(OsString::from(format!("--{}", opt)));
+                        args.push(OsString::from(value));
+                    }
+                }
+            }
+        }
+        // Check for missing flags and inject config options into
+        Ok(self.get_matches_from(args))
     }
 }
 

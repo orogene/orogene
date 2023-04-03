@@ -11,9 +11,7 @@ readme = "README.md"
 rust-version = "1.67.1"
 
 [dependencies]
-oro-config-derive = { version = "=0.3.16", path = "../oro-config-derive" }
-
-clap = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["string"] }
 config = { workspace = true, features = ["toml"] }
 miette = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

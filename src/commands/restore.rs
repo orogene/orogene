@@ -5,7 +5,6 @@ use clap::Args;
 use indicatif::ProgressStyle;
 use miette::{IntoDiagnostic, Result};
 use node_maintainer::{NodeMaintainer, NodeMaintainerOptions};
-use oro_config::OroConfigLayer;
 use rand::seq::IteratorRandom;
 use tracing::{Instrument, Span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -13,7 +12,7 @@ use url::Url;
 
 use crate::commands::OroCommand;
 
-#[derive(Debug, Args, OroConfigLayer)]
+#[derive(Debug, Args)]
 pub struct RestoreCmd {
     /// When extracting packages, prefer to copy files files instead of
     /// linking them.
@@ -43,53 +42,50 @@ pub struct RestoreCmd {
     ignore_scripts: bool,
 
     /// Default dist-tag to use when resolving package versions.
-    #[arg(long)]
-    default_tag: Option<String>,
+    #[arg(long, default_value = "latest")]
+    default_tag: String,
 
     /// Controls number of concurrent operations during various restore steps
     /// (resolution fetches, extractions, etc).
     ///
     /// Tuning this might help reduce memory usage (if lowered), or improve
     /// performance (if increased).
-    #[arg(long)]
-    concurrency: Option<usize>,
+    #[arg(long, default_value_t = node_maintainer::DEFAULT_CONCURRENCY)]
+    concurrency: usize,
 
     /// Controls number of concurrent script executions while running
     /// `run_script`.
     ///
     /// This option is separate from `concurrency` because executing
     /// concurrent scripts is a much heavier operation.
-    #[arg(long)]
-    script_concurrency: Option<usize>,
+    #[arg(long, default_value_t = node_maintainer::DEFAULT_SCRIPT_CONCURRENCY)]
+    script_concurrency: usize,
 
     /// Skip writing the lockfile.
     #[arg(long)]
     no_lockfile: bool,
 
     #[arg(from_global)]
-    registry: Option<Url>,
+    registry: Url,
 
     #[arg(from_global)]
     json: bool,
 
     #[arg(from_global)]
-    root: Option<PathBuf>,
+    root: PathBuf,
 
     #[arg(from_global)]
     cache: Option<PathBuf>,
 
     #[arg(from_global)]
-    no_emoji: bool,
+    emoji: bool,
 }
 
 #[async_trait]
 impl OroCommand for RestoreCmd {
     async fn execute(self) -> Result<()> {
         let total_time = std::time::Instant::now();
-        let root = self
-            .root
-            .as_deref()
-            .expect("root should've been set by global defaults");
+        let root = &self.root;
         let maintainer = self.resolve(root, self.configured_maintainer()).await?;
 
         if !self.lockfile_only {
@@ -126,12 +122,13 @@ impl OroCommand for RestoreCmd {
 
 impl RestoreCmd {
     fn configured_maintainer(&self) -> NodeMaintainerOptions {
-        let root = self
-            .root
-            .as_deref()
-            .expect("root should've been set by global defaults");
+        let root = &self.root;
         let mut nm = NodeMaintainerOptions::new();
         nm = nm
+            .registry(self.registry.clone())
+            .default_tag(&self.default_tag)
+            .concurrency(self.concurrency)
+            .script_concurrency(self.script_concurrency)
             .root(root)
             .prefer_copy(self.prefer_copy)
             .validate(self.validate)
@@ -169,20 +166,9 @@ impl RestoreCmd {
                 span.pb_inc(1);
                 span.pb_set_message(line);
             });
-        if let Some(registry) = self.registry.as_ref() {
-            nm = nm.registry(registry.clone());
-        }
+
         if let Some(cache) = self.cache.as_deref() {
             nm = nm.cache(cache);
-        }
-        if let Some(tag) = self.default_tag.as_deref() {
-            nm = nm.default_tag(tag);
-        }
-        if let Some(concurrency) = self.concurrency {
-            nm = nm.concurrency(concurrency);
-        }
-        if let Some(script_concurrency) = self.script_concurrency {
-            nm = nm.script_concurrency(script_concurrency);
         }
 
         nm
@@ -333,10 +319,10 @@ impl RestoreCmd {
     }
 
     fn maybe_emoji(&self, emoji: &'static str) -> &'static str {
-        if self.no_emoji {
-            ""
-        } else {
+        if self.emoji {
             emoji
+        } else {
+            ""
         }
     }
 }

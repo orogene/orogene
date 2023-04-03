@@ -4,16 +4,15 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_client::{self, OroClient};
-use oro_config::OroConfigLayer;
 use serde_json::Value;
 use url::Url;
 
 use crate::commands::OroCommand;
 
-#[derive(Debug, Args, OroConfigLayer)]
+#[derive(Debug, Args)]
 pub struct PingCmd {
     #[arg(from_global)]
-    registry: Option<Url>,
+    registry: Url,
 
     #[arg(from_global)]
     json: bool,
@@ -23,9 +22,7 @@ pub struct PingCmd {
 impl OroCommand for PingCmd {
     async fn execute(self) -> Result<()> {
         let start = Instant::now();
-        let registry = self
-            .registry
-            .expect("Registry should've already been defaulted");
+        let registry = self.registry;
         tracing::info!("ping: {registry}");
         let client = OroClient::new(registry.clone());
         let payload = client.ping().await?;

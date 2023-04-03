@@ -38,10 +38,10 @@
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
-use clap::{ArgMatches, Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
+use clap::{Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
-use oro_config::{OroConfig, OroConfigLayer, OroConfigOptions};
+use oro_config::{OroConfig, OroConfigLayerExt, OroConfigOptions};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{
@@ -52,7 +52,7 @@ use tracing_subscriber::{
 };
 use url::Url;
 
-use commands::{ping::PingCmd, restore::RestoreCmd, view::ViewCmd, OroCommand};
+use commands::OroCommand;
 
 mod commands;
 
@@ -62,16 +62,29 @@ const MAX_RETAINED_LOGS: usize = 5;
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Orogene {
-    /// Package path to operate on.
-    #[arg(help_heading = "Global Options", global = true, long)]
-    root: Option<PathBuf>,
-
-    #[allow(rustdoc::bare_urls)]
-    /// Registry used for unscoped packages.
+    /// Path to the project to operate on.
     ///
-    /// Defaults to https://registry.npmjs.org.
-    #[arg(help_heading = "Global Options", global = true, long)]
-    registry: Option<Url>,
+    /// By default, Orogene will look up from the current working directory
+    /// until it finds a directory with a `package.json` file or a
+    /// `node_modules/` directory.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        // NB(zkat): this is actually a dummy value. The real root default is
+        // handled by the config system, and is a special case.
+        default_value = "."
+    )]
+    root: PathBuf,
+
+    /// Registry used for unscoped packages.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value = "https://registry.npmjs.org"
+    )]
+    registry: Url,
 
     /// Location of disk cache.
     ///
@@ -91,8 +104,13 @@ pub struct Orogene {
     /// Supports plain loglevels (off, error, warn, info, debug, trace) as
     /// well as more advanced directives in the format
     /// `target[span{field=value}]=level`.
-    #[arg(help_heading = "Global Options", global = true, long)]
-    loglevel: Option<String>,
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value = "info"
+    )]
+    loglevel: String,
 
     /// Disable all output.
     #[arg(help_heading = "Global Options", global = true, long, short)]
@@ -102,13 +120,22 @@ pub struct Orogene {
     #[arg(help_heading = "Global Options", global = true, long)]
     json: bool,
 
-    /// Disable progress bar display.
-    #[arg(help_heading = "Global Options", global = true, long)]
-    no_progress: bool,
+    /// Whether to display a progress bar for long operations. Use
+    /// `--no-progress` to disable.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = true
+    )]
+    progress: bool,
 
-    /// Disables all emoji usage.
-    #[arg(help_heading = "Global Options", global = true, long)]
-    no_emoji: bool,
+    /// Whether to display emoji. Use `--no-emoji` to disable.
+    ///
+    /// By default, this will show emoji when outputting to a TTY that
+    /// supports unicode.
+    #[arg(help_heading = "Global Options", global = true, long, default_value_t = supports_unicode::on(supports_unicode::Stream::Stderr))]
+    emoji: bool,
 
     #[command(subcommand)]
     subcommand: OroCmd,
@@ -122,7 +149,7 @@ impl Orogene {
                 .with_default_directive(LevelFilter::OFF.into())
                 .from_env_lossy()
         } else {
-            let dir_str = self.loglevel.clone().unwrap_or_else(|| "info".to_owned());
+            let dir_str = self.loglevel.clone();
             let directives = dir_str
                 .split(',')
                 .filter(|s| !s.is_empty())
@@ -164,12 +191,11 @@ impl Orogene {
             );
             let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
-            if self.quiet || self.no_progress {
+            if self.quiet || !self.progress {
                 builder
                     .with(
                         tracing_subscriber::fmt::layer()
                             .without_time()
-                            .with_target(false)
                             .with_filter(filter),
                     )
                     .with(
@@ -184,7 +210,6 @@ impl Orogene {
                     .with(
                         tracing_subscriber::fmt::layer()
                             .without_time()
-                            .with_target(false)
                             .with_writer(ilayer.get_stderr_writer())
                             .with_filter(filter),
                     )
@@ -200,7 +225,7 @@ impl Orogene {
 
             Ok(Some(guard))
         } else {
-            if self.quiet || self.no_progress {
+            if self.quiet || !self.progress {
                 builder
                     .with(
                         tracing_subscriber::fmt::layer()
@@ -234,17 +259,8 @@ impl Orogene {
             &cwd
         };
 
-        let mut cfg_builder = OroConfigOptions::new()
-            .set_default("registry", "https://registry.npmjs.org")?
-            .set_default("loglevel", "info")?
-            .set_default(
-                "no_emoji",
-                &format!(
-                    "{}",
-                    !supports_unicode::on(supports_unicode::Stream::Stderr)
-                ),
-            )?
-            .set_default("root", &root.to_string_lossy())?;
+        let mut cfg_builder =
+            OroConfigOptions::new().set_default("root", &root.to_string_lossy())?;
         if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
             cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy())?;
         }
@@ -254,7 +270,7 @@ impl Orogene {
         } else {
             cfg_builder
                 .global_config_file(dirs.map(|d| d.config_dir().to_owned().join("ororc.toml")))
-                .pkg_root(self.root.clone().or(Some(PathBuf::from(root))))
+                .pkg_root(Some(self.root.clone()))
                 .load()?
         };
 
@@ -263,10 +279,15 @@ impl Orogene {
 
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
-        let matches = Orogene::command().get_matches();
-        let mut oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
+        // We have to instantiate Orogene twice: once to pick up "base" config
+        // options, like `root` and `config`, which affect our overall config
+        // parsing, and then a second time to pick up config options from the
+        // config file(s).
+        let matches = Orogene::command().with_negations().get_matches();
+        let oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
         let config = oro.build_config()?;
-        oro.layer_config(&matches, &config)?;
+        let oro = Orogene::from_arg_matches(&Orogene::command().layered_matches(&config)?)
+            .into_diagnostic()?;
         let log_file = oro
             .cache
             .clone()
@@ -338,13 +359,15 @@ fn log_command_line() {
 #[derive(Debug, Subcommand)]
 pub enum OroCmd {
     /// Ping the registry.
-    Ping(PingCmd),
+    Ping(commands::ping::PingCmd),
 
-    /// Resolves and extracts a node_modules/ tree.
-    Restore(RestoreCmd),
+    /// Resolves and extracts a `node_modules/` tree.
+    #[clap(visible_aliases(["r", "res"]))]
+    Restore(commands::restore::RestoreCmd),
 
     /// Get information about a package.
-    View(ViewCmd),
+    #[clap(visible_aliases(["v", "info"]))]
+    View(commands::view::ViewCmd),
 
     #[clap(hide = true)]
     HelpMarkdown(HelpMarkdownCmd),
@@ -363,26 +386,7 @@ impl OroCommand for Orogene {
     }
 }
 
-impl OroConfigLayer for Orogene {
-    fn layer_config(&mut self, args: &ArgMatches, conf: &OroConfig) -> Result<()> {
-        match self.subcommand {
-            OroCmd::Ping(ref mut cmd) => {
-                cmd.layer_config(args.subcommand_matches("ping").unwrap(), conf)
-            }
-            OroCmd::Restore(ref mut cmd) => {
-                cmd.layer_config(args.subcommand_matches("restore").unwrap(), conf)
-            }
-            OroCmd::View(ref mut cmd) => {
-                cmd.layer_config(args.subcommand_matches("view").unwrap(), conf)
-            }
-            OroCmd::HelpMarkdown(ref mut cmd) => {
-                cmd.layer_config(args.subcommand_matches("help-markdown").unwrap(), conf)
-            }
-        }
-    }
-}
-
-#[derive(Debug, Args, OroConfigLayer)]
+#[derive(Debug, Args)]
 pub struct HelpMarkdownCmd {
     #[arg()]
     command_name: String,
@@ -442,7 +446,7 @@ impl OroCommand for HelpMarkdownCmd {
                 }
 
                 if line.starts_with('[') {
-                    println!("\\{line}  ");
+                    println!("\\{line}");
                     continue;
                 }
 
