@@ -269,7 +269,7 @@ impl Orogene {
             cfg_builder.global_config_file(Some(file.clone())).load()?
         } else {
             cfg_builder
-                .global_config_file(dirs.map(|d| d.config_dir().to_owned().join("ororc.toml")))
+                .global_config_file(dirs.map(|d| d.config_dir().to_owned().join("oro.kdl")))
                 .pkg_root(Some(self.root.clone()))
                 .load()?
         };

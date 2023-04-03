@@ -12,7 +12,8 @@ rust-version = "1.67.1"
 
 [dependencies]
 clap = { workspace = true, features = ["string"] }
-config = { workspace = true, features = ["toml"] }
+config = { workspace = true, default-features = false }
+kdl = { workspace = true }
 miette = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }

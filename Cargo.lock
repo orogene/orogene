@@ -2147,6 +2147,7 @@ version = "0.3.16"
 dependencies = [
  "clap",
  "config",
+ "kdl",
  "miette",
  "pretty_assertions",
  "serde",

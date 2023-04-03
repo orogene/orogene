@@ -2,14 +2,20 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf, ffi::OsString,
+    ffi::OsString,
+    path::PathBuf,
 };
 
 pub use clap::{ArgMatches, Command};
 pub use config::Config as OroConfig;
-use config::{builder::DefaultState, ConfigBuilder, ConfigError, Environment, File};
-use miette::{Diagnostic, Result};
-use thiserror::Error;
+use config::{builder::DefaultState, ConfigBuilder, Environment, File};
+use kdl_source::KdlFormat;
+use miette::Result;
+
+use error::OroConfigError;
+
+mod error;
+mod kdl_source;
 
 pub trait OroConfigLayerExt {
     fn with_negations(self) -> Self;
@@ -70,17 +76,6 @@ impl OroConfigLayerExt for Command {
     }
 }
 
-#[derive(Debug, Error, Diagnostic)]
-pub enum OroConfigError {
-    #[error(transparent)]
-    #[diagnostic(code(config::error))]
-    ConfigError(#[from] ConfigError),
-
-    #[error(transparent)]
-    #[diagnostic(code(config::error))]
-    ConfigParseError(#[from] Box<dyn std::error::Error + Send + Sync>),
-}
-
 #[derive(Debug, Clone)]
 pub struct OroConfigOptions {
     builder: ConfigBuilder<DefaultState>,
@@ -137,27 +132,16 @@ impl OroConfigOptions {
         if self.global {
             if let Some(config_file) = self.global_config_file {
                 let path = config_file.display().to_string();
-                builder = builder.add_source(File::with_name(&path[..]).required(false));
+                builder = builder.add_source(File::new(&path, KdlFormat).required(false));
             }
         }
         if self.env {
             builder = builder.add_source(Environment::with_prefix("oro_config"));
         }
         if let Some(root) = self.pkg_root {
-            builder = builder
-                .add_source(
-                    File::with_name(&root.join("ororc").display().to_string()).required(false),
-                )
-                .add_source(
-                    File::with_name(&root.join(".ororc").display().to_string()).required(false),
-                )
-                .add_source(
-                    File::with_name(&root.join("ororc.toml").display().to_string()).required(false),
-                )
-                .add_source(
-                    File::with_name(&root.join(".ororc.toml").display().to_string())
-                        .required(false),
-                );
+            builder = builder.add_source(
+                File::new(&root.join("oro.kdl").display().to_string(), KdlFormat).required(false),
+            );
         }
         Ok(builder.build().map_err(OroConfigError::ConfigError)?)
     }
