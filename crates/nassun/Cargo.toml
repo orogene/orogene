@@ -1,6 +1,6 @@
 [package]
 name = "nassun"
-version = "0.3.16"
+version = "0.3.17"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "NPM package interface for resolving, fetching metadata, downloading, and extracting individual packages."
@@ -11,9 +11,9 @@ readme = "README.md"
 rust-version = "1.67.1"
 
 [dependencies]
-oro-common = { version = "=0.3.16", path = "../oro-common" }
-oro-client = { version = "=0.3.16", path = "../oro-client" }
-oro-package-spec = { version = "=0.3.16", path = "../oro-package-spec" }
+oro-common = { version = "=0.3.17", path = "../oro-common" }
+oro-client = { version = "=0.3.17", path = "../oro-client" }
+oro-package-spec = { version = "=0.3.17", path = "../oro-package-spec" }
 
 async-compression = { workspace = true, features = ["gzip", "futures-io"] }
 async-std = { workspace = true, features = [
