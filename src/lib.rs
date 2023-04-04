@@ -363,15 +363,10 @@ fn log_command_line() {
 
 #[derive(Debug, Subcommand)]
 pub enum OroCmd {
-    /// Ping the registry.
     Ping(commands::ping::PingCmd),
 
-    /// Resolves and extracts a `node_modules/` tree.
-    #[clap(visible_aliases(["r", "res"]))]
     Restore(commands::restore::RestoreCmd),
 
-    /// Get information about a package.
-    #[clap(visible_aliases(["v", "info"]))]
     View(commands::view::ViewCmd),
 
     #[clap(hide = true)]

@@ -12,7 +12,9 @@ use url::Url;
 
 use crate::commands::OroCommand;
 
+/// Resolves and extracts a `node_modules/` tree.
 #[derive(Debug, Args)]
+#[clap(visible_aliases(["r", "res"]))]
 pub struct RestoreCmd {
     /// When extracting packages, prefer to copy files files instead of
     /// linking them.

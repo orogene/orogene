@@ -9,6 +9,7 @@ use url::Url;
 
 use crate::commands::OroCommand;
 
+/// Ping the registry.
 #[derive(Debug, Args)]
 pub struct PingCmd {
     #[arg(from_global)]

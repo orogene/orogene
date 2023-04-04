@@ -13,6 +13,8 @@ use url::Url;
 use crate::commands::OroCommand;
 
 #[derive(Debug, Args)]
+/// Get information about a package.
+#[clap(visible_aliases(["v", "info"]))]
 pub struct ViewCmd {
     /// Package spec to look up.
     #[arg()]
