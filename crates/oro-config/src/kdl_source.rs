@@ -11,18 +11,22 @@ impl Source for KdlSource {
 
     fn collect(&self) -> Result<Map<String, Value>, ConfigError> {
         let mut map = Map::new();
-        for node in self.0.nodes() {
-            let key = node.name().to_string();
-            if let Some(value) = node.get(0) {
-                let value = Value::new(
-                    Some(&if let Some(str) = value.as_string() {
-                        str.to_owned()
-                    } else {
-                        value.to_string()
-                    }),
-                    value_kind(value),
-                );
-                map.insert(key, value);
+        if let Some(config_node) = self.0.get("options") {
+            if let Some(children) = config_node.children() {
+                for node in children.nodes() {
+                    let key = node.name().to_string();
+                    if let Some(value) = node.get(0) {
+                        let value = Value::new(
+                            Some(&if let Some(str) = value.as_string() {
+                                str.to_owned()
+                            } else {
+                                value.to_string()
+                            }),
+                            value_kind(value),
+                        );
+                        map.insert(key, value);
+                    }
+                }
             }
         }
         Ok(map)
