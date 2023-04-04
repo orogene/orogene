@@ -263,8 +263,9 @@ impl Orogene {
             &cwd
         };
 
-        let mut cfg_builder =
-            OroConfigOptions::new().set_default("root", &root.to_string_lossy())?;
+        let mut cfg_builder = OroConfigOptions::new()
+            .set_default("root", &root.to_string_lossy())?
+            .env(true);
         if let Some(cache) = dirs.as_ref().map(|d| d.cache_dir().to_owned()) {
             cfg_builder = cfg_builder.set_default("cache", &cache.to_string_lossy())?;
         }
