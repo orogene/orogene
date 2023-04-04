@@ -17,6 +17,9 @@ pub struct PingCmd {
 
     #[arg(from_global)]
     json: bool,
+
+    #[arg(from_global)]
+    emoji: bool,
 }
 
 #[async_trait]
@@ -24,11 +27,11 @@ impl OroCommand for PingCmd {
     async fn execute(self) -> Result<()> {
         let start = Instant::now();
         let registry = self.registry;
-        tracing::info!("ping: {registry}");
+        tracing::info!("{}ping: {registry}", if self.emoji { "🗣️  " } else { "" });
         let client = OroClient::new(registry.clone());
         let payload = client.ping().await?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
-        tracing::info!("pong: {time}ms");
+        tracing::info!("{}pong: {time}ms", if self.emoji { "👂 " } else { "" });
         if self.json {
             let details: Value = serde_json::from_str(&payload)
                 .into_diagnostic()
@@ -42,7 +45,7 @@ impl OroCommand for PingCmd {
             .wrap_err("ping::serialize")?;
             println!("{output}");
         } else {
-            tracing::info!("payload: {payload}");
+            tracing::info!("{}payload: {payload}", if self.emoji { "📦 " } else { "" });
         }
         Ok(())
     }
