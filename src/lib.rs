@@ -425,6 +425,15 @@ impl OroCommand for HelpMarkdownCmd {
                     println!("```");
                     println!("oro {usage}");
                     println!("```");
+                    let aliases = subcmd.get_visible_aliases().collect::<Vec<_>>();
+                    if !aliases.is_empty() {
+                        println!();
+                        println!(
+                            "[alias{}: {}]",
+                            if aliases.len() == 1 { "" } else { "es" },
+                            aliases.join(", ")
+                        );
+                    }
                     continue;
                 }
 
