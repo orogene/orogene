@@ -174,8 +174,8 @@ mod tests {
     #[test]
     fn global_config() -> Result<()> {
         let dir = tempdir().into_diagnostic()?;
-        let file = dir.path().join("ororc.toml");
-        fs::write(&file, "store = \"hello world\"").into_diagnostic()?;
+        let file = dir.path().join("oro.kdl");
+        fs::write(&file, "options{\nstore \"hello world\"\n}").into_diagnostic()?;
         let config = OroConfigOptions::new()
             .env(false)
             .global_config_file(Some(file))
