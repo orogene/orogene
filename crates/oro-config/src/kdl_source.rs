@@ -1,5 +1,5 @@
 use config::{ConfigError, FileStoredFormat, Format, Map, Source, Value, ValueKind};
-use kdl::{KdlDocument, KdlValue};
+use kdl::{KdlDocument, KdlNode, KdlValue};
 
 #[derive(Clone, Debug)]
 pub(crate) struct KdlSource(KdlDocument);
@@ -14,18 +14,7 @@ impl Source for KdlSource {
         if let Some(config_node) = self.0.get("options") {
             if let Some(children) = config_node.children() {
                 for node in children.nodes() {
-                    let key = node.name().to_string();
-                    if let Some(value) = node.get(0) {
-                        let value = Value::new(
-                            Some(&if let Some(str) = value.as_string() {
-                                str.to_owned()
-                            } else {
-                                value.to_string()
-                            }),
-                            value_kind(value),
-                        );
-                        map.insert(key, value);
-                    }
+                    map.insert(node.name().value().to_string(), node_value(node));
                 }
             }
         }
@@ -63,5 +52,68 @@ fn value_kind(value: &KdlValue) -> ValueKind {
         ValueKind::Boolean(boolean)
     } else {
         ValueKind::Nil
+    }
+}
+
+fn map_kind(value: impl Iterator<Item = (String, Value)>) -> ValueKind {
+    ValueKind::Table(value.collect())
+}
+
+fn array_kind(value: impl Iterator<Item = Value>) -> ValueKind {
+    ValueKind::Array(value.collect())
+}
+
+fn node_value(node: &KdlNode) -> Value {
+    let mut entries = node.entries().iter().filter(|e| e.name().is_some());
+    let len = entries.clone().count();
+    // foo 1 => { foo: 1 }
+    //
+    // Technically, this could semantically be an array as well, but we choose
+    // to treat single-entries as single values.
+    if len == 1 {
+        Value::new(
+            None,
+            value_kind(entries.next().expect("checked length already").value()),
+        )
+    // foo 1 2 3 => { foo: [1, 2, 3] }
+    } else if len > 1 {
+        Value::new(
+            None,
+            array_kind(entries.map(|e| Value::new(None, value_kind(e.value())))),
+        )
+    } else if let Some(children) = node.children() {
+        let dash_children = children
+            .nodes()
+            .iter()
+            .all(|node| node.name().value() == "-");
+        if dash_children {
+            // foo {
+            //   - 1
+            //   - 2
+            //   - {
+            //     bar 3
+            //   }
+            // }
+            // => { foo: [1, 2, { bar: 3 }] }
+            Value::new(None, array_kind(children.nodes().iter().map(node_value)))
+        } else {
+            // foo {
+            //     bar {
+            //         baz 1
+            //     }
+            // }
+            // => { foo: { bar: { baz: 1 } } }
+            Value::new(
+                None,
+                map_kind(
+                    children
+                        .nodes()
+                        .iter()
+                        .map(|node| (node.name().value().to_string(), node_value(node))),
+                ),
+            )
+        }
+    } else {
+        Value::new(None, ValueKind::Nil)
     }
 }
