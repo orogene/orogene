@@ -70,7 +70,6 @@ impl OroConfigLayerExt for Command {
                         args.push(OsString::from(value));
                     }
                 } else if let Ok(value) = config.get_table(&opt) {
-                    println!("got table: {:?}", value);
                     if !args.contains(&OsString::from(format!("--no-{}", opt))) {
                         args.push(OsString::from(format!("--{}", opt)));
                         let joined = value
@@ -79,6 +78,15 @@ impl OroConfigLayerExt for Command {
                             .collect::<Vec<_>>()
                             .join(",");
                         args.push(OsString::from(joined));
+                    }
+                } else if let Ok(value) = config.get_array(&opt) {
+                    if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                        for val in value {
+                            if let Ok(val) = val.into_string() {
+                                args.push(OsString::from(format!("--{}", opt)));
+                                args.push(OsString::from(val));
+                            }
+                        }
                     }
                 }
             }

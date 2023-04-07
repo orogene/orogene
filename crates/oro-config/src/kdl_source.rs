@@ -66,21 +66,29 @@ fn array_kind(value: impl Iterator<Item = Value>) -> ValueKind {
 fn node_value(node: &KdlNode) -> Value {
     let mut entries = node.entries().iter().filter(|e| e.name().is_none());
     let len = entries.clone().count();
-    // foo 1 => { foo: 1 }
-    //
-    // Technically, this could semantically be an array as well, but we choose
-    // to treat single-entries as single values.
     if len == 1 {
+        // foo 1 => { foo: 1 }
+        //
+        // Technically, this could semantically be an array as well, but we choose
+        // to treat single-entries as single values.
         Value::new(
             None,
             value_kind(entries.next().expect("checked length already").value()),
         )
-    // foo 1 2 3 => { foo: [1, 2, 3] }
     } else if len > 1 {
+        // foo 1 2 3 => { foo: [1, 2, 3] }
         Value::new(
             None,
             array_kind(entries.map(|e| Value::new(None, value_kind(e.value())))),
         )
+    } else if !node.entries().is_empty() {
+        // foo bar=1 => { foo: { bar: 1 } }
+        Value::new(None, map_kind(node.entries().iter().map(|e| {
+            (
+                e.name().expect("these should all have names").value().to_string(),
+                Value::new(None, value_kind(e.value())),
+            )
+        })))
     } else if let Some(children) = node.children() {
         let dash_children = children
             .nodes()
@@ -114,6 +122,7 @@ fn node_value(node: &KdlNode) -> Value {
             )
         }
     } else {
+        // Probably unreachable, but just in case...
         Value::new(None, ValueKind::Nil)
     }
 }
