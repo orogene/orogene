@@ -55,18 +55,30 @@ impl OroConfigLayerExt for Command {
             if let Some(short) = opt.get_short() {
                 short_opts.insert(short, (*opt).clone());
             }
-            if let Some(long) = opt.get_long() {
-                long_opts.insert(long.to_string());
+            if opt.get_long().is_some() {
+                long_opts.insert(opt.get_id().to_string());
             }
         }
         let mut args = std::env::args_os().collect::<Vec<_>>();
         let matches = self.clone().get_matches_from(&args);
         for opt in long_opts {
             if matches.value_source(&opt) != Some(clap::parser::ValueSource::CommandLine) {
+                let opt = opt.replace('_', "-");
                 if let Ok(value) = config.get_string(&opt) {
                     if !args.contains(&OsString::from(format!("--no-{}", opt))) {
                         args.push(OsString::from(format!("--{}", opt)));
                         args.push(OsString::from(value));
+                    }
+                } else if let Ok(value) = config.get_table(&opt) {
+                    println!("got table: {:?}", value);
+                    if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                        args.push(OsString::from(format!("--{}", opt)));
+                        let joined = value
+                            .iter()
+                            .map(|(k, v)| format!("{}={}", k, v))
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        args.push(OsString::from(joined));
                     }
                 }
             }

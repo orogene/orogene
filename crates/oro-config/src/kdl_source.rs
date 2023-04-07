@@ -64,7 +64,7 @@ fn array_kind(value: impl Iterator<Item = Value>) -> ValueKind {
 }
 
 fn node_value(node: &KdlNode) -> Value {
-    let mut entries = node.entries().iter().filter(|e| e.name().is_some());
+    let mut entries = node.entries().iter().filter(|e| e.name().is_none());
     let len = entries.clone().count();
     // foo 1 => { foo: 1 }
     //

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, collections::HashMap};
 
 use async_trait::async_trait;
 use clap::Args;
@@ -24,6 +24,9 @@ pub struct ViewCmd {
     registry: Url,
 
     #[arg(from_global)]
+    scope_registries: HashMap<String, Url>,
+
+    #[arg(from_global)]
     root: Option<PathBuf>,
 
     #[arg(from_global)]
@@ -37,6 +40,9 @@ pub struct ViewCmd {
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
         let mut nassun_opts = NassunOpts::new().registry(self.registry);
+        for (scope, registry) in self.scope_registries {
+            nassun_opts = nassun_opts.scope_registry(scope, registry);
+        }
         if let Some(root) = self.root {
             nassun_opts = nassun_opts.base_dir(root);
         }

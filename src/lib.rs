@@ -35,7 +35,11 @@
 //! [CONTRIBUTING.md]: https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    path::{Path, PathBuf},
+};
 
 use async_trait::async_trait;
 use clap::{Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
@@ -85,6 +89,17 @@ pub struct Orogene {
         default_value = "https://registry.npmjs.org"
     )]
     registry: Url,
+
+    /// Registries used for specific scopes. Supports multiple scopes by
+    /// joining them with `,`.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value = "",
+        value_parser = parse_hash::<String, Url>
+    )]
+    scope_registries: HashMap<String, Url>,
 
     /// Location of disk cache.
     ///
@@ -359,6 +374,29 @@ fn log_command_line() {
         cmd.push_str(&arg);
     }
     tracing::debug!("Running command: {cmd}");
+}
+
+fn parse_hash<T, U>(
+    s: &str,
+) -> Result<HashMap<T, U>, Box<dyn std::error::Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr + Hash + Eq,
+    T::Err: std::error::Error + Send + Sync + 'static,
+    U: std::str::FromStr,
+    U::Err: std::error::Error + Send + Sync + 'static,
+{
+    let mut hash = HashMap::new();
+    for pair in s.trim().split(',') {
+        if pair.is_empty() {
+            continue;
+        }
+        let pos = pair
+            .find('=')
+            .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+
+        hash.insert(pair[..pos].parse()?, pair[pos + 1..].parse()?);
+    }
+    Ok(hash)
 }
 
 #[derive(Debug, Subcommand)]

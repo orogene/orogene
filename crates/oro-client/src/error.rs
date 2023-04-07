@@ -1,4 +1,5 @@
 use miette::{Diagnostic, NamedSource, SourceOffset};
+use reqwest::Url;
 use thiserror::Error;
 
 #[derive(Debug, Error, Diagnostic)]
@@ -7,9 +8,9 @@ pub enum OroClientError {
     #[diagnostic(code(oro_client::url_parse_error))]
     UrlParseError(#[from] url::ParseError),
 
-    #[error("Package was not found in registry: {0}")]
+    #[error("Package `{1}` was not found in registry {0}.")]
     #[diagnostic(code(oro_client::package_not_found))]
-    PackageNotFound(String),
+    PackageNotFound(Url, String),
 
     /// Got some bad JSON we couldn't parse.
     #[error("Received some unexpected JSON. Unable to parse.")]
