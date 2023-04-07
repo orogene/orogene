@@ -31,9 +31,9 @@ use petgraph::Direction;
 use unicase::UniCase;
 use url::Url;
 
-use crate::edge::{DepType, Edge};
 use crate::error::NodeMaintainerError;
-use crate::{graph::Graph, IntoKdl, Lockfile, LockfileNode, Node};
+use crate::graph::{DepType, Edge, Graph, Node};
+use crate::{IntoKdl, Lockfile, LockfileNode};
 
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;

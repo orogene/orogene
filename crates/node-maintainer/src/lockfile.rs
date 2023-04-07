@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use ssri::Integrity;
 use unicase::UniCase;
 
-use crate::{error::NodeMaintainerError, DepType, IntoKdl};
+use crate::{error::NodeMaintainerError, graph::DepType, IntoKdl};
 
 /// A representation of a resolved lockfile.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
