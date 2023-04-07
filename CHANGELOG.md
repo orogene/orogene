@@ -1,5 +1,24 @@
 # Orogene Release Changelog
 
+<a name="0.3.18"></a>
+## 0.3.18 (2023-04-07)
+
+### Features
+
+* **config:** load options from env, too ([ccfa812b](https://github.com/orogene/orogene/commit/ccfa812b54d6f22089369773e2780c48b927d670))
+* **docs:** More detailed configuration docs ([6165e808](https://github.com/orogene/orogene/commit/6165e8083bbbac7ce864ccf329b9adf61be9bda4))
+* **ping:** emojify ping ([a6627657](https://github.com/orogene/orogene/commit/a66276570dec663c1bec43b681e72e232f10d2b5))
+* **config:** read config file options from `options` node ([41b281ee](https://github.com/orogene/orogene/commit/41b281eecc4a66275bc0abdfdc1e0afadad195ff))
+* **docs:** show command aliases in docs ([0dc70672](https://github.com/orogene/orogene/commit/0dc706725f534c48daaae648323f25145b1b34c6))
+* **config:** add support for nested arrays and maps to kdl configs ([f5e71d0c](https://github.com/orogene/orogene/commit/f5e71d0c9f83d1a9ef2376bc402d1d78d6e15fbc))
+* **config:** support for specifying scope registries ([49c2190e](https://github.com/orogene/orogene/commit/49c2190e7a40a4b7ca19ac7ddc342f647b96ce63))
+* **config:** support for arrays, too ([ef46e5aa](https://github.com/orogene/orogene/commit/ef46e5aa84a3c3ce389a8f45d8441acf09d0c719))
+* **config:** overhaul how scoped registries are provided ([31c3ae74](https://github.com/orogene/orogene/commit/31c3ae742988dd0ff0235156ae7b302f3e6a4421))
+
+### Bug Fixes
+
+* **view:** remove stray `dbg!` ([03f7a7dd](https://github.com/orogene/orogene/commit/03f7a7ddcf39b6e7afd3bdb11c645dbdd147ef25))
+
 <a name="0.3.17"></a>
 ## 0.3.17 (2023-04-03)
 
