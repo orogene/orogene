@@ -49,8 +49,11 @@ impl NassunOpts {
 
     /// Adds a registry to use for a specific scope.
     pub fn scope_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
-        self.registries
-            .insert(Some(scope.as_ref().into()), registry);
+        let scope = scope.as_ref();
+        self.registries.insert(
+            Some(scope.strip_prefix('@').unwrap_or(scope).to_string()),
+            registry,
+        );
         self
     }
 

@@ -35,11 +35,7 @@
 //! [CONTRIBUTING.md]: https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
-use std::{
-    collections::HashMap,
-    hash::Hash,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use clap::{Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
@@ -90,16 +86,18 @@ pub struct Orogene {
     )]
     registry: Url,
 
-    /// Registries used for specific scopes. Supports multiple scopes by
-    /// joining them with `,`.
+    /// Registry to use for a specific `@scope`, using `--scoped-registry
+    /// @scope=https://foo.com` format.
+    ///
+    /// Can be provided multiple times to specify multiple scoped registries.
     #[arg(
         help_heading = "Global Options",
         global = true,
-        long,
-        default_value = "",
-        value_parser = parse_hash::<String, Url>
+        alias = "scoped-registries",
+        long = "scoped-registry",
+        value_parser = parse_key_value::<String, Url>
     )]
-    scope_registries: HashMap<String, Url>,
+    scoped_registries: Vec<(String, Url)>,
 
     /// Location of disk cache.
     ///
@@ -376,27 +374,20 @@ fn log_command_line() {
     tracing::debug!("Running command: {cmd}");
 }
 
-fn parse_hash<T, U>(
+fn parse_key_value<T, U>(
     s: &str,
-) -> Result<HashMap<T, U>, Box<dyn std::error::Error + Send + Sync + 'static>>
+) -> Result<(T, U), Box<dyn std::error::Error + Send + Sync + 'static>>
 where
-    T: std::str::FromStr + Hash + Eq,
+    T: std::str::FromStr,
     T::Err: std::error::Error + Send + Sync + 'static,
     U: std::str::FromStr,
     U::Err: std::error::Error + Send + Sync + 'static,
 {
-    let mut hash = HashMap::new();
-    for pair in s.trim().split(',') {
-        if pair.is_empty() {
-            continue;
-        }
-        let pos = pair
-            .find('=')
-            .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=VALUE pair: no `=` found in `{s}`"))?;
 
-        hash.insert(pair[..pos].parse()?, pair[pos + 1..].parse()?);
-    }
-    Ok(hash)
+    Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
 }
 
 #[derive(Debug, Subcommand)]

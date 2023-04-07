@@ -71,13 +71,10 @@ impl OroConfigLayerExt for Command {
                     }
                 } else if let Ok(value) = config.get_table(&opt) {
                     if !args.contains(&OsString::from(format!("--no-{}", opt))) {
-                        args.push(OsString::from(format!("--{}", opt)));
-                        let joined = value
-                            .iter()
-                            .map(|(k, v)| format!("{}={}", k, v))
-                            .collect::<Vec<_>>()
-                            .join(",");
-                        args.push(OsString::from(joined));
+                        for (key, val) in value {
+                            args.push(OsString::from(format!("--{}", opt)));
+                            args.push(OsString::from(format!("{key}={val}")))
+                        }
                     }
                 } else if let Ok(value) = config.get_array(&opt) {
                     if !args.contains(&OsString::from(format!("--no-{}", opt))) {

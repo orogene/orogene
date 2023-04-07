@@ -1,4 +1,4 @@
-use std::{path::{Path, PathBuf}, collections::HashMap};
+use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
 use clap::Args;
@@ -71,7 +71,7 @@ pub struct RestoreCmd {
     registry: Url,
 
     #[arg(from_global)]
-    scope_registries: HashMap<String, Url>,
+    scoped_registries: Vec<(String, Url)>,
 
     #[arg(from_global)]
     json: bool,
@@ -172,7 +172,7 @@ impl RestoreCmd {
                 span.pb_set_message(line);
             });
 
-        for (scope, registry) in &self.scope_registries {
+        for (scope, registry) in &self.scoped_registries {
             nm = nm.scope_registry(scope, registry.clone());
         }
 
