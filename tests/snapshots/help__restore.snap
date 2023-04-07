@@ -89,6 +89,12 @@ Registry used for unscoped packages
 
 \[default: https://registry.npmjs.org]
 
+#### `--scoped-registry <SCOPED_REGISTRIES>`
+
+Registry to use for a specific `@scope`, using `--scoped-registry @scope=https://foo.com` format.
+
+Can be provided multiple times to specify multiple scoped registries.
+
 #### `--cache <CACHE>`
 
 Location of disk cache.
