@@ -54,7 +54,10 @@ impl OroClient {
             .error_for_status()
             .map_err(|err| {
                 if err.status() == Some(StatusCode::NOT_FOUND) {
-                    OroClientError::PackageNotFound((*self.registry).clone(), package_name.as_ref().to_string())
+                    OroClientError::PackageNotFound(
+                        (*self.registry).clone(),
+                        package_name.as_ref().to_string(),
+                    )
                 } else {
                     OroClientError::RequestError(err)
                 }

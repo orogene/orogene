@@ -83,12 +83,18 @@ fn node_value(node: &KdlNode) -> Value {
         )
     } else if !node.entries().is_empty() {
         // foo bar=1 => { foo: { bar: 1 } }
-        Value::new(None, map_kind(node.entries().iter().map(|e| {
-            (
-                e.name().expect("these should all have names").value().to_string(),
-                Value::new(None, value_kind(e.value())),
-            )
-        })))
+        Value::new(
+            None,
+            map_kind(node.entries().iter().map(|e| {
+                (
+                    e.name()
+                        .expect("these should all have names")
+                        .value()
+                        .to_string(),
+                    Value::new(None, value_kind(e.value())),
+                )
+            })),
+        )
     } else if let Some(children) = node.children() {
         let dash_children = children
             .nodes()
