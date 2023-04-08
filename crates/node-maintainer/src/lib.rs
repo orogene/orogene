@@ -15,6 +15,7 @@ mod wasm;
 mod error;
 mod graph;
 mod into_kdl;
+mod linkers;
 mod lockfile;
 mod maintainer;
 mod resolver;
