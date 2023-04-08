@@ -131,8 +131,8 @@ impl NodeMaintainerOptions {
         self
     }
 
-    /// When extracting packages, prefer to copy files files instead of
-    /// linking them.
+    /// When extracting packages, prefer to copy files instead of linking
+    /// them.
     ///
     /// This option has no effect if hard linking fails (for example, if the
     /// cache is on a different drive), or if the project is on a filesystem
