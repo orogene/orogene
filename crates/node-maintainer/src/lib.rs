@@ -17,5 +17,6 @@ mod graph;
 mod into_kdl;
 mod lockfile;
 mod maintainer;
+mod resolver;
 #[cfg(target_arch = "wasm32")]
 pub use wasm::*;
