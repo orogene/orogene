@@ -67,46 +67,8 @@ impl BuildManifest {
     fn normalize(raw: RawBuildManifest) -> std::io::Result<Self> {
         let mut bin_map = HashMap::new();
         if let Some(Bin::Hash(bins)) = raw.bin {
-            for (name, bin) in &bins {
-                let base = Path::new(name).file_name();
-                if base.is_none() || base == Some(OsStr::new("")) {
-                    continue;
-                }
-                let base = Path::new("/")
-                    .join(Path::new(
-                        &base
-                            .unwrap()
-                            .to_string_lossy()
-                            .to_string()
-                            .replace(['\\', ':'], "/"),
-                    ))
-                    .strip_prefix(
-                        #[cfg(windows)]
-                        "\\",
-                        #[cfg(not(windows))]
-                        "/",
-                    )
-                    .expect("We added this ourselves")
-                    .to_path_buf();
-                if base == Path::new("") {
-                    continue;
-                }
-
-                let bin_target = Path::new("/")
-                    .join(bin.to_string_lossy().to_string())
-                    .strip_prefix(
-                        #[cfg(windows)]
-                        "\\",
-                        #[cfg(not(windows))]
-                        "/",
-                    )
-                    .expect("We added this ourselves")
-                    .to_path_buf();
-                if bin_target == Path::new("") {
-                    continue;
-                }
-
-                bin_map.insert(base.to_string_lossy().to_string(), bin_target);
+            for (name, bin) in bins {
+                bin_map.insert(name, bin);
             }
         } else if let Some(Bin::Str(bin)) = raw.bin {
             if let Some(name) = raw.name {
@@ -142,8 +104,53 @@ impl BuildManifest {
                 }
             }
         };
+        let mut normalized = HashMap::new();
+        for (name, bin) in &bin_map {
+            let base = Path::new(name).file_name();
+            if base.is_none() || base == Some(OsStr::new("")) {
+                continue;
+            }
+            let base = Path::new("/")
+                .join(Path::new(
+                    &base
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_string()
+                        .replace(['\\', ':'], "/"),
+                ))
+                .strip_prefix(
+                    #[cfg(windows)]
+                    "\\",
+                    #[cfg(not(windows))]
+                    "/",
+                )
+                .expect("We added this ourselves")
+                .file_name()
+                .map(PathBuf::from);
+            if base.is_none() || base == Some(PathBuf::from("")) {
+                continue;
+            }
+
+            let base = base.unwrap();
+
+            let bin_target = Path::new("/")
+                .join(bin.to_string_lossy().to_string())
+                .strip_prefix(
+                    #[cfg(windows)]
+                    "\\",
+                    #[cfg(not(windows))]
+                    "/",
+                )
+                .expect("We added this ourselves")
+                .to_path_buf();
+            if bin_target == Path::new("") {
+                continue;
+            }
+
+            normalized.insert(base.to_string_lossy().to_string(), bin_target);
+        }
         Ok(Self {
-            bin: bin_map,
+            bin: normalized,
             scripts: raw.scripts,
         })
     }
