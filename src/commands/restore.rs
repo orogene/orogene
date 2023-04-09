@@ -63,9 +63,26 @@ pub struct RestoreCmd {
     #[arg(long, default_value_t = node_maintainer::DEFAULT_SCRIPT_CONCURRENCY)]
     script_concurrency: usize,
 
-    /// Skip writing the lockfile.
+    /// Whether to write the lockfile after operations complete. Disable by
+    /// using `--no-lockfile`.
+    ///
+    /// Note that lockfiles are only written after all operations complete
+    /// successfully.
     #[arg(long)]
-    no_lockfile: bool,
+    lockfile: bool,
+
+    /// Use the hoisted installation mode, where all dependencies and their
+    /// transitive dependencies are installed as high up in the `node_modules`
+    /// tree as possible.
+    ///
+    /// This can potentially mean that packages have access to dependencies
+    /// they did not specify in their package.json, but it might be useful for
+    /// compatibility.
+    ///
+    /// By default, dependencies are installed in "isolated" mode, using a
+    /// symlink/junction structure to simulate a dependency tree.
+    #[arg(long)]
+    hoisted: bool,
 
     #[arg(from_global)]
     registry: Url,
@@ -104,7 +121,7 @@ impl OroCommand for RestoreCmd {
             );
         }
 
-        if !self.no_lockfile {
+        if self.lockfile {
             maintainer
                 .write_lockfile(root.join("package-lock.kdl"))
                 .await?;
@@ -137,6 +154,7 @@ impl RestoreCmd {
             .root(root)
             .prefer_copy(self.prefer_copy)
             .validate(self.validate)
+            .hoisted(self.hoisted)
             .on_resolution_added(move || {
                 Span::current().pb_inc_length(1);
             })
@@ -282,24 +300,38 @@ impl RestoreCmd {
 
     async fn rebuild(&self, maintainer: &NodeMaintainer) -> Result<()> {
         let script_time = std::time::Instant::now();
-        let script_span = tracing::info_span!("Building");
-        script_span.pb_set_style(
-            &ProgressStyle::default_bar()
-                .template(&format!(
-                    "{{spinner}} {}Running scripts {{wide_msg:.dim}}",
-                    self.emoji_run(),
-                ))
-                .unwrap(),
-        );
+        let script_span = if self.ignore_scripts {
+            tracing::debug_span!("Building")
+        } else {
+            tracing::info_span!("Building")
+        };
+        if !self.ignore_scripts {
+            script_span.pb_set_style(
+                &ProgressStyle::default_bar()
+                    .template(&format!(
+                        "{{spinner}} {}Running scripts {{wide_msg:.dim}}",
+                        self.emoji_run(),
+                    ))
+                    .unwrap(),
+            );
+        }
         maintainer
             .rebuild(self.ignore_scripts)
             .instrument(script_span)
             .await?;
-        tracing::info!(
-            "{}Ran lifecycle scripts in {}s.",
-            self.emoji_run(),
-            script_time.elapsed().as_millis() as f32 / 1000.0
-        );
+        if self.ignore_scripts {
+            tracing::info!(
+                "{}Linked script bins in {}s.",
+                self.emoji_link(),
+                script_time.elapsed().as_millis() as f32 / 1000.0
+            );
+        } else {
+            tracing::info!(
+                "{}Ran lifecycle scripts in {}s.",
+                self.emoji_run(),
+                script_time.elapsed().as_millis() as f32 / 1000.0
+            );
+        }
         Ok(())
     }
 
@@ -325,6 +357,10 @@ impl RestoreCmd {
 
     fn emoji_tada(&self) -> &'static str {
         self.maybe_emoji("🎉 ")
+    }
+
+    fn emoji_link(&self) -> &'static str {
+        self.maybe_emoji("🔗 ")
     }
 
     fn maybe_emoji(&self, emoji: &'static str) -> &'static str {

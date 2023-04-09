@@ -30,6 +30,9 @@ tracing = { workspace = true }
 unicase = "2.6.0"
 url = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+junction = { workspace = true }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 oro-script = { version = "=0.3.18", path = "../oro-script" }
 oro-shim-bin = { version = "=0.3.18", path = "../oro-shim-bin" }

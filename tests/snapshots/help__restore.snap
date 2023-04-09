@@ -61,9 +61,19 @@ This option is separate from `concurrency` because executing concurrent scripts 
 
 \[default: 6]
 
-#### `--no-lockfile`
+#### `--lockfile`
 
-Skip writing the lockfile
+Whether to write the lockfile after operations complete. Disable by using `--no-lockfile`.
+
+Note that lockfiles are only written after all operations complete successfully.
+
+#### `--hoisted`
+
+Use the hoisted installation mode, where all dependencies and their transitive dependencies are installed as high up in the `node_modules` tree as possible.
+
+This can potentially mean that packages have access to dependencies they did not specify in their package.json, but it might be useful for compatibility.
+
+By default, dependencies are installed in "isolated" mode, using a symlink/junction structure to simulate a dependency tree.
 
 #### `-h, --help`
 

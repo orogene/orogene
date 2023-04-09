@@ -1650,6 +1650,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "junction"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca39ef0d69b18e6a2fd14c2f0a1d593200f4a4ed949b240b5917ab51fac754cb"
+dependencies = [
+ "scopeguard",
+ "winapi",
+]
+
+[[package]]
 name = "kdl"
 version = "5.0.0-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1936,6 +1946,7 @@ dependencies = [
  "indicatif",
  "insta",
  "js-sys",
+ "junction",
  "kdl",
  "maplit",
  "miette",
