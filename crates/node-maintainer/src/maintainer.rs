@@ -276,24 +276,21 @@ impl NodeMaintainerOptions {
         let (graph, actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
         let linker = Linker::hoisted(LinkerOptions {
-                actual_tree,
-                concurrency: self.concurrency,
-                script_concurrency: self.script_concurrency,
-                cache: self.cache,
-                prefer_copy: self.prefer_copy,
-                validate: self.validate,
-                root: proj_root,
-                on_prune_progress: self.on_prune_progress,
-                on_extract_progress: self.on_extract_progress,
-                on_script_start: self.on_script_start,
-                on_script_line: self.on_script_line,
-            });
+            actual_tree,
+            concurrency: self.concurrency,
+            script_concurrency: self.script_concurrency,
+            cache: self.cache,
+            prefer_copy: self.prefer_copy,
+            validate: self.validate,
+            root: proj_root,
+            on_prune_progress: self.on_prune_progress,
+            on_extract_progress: self.on_extract_progress,
+            on_script_start: self.on_script_start,
+            on_script_line: self.on_script_line,
+        });
         #[cfg(target_arch = "wasm32")]
         let linker = Linker::null();
-        let nm = NodeMaintainer {
-            graph,
-            linker,
-        };
+        let nm = NodeMaintainer { graph, linker };
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -324,24 +321,21 @@ impl NodeMaintainerOptions {
         let (graph, actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
         let linker = Linker::hoisted(LinkerOptions {
-                actual_tree,
-                concurrency: self.concurrency,
-                script_concurrency: self.script_concurrency,
-                cache: self.cache,
-                prefer_copy: self.prefer_copy,
-                validate: self.validate,
-                root: proj_root,
-                on_prune_progress: self.on_prune_progress,
-                on_extract_progress: self.on_extract_progress,
-                on_script_start: self.on_script_start,
-                on_script_line: self.on_script_line,
-            });
+            actual_tree,
+            concurrency: self.concurrency,
+            script_concurrency: self.script_concurrency,
+            cache: self.cache,
+            prefer_copy: self.prefer_copy,
+            validate: self.validate,
+            root: proj_root,
+            on_prune_progress: self.on_prune_progress,
+            on_extract_progress: self.on_extract_progress,
+            on_script_start: self.on_script_start,
+            on_script_line: self.on_script_line,
+        });
         #[cfg(target_arch = "wasm32")]
         let linker = Linker::null();
-        let nm = NodeMaintainer {
-            graph,
-            linker,
-        };
+        let nm = NodeMaintainer { graph, linker };
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)

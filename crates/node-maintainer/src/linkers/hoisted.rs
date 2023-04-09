@@ -271,8 +271,7 @@ impl HoistedLinker {
                     return Ok(());
                 }
 
-                let subdir =
-                    graph
+                let subdir = graph
                     .node_path(idx)
                     .iter()
                     .map(|x| x.to_string())
@@ -336,7 +335,11 @@ impl HoistedLinker {
         Ok(linked)
     }
 
-    pub async fn rebuild(&self, graph: &Graph, ignore_scripts: bool) -> Result<(), NodeMaintainerError> {
+    pub async fn rebuild(
+        &self,
+        graph: &Graph,
+        ignore_scripts: bool,
+    ) -> Result<(), NodeMaintainerError> {
         tracing::debug!("Running lifecycle scripts...");
         let start = std::time::Instant::now();
         if !ignore_scripts {
@@ -365,8 +368,7 @@ impl HoistedLinker {
                     return Ok::<_, NodeMaintainerError>(());
                 }
 
-                let subdir =
-                    graph
+                let subdir = graph
                     .node_path(idx)
                     .iter()
                     .map(|x| x.to_string())
