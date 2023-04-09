@@ -82,8 +82,12 @@ jobs:
   #         MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-strict-provenance
   #       run: cargo miri test --all --verbose
 
-  minimal_versions: name: Minimal versions check runs-on: ${{ matrix.os }}
-    strategy: matrix: os: [ubuntu-latest, macOS-latest, windows-latest]
+  minimal_versions:
+    name: Minimal versions check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v1
