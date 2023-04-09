@@ -148,10 +148,7 @@ impl PackageResolver {
         packument: &Arc<CorgiPackument>,
     ) -> Result<PackageResolution, NassunError> {
         use PackageSpec::*;
-        let spec = match wanted {
-            Alias { spec, .. } => spec,
-            spec => spec,
-        };
+        let spec = wanted.target();
 
         if let Dir { ref path } = spec {
             return Ok(PackageResolution::Dir {
