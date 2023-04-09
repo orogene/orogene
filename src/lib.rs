@@ -313,6 +313,11 @@ impl Orogene {
             .map(|c| c.join("_logs").join(log_file_name()));
         let _guard = oro.setup_logging(log_file.as_deref())?;
         oro.execute().await.map_err(|e| {
+            // We toss this in a debug so execution errors show up in our
+            // debug logs. Unfortunately, we can't do the same for other
+            // errors in this method because they all happen before the debug
+            // log is even set up.
+            tracing::debug!("{e:?}");
             if let Some(log_file) = log_file.as_deref() {
                 tracing::error!("A debug log was written to {}", log_file.display());
             }
