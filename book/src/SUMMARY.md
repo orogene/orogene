@@ -13,8 +13,8 @@
 
 # Commands
 
+- [apply](./commands/apply.md)
 - [ping](./commands/ping.md)
-- [restore](./commands/restore.md)
 - [view](./commands/view.md)
 
 ---

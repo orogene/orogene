@@ -3,13 +3,13 @@ use std::process::{Command, Output, Stdio};
 static BIN: &str = env!("CARGO_BIN_EXE_oro");
 
 #[test]
-fn ping_markdown() {
-    insta::assert_snapshot!("ping", sub_md("ping"));
+fn apply_markdown() {
+    insta::assert_snapshot!("apply", sub_md("apply"));
 }
 
 #[test]
-fn restore_markdown() {
-    insta::assert_snapshot!("restore", sub_md("restore"));
+fn ping_markdown() {
+    insta::assert_snapshot!("ping", sub_md("ping"));
 }
 
 #[test]

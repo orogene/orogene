@@ -397,9 +397,9 @@ where
 
 #[derive(Debug, Subcommand)]
 pub enum OroCmd {
-    Ping(commands::ping::PingCmd),
+    Apply(commands::apply::ApplyCmd),
 
-    Restore(commands::restore::RestoreCmd),
+    Ping(commands::ping::PingCmd),
 
     View(commands::view::ViewCmd),
 
@@ -413,13 +413,14 @@ impl OroCommand for Orogene {
         log_command_line();
         match self.subcommand {
             OroCmd::Ping(cmd) => cmd.execute().await,
-            OroCmd::Restore(cmd) => cmd.execute().await,
+            OroCmd::Apply(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
             OroCmd::HelpMarkdown(cmd) => cmd.execute().await,
         }
     }
 }
 
+/// Used for generating markdown documentation for Orogene commands.
 #[derive(Debug, Args)]
 pub struct HelpMarkdownCmd {
     #[arg()]

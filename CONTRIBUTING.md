@@ -80,20 +80,20 @@ To build `node-maintainer`:
 
 ## Working on the installer
 
-Orogene's "install" command is called `restore`. During development, you can
+Orogene's "install" command is called `apply`. During development, you can
 call it like this:
 
 ```sh
-$ cargo run [--release] -- restore [--root ../path/to/test/react-app] [--oro-cache ./path/to/cache] [--loglevel info]
+$ cargo run [--release] -- apply [--root ../path/to/test/react-app] [--oro-cache ./path/to/cache] [--loglevel info]
 ```
 
 It might be worth it to run with `--release` every time if you plan on seeing
-restores to completion, because debug builds of orogene are pretty slow.
+applies to completion, because debug builds of orogene are pretty slow.
 
-The restore command itself is defined in `src/commands/restore.rs`, and is
+The apply command itself is defined in `src/commands/apply.rs`, and is
 pretty much a UI wrapper around `crates/node-maintainer`'s APIs.
 
-If you're only interested in the dependency resolution aspect of `restore`,
+If you're only interested in the dependency resolution aspect of `apply`,
 you can run with `--lockfile-only`, which will skip the much more expensive
 extraction process.
 
@@ -104,7 +104,7 @@ orogene uses [tracing](https://docs.rs/tracing) and
 logging capabilities, which can be configured through `--loglevel`. The syntax
 for this option is documented
 [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives).
-For example, `cargo run -- restore --loglevel node_maintainer=trace,info` will
+For example, `cargo run -- apply --loglevel node_maintainer=trace,info` will
 default to INFO-level logging for everything, but also include TRACE-level
 logging for anything logged by `node-maintainer` (node the underscore. It's
 based on the module name, not the crate.)

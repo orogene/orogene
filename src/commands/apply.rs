@@ -12,10 +12,13 @@ use url::Url;
 
 use crate::commands::OroCommand;
 
-/// Resolves and extracts a `node_modules/` tree.
+/// Applies the current project's requested dependencies to `node_modules/`,
+/// adding, removing, and updating dependencies as needed. This command is
+/// intended to be an idempotent way to make sure your `node_modules` is in
+/// the right state to execute, based on your declared dependencies.
 #[derive(Debug, Args)]
-#[clap(visible_aliases(["r", "res"]))]
-pub struct RestoreCmd {
+#[clap(visible_aliases(["a", "ap", "app"]))]
+pub struct ApplyCmd {
     /// When extracting packages, prefer to copy files files instead of
     /// linking them.
     ///
@@ -47,7 +50,7 @@ pub struct RestoreCmd {
     #[arg(long, default_value = "latest")]
     default_tag: String,
 
-    /// Controls number of concurrent operations during various restore steps
+    /// Controls number of concurrent operations during various apply steps
     /// (resolution fetches, extractions, etc).
     ///
     /// Tuning this might help reduce memory usage (if lowered), or improve
@@ -104,7 +107,7 @@ pub struct RestoreCmd {
 }
 
 #[async_trait]
-impl OroCommand for RestoreCmd {
+impl OroCommand for ApplyCmd {
     async fn execute(self) -> Result<()> {
         let total_time = std::time::Instant::now();
         let root = &self.root;
@@ -142,7 +145,7 @@ impl OroCommand for RestoreCmd {
     }
 }
 
-impl RestoreCmd {
+impl ApplyCmd {
     fn configured_maintainer(&self) -> NodeMaintainerOptions {
         let root = &self.root;
         let mut nm = NodeMaintainerOptions::new();

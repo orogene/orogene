@@ -74,7 +74,7 @@ impl NodeMaintainerOptions {
         self
     }
 
-    /// Controls number of concurrent operations during various restore steps
+    /// Controls number of concurrent operations during various apply steps
     /// (resolution fetches, extractions, etc). Tuning this might help reduce
     /// memory usage.
     pub fn concurrency(mut self, concurrency: usize) -> Self {

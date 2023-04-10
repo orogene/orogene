@@ -1,21 +1,21 @@
 ---
 source: tests/help.rs
-expression: "sub_md(\"restore\")"
+expression: "sub_md(\"apply\")"
 ---
 stderr:
 
 stdout:
-# oro restore
+# oro apply
 
-Resolves and extracts a `node_modules/` tree
+Applies the current project's requested dependencies to `node_modules/`, adding, removing, and updating dependencies as needed. This command is intended to be an idempotent way to make sure your `node_modules` is in the right state to execute, based on your declared dependencies
 
 ### Usage:
 
 ```
-oro restore [OPTIONS]
+oro apply [OPTIONS]
 ```
 
-[aliases: r, res]
+[aliases: a, ap, app]
 
 ### Options
 
@@ -47,7 +47,7 @@ Default dist-tag to use when resolving package versions
 
 #### `--concurrency <CONCURRENCY>`
 
-Controls number of concurrent operations during various restore steps (resolution fetches, extractions, etc).
+Controls number of concurrent operations during various apply steps (resolution fetches, extractions, etc).
 
 Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).
 

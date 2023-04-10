@@ -83,7 +83,7 @@ fn exec_benchmark(prepare: &str) -> Result<BenchmarkResults> {
                 &json_output,
                 "--warmup",
                 "1",
-                "../release/oro restore --cache pm-cache",
+                "../release/oro apply --ignore-scripts --cache pm-cache",
                 "bun install --ignore-scripts",
                 "npm install --ignore-scripts --cache pm-cache",
                 "npx -p pnpm pnpm install --ignore-scripts --store-dir pm-cache",
