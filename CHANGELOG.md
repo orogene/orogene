@@ -1,4 +1,18 @@
 # Orogene Release Changelog
+<a name="0.3.19"></a>
+## 0.3.19 (2023-04-10)
+
+### Features
+
+* **debug:** Include errors in debug log when possible ([9551239e](https://github.com/orogene/orogene/commit/9551239ee634244dc2fbef86627696614726c0ac))
+* **isolated:** add support for isolated dependency installation (#226) ([9da2e1e7](https://github.com/orogene/orogene/commit/9da2e1e7231054437fbde2c7f8eaace9c1b67897))
+* **apply:** rename `restore` to `apply` ([82f7b623](https://github.com/orogene/orogene/commit/82f7b623b3d657a5e02757c90567acefa9521481))
+
+### Bug Fixes
+
+* **binlink:** properly normalize non-object bin names ([aea368e9](https://github.com/orogene/orogene/commit/aea368e92c5d336b4c70d8f6506fb8fcc22b3273))
+* **resolve:** use PackageSpec::target() for recursive alias support ([bd884703](https://github.com/orogene/orogene/commit/bd884703dafb32912883a8823a70a64d3fa71ae0))
+* **ci:** how did this even happen ([d77a915e](https://github.com/orogene/orogene/commit/d77a915e4c1d64503ed2b325b93501d7259d4bc0))
 
 <a name="0.3.18"></a>
 ## 0.3.18 (2023-04-07)
