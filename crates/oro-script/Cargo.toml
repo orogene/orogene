@@ -1,6 +1,6 @@
 [package]
 name = "oro-script"
-version = "0.3.18"
+version = "0.3.19"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2021"
 description = "Execute scripts for NPM packages."
@@ -11,7 +11,7 @@ readme = "README.md"
 rust-version = "1.67.1"
 
 [dependencies]
-oro-common = { version = "=0.3.18", path = "../oro-common" }
+oro-common = { version = "=0.3.19", path = "../oro-common" }
 
 dunce = { workspace = true }
 miette = { workspace = true }
