@@ -1,6 +1,5 @@
 use std::ffi::OsStr;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{atomic, Arc};
 
@@ -12,7 +11,7 @@ use walkdir::WalkDir;
 
 use crate::error::NodeMaintainerError;
 use crate::graph::Graph;
-use crate::META_FILE_NAME;
+use crate::{META_FILE_NAME, STORE_DIR_NAME};
 
 use super::LinkerOptions;
 
@@ -20,25 +19,37 @@ pub(crate) struct HoistedLinker(pub(crate) LinkerOptions);
 
 impl HoistedLinker {
     pub async fn prune(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
+        let start = std::time::Instant::now();
+
         let prefix = self.0.root.join("node_modules");
 
         if !prefix.exists() {
+            tracing::debug!(
+                "Nothing to prune. Completed check in {}ms.",
+                start.elapsed().as_micros() / 1000
+            );
             return Ok(0);
         }
 
-        let start = std::time::Instant::now();
-
-        if self.0.actual_tree.is_none() {
+        if self.0.actual_tree.is_none()
+            || async_std::path::Path::new(&prefix.join(STORE_DIR_NAME))
+                .exists()
+                .await
+        {
             // If there's no actual tree previously calculated, we can't trust
             // *anything* inside node_modules, so everything is immediately
             // extraneous and we wipe it all. Sorry.
             let mut entries = async_std::fs::read_dir(&prefix).await?;
             while let Some(entry) = entries.next().await {
                 let entry = entry?;
-                if entry.file_type().await?.is_dir() {
+                let ty = entry.file_type().await?;
+                if ty.is_dir() {
                     async_std::fs::remove_dir_all(entry.path()).await?;
-                } else {
+                } else if ty.is_file() {
                     async_std::fs::remove_file(entry.path()).await?;
+                } else if ty.is_symlink() && async_std::fs::remove_file(entry.path()).await.is_err()
+                {
+                    async_std::fs::remove_dir_all(entry.path()).await?;
                 }
             }
 
@@ -183,7 +194,7 @@ impl HoistedLinker {
         std::fs::create_dir_all(&node_modules)?;
         let prefer_copy = self.0.prefer_copy
             || match self.0.cache.as_deref() {
-                Some(cache) => supports_reflink(cache, &node_modules),
+                Some(cache) => super::supports_reflink(cache, &node_modules),
                 None => false,
             };
         let validate = self.0.validate;
@@ -245,7 +256,7 @@ impl HoistedLinker {
         Ok(actually_extracted)
     }
 
-    pub async fn link_bins(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
+    async fn link_bins(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
         tracing::debug!("Linking bins...");
         let start = std::time::Instant::now();
         let root = &self.0.root;
@@ -311,7 +322,7 @@ impl HoistedLinker {
                                     std::fs::remove_file(&to)?;
                                 }
                             }
-                            link_bin(&from, &to)?;
+                            super::link_bin(&from, &to)?;
                             tracing::trace!(
                                 "Linked bin for {} from {} to {}",
                                 name,
@@ -357,24 +368,24 @@ impl HoistedLinker {
         Ok(())
     }
 
-    pub async fn run_scripts(&self, graph: &Graph, event: &str) -> Result<(), NodeMaintainerError> {
+    async fn run_scripts(&self, graph: &Graph, event: &str) -> Result<(), NodeMaintainerError> {
         tracing::debug!("Running {event} lifecycle scripts");
         let start = std::time::Instant::now();
         let root = &self.0.root;
         futures::stream::iter(graph.inner.node_indices())
             .map(Ok)
             .try_for_each_concurrent(self.0.script_concurrency, move |idx| async move {
-                if idx == graph.root {
-                    return Ok::<_, NodeMaintainerError>(());
-                }
-
-                let subdir = graph
-                    .node_path(idx)
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>()
-                    .join("/node_modules/");
-                let package_dir = root.join("node_modules").join(subdir);
+                let package_dir = if idx == graph.root {
+                    root.clone()
+                } else {
+                    let subdir = graph
+                        .node_path(idx)
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<_>>()
+                        .join("/node_modules/");
+                    root.join("node_modules").join(subdir)
+                };
 
                 let build_mani = BuildManifest::from_path(package_dir.join("package.json"))
                     .map_err(|e| {
@@ -452,55 +463,4 @@ impl HoistedLinker {
         );
         Ok(())
     }
-}
-
-fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
-    let temp = match tempfile::NamedTempFile::new_in(src_dir) {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::debug!("error creating tempfile while checking for reflink support: {e}.");
-            return false;
-        }
-    };
-    match std::fs::write(&temp, "a") {
-        Ok(_) => {}
-        Err(e) => {
-            tracing::debug!("error writing to tempfile while checking for reflink support: {e}.");
-            return false;
-        }
-    };
-    let tempdir = match tempfile::TempDir::new_in(dest_dir) {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::debug!(
-                "error creating destination tempdir while checking for reflink support: {e}."
-            );
-            return false;
-        }
-    };
-    let supports_reflink = reflink::reflink(temp.path(), tempdir.path().join("b"))
-        .map(|_| true)
-        .map_err(|e| {
-            tracing::debug!(
-                "reflink support check failed. Files will be hard linked or copied. ({e})"
-            );
-            e
-        })
-        .unwrap_or(false);
-
-    if supports_reflink {
-        tracing::debug!("Verified reflink support. Extracted data will use copy-on-write reflinks instead of hard links or full copies.")
-    }
-
-    supports_reflink
-}
-
-fn link_bin(from: &Path, to: &Path) -> Result<(), NodeMaintainerError> {
-    #[cfg(windows)]
-    oro_shim_bin::shim_bin(from, to)?;
-    #[cfg(not(windows))]
-    {
-        std::os::unix::fs::symlink(from, to)?;
-    }
-    Ok(())
 }

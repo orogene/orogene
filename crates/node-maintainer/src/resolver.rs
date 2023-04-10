@@ -7,7 +7,9 @@ use async_std::sync::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use colored::Colorize;
 use futures::{StreamExt, TryFutureExt};
-use nassun::{Nassun, Package, PackageSpec};
+use nassun::client::Nassun;
+use nassun::package::Package;
+use nassun::PackageSpec;
 use oro_common::{CorgiManifest, CorgiVersionMetadata};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
@@ -16,7 +18,9 @@ use unicase::UniCase;
 
 use crate::error::NodeMaintainerError;
 use crate::graph::{DepType, Edge, Graph, Node};
-use crate::{Lockfile, LockfileNode, ProgressAdded, ProgressHandler, META_FILE_NAME};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::META_FILE_NAME;
+use crate::{Lockfile, LockfileNode, ProgressAdded, ProgressHandler};
 
 #[derive(Debug, Clone)]
 struct NodeDependency {

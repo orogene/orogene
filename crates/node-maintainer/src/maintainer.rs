@@ -10,13 +10,16 @@ use url::Url;
 
 use crate::error::NodeMaintainerError;
 use crate::graph::{Graph, Node};
-use crate::linkers::{Linker, LinkerOptions};
+use crate::linkers::Linker;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::linkers::LinkerOptions;
 use crate::resolver::Resolver;
 use crate::{IntoKdl, Lockfile};
 
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;
 pub const META_FILE_NAME: &str = ".orogene-meta.kdl";
+pub const STORE_DIR_NAME: &str = ".oro-store";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
 pub type ProgressHandler = Arc<dyn Fn(&Package) + Send + Sync>;
@@ -32,6 +35,8 @@ pub struct NodeMaintainerOptions {
     npm_lock: Option<Lockfile>,
 
     #[allow(dead_code)]
+    hoisted: bool,
+    #[allow(dead_code)]
     script_concurrency: usize,
     #[allow(dead_code)]
     cache: Option<PathBuf>,
@@ -45,9 +50,13 @@ pub struct NodeMaintainerOptions {
     // Intended for progress bars
     on_resolution_added: Option<ProgressAdded>,
     on_resolve_progress: Option<ProgressHandler>,
+    #[allow(dead_code)]
     on_prune_progress: Option<PruneProgress>,
+    #[allow(dead_code)]
     on_extract_progress: Option<ProgressHandler>,
+    #[allow(dead_code)]
     on_script_start: Option<ScriptStartHandler>,
+    #[allow(dead_code)]
     on_script_line: Option<ScriptLineHandler>,
 }
 
@@ -150,6 +159,16 @@ impl NodeMaintainerOptions {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn validate(mut self, validate: bool) -> Self {
         self.validate = validate;
+        self
+    }
+
+    /// Use the hoisted installation mode, where all dependencies and their
+    /// transitive dependencies are installed as high up in the `node_modules`
+    /// tree as possible. This can potentially mean that packages have access
+    /// to dependencies they did not specify in their package.json, but it
+    /// might be useful for compatibility.
+    pub fn hoisted(mut self, hoisted: bool) -> Self {
+        self.hoisted = hoisted;
         self
     }
 
@@ -273,10 +292,10 @@ impl NodeMaintainerOptions {
         };
         let node = resolver.graph.inner.add_node(Node::new(root_pkg, root));
         resolver.graph[node].root = node;
-        let (graph, actual_tree) = resolver.run_resolver(lockfile).await?;
+        let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
         let linker = Linker::hoisted(LinkerOptions {
-            actual_tree,
+            actual_tree: _actual_tree,
             concurrency: self.concurrency,
             script_concurrency: self.script_concurrency,
             cache: self.cache,
@@ -318,10 +337,10 @@ impl NodeMaintainerOptions {
         let corgi = root_pkg.corgi_metadata().await?.manifest;
         let node = resolver.graph.inner.add_node(Node::new(root_pkg, corgi));
         resolver.graph[node].root = node;
-        let (graph, actual_tree) = resolver.run_resolver(lockfile).await?;
+        let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
-        let linker = Linker::hoisted(LinkerOptions {
-            actual_tree,
+        let linker_opts = LinkerOptions {
+            actual_tree: _actual_tree,
             concurrency: self.concurrency,
             script_concurrency: self.script_concurrency,
             cache: self.cache,
@@ -332,10 +351,18 @@ impl NodeMaintainerOptions {
             on_extract_progress: self.on_extract_progress,
             on_script_start: self.on_script_start,
             on_script_line: self.on_script_line,
-        });
-        #[cfg(target_arch = "wasm32")]
-        let linker = Linker::null();
-        let nm = NodeMaintainer { graph, linker };
+        };
+        let nm = NodeMaintainer {
+            graph,
+            #[cfg(target_arch = "wasm32")]
+            linker: Linker::null(),
+            #[cfg(not(target_arch = "wasm32"))]
+            linker: if self.hoisted {
+                Linker::hoisted(linker_opts)
+            } else {
+                Linker::isolated(linker_opts)
+            },
+        };
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
@@ -351,6 +378,7 @@ impl Default for NodeMaintainerOptions {
             npm_lock: None,
             script_concurrency: DEFAULT_SCRIPT_CONCURRENCY,
             cache: None,
+            hoisted: false,
             prefer_copy: false,
             validate: false,
             root: None,
@@ -366,7 +394,7 @@ impl Default for NodeMaintainerOptions {
 
 /// Resolves and manages `node_modules` for a given project.
 pub struct NodeMaintainer {
-    graph: Graph,
+    pub(crate) graph: Graph,
     #[allow(dead_code)]
     linker: Linker,
 }
@@ -441,25 +469,10 @@ impl NodeMaintainer {
         self.linker.extract(&self.graph).await
     }
 
-    /// Links package binaries to their corresponding `node_modules/.bin`
-    /// directories. On Windows, this will create `.cmd`, `.ps1`, and `sh`
-    /// shims instead of link directly to the bins.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub async fn link_bins(&self) -> Result<usize, NodeMaintainerError> {
-        self.linker.link_bins(&self.graph).await
-    }
-
     /// Runs the `preinstall`, `install`, and `postinstall` lifecycle scripts,
     /// as well as linking the package bins as needed.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn rebuild(&self, ignore_scripts: bool) -> Result<(), NodeMaintainerError> {
         self.linker.rebuild(&self.graph, ignore_scripts).await
-    }
-
-    /// Concurrently executes the lifecycle scripts for the given event across
-    /// all packages in the graph.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub async fn run_scripts(&self, event: impl AsRef<str>) -> Result<(), NodeMaintainerError> {
-        self.linker.run_scripts(&self.graph, event.as_ref()).await
     }
 }
