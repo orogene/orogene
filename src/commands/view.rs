@@ -39,7 +39,6 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        dbg!(&self);
         let mut nassun_opts = NassunOpts::new().registry(self.registry);
         for (scope, registry) in self.scoped_registries {
             nassun_opts = nassun_opts.scope_registry(scope, registry);
