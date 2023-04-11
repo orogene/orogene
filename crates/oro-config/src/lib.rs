@@ -34,8 +34,17 @@ impl OroConfigLayerExt for Command {
             .filter(|opt| opt.get_long().is_some())
             .zip(negated)
             .map(|(opt, negated)| {
-                clap::Arg::new(negated.clone())
-                    .long(negated)
+                // This is a bit tricky. For arguments that we want to have
+                // `--no-foo` for, but we want `foo` to default to true, we
+                // need to set the `long` flag _on the original_ to `no-foo`,
+                // and then this one will "reverse" it.
+                let long = if negated.starts_with("no-no-") {
+                    negated.replace("no-no-", "")
+                } else {
+                    negated.clone()
+                };
+                clap::Arg::new(negated)
+                    .long(long)
                     .global(opt.is_global_set())
                     .hide(true)
                     .action(clap::ArgAction::SetTrue)
@@ -46,9 +55,7 @@ impl OroConfigLayerExt for Command {
         self.args(negations)
     }
 
-    fn layered_matches(mut self, config: &OroConfig) -> Result<ArgMatches> {
-        // Add the negations
-        self = self.with_negations();
+    fn layered_matches(self, config: &OroConfig) -> Result<ArgMatches> {
         let mut short_opts = HashMap::new();
         let mut long_opts = HashSet::new();
         for opt in self.get_arguments() {
@@ -64,20 +71,16 @@ impl OroConfigLayerExt for Command {
         for opt in long_opts {
             if matches.value_source(&opt) != Some(clap::parser::ValueSource::CommandLine) {
                 let opt = opt.replace('_', "-");
-                if let Ok(value) = config.get_string(&opt) {
-                    if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                    if let Ok(value) = config.get_string(&opt) {
                         args.push(OsString::from(format!("--{}", opt)));
                         args.push(OsString::from(value));
-                    }
-                } else if let Ok(value) = config.get_table(&opt) {
-                    if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                    } else if let Ok(value) = config.get_table(&opt) {
                         for (key, val) in value {
                             args.push(OsString::from(format!("--{}", opt)));
                             args.push(OsString::from(format!("{key}={val}")))
                         }
-                    }
-                } else if let Ok(value) = config.get_array(&opt) {
-                    if !args.contains(&OsString::from(format!("--no-{}", opt))) {
+                    } else if let Ok(value) = config.get_array(&opt) {
                         for val in value {
                             if let Ok(val) = val.into_string() {
                                 args.push(OsString::from(format!("--{}", opt)));
@@ -88,7 +91,6 @@ impl OroConfigLayerExt for Command {
                 }
             }
         }
-        // Check for missing flags and inject config options into
         Ok(self.get_matches_from(args))
     }
 }

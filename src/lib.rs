@@ -35,10 +35,13 @@
 //! [CONTRIBUTING.md]: https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::VecDeque,
+    path::{Path, PathBuf},
+};
 
 use async_trait::async_trait;
-use clap::{Args, CommandFactory, FromArgMatches as _, Parser, Subcommand};
+use clap::{Args, Command, CommandFactory, FromArgMatches as _, Parser, Subcommand};
 use directories::ProjectDirs;
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayerExt, OroConfigOptions};
@@ -54,6 +57,7 @@ use url::Url;
 
 use commands::OroCommand;
 
+mod apply;
 mod commands;
 
 const MAX_RETAINED_LOGS: usize = 5;
@@ -133,21 +137,26 @@ pub struct Orogene {
     #[arg(help_heading = "Global Options", global = true, long)]
     json: bool,
 
-    /// Whether to display a progress bar for long operations. Use
-    /// `--no-progress` to disable.
+    /// Disable the progress bars.
     #[arg(
         help_heading = "Global Options",
         global = true,
-        long,
-        default_value_t = true
+        long = "no-progress",
+        action = clap::ArgAction::SetFalse,
     )]
     progress: bool,
 
-    /// Whether to display emoji. Use `--no-emoji` to disable.
+    /// Disable printing emoji.
     ///
     /// By default, this will show emoji when outputting to a TTY that
     /// supports unicode.
-    #[arg(help_heading = "Global Options", global = true, long, default_value_t = supports_unicode::on(supports_unicode::Stream::Stderr))]
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "no-emoji",
+        action = clap::ArgAction::SetFalse,
+        default_value_t = supports_unicode::on(supports_unicode::Stream::Stderr)
+    )]
     emoji: bool,
 
     #[command(subcommand)]
@@ -295,17 +304,46 @@ impl Orogene {
         Ok(cfg)
     }
 
+    fn current_command() -> Command {
+        // First, we do a fake parse. All we really want is to get the subcommand, here.
+        let matches = Orogene::command().ignore_errors(true).get_matches();
+        let mut matches_ref = &matches;
+
+        // Next, we "recursively" follow the subcommand chain until we bottom
+        // out, then keep that path.
+        let mut subcmd_path = VecDeque::new();
+        while let Some((sub_cmd, new_m)) = matches_ref.subcommand() {
+            subcmd_path.push_back(sub_cmd);
+            matches_ref = new_m;
+        }
+
+        // Then, we find the subcommand starting from our toplevel Command.
+        let mut command = Orogene::command().with_negations();
+        let mut subcmd = &mut command;
+        while let Some(name) = subcmd_path.pop_front() {
+            subcmd = subcmd
+                .find_subcommand_mut(name)
+                .expect("This should definitely exist?");
+            *subcmd = subcmd.clone().with_negations();
+        }
+
+        command
+    }
+
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
         // We have to instantiate Orogene twice: once to pick up "base" config
         // options, like `root` and `config`, which affect our overall config
         // parsing, and then a second time to pick up config options from the
-        // config file(s).
-        let matches = Orogene::command().with_negations().get_matches();
+        // config file(s). The first instantiation also ignores errors,
+        // because what we really need to apply the negations to is the
+        // subcommand we're interested in.
+        let command = Self::current_command();
+        let matches = command.clone().get_matches();
         let oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
         let config = oro.build_config()?;
-        let oro = Orogene::from_arg_matches(&Orogene::command().layered_matches(&config)?)
-            .into_diagnostic()?;
+        let oro =
+            Orogene::from_arg_matches(&command.layered_matches(&config)?).into_diagnostic()?;
         let log_file = oro
             .cache
             .clone()
@@ -401,6 +439,8 @@ pub enum OroCmd {
 
     Ping(commands::ping::PingCmd),
 
+    Reapply(commands::reapply::ReapplyCmd),
+
     View(commands::view::ViewCmd),
 
     #[clap(hide = true)]
@@ -412,8 +452,9 @@ impl OroCommand for Orogene {
     async fn execute(self) -> Result<()> {
         log_command_line();
         match self.subcommand {
-            OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Apply(cmd) => cmd.execute().await,
+            OroCmd::Ping(cmd) => cmd.execute().await,
+            OroCmd::Reapply(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
             OroCmd::HelpMarkdown(cmd) => cmd.execute().await,
         }

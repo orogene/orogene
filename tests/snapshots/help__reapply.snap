@@ -1,23 +1,19 @@
 ---
 source: tests/help.rs
-expression: "sub_md(\"apply\")"
+expression: "sub_md(\"reapply\")"
 ---
 stderr:
 
 stdout:
-# oro apply
+# oro reapply
 
-Applies the current project's requested dependencies to `node_modules/`, adding, removing, and updating dependencies as needed. This command is intended to be an idempotent way to make sure your `node_modules` is in the right state to execute, based on your declared dependencies.
-
-This command is automatically executed by a number of Orogene subcommands. To force a full reapplication of `node_modules`, consider using the `oro reapply` command.
+Removes the existing `node_modules`, if any, and reapplies it from scratch. You can use this to make sure you have a pristine `node_modules`
 
 ### Usage:
 
 ```
-oro apply [OPTIONS]
+oro reapply [OPTIONS]
 ```
-
-[aliases: a, ap, app]
 
 ### Options
 

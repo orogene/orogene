@@ -286,7 +286,7 @@ impl Graph {
 
                     if !dependency.package.resolved().satisfies(&edge.requested)? {
                         return Err(GraphValidationError(format!(
-                            "Dependency {:?} does not satisfy requirement {:?} from {:?}",
+                            "Dependency {:?} does not satisfy requirement {} from {:?}",
                             dependency.package.resolved(),
                             edge.requested,
                             dependent.package.resolved(),
@@ -294,7 +294,7 @@ impl Graph {
                     }
                 } else {
                     return Err(GraphValidationError(format!(
-                        "Dependency {:?} {:?} not reachable from {:?}",
+                        "Dependency {:?} {} not reachable from {:?}",
                         dep_name,
                         edge.requested,
                         dependent.package.resolved(),
