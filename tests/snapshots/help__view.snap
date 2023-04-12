@@ -25,6 +25,12 @@ Package spec to look up
 
 ### Options
 
+#### `--default-tag <DEFAULT_TAG>`
+
+Default dist-tag to use when resolving package versions
+
+\[default: latest]
+
 #### `-h, --help`
 
 Print help (see a summary with '-h')

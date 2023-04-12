@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::Result;
 
-use crate::apply::Apply;
+use crate::apply_args::ApplyArgs;
 use crate::commands::OroCommand;
 
 /// Applies the current project's requested dependencies to `node_modules/`,
@@ -17,7 +17,7 @@ use crate::commands::OroCommand;
 #[clap(visible_aliases(["a", "ap", "app"]))]
 pub struct ApplyCmd {
     #[command(flatten)]
-    apply: Apply,
+    apply: ApplyArgs,
 }
 
 #[async_trait]

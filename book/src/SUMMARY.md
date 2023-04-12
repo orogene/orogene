@@ -13,6 +13,7 @@
 
 # Commands
 
+- [add](./commands/add.md)
 - [apply](./commands/apply.md)
 - [ping](./commands/ping.md)
 - [reapply](./commands/reapply.md)

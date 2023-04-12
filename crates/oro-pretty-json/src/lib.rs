@@ -73,7 +73,9 @@ fn detect_indentation(json: &str) -> Option<(char, usize)> {
 fn detect_line_end(json: &str) -> Option<(String, bool)> {
     json.find(['\r', '\n'])
         .map(|idx| {
-            let c = json.get(idx..idx + 1).expect("we already know there's a char there");
+            let c = json
+                .get(idx..idx + 1)
+                .expect("we already know there's a char there");
             if c == "\r" && json.get(idx..idx + 2) == Some("\r\n") {
                 return "\r\n".into();
             }

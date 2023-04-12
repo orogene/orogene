@@ -57,8 +57,9 @@ use url::Url;
 
 use commands::OroCommand;
 
-mod apply;
+mod apply_args;
 mod commands;
+mod nassun_args;
 
 const MAX_RETAINED_LOGS: usize = 5;
 
@@ -435,6 +436,8 @@ where
 
 #[derive(Debug, Subcommand)]
 pub enum OroCmd {
+    Add(commands::add::AddCmd),
+
     Apply(commands::apply::ApplyCmd),
 
     Ping(commands::ping::PingCmd),
@@ -452,6 +455,7 @@ impl OroCommand for Orogene {
     async fn execute(self) -> Result<()> {
         log_command_line();
         match self.subcommand {
+            OroCmd::Add(cmd) => cmd.execute().await,
             OroCmd::Apply(cmd) => cmd.execute().await,
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Reapply(cmd) => cmd.execute().await,

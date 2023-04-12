@@ -1,16 +1,13 @@
-use std::path::PathBuf;
-
 use async_trait::async_trait;
 use clap::Args;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
-use nassun::NassunOpts;
 use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
-use url::Url;
 
 use crate::commands::OroCommand;
+use crate::nassun_args::NassunArgs;
 
 #[derive(Debug, Args)]
 /// Get information about a package.
@@ -21,35 +18,16 @@ pub struct ViewCmd {
     pkg: String,
 
     #[arg(from_global)]
-    registry: Url,
-
-    #[arg(from_global)]
-    scoped_registries: Vec<(String, Url)>,
-
-    #[arg(from_global)]
-    root: Option<PathBuf>,
-
-    #[arg(from_global)]
-    cache: Option<PathBuf>,
-
-    #[arg(from_global)]
     json: bool,
+
+    #[command(flatten)]
+    nassun_args: NassunArgs,
 }
 
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let mut nassun_opts = NassunOpts::new().registry(self.registry);
-        for (scope, registry) in self.scoped_registries {
-            nassun_opts = nassun_opts.scope_registry(scope, registry);
-        }
-        if let Some(root) = self.root {
-            nassun_opts = nassun_opts.base_dir(root);
-        }
-        if let Some(cache) = self.cache {
-            nassun_opts = nassun_opts.cache(cache);
-        }
-        let pkg = nassun_opts.build().resolve(&self.pkg).await?;
+        let pkg = self.nassun_args.to_nassun().resolve(&self.pkg).await?;
         let packument = pkg.packument().await?;
         let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]

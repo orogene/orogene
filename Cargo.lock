@@ -2234,6 +2234,8 @@ dependencies = [
  "oro-client",
  "oro-common",
  "oro-config",
+ "oro-package-spec",
+ "oro-pretty-json",
  "poloto",
  "rand 0.8.5",
  "resvg",

@@ -1,0 +1,166 @@
+---
+source: tests/help.rs
+expression: "sub_md(\"add\")"
+---
+stderr:
+
+stdout:
+# oro add
+
+Adds one or more dependencies to the target package
+
+### Usage:
+
+```
+oro add [OPTIONS] <SPECS>...
+```
+
+### Arguments
+
+#### `<SPECS>...`
+
+Specifiers for packages to add
+
+### Options
+
+#### `-D, --dev`
+
+Add packages as devDependencies
+
+#### `-O, --opt`
+
+Add packages as optionalDependencies
+
+\[aliases: optional]
+
+#### `-h, --help`
+
+Print help (see a summary with '-h')
+
+#### `-V, --version`
+
+Print version
+
+### Apply Options
+
+#### `--no-apply`
+
+Prevent all apply operations from executing
+
+#### `--prefer-copy`
+
+When extracting packages, prefer to copy files files instead of linking them.
+
+This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).
+
+#### `--validate`
+
+Validate the integrity of installed files.
+
+When this is true, orogene will verify all files extracted from the cache, as well as verify that any files in the existing `node_modules` are unmodified. If verification fails, the packages will be reinstalled.
+
+#### `--lockfile-only`
+
+Whether to skip restoring packages into `node_modules` and just resolve the tree and write the lockfile
+
+#### `--no-scripts`
+
+Skip running install scripts
+
+#### `--default-tag <DEFAULT_TAG>`
+
+Default dist-tag to use when resolving package versions
+
+\[default: latest]
+
+#### `--concurrency <CONCURRENCY>`
+
+Controls number of concurrent operations during various apply steps (resolution fetches, extractions, etc).
+
+Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).
+
+\[default: 50]
+
+#### `--script-concurrency <SCRIPT_CONCURRENCY>`
+
+Controls number of concurrent script executions while running `run_script`.
+
+This option is separate from `concurrency` because executing concurrent scripts is a much heavier operation.
+
+\[default: 6]
+
+#### `--no-lockfile`
+
+Disable writing the lockfile after operations complete.
+
+Note that lockfiles are only written after all operations complete successfully.
+
+#### `--hoisted`
+
+Use the hoisted installation mode, where all dependencies and their transitive dependencies are installed as high up in the `node_modules` tree as possible.
+
+This can potentially mean that packages have access to dependencies they did not specify in their package.json, but it might be useful for compatibility.
+
+By default, dependencies are installed in "isolated" mode, using a symlink/junction structure to simulate a dependency tree.
+
+### Global Options
+
+#### `--root <ROOT>`
+
+Path to the project to operate on.
+
+By default, Orogene will look up from the current working directory until it finds a directory with a `package.json` file or a `node_modules/` directory.
+
+\[default: .]
+
+#### `--registry <REGISTRY>`
+
+Registry used for unscoped packages
+
+\[default: https://registry.npmjs.org]
+
+#### `--scoped-registry <SCOPED_REGISTRIES>`
+
+Registry to use for a specific `@scope`, using `--scoped-registry @scope=https://foo.com` format.
+
+Can be provided multiple times to specify multiple scoped registries.
+
+#### `--cache <CACHE>`
+
+Location of disk cache.
+
+Default location varies by platform.
+
+#### `--config <CONFIG>`
+
+File to read configuration values from.
+
+When specified, global configuration loading is disabled and configuration values will only be read from this location.
+
+#### `--loglevel <LOGLEVEL>`
+
+Log output level/directive.
+
+Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format `target[span{field=value}]=level`.
+
+\[default: info]
+
+#### `-q, --quiet`
+
+Disable all output
+
+#### `--json`
+
+Format output as JSON
+
+#### `--no-progress`
+
+Disable the progress bars
+
+#### `--no-emoji`
+
+Disable printing emoji.
+
+By default, this will show emoji when outputting to a TTY that supports unicode.
+
+

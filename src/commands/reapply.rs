@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::{IntoDiagnostic, Result};
 
-use crate::apply::Apply;
+use crate::apply_args::ApplyArgs;
 use crate::commands::OroCommand;
 
 /// Removes the existing `node_modules`, if any, and reapplies it from
@@ -10,7 +10,7 @@ use crate::commands::OroCommand;
 #[derive(Debug, Args)]
 pub struct ReapplyCmd {
     #[command(flatten)]
-    apply: Apply,
+    apply: ApplyArgs,
 }
 
 #[async_trait]
