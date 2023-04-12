@@ -75,13 +75,13 @@ Disable all output
 
 Format output as JSON
 
-#### `--progress`
+#### `--no-progress`
 
-Whether to display a progress bar for long operations. Use `--no-progress` to disable
+Disable the progress bars
 
-#### `--emoji`
+#### `--no-emoji`
 
-Whether to display emoji. Use `--no-emoji` to disable.
+Disable printing emoji.
 
 By default, this will show emoji when outputting to a TTY that supports unicode.
 

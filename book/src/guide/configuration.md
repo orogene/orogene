@@ -31,8 +31,15 @@ the command line.
 
 All available options for individual commands are available by doing `oro
 <subcommand> --help`, or by visiting the individual commands' documentation
-pages on this site. "Global Options" can potentially be used across all
-commands and have a shared meaning.
+pages on this site.
+
+"Global Options" can potentially be used across all commands and have a shared
+meaning. Global options are always listed and accepted for all commands, even
+if the individual commands do not make use of them.
+
+Commands with an "Apply Options" section support [implicit dependency
+application](./node_modules.md). Any that don't have that section do not
+interact with `node_modules` at all.
 
 ### Specifying Options
 

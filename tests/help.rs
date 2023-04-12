@@ -13,6 +13,11 @@ fn ping_markdown() {
 }
 
 #[test]
+fn reapply_markdown() {
+    insta::assert_snapshot!("reapply", sub_md("reapply"));
+}
+
+#[test]
 fn view_markdown() {
     insta::assert_snapshot!("view", sub_md("view"));
 }
