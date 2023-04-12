@@ -19,21 +19,33 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Cache web cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-web-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Install mdbook
         run: |
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.14/mdbook-v0.4.14-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
           echo `pwd`/mdbook >> $GITHUB_PATH
+
       - name: Run mdbook build
         run: |
           cd book
           mdbook build
 
       - name: Install oranda
-        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.0.1/oranda-v0.0.1-installer.sh | sh"
+        run: cargo install --git https://github.com/axodotdev/oranda --rev 89e81fe
 
       - name: Run oranda
-        run: oranda build
+        run: ~/.cargo/bin/oranda build
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.4.1

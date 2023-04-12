@@ -4,6 +4,10 @@
 
 </div>
 
+[the benchmarks]: ./BENCHMARKS.md
+[CONTRIBUTING.md]: ./CONTRIBUTING.md
+[Apache 2.0 License]: ./LICENSE
+
 > Yet another `node_modules/` package manager, I guess.
 
 [![crates.io](https://img.shields.io/crates/v/orogene.svg)](https://crates.io/crates/orogene)
@@ -40,7 +44,3 @@ Orogene and all its sub-crates are licensed under the terms of the [Apache
 [the benchmarks]: https://orogene.dev/BENCHMARKS.html
 [CONTRIBUTING.md]: https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
 [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
-
-[the benchmarks]: ./BENCHMARKS.md
-[CONTRIBUTING.md]: ./CONTRIBUTING.md
-[Apache 2.0 License]: ./LICENSE

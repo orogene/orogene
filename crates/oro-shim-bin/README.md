@@ -1,7 +1,7 @@
 # `oro-shim-bin`
 
 Creates shims for package bins on Windows. Basically a Rust port of
-https://github.com/npm/cmd-shim.
+<https://github.com/npm/cmd-shim>.
 
 ## Orogene
 

@@ -1,4 +1,8 @@
 {
-    "additional_pages": ["./CHANGELOG.md", "./CONTRIBUTING.md"],
+    "additional_pages": {
+        "Changelog": "./CHANGELOG.md",
+        "Benchmarks": "./BENCHMARKS.md",
+        "Contributing": "./CONTRIBUTING.md"
+    },
     "md_book": "./book/book"
 }
