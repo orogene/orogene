@@ -1,0 +1,15 @@
+[package]
+name = "oro-pretty-json"
+version = "0.3.19"
+description = "Utility for pretty printing JSON while preserving the order of keys and the original indentation and line endings from a JSON source."
+readme = "README.md"
+license = "Apache-2.0"
+
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde_json = { workspace = true, features = ["preserve_order"] }
