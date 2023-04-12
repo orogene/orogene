@@ -15,6 +15,7 @@
 
 - [apply](./commands/apply.md)
 - [ping](./commands/ping.md)
+- [reapply](./commands/reapply.md)
 - [view](./commands/view.md)
 
 ---
