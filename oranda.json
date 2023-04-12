@@ -4,5 +4,6 @@
         "Benchmarks": "./BENCHMARKS.md",
         "Contributing": "./CONTRIBUTING.md"
     },
-    "md_book": "./book/book"
+    "md_book": "./book/book",
+    "static_dir": "assets"
 }
