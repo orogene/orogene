@@ -1,14 +1,15 @@
 [package]
 name = "oro-common"
 version = "0.3.19"
-authors = ["Kat Marchán <kzm@zkat.tech>"]
-edition = "2021"
 description = "Common types and utilities for Orogene."
-license = "Apache-2.0"
-repository = "https://github.com/orogene/orogene"
-homepage = "https://github.com/orogene/orogene"
 readme = "README.md"
-rust-version = "1.67.1"
+license = "Apache-2.0"
+
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 derive_builder = { workspace = true }
