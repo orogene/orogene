@@ -1,6 +1,6 @@
 use derive_builder::Builder;
 use node_semver::Version;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use url::Url;
@@ -74,7 +74,11 @@ pub struct CorgiVersionMetadata {
     pub has_shrinkwrap: Option<bool>,
     #[serde(flatten)]
     pub manifest: CorgiManifest,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "string_or_bool",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub deprecated: Option<String>,
 }
 
@@ -89,7 +93,11 @@ pub struct VersionMetadata {
     pub dist: Dist,
     #[serde(rename = "_hasShrinkwrap", skip_serializing_if = "Option::is_none")]
     pub has_shrinkwrap: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "string_or_bool",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub deprecated: Option<String>,
 
     #[serde(flatten)]
@@ -127,6 +135,19 @@ impl From<CorgiVersionMetadata> for CorgiManifest {
 impl From<VersionMetadata> for Manifest {
     fn from(value: VersionMetadata) -> Self {
         value.manifest
+    }
+}
+
+fn string_or_bool<'de, D, T>(deserializer: D) -> std::result::Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: std::cmp::PartialEq<&'de str> + Deserialize<'de>,
+{
+    let val: T = Deserialize::deserialize(deserializer)?;
+    if val != "false" {
+        Ok(Some(val))
+    } else {
+        Ok(None)
     }
 }
 
