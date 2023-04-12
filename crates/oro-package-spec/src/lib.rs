@@ -69,6 +69,20 @@ impl PackageSpec {
         }
     }
 
+    pub fn target_mut(&mut self) -> &mut PackageSpec {
+        use PackageSpec::*;
+        match self {
+            Alias { spec, .. } => {
+                if spec.is_alias() {
+                    spec.target_mut()
+                } else {
+                    spec
+                }
+            }
+            _ => self,
+        }
+    }
+
     pub fn requested(&self) -> String {
         use PackageSpec::*;
         match self {

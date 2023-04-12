@@ -15,7 +15,7 @@ use url::Url;
 /// the right state to execute, based on your declared dependencies.
 #[derive(Debug, Args)]
 #[command(next_help_heading = "Apply Options")]
-pub struct Apply {
+pub struct ApplyArgs {
     /// Prevent all apply operations from executing.
     #[arg(
         long = "no-apply",
@@ -109,7 +109,7 @@ pub struct Apply {
     pub emoji: bool,
 }
 
-impl Apply {
+impl ApplyArgs {
     pub async fn execute(&self) -> Result<()> {
         let total_time = std::time::Instant::now();
 

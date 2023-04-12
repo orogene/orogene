@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use miette::Result;
 
+pub mod add;
 pub mod apply;
 pub mod ping;
 pub mod reapply;
