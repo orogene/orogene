@@ -69,7 +69,8 @@ impl OroClient {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod test {
-    use maplit::{btreemap, hashmap};
+    use indexmap::IndexMap;
+    use maplit::hashmap;
     use miette::{IntoDiagnostic, Result};
     use oro_common::{CorgiManifest, CorgiVersionMetadata, Manifest, VersionMetadata};
     use pretty_assertions::assert_eq;
@@ -110,9 +111,9 @@ mod test {
                         manifest: CorgiManifest {
                             name: Some("some-pkg".to_string()),
                             version: Some("1.0.0".parse()?),
-                            dependencies: btreemap!(
-                                "some-dep".to_string() => "1.0.0".to_string()
-                            ),
+                            dependencies: IndexMap::from([
+                                ("some-dep".to_string(), "1.0.0".to_string())
+                            ]),
                             ..Default::default()
                         },
                     ..Default::default()
@@ -147,9 +148,9 @@ mod test {
                         manifest: Manifest {
                             name: Some("some-pkg".to_string()),
                             version: Some("1.0.0".parse()?),
-                            dependencies: btreemap!(
-                                "some-dep".to_string() => "1.0.0".to_string()
-                            ),
+                            dependencies: IndexMap::from([
+                                ("some-dep".to_string(), "1.0.0".to_string())
+                            ]),
                             ..Default::default()
                         },
                     ..Default::default()

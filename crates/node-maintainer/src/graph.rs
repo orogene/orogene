@@ -1,10 +1,11 @@
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::VecDeque,
     ffi::OsStr,
     ops::{Index, IndexMut},
     path::Path,
 };
 
+use indexmap::IndexMap;
 use kdl::KdlDocument;
 use nassun::{package::Package, PackageResolution, PackageSpec};
 use oro_common::CorgiManifest;
@@ -39,13 +40,13 @@ pub struct Node {
     /// Quick index back to this Node's [`Graph`]'s root Node.
     pub(crate) root: NodeIndex,
     /// Name-indexed map of outgoing [`crate::Edge`]s from this Node.
-    pub(crate) dependencies: BTreeMap<UniCase<String>, EdgeIndex>,
+    pub(crate) dependencies: IndexMap<UniCase<String>, EdgeIndex>,
     /// Parent, if any, of this Node in the logical filesystem hierarchy.
     pub(crate) parent: Option<NodeIndex>,
     /// Children of this node in the logical filesystem hierarchy. These are
     /// not necessarily dependencies, and this Node's dependencies may not all
     /// be in this HashMap.
-    pub(crate) children: BTreeMap<UniCase<String>, NodeIndex>,
+    pub(crate) children: IndexMap<UniCase<String>, NodeIndex>,
 }
 
 impl Node {
@@ -56,8 +57,8 @@ impl Node {
             idx: NodeIndex::new(0),
             root: NodeIndex::new(0),
             parent: None,
-            children: BTreeMap::new(),
-            dependencies: BTreeMap::new(),
+            children: IndexMap::new(),
+            dependencies: IndexMap::new(),
         }
     }
 
@@ -158,7 +159,7 @@ impl Graph {
                     node,
                 ))
             })
-            .collect::<Result<BTreeMap<_, _>, NodeMaintainerError>>()?;
+            .collect::<Result<IndexMap<_, _>, NodeMaintainerError>>()?;
         Ok(Lockfile {
             version: 1,
             root,
@@ -324,10 +325,10 @@ impl Graph {
             None
         };
 
-        let mut prod_deps = BTreeMap::new();
-        let mut dev_deps = BTreeMap::new();
-        let mut peer_deps = BTreeMap::new();
-        let mut opt_deps = BTreeMap::new();
+        let mut prod_deps = IndexMap::new();
+        let mut dev_deps = IndexMap::new();
+        let mut peer_deps = IndexMap::new();
+        let mut opt_deps = IndexMap::new();
         let dependencies = node.dependencies.iter().map(|(name, edge_idx)| {
             let edge = &self.inner[*edge_idx];
             (name, &edge.requested, &edge.dep_type)

@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -7,6 +7,7 @@ use async_std::sync::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use colored::Colorize;
 use futures::{StreamExt, TryFutureExt};
+use indexmap::IndexMap;
 use nassun::client::Nassun;
 use nassun::package::Package;
 use nassun::PackageSpec;
@@ -64,7 +65,7 @@ impl<'a> Resolver<'a> {
         // fetched dependencies. Thus we maintain a mapping from "name@spec" to
         // a vector of `NodeDependency`s. When we will fetch the package - we
         // will apply it to all dependencies that need it.
-        let fetches: BTreeMap<String, Vec<NodeDependency>> = BTreeMap::new();
+        let fetches: IndexMap<String, Vec<NodeDependency>> = IndexMap::new();
         let fetches = Arc::new(Mutex::new(fetches));
 
         let mut package_stream = package_stream

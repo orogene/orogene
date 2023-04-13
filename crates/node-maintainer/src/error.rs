@@ -51,12 +51,12 @@ pub enum NodeMaintainerError {
     /// Missing package node name.
     #[error("Missing package name:\n{0:#?}")]
     #[diagnostic(code(node_maintainer::npm::missing_name))]
-    NpmLockMissingName(NpmPackageLockEntry),
+    NpmLockMissingName(Box<NpmPackageLockEntry>),
 
     /// Failed to parse an integrity value while loading NPM lockfile.
     #[error("Failed to parse an integrity value while loading lockfile node:\n{0:#?}")]
     #[diagnostic(code(node_maintainer::npm::integrity_parse_error))]
-    NpmLockfileIntegrityParseError(NpmPackageLockEntry, #[source] ssri::Error),
+    NpmLockfileIntegrityParseError(Box<NpmPackageLockEntry>, #[source] ssri::Error),
 
     /// Unsupported NPM Package Lock version.
     #[error("Unsupported NPM Package Lock version: {0}")]

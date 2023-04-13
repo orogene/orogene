@@ -19,6 +19,7 @@ oro-package-spec = { version = "=0.3.19", path = "../oro-package-spec" }
 async-std = { workspace = true }
 colored = { workspace = true }
 futures = { workspace = true }
+indexmap = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }

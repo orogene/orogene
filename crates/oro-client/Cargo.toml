@@ -15,6 +15,7 @@ rust-version.workspace = true
 oro-common = { version = "=0.3.19", path = "../oro-common" }
 
 futures = { workspace = true, features = ["io-compat"] }
+indexmap = { workspace = true }
 miette = { workspace = true }
 reqwest = { workspace = true, features = ["json", "gzip", "stream"] }
 serde = { workspace = true }
