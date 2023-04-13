@@ -444,6 +444,8 @@ pub enum OroCmd {
 
     Reapply(commands::reapply::ReapplyCmd),
 
+    Remove(commands::remove::RemoveCmd),
+
     View(commands::view::ViewCmd),
 
     #[clap(hide = true)]
@@ -459,6 +461,7 @@ impl OroCommand for Orogene {
             OroCmd::Apply(cmd) => cmd.execute().await,
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Reapply(cmd) => cmd.execute().await,
+            OroCmd::Remove(cmd) => cmd.execute().await,
             OroCmd::View(cmd) => cmd.execute().await,
             OroCmd::HelpMarkdown(cmd) => cmd.execute().await,
         }

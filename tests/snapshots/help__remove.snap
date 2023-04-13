@@ -1,45 +1,29 @@
 ---
 source: tests/help.rs
-expression: "sub_md(\"add\")"
+expression: "sub_md(\"remove\")"
 ---
 stderr:
 
 stdout:
-# oro add
+# oro remove
 
-Adds one or more dependencies to the target package
+Removes one or more dependencies to the target package
 
 ### Usage:
 
 ```
-oro add [OPTIONS] <SPECS>...
+oro remove [OPTIONS] <NAMES>...
 ```
+
+[alias: rm]
 
 ### Arguments
 
-#### `<SPECS>...`
+#### `<NAMES>...`
 
-Specifiers for packages to add
+Package names of dependencies to remove. These will be removed from all dependency types
 
 ### Options
-
-#### `--prefix <PREFIX>`
-
-Prefix to prepend to package versions for resolved NPM dependencies.
-
-For example, if you do `oro add foo@1.2.3 --prefix ~`, this will write `"foo": "~1.2.3"` to your `package.json`.
-
-\[default: ^]
-
-#### `-D, --dev`
-
-Add packages as devDependencies
-
-#### `-O, --opt`
-
-Add packages as optionalDependencies
-
-\[aliases: optional]
 
 #### `-h, --help`
 
