@@ -23,6 +23,11 @@ fn reapply_markdown() {
 }
 
 #[test]
+fn remove_markdown() {
+    insta::assert_snapshot!("remove", sub_md("remove"));
+}
+
+#[test]
 fn view_markdown() {
     insta::assert_snapshot!("view", sub_md("view"));
 }
