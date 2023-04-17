@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use async_process::{Command, Stdio};
 use async_std::sync::Arc;
 use async_trait::async_trait;
+use node_semver::{Range, Version};
 use once_cell::sync::OnceCell;
 use oro_client::{self, OroClient};
 use oro_common::{CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
@@ -35,33 +36,46 @@ impl GitFetcher {
     async fn fetch_to_temp_dir(&self, info: &GitInfo, dir: &Path) -> Result<()> {
         match info {
             GitInfo::Url {
-                url, committish, ..
+                url,
+                committish,
+                semver,
+                ..
             } => {
-                self.fetch_clone(dir, url.to_string(), committish).await?;
+                self.fetch_clone(dir, url.to_string(), committish, semver, info)
+                    .await?;
             }
             GitInfo::Ssh {
-                ssh, committish, ..
+                ssh,
+                committish,
+                semver,
+                ..
             } => {
-                self.fetch_clone(dir, ssh, committish).await?;
+                self.fetch_clone(dir, ssh, committish, semver, info).await?;
             }
             hosted @ GitInfo::Hosted { .. } => match &hosted {
                 GitInfo::Hosted {
                     requested,
                     committish,
+                    semver,
                     ..
                 } => {
                     if let Some(requested) = requested {
-                        self.fetch_clone(dir, requested, committish).await?;
+                        self.fetch_clone(dir, requested, committish, semver, info)
+                            .await?;
                     } else if let (Some(tarball), Some(https), Some(ssh)) =
                         (hosted.tarball(), hosted.https(), hosted.ssh())
                     {
                         match self.fetch_tarball(dir, &tarball).await {
                             Ok(_) => {}
                             Err(_) => {
-                                match self.fetch_clone(dir, https.to_string(), committish).await {
+                                match self
+                                    .fetch_clone(dir, https.to_string(), committish, semver, info)
+                                    .await
+                                {
                                     Ok(_) => {}
                                     Err(_) => {
-                                        self.fetch_clone(dir, ssh, committish).await?;
+                                        self.fetch_clone(dir, ssh, committish, semver, info)
+                                            .await?;
                                     }
                                 }
                             }
@@ -89,6 +103,8 @@ impl GitFetcher {
         dir: &Path,
         repo: impl AsRef<str>,
         committish: &Option<String>,
+        semver: &Option<Range>,
+        info: &GitInfo,
     ) -> Result<()> {
         let repo = repo.as_ref();
         let git = self
@@ -112,10 +128,46 @@ impl GitFetcher {
                     Err(NassunError::GitCloneError(String::from(repo)))
                 }
             })?;
-        if let Some(committish) = committish {
+        let checkout_ref = if let Some(range) = semver {
+            let refs_output = Command::new(git)
+                .arg("show-ref")
+                .arg("--tags")
+                .current_dir(dir.join("package"))
+                .stdin(Stdio::null())
+                .stderr(Stdio::null())
+                .output()
+                .await
+                .map_err(NassunError::GitIoError)?;
+            let versions: Vec<Version> = String::from_utf8(refs_output.stdout)
+                .map_err(|e| {
+                    NassunError::MiscError(format!("Could not decode git output as UTF-8. {}", e))
+                })?
+                .lines()
+                .filter_map(|line| {
+                    line.split('/')
+                        .last()
+                        .and_then(|tag| Version::parse(tag).ok())
+                })
+                .collect();
+            Some(
+                versions
+                    .iter()
+                    .filter(|v| range.satisfies(v))
+                    .max()
+                    .ok_or_else(|| NassunError::NoVersion {
+                        name: repo.to_string(),
+                        spec: PackageSpec::Git(info.clone()),
+                        versions: versions.iter().map(|v| v.to_string()).collect(),
+                    })?
+                    .to_string(),
+            )
+        } else {
+            committish.clone()
+        };
+        if let Some(checkout_ref) = checkout_ref {
             Command::new(git)
                 .arg("checkout")
-                .arg(committish)
+                .arg(&checkout_ref)
                 .current_dir(dir.join("package"))
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -129,7 +181,7 @@ impl GitFetcher {
                     } else {
                         Err(NassunError::GitCheckoutError(
                             String::from(repo),
-                            committish.clone(),
+                            checkout_ref.clone(),
                         ))
                     }
                 })?;
@@ -391,6 +443,29 @@ mod test {
             packument
                 .versions
                 .get(&"1.0.0".parse()?)
+                .unwrap()
+                .dist
+                .file_count,
+            None
+        );
+        // get specific commit (by semver tag)
+        let packument = fetcher
+            .packument(
+                &PackageSpec::Git(GitInfo::Url {
+                    url: format!("file://{}", git_dir.path().to_str().unwrap())
+                        .parse()
+                        .unwrap(),
+                    committish: None,
+                    semver: Some(">1.0.0 <1.5.0".parse()?),
+                }),
+                tmp.path(),
+            )
+            .await?;
+        assert!(packument.versions.contains_key(&"1.2.0".parse()?));
+        assert_eq!(
+            packument
+                .versions
+                .get(&"1.2.0".parse()?)
                 .unwrap()
                 .dist
                 .file_count,
