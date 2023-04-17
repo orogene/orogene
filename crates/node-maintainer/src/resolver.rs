@@ -6,7 +6,7 @@ use std::sync::Arc;
 use async_std::sync::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use colored::Colorize;
-use futures::{StreamExt, TryFutureExt};
+use futures::StreamExt;
 use indexmap::IndexMap;
 use nassun::client::Nassun;
 use nassun::package::Package;
@@ -26,8 +26,9 @@ use crate::{Lockfile, LockfileNode, ProgressAdded, ProgressHandler};
 #[derive(Debug, Clone)]
 struct NodeDependency {
     name: UniCase<String>,
-    spec: String,
+    requested: PackageSpec,
     dep_type: DepType,
+    resolved: Option<(Package, LockfileNode)>,
     node_idx: NodeIndex,
 }
 
@@ -65,31 +66,26 @@ impl<'a> Resolver<'a> {
         // fetched dependencies. Thus we maintain a mapping from "name@spec" to
         // a vector of `NodeDependency`s. When we will fetch the package - we
         // will apply it to all dependencies that need it.
-        let fetches: IndexMap<String, Vec<NodeDependency>> = IndexMap::new();
+        let fetches: IndexMap<PackageSpec, Vec<NodeDependency>> = IndexMap::new();
         let fetches = Arc::new(Mutex::new(fetches));
 
         let mut package_stream = package_stream
             .map(|dep: NodeDependency| {
-                let spec = format!("{}@{}", dep.name, dep.spec);
-                let maybe_spec = if let Some(mut fetches) = fetches.try_lock() {
-                    if let Some(list) = fetches.get_mut(&spec) {
+                if let Some(mut fetches) = fetches.try_lock() {
+                    if let Some(list) = fetches.get_mut(&dep.requested) {
                         // Package fetch is already in-flight, add dependency
                         // to the existing list.
                         list.push(dep);
-                        None
+                        return futures::future::ready(None);
                     } else {
                         // Fetch package since we are the first one to get here.
-                        fetches.insert(spec.clone(), vec![dep]);
-                        Some(spec)
+                        fetches.insert(dep.requested.clone(), vec![dep.clone()]);
                     }
-                } else {
-                    // Mutex is locked - fetch the package
-                    Some(spec)
                 };
-                futures::future::ready(maybe_spec)
+                futures::future::ready(Some(dep))
             })
-            .filter_map(|maybe_spec| maybe_spec)
-            .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
+            .filter_map(|dep| dep)
+            .map(|dep| Self::resolve_dep(&self.nassun, dep))
             .buffer_unordered(self.concurrency)
             .ready_chunks(self.concurrency);
 
@@ -97,43 +93,35 @@ impl<'a> Resolver<'a> {
         while !q.is_empty() || in_flight != 0 {
             while let Some(node_idx) = q.pop_front() {
                 let mut names = HashSet::new();
-                let manifest = self.graph[node_idx].manifest.clone();
                 // Grab all the deps from the current package and fire off a
                 // lookup. These will be resolved concurrently.
-                for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
-                    // `dependencies` > `optionalDependencies` ->
-                    // `peerDependencies` -> `devDependencies` (if we're looking
-                    // at root)
-                    let name = UniCase::new(name.clone());
-
+                for (name, (spec, dep_type)) in self.graph[node_idx].dependency_reqs.clone() {
                     if names.contains(&name) {
                         continue;
                     } else {
                         names.insert(name.clone());
                     }
 
-                    let dep = NodeDependency {
+                    let mut dep = NodeDependency {
                         name: name.clone(),
-                        spec: spec.to_string(),
-                        dep_type: dep_type.clone(),
+                        requested: spec,
+                        dep_type,
                         node_idx,
+                        resolved: None,
                     };
 
                     if let Some(handler) = &self.on_resolution_added {
                         handler();
                     }
 
-                    let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-
+                    // Walk up the current hierarchy to see if we find a
+                    // dependency that already satisfies this request. If so,
+                    // make a new edge and move on.
                     if let Some(_child_idx) = Self::satisfy_dependency(&mut self.graph, &dep)? {
                         if let Some(handler) = &self.on_resolve_progress {
                             handler(&self.graph[_child_idx].package);
                         }
-                    }
-                    // Walk up the current hierarchy to see if we find a
-                    // dependency that already satisfies this request. If so,
-                    // make a new edge and move on.
-                    else {
+                    } else {
                         // If we have a lockfile, first check if there's a
                         // dep there that would satisfy this.
                         let lock = if lockfile.is_some() {
@@ -142,34 +130,18 @@ impl<'a> Resolver<'a> {
                             // Fall back to the actual tree lock if it's there.
                             &self.actual_tree
                         };
-                        if let Some(kdl_lock) = lock {
+                        if let Some(lockfile) = lock {
                             if let Some((package, lockfile_node)) = self
                                 .satisfy_from_lockfile(
                                     &self.graph,
                                     node_idx,
-                                    kdl_lock,
+                                    lockfile,
                                     &name,
-                                    &requested,
+                                    &dep.requested,
                                 )
                                 .await?
                             {
-                                let target_path = lockfile_node.path.clone();
-
-                                let child_idx = Self::place_child(
-                                    &mut self.graph,
-                                    node_idx,
-                                    package,
-                                    &requested,
-                                    dep_type,
-                                    lockfile_node.into(),
-                                    Some(target_path),
-                                )?;
-                                q.push_back(child_idx);
-
-                                if let Some(handler) = &self.on_resolve_progress {
-                                    handler(&self.graph[child_idx].package);
-                                }
-                                continue;
+                                dep.resolved = Some((package, lockfile_node));
                             }
                         }
 
@@ -190,33 +162,40 @@ impl<'a> Resolver<'a> {
             // don't have to worry about races messing with placement.
             if let Some(packages) = package_stream.next().await {
                 for res in packages {
-                    let (package, spec) = res?;
+                    let (package, lockfile_node, spec) = res?;
                     let deps = fetches.lock().await.remove(&spec);
 
                     if let Some(deps) = deps {
                         in_flight -= deps.len();
 
-                        let CorgiVersionMetadata {
-                            manifest,
-                            #[cfg(not(target_arch = "wasm32"))]
-                            deprecated,
-                            ..
-                        } = &package.corgi_metadata().await?;
+                        let (target_path, manifest) = if let Some((target_path, manifest)) =
+                            lockfile_node.map(|n| (Some(n.path.clone()), n.into()))
+                        {
+                            (target_path, manifest)
+                        } else {
+                            // For performance reasons, we skip deprecation
+                            // checks for lockfile dependencies.
+                            let CorgiVersionMetadata {
+                                manifest,
+                                deprecated,
+                                ..
+                            } = package.corgi_metadata().await?;
 
-                        #[cfg(not(target_arch = "wasm32"))]
-                        if let Some(deprecated) = deprecated {
-                            tracing::warn!(
-                                "{} {}@{}: {}",
-                                "deprecated".magenta(),
-                                manifest.name.as_ref().unwrap(),
-                                manifest
-                                    .version
-                                    .as_ref()
-                                    .map(|v| v.to_string())
-                                    .unwrap_or_else(|| "unknown".into()),
-                                deprecated
-                            );
-                        }
+                            if let Some(deprecated) = deprecated {
+                                tracing::warn!(
+                                    "{} {}@{}: {}",
+                                    "deprecated".magenta(),
+                                    manifest.name.as_ref().unwrap(),
+                                    manifest
+                                        .version
+                                        .as_ref()
+                                        .map(|v| v.to_string())
+                                        .unwrap_or_else(|| "unknown".into()),
+                                    deprecated
+                                );
+                            }
+                            (None, manifest)
+                        };
 
                         for dep in deps {
                             if let Some(_child_idx) =
@@ -228,16 +207,14 @@ impl<'a> Resolver<'a> {
                                 continue;
                             }
 
-                            let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-
                             let child_idx = Self::place_child(
                                 &mut self.graph,
                                 dep.node_idx,
                                 package.clone(),
-                                &requested,
+                                &dep.requested,
                                 dep.dep_type,
                                 manifest.clone(),
-                                None,
+                                target_path.clone(),
                             )?;
 
                             q.push_back(child_idx);
@@ -271,28 +248,38 @@ impl<'a> Resolver<'a> {
         Ok((self.graph, self.actual_tree))
     }
 
+    async fn resolve_dep(
+        nassun: &Nassun,
+        dep: NodeDependency,
+    ) -> Result<(Package, Option<LockfileNode>, PackageSpec), NodeMaintainerError> {
+        if let Some((package, lockfile_node)) = dep.resolved {
+            Ok((package, Some(lockfile_node), dep.requested.clone()))
+        } else {
+            let pkg = nassun.resolve_spec(&dep.requested).await?;
+            Ok((pkg, None, dep.requested.clone()))
+        }
+    }
+
     fn satisfy_dependency(
         graph: &mut Graph,
         dep: &NodeDependency,
     ) -> Result<Option<NodeIndex>, NodeMaintainerError> {
-        if let Some(satisfier_idx) = graph.find_by_name(dep.node_idx, &dep.name)? {
-            let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
+        if let Some(satisfier_idx) = graph.resolve_dep(dep.node_idx, &dep.name) {
             if graph[satisfier_idx]
                 .package
                 .resolved()
-                .satisfies(&requested)?
+                .satisfies(&dep.requested)?
             {
                 let edge_idx = graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
-                    Edge::new(requested, dep.dep_type.clone()),
+                    Edge::new(dep.requested.clone(), dep.dep_type),
                 );
                 graph[dep.node_idx]
                     .dependencies
                     .insert(dep.name.clone(), edge_idx);
                 return Ok(Some(satisfier_idx));
             }
-            return Ok(None);
         }
         Ok(None)
     }
@@ -324,7 +311,9 @@ impl<'a> Resolver<'a> {
                     if package.resolved().satisfies(requested)? {
                         return Ok(Some((package, lockfile_node.clone())));
                     } else {
-                        // TODO: Log this We found a lockfile node in a place
+                        // TODO: Log this
+                        //
+                        // We found a lockfile node in a place
                         // where it would be loaded, but it doesn't satisfy the
                         // actual request, so it would be wrong. Return None here
                         // so the node gets re-resolved.
@@ -340,6 +329,28 @@ impl<'a> Resolver<'a> {
         Ok(None)
     }
 
+    fn check_placement(
+        graph: &mut Graph,
+        target: NodeIndex,
+        requested: &PackageSpec,
+        child_name: &UniCase<String>,
+    ) -> Result<bool, NodeMaintainerError> {
+        if let Some(resolved) = graph.resolve_dep(target, child_name) {
+            for edge_ref in graph.inner.edges_directed(resolved, Direction::Incoming) {
+                let (from, _) = graph
+                    .inner
+                    .edge_endpoints(edge_ref.id())
+                    .expect("Where did the edge go?!?!");
+                if graph.is_ancestor(target, from)
+                    && !graph[resolved].package.resolved().satisfies(requested)?
+                {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+
     fn place_child(
         graph: &mut Graph,
         dependent_idx: NodeIndex,
@@ -350,7 +361,7 @@ impl<'a> Resolver<'a> {
         target_path: Option<Vec<UniCase<String>>>,
     ) -> Result<NodeIndex, NodeMaintainerError> {
         let child_name = UniCase::new(package.name().to_string());
-        let child_node = Node::new(package, corgi);
+        let child_node = Node::new(package, corgi, false)?;
         let child_idx = graph.inner.add_node(child_node);
         graph[child_idx].root = graph.root;
         // We needed to generate the node index before setting it in the node,
@@ -370,14 +381,17 @@ impl<'a> Resolver<'a> {
         // If we got a suggested target path, we'll try to use that first.
         if let Some(target_path) = target_path {
             for segment in target_path.iter().take(target_path.len() - 1) {
-                if let Some(new_target) = &graph[target_idx].children.get(segment) {
-                    target_idx = **new_target;
+                if let Some(new_target) = graph[target_idx].children.get(segment) {
+                    target_idx = *new_target;
                 } else {
                     // We couldn't find the target path. We'll just place the
                     // node in the highest possible location.
                     found_in_path = false;
                     break;
                 }
+            }
+            if found_in_path {
+                found_in_path = Self::check_placement(graph, target_idx, requested, &child_name)?;
             }
         } else {
             found_in_path = false;
@@ -409,6 +423,7 @@ impl<'a> Resolver<'a> {
                 parent_idx = graph[curr_target_idx].parent;
             }
         }
+
         {
             // Now we set backlinks: first, the dependent node needs to point
             // to the child, wherever it is in the graph.
@@ -425,39 +440,16 @@ impl<'a> Resolver<'a> {
         {
             // Finally, we add the backlink from the parent node to the child.
             let node = &mut graph[target_idx];
-            node.children.insert(child_name, child_idx);
+            if let Some(old) = node.children.insert(child_name, child_idx) {
+                // TODO: this is probably an error?
+                println!(
+                    "clobbered {:?} with {:?}",
+                    graph[old].package.resolved(),
+                    graph[child_idx].package.resolved()
+                );
+            }
         }
         Ok(child_idx)
-    }
-
-    fn package_deps<'b, 'c>(
-        &'b self,
-        node_idx: NodeIndex,
-        manifest: &'c CorgiManifest,
-    ) -> Box<dyn Iterator<Item = ((&'c String, &'c String), DepType)> + 'c + Send> {
-        let deps = manifest
-            .dependencies
-            .iter()
-            .map(|x| (x, DepType::Prod))
-            .chain(
-                manifest
-                    .optional_dependencies
-                    .iter()
-                    .map(|x| (x, DepType::Opt)),
-                // TODO: Place these properly.
-                // )
-                // .chain(
-                //     manifest
-                //         .peer_dependencies
-                //         .iter()
-                //         .map(|x| (x, DepType::Peer)),
-            );
-
-        if node_idx == self.graph.root {
-            Box::new(deps.chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev))))
-        } else {
-            Box::new(deps)
-        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]

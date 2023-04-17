@@ -36,11 +36,13 @@ pub struct Node {
     /// Resolved [`Package`] for this Node.
     pub(crate) package: Package,
     /// Resolved [`CorgiManifest`] for this Node.
-    pub(crate) manifest: CorgiManifest,
+    // pub(crate) manifest: CorgiManifest,
     /// Quick index back to this Node's [`Graph`]'s root Node.
     pub(crate) root: NodeIndex,
     /// Name-indexed map of outgoing [`crate::Edge`]s from this Node.
     pub(crate) dependencies: IndexMap<UniCase<String>, EdgeIndex>,
+    /// Map of dependencies to their requirements.
+    pub(crate) dependency_reqs: IndexMap<UniCase<String>, (PackageSpec, DepType)>,
     /// Parent, if any, of this Node in the logical filesystem hierarchy.
     pub(crate) parent: Option<NodeIndex>,
     /// Children of this node in the logical filesystem hierarchy. These are
@@ -50,16 +52,44 @@ pub struct Node {
 }
 
 impl Node {
-    pub(crate) fn new(package: Package, manifest: CorgiManifest) -> Self {
-        Self {
+    pub(crate) fn new(package: Package, manifest: CorgiManifest, is_root: bool) -> Result<Self, NodeMaintainerError> {
+        let deps = manifest
+            .dependencies
+            .iter()
+            .map(|x| (x, DepType::Prod))
+            .chain(
+                manifest
+                    .optional_dependencies
+                    .iter()
+                    .map(|x| (x, DepType::Opt)),
+                // TODO: Place these properly.
+                // )
+                // .chain(
+                //     manifest
+                //         .peer_dependencies
+                //         .iter()
+                //         .map(|x| (x, DepType::Peer)),
+            );
+
+        let deps: Box<dyn Iterator<Item = ((&String, &String), DepType)> + Send> = if is_root {
+            Box::new(deps.chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev))))
+        } else {
+            Box::new(deps)
+        };
+        let mut dependency_reqs = IndexMap::new();
+        for ((name, spec), dep_type) in deps {
+            dependency_reqs.insert(UniCase::new(name.clone()), (format!("{name}@{spec}").parse()?, dep_type));
+        }
+        Ok(Self {
             package,
-            manifest,
+            // manifest,
             idx: NodeIndex::new(0),
             root: NodeIndex::new(0),
             parent: None,
             children: IndexMap::new(),
             dependencies: IndexMap::new(),
-        }
+            dependency_reqs,
+        })
     }
 
     /// This Node's depth in the logical filesystem hierarchy.
@@ -68,7 +98,7 @@ impl Node {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DepType {
     Prod,
     Dev,
@@ -127,8 +157,8 @@ impl IndexMut<EdgeIndex> for Graph {
 
 impl Graph {
     pub fn resolve_dep(&self, node: NodeIndex, dep: &UniCase<String>) -> Option<NodeIndex> {
-        for parent in self.node_parent_iter(node) {
-            if let Some(resolved) = parent.children.get(dep) {
+        for node in self.node_parent_iter(node) {
+            if let Some(resolved) = node.children.get(dep) {
                 return Some(*resolved);
             }
         }
@@ -225,20 +255,6 @@ impl Graph {
 
     pub(crate) fn package_at_path(&self, path: &Path) -> Option<Package> {
         Some(self.node_at_path(path)?.package.clone())
-    }
-
-    pub(crate) fn find_by_name(
-        &self,
-        parent: NodeIndex,
-        name: &UniCase<String>,
-    ) -> Result<Option<NodeIndex>, NodeMaintainerError> {
-        Ok(self.node_parent_iter(parent).find_map(|node| {
-            if node.children.contains_key(name) {
-                Some(node.children[name])
-            } else {
-                None
-            }
-        }))
     }
 
     pub(crate) fn node_path(&self, node_idx: NodeIndex) -> VecDeque<UniCase<String>> {

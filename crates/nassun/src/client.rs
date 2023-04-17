@@ -220,14 +220,20 @@ impl Nassun {
         Self::new().resolve(spec.as_ref()).await?.entries().await
     }
 
-    /// Resolve a spec (e.g. `foo@^1.2.3`, `github:foo/bar`, etc), to a
+    /// Resolve a string spec (e.g. `foo@^1.2.3`, `github:foo/bar`, etc), to a
     /// [`Package`] that can be used for further operations.
     pub async fn resolve(&self, spec: impl AsRef<str>) -> Result<Package> {
         let spec = spec.as_ref().parse()?;
-        let fetcher = self.pick_fetcher(&spec);
-        let name = fetcher.name(&spec, &self.resolver.base_dir).await?;
+        self.resolve_spec(&spec).await
+    }
+
+    /// Resolve a preparsed [`PackageSpec`] to a
+    /// [`Package`] that can be used for further operations.
+    pub async fn resolve_spec(&self, spec: &PackageSpec) -> Result<Package> {
+        let fetcher = self.pick_fetcher(spec);
+        let name = fetcher.name(spec, &self.resolver.base_dir).await?;
         self.resolver
-            .resolve(name, spec, fetcher, self.cache.clone())
+            .resolve(name, spec.clone(), fetcher, self.cache.clone())
             .await
     }
 
