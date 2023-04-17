@@ -3,7 +3,7 @@ use clap::Args;
 use colored::*;
 use humansize::{file_size_opts, FileSize};
 use miette::{IntoDiagnostic, Result, WrapErr};
-use oro_common::{Bin, Manifest, NpmUser, Person, PersonField, VersionMetadata};
+use oro_common::{Bin, DeprecationInfo, Manifest, NpmUser, Person, PersonField, VersionMetadata};
 use term_grid::{Cell, Direction, Filling, Grid, GridOptions};
 
 use crate::commands::OroCommand;
@@ -97,8 +97,13 @@ impl OroCommand for ViewCmd {
             println!();
 
             // DEPRECATED - <deprecation message>
-            if let Some(msg) = deprecated.as_ref() {
-                println!("{} - {}\n", "DEPRECATED".bright_red(), msg);
+            if let Some(info) = deprecated.as_ref() {
+                let deprecated = "DEPRECATED".on_magenta();
+                if let DeprecationInfo::Reason(msg) = info {
+                    println!("{deprecated} {msg}\n");
+                } else {
+                    println!("{deprecated}\n");
+                }
             }
 
             // keywords: foo, bar, baz
