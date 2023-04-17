@@ -1,8 +1,8 @@
 use derive_builder::Builder;
 use node_semver::Version;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 use url::Url;
 
 use crate::{CorgiManifest, Manifest, PersonField};
@@ -76,10 +76,10 @@ pub struct CorgiVersionMetadata {
     pub manifest: CorgiManifest,
     #[serde(
         default,
-        deserialize_with = "string_or_bool",
+        deserialize_with = "deserialize_deprecation_info",
         skip_serializing_if = "Option::is_none"
     )]
-    pub deprecated: Option<String>,
+    pub deprecated: Option<DeprecationInfo>,
 }
 
 /// A manifest for an individual package version.
@@ -95,10 +95,10 @@ pub struct VersionMetadata {
     pub has_shrinkwrap: Option<bool>,
     #[serde(
         default,
-        deserialize_with = "string_or_bool",
+        deserialize_with = "deserialize_deprecation_info",
         skip_serializing_if = "Option::is_none"
     )]
-    pub deprecated: Option<String>,
+    pub deprecated: Option<DeprecationInfo>,
 
     #[serde(flatten)]
     pub manifest: Manifest,
@@ -138,17 +138,11 @@ impl From<VersionMetadata> for Manifest {
     }
 }
 
-fn string_or_bool<'de, D, T>(deserializer: D) -> std::result::Result<Option<T>, D::Error>
-where
-    D: Deserializer<'de>,
-    T: std::cmp::PartialEq<&'de str> + Deserialize<'de>,
-{
-    let val: T = Deserialize::deserialize(deserializer)?;
-    if val != "false" {
-        Ok(Some(val))
-    } else {
-        Ok(None)
-    }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+enum StringOrBool {
+    String(String),
+    Bool(bool),
 }
 
 /// Representation for the `bin` field in package manifests.
@@ -164,6 +158,53 @@ pub enum Bin {
 pub struct NpmUser {
     pub name: String,
     pub email: Option<String>,
+}
+
+/// Represents the deprecation state of a package.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DeprecationInfo {
+    Reason(String),
+    UnknownReason,
+}
+
+impl Display for DeprecationInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Reason(s) => write!(f, "{:?}", s),
+            Self::UnknownReason => write!(f, "Unknown Reason"),
+        }
+    }
+}
+
+impl Serialize for DeprecationInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            DeprecationInfo::Reason(s) => serializer.serialize_str(s),
+            DeprecationInfo::UnknownReason => serializer.serialize_bool(true),
+        }
+    }
+}
+
+fn deserialize_deprecation_info<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<DeprecationInfo>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val: StringOrBool = Deserialize::deserialize(deserializer)?;
+    Ok(match val {
+        StringOrBool::String(s) => Some(DeprecationInfo::Reason(s)),
+        StringOrBool::Bool(b) => {
+            if b {
+                Some(DeprecationInfo::UnknownReason)
+            } else {
+                None
+            }
+        }
+    })
 }
 
 /// Distribution information for a particular package version.

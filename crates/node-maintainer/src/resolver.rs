@@ -206,7 +206,7 @@ impl<'a> Resolver<'a> {
                         if let Some(deprecated) = deprecated {
                             tracing::warn!(
                                 "{} {}@{}: {}",
-                                "deprecated".magenta(),
+                                "deprecated".on_magenta(),
                                 manifest.name.as_ref().unwrap(),
                                 manifest
                                     .version
