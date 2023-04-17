@@ -233,11 +233,14 @@ impl LockfileNode {
                 )
             })
             .collect::<Vec<_>>();
-        let name = path
-            .last()
-            .cloned()
-            // TODO: add a miette span here
-            .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(node.clone()))?;
+        let name = if is_root {
+            UniCase::new("".into())
+        } else {
+            path.last()
+                .cloned()
+                // TODO: add a miette span here
+                .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(node.clone()))?
+        };
         let integrity = children
             .get_arg("integrity")
             .and_then(|i| i.as_string())
