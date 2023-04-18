@@ -101,10 +101,17 @@ pub enum NodeMaintainerError {
     #[diagnostic(code(node_maintainer::io_error), url(docsrs))]
     IoError(#[from] std::io::Error),
 
+    #[cfg(not(target_arch = "wasm32"))]
     /// Generic error returned from Nassun.
     #[error(transparent)]
     #[diagnostic(transparent)]
     NassunError(#[from] nassun::NassunError),
+
+    #[cfg(target_arch = "wasm32")]
+    /// Generic error returned from Nassun.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NassunError(#[from] nassun::error::NassunError),
 
     /// Generic serde_json error.
     #[error(transparent)]
