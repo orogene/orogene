@@ -1,9 +1,15 @@
 {
     "additional_pages": {
-        "Changelog": "./CHANGELOG.md",
         "Benchmarks": "./BENCHMARKS.md",
         "Contributing": "./CONTRIBUTING.md"
     },
+    "changelog": true,
     "md_book": "./book/book",
-    "static_dir": "assets"
+    "static_dir": "assets",
+    "artifacts": {
+        "cargo_dist": true,
+        "package_managers": {
+            "crates.io": "cargo install orogene"
+        }
+    }
 }

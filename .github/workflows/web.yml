@@ -42,10 +42,10 @@ jobs:
           mdbook build
 
       - name: Install oranda
-        run: cargo install --git https://github.com/axodotdev/oranda --rev 89e81fe
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.0.2/oranda-v0.0.2-installer.sh | sh
 
       - name: Run oranda
-        run: ~/.cargo/bin/oranda build
+        run: oranda build
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4.4.1
