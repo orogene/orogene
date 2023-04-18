@@ -139,7 +139,7 @@ wiremock = "0.5.17"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.0.6-prerelease.2"
+cargo-dist-version = "0.0.6-prerelease.3"
 # The preferred Rust toolchain to use in CI (rustup toolchain syntax)
 rust-toolchain-version = "1.67.1"
 # CI backends to support (see 'cargo dist generate-ci')

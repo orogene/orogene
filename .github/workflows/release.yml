@@ -54,13 +54,13 @@ jobs:
       - name: Install Rust
         run: rustup update 1.67.1 --no-self-update && rustup default 1.67.1
       - name: Install cargo-dist
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.2/cargo-dist-v0.0.6-prerelease.2-installer.sh | sh
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.3/cargo-dist-v0.0.6-prerelease.3-installer.sh | sh
       - id: create-release
         run: |
           cargo dist manifest --tag=${{ github.ref_name }} --artifacts=all --no-local-paths --output-format=json > dist-manifest.json
           echo "dist manifest ran successfully"
           cat dist-manifest.json
-        
+
           # Create the Github Release™ based on what cargo-dist thinks it should be
           ANNOUNCEMENT_TITLE=$(cat dist-manifest.json | jq --raw-output ".announcement_title")
           IS_PRERELEASE=$(cat dist-manifest.json | jq --raw-output ".announcement_is_prerelease")
@@ -87,16 +87,16 @@ jobs:
         include:
         - os: ubuntu-20.04
           dist-args: --artifacts=global
-          install-dist: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.2/cargo-dist-v0.0.6-prerelease.2-installer.sh | sh
+          install-dist: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.3/cargo-dist-v0.0.6-prerelease.3-installer.sh | sh
         - os: macos-11
           dist-args: --artifacts=local --target=aarch64-apple-darwin --target=x86_64-apple-darwin
-          install-dist: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.2/cargo-dist-v0.0.6-prerelease.2-installer.sh | sh
+          install-dist: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.3/cargo-dist-v0.0.6-prerelease.3-installer.sh | sh
         - os: ubuntu-20.04
           dist-args: --artifacts=local --target=x86_64-unknown-linux-gnu
-          install-dist: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.2/cargo-dist-v0.0.6-prerelease.2-installer.sh | sh
+          install-dist: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.3/cargo-dist-v0.0.6-prerelease.3-installer.sh | sh
         - os: windows-2019
           dist-args: --artifacts=local --target=x86_64-pc-windows-msvc
-          install-dist: irm  https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.2/cargo-dist-v0.0.6-prerelease.2-installer.ps1 | iex
+          install-dist: irm  https://github.com/axodotdev/cargo-dist/releases/download/v0.0.6-prerelease.3/cargo-dist-v0.0.6-prerelease.3-installer.ps1 | iex
 
     runs-on: ${{ matrix.os }}
     env:
