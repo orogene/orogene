@@ -1,28 +1,12 @@
 use async_trait::async_trait;
 use clap::Args;
-use miette::{Diagnostic, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use nassun::PackageSpec;
 use oro_pretty_json::Formatted;
-use thiserror::Error;
 
 use crate::apply_args::ApplyArgs;
 use crate::commands::OroCommand;
-
-#[derive(Debug, Error, Diagnostic)]
-enum RemoveCmdError {
-    /// Invalid package name. Only package names should be passed to `oro
-    /// remove`, but you passed either a package specifier or an invalid
-    /// package name.
-    ///
-    /// Try passing the package name as it appears in your package.json.
-    #[error("{0} is not a valid package name. Only package names should be passed to `oro remove`, but you passed either a non-NPM package specifier or an invalid package name.")]
-    #[diagnostic(
-        code(oro::remove::invalid_package_name),
-        url(docsrs),
-        help("Use the package name as it appears in your package.json instead.")
-    )]
-    InvalidPackageName(String),
-}
+use crate::OroError;
 
 /// Removes one or more dependencies from the target package.
 #[derive(Debug, Args)]
@@ -57,7 +41,7 @@ impl OroCommand for RemoveCmd {
                 }
                 count += self.remove_from_manifest(&mut manifest, &spec_name);
             } else {
-                return Err(RemoveCmdError::InvalidPackageName(name.clone()).into());
+                return Err(OroError::InvalidPackageName(name.clone()).into());
             }
         }
 

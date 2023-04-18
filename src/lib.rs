@@ -58,8 +58,11 @@ use url::Url;
 
 use commands::OroCommand;
 
+pub use error::OroError;
+
 mod apply_args;
 mod commands;
+mod error;
 mod nassun_args;
 
 const MAX_RETAINED_LOGS: usize = 5;
