@@ -128,7 +128,7 @@ fn node_value(node: &KdlNode) -> Value {
             )
         }
     } else {
-        // Probably unreachable, but just in case...
-        Value::new(None, ValueKind::Nil)
+        // Nodes without args or children act the same as "true"
+        Value::new(None, ValueKind::Boolean(true))
     }
 }

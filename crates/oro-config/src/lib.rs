@@ -1,10 +1,6 @@
 //! Configuration loader for Orogene config files.
 
-use std::{
-    collections::{HashMap, HashSet},
-    ffi::OsString,
-    path::PathBuf,
-};
+use std::{collections::HashSet, ffi::OsString, path::PathBuf};
 
 pub use clap::{ArgMatches, Command};
 pub use config::Config as OroConfig;
@@ -19,7 +15,7 @@ mod kdl_source;
 
 pub trait OroConfigLayerExt {
     fn with_negations(self) -> Self;
-    fn layered_matches(self, config: &OroConfig) -> Result<ArgMatches>;
+    fn layered_args(&self, args: &mut Vec<OsString>, config: &OroConfig) -> Result<()>;
 }
 
 impl OroConfigLayerExt for Command {
@@ -55,24 +51,28 @@ impl OroConfigLayerExt for Command {
         self.args(negations)
     }
 
-    fn layered_matches(self, config: &OroConfig) -> Result<ArgMatches> {
-        let mut short_opts = HashMap::new();
+    fn layered_args(&self, args: &mut Vec<OsString>, config: &OroConfig) -> Result<()> {
         let mut long_opts = HashSet::new();
         for opt in self.get_arguments() {
-            if let Some(short) = opt.get_short() {
-                short_opts.insert(short, (*opt).clone());
-            }
             if opt.get_long().is_some() {
                 long_opts.insert(opt.get_id().to_string());
             }
         }
-        let mut args = std::env::args_os().collect::<Vec<_>>();
-        let matches = self.clone().get_matches_from(&args);
+        let matches = self
+            .clone()
+            .ignore_errors(true)
+            .get_matches_from(&args.clone());
         for opt in long_opts {
             if matches.value_source(&opt) != Some(clap::parser::ValueSource::CommandLine) {
                 let opt = opt.replace('_', "-");
-                if !args.contains(&OsString::from(format!("--no-{}", opt))) {
-                    if let Ok(value) = config.get_string(&opt) {
+                if !args.contains(&OsString::from(format!("--no-{opt}"))) {
+                    if let Ok(bool) = config.get_bool(&opt) {
+                        if bool {
+                            args.push(OsString::from(format!("--{}", opt)));
+                        } else {
+                            args.push(OsString::from(format!("--no-{}", opt)));
+                        }
+                    } else if let Ok(value) = config.get_string(&opt) {
                         args.push(OsString::from(format!("--{}", opt)));
                         args.push(OsString::from(value));
                     } else if let Ok(value) = config.get_table(&opt) {
@@ -91,7 +91,7 @@ impl OroConfigLayerExt for Command {
                 }
             }
         }
-        Ok(self.get_matches_from(args))
+        Ok(())
     }
 }
 

@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::{Diagnostic, IntoDiagnostic, Result};
 use nassun::PackageSpec;
-use thiserror::Error;
 use oro_pretty_json::Formatted;
+use thiserror::Error;
 
 use crate::apply_args::ApplyArgs;
 use crate::commands::OroCommand;
@@ -14,11 +14,8 @@ enum RemoveCmdError {
     /// remove`, but you passed either a package specifier or an invalid
     /// package name.
     #[error("{0} is not a valid package name. Only package names should be passed to `oro remove`, but you passed either a non-NPM package specifier or an invalid package name.")]
-    #[diagnostic(
-        code(oro::remove::invalid_package_name),
-        url(docsrs)
-    )]
-    InvalidPackageName(String)
+    #[diagnostic(code(oro::remove::invalid_package_name), url(docsrs))]
+    InvalidPackageName(String),
 }
 
 /// Removes one or more dependencies from the target package.
@@ -45,7 +42,10 @@ impl OroCommand for RemoveCmd {
         .into_diagnostic()?;
         let mut count = 0;
         for name in &self.names {
-            if let Ok(PackageSpec::Npm { name: spec_name, .. }) = name.parse() {
+            if let Ok(PackageSpec::Npm {
+                name: spec_name, ..
+            }) = name.parse()
+            {
                 if &spec_name != name {
                     tracing::warn!("Ignoring version specifier in {name}. Arguments to `oro remove` should only be package names. Proceeding with {spec_name} instead.");
                 }

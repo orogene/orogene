@@ -16,8 +16,9 @@ Options are read from three possible `oro.kdl` file locations:
 All files files use [KDL](https://kdl.dev) as their configuration language.
 Key/value options are typically specified using `node-name "value"` format.
 For example, `foo "bar"` would be the equivalent of `--foo bar`. For boolean
-operations, use `foo true` and `foo false`. Negations (`no-foo`) are not
-supported.
+operations, use `foo true` and `foo false`. If an empty node name is found,
+that will be treated as if it had a value of `true`. Negations (`no-foo`) are
+not supported.
 
 Some configurations, such a [Options](#options-from-orokdl), exist in nested
 nodes. Refer to their dedicated sections for more details.

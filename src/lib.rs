@@ -37,6 +37,7 @@
 
 use std::{
     collections::VecDeque,
+    ffi::OsString,
     path::{Path, PathBuf},
 };
 
@@ -331,6 +332,36 @@ impl Orogene {
         command
     }
 
+    fn layer_command_args(
+        command: &Command,
+        args: &mut Vec<OsString>,
+        config: &OroConfig,
+    ) -> Result<()> {
+        // First, we do a fake parse. All we really want is to get the subcommand, here.
+        let matches = command.clone().ignore_errors(true).get_matches();
+        let mut matches_ref = &matches;
+
+        // Next, we "recursively" follow the subcommand chain until we bottom
+        // out, then keep that path.
+        let mut subcmd_path = VecDeque::new();
+        while let Some((sub_cmd, new_m)) = matches_ref.subcommand() {
+            subcmd_path.push_back(sub_cmd);
+            matches_ref = new_m;
+        }
+
+        // Then, we find the subcommand starting from our toplevel Command.
+        let mut command = command.clone();
+        let mut subcmd = &mut command;
+        subcmd.layered_args(args, config)?;
+        while let Some(name) = subcmd_path.pop_front() {
+            subcmd = subcmd
+                .find_subcommand_mut(name)
+                .expect("This should definitely exist?");
+            subcmd.layered_args(args, config)?;
+        }
+        Ok(())
+    }
+
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
         // We have to instantiate Orogene twice: once to pick up "base" config
@@ -343,8 +374,9 @@ impl Orogene {
         let matches = command.clone().get_matches();
         let oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
         let config = oro.build_config()?;
-        let oro =
-            Orogene::from_arg_matches(&command.layered_matches(&config)?).into_diagnostic()?;
+        let mut args = std::env::args_os().collect::<Vec<_>>();
+        Self::layer_command_args(&command, &mut args, &config)?;
+        let oro = Orogene::from_arg_matches(&command.get_matches_from(&args)).into_diagnostic()?;
         let log_file = oro
             .cache
             .clone()
