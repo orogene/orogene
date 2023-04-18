@@ -9,7 +9,10 @@ use indexmap::IndexMap;
 use kdl::KdlDocument;
 use nassun::{package::Package, PackageResolution, PackageSpec};
 use oro_common::CorgiManifest;
-use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
+use petgraph::{
+    stable_graph::{EdgeIndex, NodeIndex, StableGraph},
+    Direction,
+};
 use unicase::UniCase;
 
 use crate::{error::NodeMaintainerError, Lockfile, LockfileNode};
@@ -160,6 +163,15 @@ impl IndexMut<EdgeIndex> for Graph {
 }
 
 impl Graph {
+    pub fn is_optional(&self, node: NodeIndex) -> bool {
+        for edge_ref in self.inner.edges_directed(node, Direction::Incoming) {
+            if edge_ref.weight().dep_type != DepType::Opt {
+                return false;
+            }
+        }
+        true
+    }
+
     pub fn resolve_dep(&self, node: NodeIndex, dep: &UniCase<String>) -> Option<NodeIndex> {
         for parent in self.node_parent_iter(node) {
             if let Some(resolved) = parent.children.get(dep) {

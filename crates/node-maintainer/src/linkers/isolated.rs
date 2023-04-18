@@ -397,6 +397,8 @@ impl IsolatedLinker {
                         .join(pkg.name())
                 };
 
+                let is_optional = graph.is_optional(idx);
+
                 let build_mani =
                     BuildManifest::from_path(pkg_dir.join("package.json")).map_err(|e| {
                         NodeMaintainerError::BuildManifestReadError(pkg_dir.join("package.json"), e)
@@ -413,13 +415,21 @@ impl IsolatedLinker {
                         on_script_start(&graph[idx].package, &event);
                     }
                     std::mem::drop(_span_enter);
-                    let mut script = async_std::task::spawn_blocking(move || {
+                    let mut script = match async_std::task::spawn_blocking(move || {
                         OroScript::new(package_dir, event)?
-                            // For isolated installs, we don't add ancestor node_modules/.bin
                             .workspace_path(package_dir_clone)
                             .spawn()
                     })
-                    .await?;
+                    .await
+                    {
+                        Ok(script) => script,
+                        Err(e) if is_optional => {
+                            let e: NodeMaintainerError = e.into();
+                            tracing::debug!("Error in optional dependency script: {}", e);
+                            return Ok(());
+                        }
+                        Err(e) => return Err(e.into()),
+                    };
                     let stdout = script.stdout.take();
                     let stderr = script.stderr.take();
                     let stdout_name = name.clone();
@@ -428,7 +438,7 @@ impl IsolatedLinker {
                     let stderr_on_line = self.0.on_script_line.clone();
                     let stdout_span = span;
                     let stderr_span = stdout_span.clone();
-                    futures::try_join!(
+                    let join = futures::try_join!(
                         async_std::task::spawn_blocking(move || {
                             let _enter = stdout_span.enter();
                             if let Some(stdout) = stdout {
@@ -459,7 +469,15 @@ impl IsolatedLinker {
                             script.wait()?;
                             Ok::<_, NodeMaintainerError>(())
                         }),
-                    )?;
+                    );
+                    match join {
+                        Ok(_) => {}
+                        Err(e) if is_optional => {
+                            tracing::debug!("Error in optional dependency script: {}", e);
+                            return Ok(());
+                        }
+                        Err(e) => return Err(e),
+                    }
                 }
 
                 Ok::<_, NodeMaintainerError>(())
