@@ -358,7 +358,7 @@ impl Orogene {
             // log is even set up.
             tracing::debug!("{e:?}");
             if let Some(log_file) = log_file.as_deref() {
-                tracing::error!("A debug log was written to {}", log_file.display());
+                tracing::warn!("A debug log was written to {}", log_file.display());
             }
             e
         })?;
