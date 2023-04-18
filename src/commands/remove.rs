@@ -14,7 +14,11 @@ enum RemoveCmdError {
     /// remove`, but you passed either a package specifier or an invalid
     /// package name.
     #[error("{0} is not a valid package name. Only package names should be passed to `oro remove`, but you passed either a non-NPM package specifier or an invalid package name.")]
-    #[diagnostic(code(oro::remove::invalid_package_name), url(docsrs))]
+    #[diagnostic(
+        code(oro::remove::invalid_package_name),
+        url(docsrs),
+        help("Use the package name as it appears in your package.json instead.")
+    )]
     InvalidPackageName(String),
 }
 
@@ -47,9 +51,9 @@ impl OroCommand for RemoveCmd {
             }) = name.parse()
             {
                 if &spec_name != name {
-                    tracing::warn!("Ignoring version specifier in {name}. Arguments to `oro remove` should only be package names. Proceeding with {spec_name} instead.");
+                    tracing::warn!("Ignoring version specifier in `{name}`. Arguments to `oro remove` should only be package names. Proceeding with `{spec_name}` instead.");
                 }
-                count += self.remove_from_manifest(&mut manifest, name);
+                count += self.remove_from_manifest(&mut manifest, &spec_name);
             } else {
                 return Err(RemoveCmdError::InvalidPackageName(name.clone()).into());
             }
@@ -64,8 +68,8 @@ impl OroCommand for RemoveCmd {
 
         tracing::info!(
             "{}Removed {count} dependenc{} from package.json.",
-            if count == 1 { "y" } else { "ies" },
             if self.apply.emoji { "📝 " } else { "" },
+            if count == 1 { "y" } else { "ies" },
         );
 
         if self.apply.locked {
