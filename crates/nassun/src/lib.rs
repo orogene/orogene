@@ -6,7 +6,7 @@ pub use oro_package_spec::{GitHost, GitInfo, PackageSpec, VersionSpec};
 
 pub mod client;
 pub mod entries;
-pub mod error;
+mod error;
 pub mod fetch;
 pub mod package;
 pub mod resolver;

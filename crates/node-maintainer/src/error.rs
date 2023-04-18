@@ -104,7 +104,7 @@ pub enum NodeMaintainerError {
     /// Generic error returned from Nassun.
     #[error(transparent)]
     #[diagnostic(transparent)]
-    NassunError(#[from] nassun::error::NassunError),
+    NassunError(#[from] nassun::NassunError),
 
     /// Generic serde_json error.
     #[error(transparent)]
