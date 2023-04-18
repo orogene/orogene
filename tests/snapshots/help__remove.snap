@@ -7,7 +7,7 @@ stderr:
 stdout:
 # oro remove
 
-Removes one or more dependencies to the target package
+Removes one or more dependencies from the target package
 
 ### Usage:
 
@@ -54,6 +54,12 @@ When this is true, orogene will verify all files extracted from the cache, as we
 #### `--lockfile-only`
 
 Whether to skip restoring packages into `node_modules` and just resolve the tree and write the lockfile
+
+#### `--locked`
+
+Make the resolver error if the newly-resolved tree would defer from an existing lockfile
+
+\[aliases: frozen]
 
 #### `--no-scripts`
 
