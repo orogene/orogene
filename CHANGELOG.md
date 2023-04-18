@@ -1,5 +1,13 @@
 # Orogene Release Changelog
 
+<a name="0.3.21"></a>
+## 0.3.21 (2023-04-18)
+
+### Bug Fixes
+
+* **release:** update cargo-dist release thing properly ([4a204a51](https://github.com/orogene/orogene/commit/4a204a5148122674fc719677cc848e6bbba01f53))
+
+
 <a name="0.3.20"></a>
 ## 0.3.20 (2023-04-18)
 
