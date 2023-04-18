@@ -4,17 +4,22 @@ use thiserror::Error;
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum OroClientError {
+    /// An invalid URL was provided.
     #[error(transparent)]
-    #[diagnostic(code(oro_client::url_parse_error))]
+    #[diagnostic(code(oro_client::url_parse_error), url(docsrs))]
     UrlParseError(#[from] url::ParseError),
 
+    /// The package was not found in the registry.
+    ///
+    /// Make sure the package name is spelled correctly and that you've
+    /// configured the right registry to fetch it from.
     #[error("Package `{1}` was not found in registry {0}.")]
-    #[diagnostic(code(oro_client::package_not_found))]
+    #[diagnostic(code(oro_client::package_not_found), url(docsrs))]
     PackageNotFound(Url, String),
 
     /// Got some bad JSON we couldn't parse.
     #[error("Received some unexpected JSON. Unable to parse.")]
-    #[diagnostic(code(oro_client::bad_json))]
+    #[diagnostic(code(oro_client::bad_json), url(docsrs))]
     BadJson {
         source: serde_json::Error,
         url: String,
@@ -24,13 +29,17 @@ pub enum OroClientError {
         err_loc: (usize, usize),
     },
 
+    /// A generic request error happened while making a request. Refer to the
+    /// error message for more details.
     #[error(transparent)]
-    #[diagnostic(code(oro_client::request_error))]
+    #[diagnostic(code(oro_client::request_error), url(docsrs))]
     RequestError(#[from] reqwest::Error),
 
+    /// A generic request middleware error happened while making a request.
+    /// Refer to the error message for more details.
     #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
-    #[diagnostic(code(oro_client::request_middleware_error))]
+    #[diagnostic(code(oro_client::request_middleware_error), url(docsrs))]
     RequestMiddlewareError(#[from] reqwest_middleware::Error),
 }
 
