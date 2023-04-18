@@ -4,11 +4,16 @@ use nom::error::{ContextError, ErrorKind, FromExternalError, ParseError};
 use thiserror::Error;
 use url::ParseError as UrlParseError;
 
+/// An invalid package specifier was provided.
+///
+/// The syntax for package specifiers is documented here:
+/// https://orogene.dev/book/guide/node_modules.html#specifier-syntax
 #[derive(Debug, Error, Diagnostic)]
 #[error("Error parsing package spec. {kind}")]
 #[diagnostic(
     code(package_spec::no_parse),
-    help("Please fix your spec. Go look up wherever they're documented idk.")
+    url(docsrs),
+    help("The syntax for package specifiers is documented here: https://orogene.dev/book/guide/node_modules.html#specifier-syntax")
 )]
 pub struct PackageSpecError {
     pub input: String,

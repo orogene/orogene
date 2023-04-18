@@ -19,6 +19,7 @@ pub enum NassunError {
 
     /// Something went wrong while trying to parse a PackageArg
     #[error(transparent)]
+    #[diagnostic(transparent)]
     PackageSpecError(#[from] oro_package_spec::PackageSpecError),
 
     #[error("{0}")]
