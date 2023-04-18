@@ -138,14 +138,18 @@ wiremock = "0.5.17"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.0.4"
+cargo-dist-version = "0.0.6-prerelease.2"
 # The preferred Rust toolchain to use in CI (rustup toolchain syntax)
 rust-toolchain-version = "1.67.1"
 # CI backends to support (see 'cargo dist generate-ci')
 ci = ["github"]
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["x86_64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-pc-windows-msvc", "aarch64-apple-darwin"]
-
+# The installers to generate for each app
+installers = ["shell", "powershell", "npm"]
+# the NPM package release thing only handles .tgz right now.
+windows-archive = ".tar.gz"
+unix-archive = ".tar.gz"
 
 [build-dependencies]
 embed-resource = "1.3.3"
