@@ -1,4 +1,34 @@
 # Orogene Release Changelog
+
+<a name="0.3.20"></a>
+## 0.3.20 (2023-04-18)
+
+### Features
+
+* **reapply:** add reapply command and refactor apply to be reusable (#237) ([bf6b1504](https://github.com/orogene/orogene/commit/bf6b150462e40dc2d0a7f16ecf49130a336e67e3))
+* **json:** add module for format-preserving JSON manipulation ([3fa23e46](https://github.com/orogene/orogene/commit/3fa23e4602ffc4a8f7038f48b9c7bb40994d94cb))
+* **add:** add `oro add` command for adding new deps ([7ed9f777](https://github.com/orogene/orogene/commit/7ed9f777e886163ea9e02fc7dc011980d2c61036))
+* **rm:** add oro rm command ([ec301bbf](https://github.com/orogene/orogene/commit/ec301bbfbce36c562fbd00419b12261aed5f1e96))
+* **git:** support specifying semver ranges for git dependencies (#217) ([56e05f5b](https://github.com/orogene/orogene/commit/56e05f5b1417024ac65520d68e261f49ea70ab19))
+* **locked:** add --locked mode support ([ffce208f](https://github.com/orogene/orogene/commit/ffce208fd1edff3f1e62093f19e567662ce8e1df))
+* **docs:** write up a section about adding dependencies + specifiers ([e66936c4](https://github.com/orogene/orogene/commit/e66936c47ad6fd7b4f0b308d0b3cbece63386293))
+* **errors:** better docs and url(docsrs) for all errors ([0629a080](https://github.com/orogene/orogene/commit/0629a08076c800f60789fe8f9feb60d176f5c432))
+
+### Bug Fixes
+
+* **metadata:** add support for boolean deserialization for `deprecated` tag of version metadata (#235) ([0505793a](https://github.com/orogene/orogene/commit/0505793ad92d3b9638034eee1943af46f396e9d5))
+* **common:** handle deprecation booleans in registry response (#246) ([8ae12196](https://github.com/orogene/orogene/commit/8ae121963b91fd75c347102621f9c86b2db9fbce))
+* **resolve:** stop lockfile from clobbering dependencies (#247) ([b3af2ddd](https://github.com/orogene/orogene/commit/b3af2ddd45335b7d937efa54f1a7110e0d3576cd))
+* **log:** log the 'debug log way written' message as WARN ([dbcbe9cc](https://github.com/orogene/orogene/commit/dbcbe9cc12c471543d3cf84e496a7fb4400651c8))
+* **rm:** warn/error when something other than a package name is provided ([26b01328](https://github.com/orogene/orogene/commit/26b0132822f82e92ce5362c3a30e4862e67bfe13))
+* **error:** fix PackageSpecError docs and help not printing ([f8e8e27a](https://github.com/orogene/orogene/commit/f8e8e27a4205d2fbfdfd2a33123df27c90943d88))
+* **config:** apply config options from subcommands, too ([3c31caac](https://github.com/orogene/orogene/commit/3c31caaca2c22267e7659848a8987297dcd51d61))
+* **rm:** more random rm fixes ([1c733452](https://github.com/orogene/orogene/commit/1c7334522a00405a25f117155bb52d50d93d5d9f))
+
+### Miscellaneous Tasks
+
+* **deps:** bump h2 from 0.3.16 to 0.3.17 (#242) ([8123013f](https://github.com/orogene/orogene/commit/8123013f6c69464ef510a09aa09d9ac33e2db8a8))
+
 <a name="0.3.19"></a>
 ## 0.3.19 (2023-04-10)
 
