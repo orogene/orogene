@@ -27,7 +27,7 @@ impl OroCommand for PingCmd {
     async fn execute(self) -> Result<()> {
         let start = Instant::now();
         let registry = self.registry;
-        tracing::info!("{}ping: {registry}", if self.emoji { "🗣️  " } else { "" });
+        tracing::info!("{}ping: {registry}", if self.emoji { "🗣️ " } else { "" });
         let client = OroClient::new(registry.clone());
         let payload = client.ping().await?;
         let time = start.elapsed().as_micros() as f32 / 1000.0;
