@@ -1,5 +1,22 @@
 # Orogene Release Changelog
 
+<a name="0.3.23"></a>
+## 0.3.23 (2023-04-18)
+
+### Bug Fixes
+
+* **docs:** update docs after `--lockfile` addition ([e1caff41](https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d))
+* **ping:** fix emoji spacing ([90038383](https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e))
+* **nassun:** try and get rustdoc to show NassunError at the toplevel to play nicer with miette ([e5638712](https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23))
+* **error:** export orogene cmd error enum ([b37e1167](https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b))
+* **wasm:** get node-maintainer working on wasm again ([b1f6bc82](https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97))
+
+### Miscellaneous Tasks
+
+* **deps:** bump miette to 5.8.0 ([e58c256e](https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372))
+* **deps:** bump supports-hyperlinks for more terminal support ([be5712e2](https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f))
+
+
 <a name="0.3.22"></a>
 ## 0.3.22 (2023-04-18)
 
