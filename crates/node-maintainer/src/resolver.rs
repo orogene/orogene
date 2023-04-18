@@ -35,6 +35,7 @@ pub(crate) struct Resolver<'a> {
     pub(crate) nassun: Nassun,
     pub(crate) graph: Graph,
     pub(crate) concurrency: usize,
+    pub(crate) locked: bool,
     #[allow(dead_code)]
     pub(crate) root: &'a Path,
     pub(crate) actual_tree: Option<Lockfile>,
@@ -252,6 +253,14 @@ impl<'a> Resolver<'a> {
                         other => other,
                     }
                 })
+            }
+        }
+
+        if self.locked {
+            if let Some(lockfile) = lockfile {
+                if lockfile != self.graph.to_lockfile()? {
+                    return Err(NodeMaintainerError::LockfileMismatch);
+                }
             }
         }
 

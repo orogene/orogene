@@ -42,6 +42,7 @@ serde_json = { workspace = true }
 supports-unicode = { workspace = true }
 term_grid = { workspace = true }
 term_size = { workspace = true }
+thiserror = { workspace = true }
 tracing = { workspace = true}
 tracing-appender = { workspace = true }
 tracing-indicatif = { workspace = true }

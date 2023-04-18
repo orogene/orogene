@@ -135,6 +135,23 @@ pub enum NodeMaintainerError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     OroScriptError(#[from] oro_script::OroScriptError),
+
+    /// Locked file was requested, but a new dependency tree was resolved that
+    /// would cause changes to the lockfile. The contents of `package.json`
+    /// may have changed since the last time the lockfile was updated.
+    ///
+    /// This typically happens when a dependency is added or removed from
+    /// package.json while locked mode is enabled. If you have an existing
+    /// lockfile and get this error without any modifications to package.json,
+    /// please [report this as a
+    /// bug](https://github.com/orogene/orogene/issues/new).
+    #[error("Locked file was requested, but a new dependency tree was resolved that would cause changes to the lockfile. The contents of `package.json` may have changed since the last time the lockfile was updated.")]
+    #[diagnostic(
+        code(node_maintainer::lockfile_mismatch),
+        url(docsrs),
+        help("Did you modify package.json by hand?")
+    )]
+    LockfileMismatch,
 }
 
 impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {

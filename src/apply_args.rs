@@ -46,6 +46,11 @@ pub struct ApplyArgs {
     #[arg(long)]
     pub lockfile_only: bool,
 
+    /// Make the resolver error if the newly-resolved tree would defer from
+    /// an existing lockfile.
+    #[arg(long, visible_alias = "frozen")]
+    pub locked: bool,
+
     /// Skip running install scripts.
     #[arg(long = "no-scripts", alias = "ignore-scripts", action = clap::ArgAction::SetFalse)]
     pub scripts: bool,
@@ -156,6 +161,7 @@ impl ApplyArgs {
         let mut nm = NodeMaintainerOptions::new();
         nm = nm
             .registry(self.registry.clone())
+            .locked(self.locked)
             .default_tag(&self.default_tag)
             .concurrency(self.concurrency)
             .script_concurrency(self.script_concurrency)

@@ -2249,6 +2249,7 @@ dependencies = [
  "tempfile",
  "term_grid",
  "term_size",
+ "thiserror",
  "tracing",
  "tracing-appender",
  "tracing-indicatif",

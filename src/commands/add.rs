@@ -36,7 +36,7 @@ pub struct AddCmd {
 
 #[async_trait]
 impl OroCommand for AddCmd {
-    async fn execute(self) -> Result<()> {
+    async fn execute(mut self) -> Result<()> {
         let mut manifest = oro_pretty_json::from_str(
             &async_std::fs::read_to_string(self.apply.root.join("package.json"))
                 .await
@@ -111,9 +111,12 @@ impl OroCommand for AddCmd {
             }
         );
 
-        // TODO: Force locked = false here, once --locked is supported.
-        // Using `oro add` with `--locked` doesn't make sense.
-        // self.apply.locked = false;
+        if self.apply.locked {
+            // NOTE: we force locked to be false here, because it doesn't make
+            // sense to run this command in locked mode.
+            tracing::info!("Ignoring --locked option. It doesn't make sense to run this command in locked mode.");
+            self.apply.locked = false;
+        }
 
         // Then, we apply the change.
         self.apply.execute().await

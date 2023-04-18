@@ -31,6 +31,7 @@ pub type ScriptLineHandler = Arc<dyn Fn(&str) + Send + Sync>;
 pub struct NodeMaintainerOptions {
     nassun_opts: NassunOpts,
     concurrency: usize,
+    locked: bool,
     kdl_lock: Option<Lockfile>,
     npm_lock: Option<Lockfile>,
 
@@ -79,6 +80,13 @@ impl NodeMaintainerOptions {
     /// memory usage.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
+        self
+    }
+
+    /// Make the resolver error if the newly-resolved tree would defer from
+    /// an existing lockfile.
+    pub fn locked(mut self, locked: bool) -> Self {
+        self.locked = locked;
         self
     }
 
@@ -285,6 +293,7 @@ impl NodeMaintainerOptions {
             nassun,
             graph: Default::default(),
             concurrency: self.concurrency,
+            locked: self.locked,
             root: &proj_root,
             actual_tree: None,
             on_resolution_added: self.on_resolution_added,
@@ -332,6 +341,7 @@ impl NodeMaintainerOptions {
             nassun,
             graph: Default::default(),
             concurrency: self.concurrency,
+            locked: self.locked,
             root: &proj_root,
             actual_tree: None,
             on_resolution_added: self.on_resolution_added,
@@ -382,6 +392,7 @@ impl Default for NodeMaintainerOptions {
             concurrency: DEFAULT_CONCURRENCY,
             kdl_lock: None,
             npm_lock: None,
+            locked: false,
             script_concurrency: DEFAULT_SCRIPT_CONCURRENCY,
             cache: None,
             hoisted: false,
