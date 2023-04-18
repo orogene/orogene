@@ -1523,6 +1523,7 @@ checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -1943,6 +1944,7 @@ dependencies = [
  "colored",
  "console_error_panic_hook",
  "futures 0.3.28",
+ "indexmap",
  "indicatif",
  "insta",
  "js-sys",
@@ -2121,6 +2123,7 @@ dependencies = [
  "async-std",
  "futures 0.3.28",
  "http-cache-reqwest",
+ "indexmap",
  "maplit",
  "miette",
  "oro-common",
@@ -2140,6 +2143,7 @@ name = "oro-common"
 version = "0.3.19"
 dependencies = [
  "derive_builder",
+ "indexmap",
  "miette",
  "node-semver",
  "nom",

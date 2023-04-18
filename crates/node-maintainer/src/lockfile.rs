@@ -1,5 +1,4 @@
-use std::collections::BTreeMap;
-
+use indexmap::IndexMap;
 use kdl::{KdlDocument, KdlNode};
 use nassun::{client::Nassun, package::Package, PackageResolution};
 use node_semver::Version;
@@ -16,7 +15,7 @@ use crate::{error::NodeMaintainerError, graph::DepType, IntoKdl};
 pub struct Lockfile {
     pub(crate) version: u64,
     pub(crate) root: LockfileNode,
-    pub(crate) packages: BTreeMap<UniCase<String>, LockfileNode>,
+    pub(crate) packages: IndexMap<UniCase<String>, LockfileNode>,
 }
 
 impl Lockfile {
@@ -28,7 +27,7 @@ impl Lockfile {
         &self.root
     }
 
-    pub fn packages(&self) -> &BTreeMap<UniCase<String>, LockfileNode> {
+    pub fn packages(&self) -> &IndexMap<UniCase<String>, LockfileNode> {
         &self.packages
     }
 
@@ -68,7 +67,7 @@ impl Lockfile {
                         .join("/node_modules/");
                     Ok((UniCase::from(path_str), node))
                 })
-                .collect::<Result<BTreeMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>(
+                .collect::<Result<IndexMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>(
                 )?;
             Ok(Lockfile {
                 version: kdl
@@ -107,7 +106,7 @@ impl Lockfile {
                         .join("/node_modules/");
                     Ok((UniCase::from(path_str), node))
                 })
-                .collect::<Result<BTreeMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>(
+                .collect::<Result<IndexMap<UniCase<String>, LockfileNode>, NodeMaintainerError>>(
                 )?;
             Ok(Lockfile {
                 version: npm
@@ -137,10 +136,10 @@ pub struct LockfileNode {
     pub resolved: Option<String>,
     pub version: Option<Version>,
     pub integrity: Option<Integrity>,
-    pub dependencies: BTreeMap<String, String>,
-    pub dev_dependencies: BTreeMap<String, String>,
-    pub peer_dependencies: BTreeMap<String, String>,
-    pub optional_dependencies: BTreeMap<String, String>,
+    pub dependencies: IndexMap<String, String>,
+    pub dev_dependencies: IndexMap<String, String>,
+    pub peer_dependencies: IndexMap<String, String>,
+    pub optional_dependencies: IndexMap<String, String>,
 }
 
 impl From<LockfileNode> for CorgiManifest {
@@ -234,11 +233,14 @@ impl LockfileNode {
                 )
             })
             .collect::<Vec<_>>();
-        let name = path
-            .last()
-            .cloned()
-            // TODO: add a miette span here
-            .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(node.clone()))?;
+        let name = if is_root {
+            UniCase::new("".into())
+        } else {
+            path.last()
+                .cloned()
+                // TODO: add a miette span here
+                .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(node.clone()))?
+        };
         let integrity = children
             .get_arg("integrity")
             .and_then(|i| i.as_string())
@@ -275,7 +277,7 @@ impl LockfileNode {
     fn from_kdl_deps(
         children: &KdlDocument,
         dep_type: &DepType,
-    ) -> Result<BTreeMap<String, String>, NodeMaintainerError> {
+    ) -> Result<IndexMap<String, String>, NodeMaintainerError> {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
@@ -283,7 +285,7 @@ impl LockfileNode {
             Peer => "peer-dependencies",
             Opt => "optional-dependencies",
         };
-        let mut deps = BTreeMap::new();
+        let mut deps = IndexMap::new();
         if let Some(node) = children.get(type_name) {
             if let Some(children) = node.children() {
                 for dep in children.nodes() {
@@ -350,7 +352,7 @@ impl LockfileNode {
         kdl_node
     }
 
-    fn to_kdl_deps(&self, dep_type: &DepType, deps: &BTreeMap<String, String>) -> KdlNode {
+    fn to_kdl_deps(&self, dep_type: &DepType, deps: &IndexMap<String, String>) -> KdlNode {
         use DepType::*;
         let type_name = match dep_type {
             Prod => "dependencies",
@@ -385,13 +387,15 @@ impl LockfileNode {
             .clone()
             .map(UniCase::new)
             .or_else(|| path.last().cloned())
-            .ok_or_else(|| NodeMaintainerError::NpmLockMissingName(npm.clone()))?;
+            .ok_or_else(|| NodeMaintainerError::NpmLockMissingName(Box::new(npm.clone())))?;
         let integrity = npm
             .integrity
             .as_ref()
             .map(|i| i.parse())
             .transpose()
-            .map_err(|e| NodeMaintainerError::NpmLockfileIntegrityParseError(npm.clone(), e))?;
+            .map_err(|e| {
+                NodeMaintainerError::NpmLockfileIntegrityParseError(Box::new(npm.clone()), e)
+            })?;
         let version = npm
             .version
             .as_ref()
@@ -420,7 +424,7 @@ pub struct NpmPackageLock {
     #[serde(default)]
     pub requires: bool,
     #[serde(default)]
-    pub packages: BTreeMap<String, NpmPackageLockEntry>,
+    pub packages: IndexMap<String, NpmPackageLockEntry>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -435,11 +439,11 @@ pub struct NpmPackageLockEntry {
     #[serde(default)]
     pub integrity: Option<String>,
     #[serde(default)]
-    pub dependencies: BTreeMap<String, String>,
+    pub dependencies: IndexMap<String, String>,
     #[serde(default)]
-    pub dev_dependencies: BTreeMap<String, String>,
+    pub dev_dependencies: IndexMap<String, String>,
     #[serde(default)]
-    pub optional_dependencies: BTreeMap<String, String>,
+    pub optional_dependencies: IndexMap<String, String>,
     #[serde(default)]
-    pub peer_dependencies: BTreeMap<String, String>,
+    pub peer_dependencies: IndexMap<String, String>,
 }

@@ -1,10 +1,11 @@
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::VecDeque,
     ffi::OsStr,
     ops::{Index, IndexMut},
     path::Path,
 };
 
+use indexmap::IndexMap;
 use kdl::KdlDocument;
 use nassun::{package::Package, PackageResolution, PackageSpec};
 use oro_common::CorgiManifest;
@@ -34,31 +35,65 @@ pub struct Node {
     pub(crate) idx: NodeIndex,
     /// Resolved [`Package`] for this Node.
     pub(crate) package: Package,
-    /// Resolved [`CorgiManifest`] for this Node.
-    pub(crate) manifest: CorgiManifest,
     /// Quick index back to this Node's [`Graph`]'s root Node.
     pub(crate) root: NodeIndex,
     /// Name-indexed map of outgoing [`crate::Edge`]s from this Node.
-    pub(crate) dependencies: BTreeMap<UniCase<String>, EdgeIndex>,
+    pub(crate) dependencies: IndexMap<UniCase<String>, EdgeIndex>,
+    /// Map of dependencies to their requirements.
+    pub(crate) dependency_reqs: IndexMap<UniCase<String>, (PackageSpec, DepType)>,
     /// Parent, if any, of this Node in the logical filesystem hierarchy.
     pub(crate) parent: Option<NodeIndex>,
     /// Children of this node in the logical filesystem hierarchy. These are
     /// not necessarily dependencies, and this Node's dependencies may not all
     /// be in this HashMap.
-    pub(crate) children: BTreeMap<UniCase<String>, NodeIndex>,
+    pub(crate) children: IndexMap<UniCase<String>, NodeIndex>,
 }
 
 impl Node {
-    pub(crate) fn new(package: Package, manifest: CorgiManifest) -> Self {
-        Self {
+    pub(crate) fn new(
+        package: Package,
+        manifest: CorgiManifest,
+        is_root: bool,
+    ) -> Result<Self, NodeMaintainerError> {
+        let deps = manifest
+            .dependencies
+            .iter()
+            .map(|x| (x, DepType::Prod))
+            .chain(
+                manifest
+                    .optional_dependencies
+                    .iter()
+                    .map(|x| (x, DepType::Opt)),
+                // TODO: Place these properly.
+                // )
+                // .chain(
+                //     manifest
+                //         .peer_dependencies
+                //         .iter()
+                //         .map(|x| (x, DepType::Peer)),
+            );
+
+        let deps: Box<dyn Iterator<Item = ((&String, &String), DepType)> + Send> = if is_root {
+            Box::new(deps.chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev))))
+        } else {
+            Box::new(deps)
+        };
+        let mut dependency_reqs = IndexMap::new();
+        for ((name, spec), dep_type) in deps {
+            dependency_reqs.insert(
+                UniCase::new(name.clone()),
+                (format!("{name}@{spec}").parse()?, dep_type),
+            );
+        }
+        Ok(Self {
             package,
-            manifest,
             idx: NodeIndex::new(0),
             root: NodeIndex::new(0),
             parent: None,
-            children: BTreeMap::new(),
-            dependencies: BTreeMap::new(),
-        }
+            children: IndexMap::new(),
+            dependencies: IndexMap::new(),
+            dependency_reqs,
+        })
     }
 
     /// This Node's depth in the logical filesystem hierarchy.
@@ -158,7 +193,7 @@ impl Graph {
                     node,
                 ))
             })
-            .collect::<Result<BTreeMap<_, _>, NodeMaintainerError>>()?;
+            .collect::<Result<IndexMap<_, _>, NodeMaintainerError>>()?;
         Ok(Lockfile {
             version: 1,
             root,
@@ -243,8 +278,8 @@ impl Graph {
     pub(crate) fn node_path(&self, node_idx: NodeIndex) -> VecDeque<UniCase<String>> {
         let node = &self.inner[node_idx];
         let mut path = VecDeque::new();
-        path.push_front(UniCase::new(node.package.name().to_owned()));
         if node_idx != self.root {
+            path.push_front(UniCase::new(node.package.name().to_owned()));
             let mut parent = node.parent;
             while let Some(parent_idx) = parent {
                 if parent_idx == self.root {
@@ -324,10 +359,10 @@ impl Graph {
             None
         };
 
-        let mut prod_deps = BTreeMap::new();
-        let mut dev_deps = BTreeMap::new();
-        let mut peer_deps = BTreeMap::new();
-        let mut opt_deps = BTreeMap::new();
+        let mut prod_deps = IndexMap::new();
+        let mut dev_deps = IndexMap::new();
+        let mut peer_deps = IndexMap::new();
+        let mut opt_deps = IndexMap::new();
         let dependencies = node.dependencies.iter().map(|(name, edge_idx)| {
             let edge = &self.inner[*edge_idx];
             (name, &edge.requested, &edge.dep_type)

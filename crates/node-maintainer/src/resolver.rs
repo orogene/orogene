@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -7,6 +7,7 @@ use async_std::sync::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
 use colored::Colorize;
 use futures::{StreamExt, TryFutureExt};
+use indexmap::IndexMap;
 use nassun::client::Nassun;
 use nassun::package::Package;
 use nassun::PackageSpec;
@@ -25,7 +26,7 @@ use crate::{Lockfile, LockfileNode, ProgressAdded, ProgressHandler};
 #[derive(Debug, Clone)]
 struct NodeDependency {
     name: UniCase<String>,
-    spec: String,
+    spec: PackageSpec,
     dep_type: DepType,
     node_idx: NodeIndex,
 }
@@ -64,31 +65,34 @@ impl<'a> Resolver<'a> {
         // fetched dependencies. Thus we maintain a mapping from "name@spec" to
         // a vector of `NodeDependency`s. When we will fetch the package - we
         // will apply it to all dependencies that need it.
-        let fetches: BTreeMap<String, Vec<NodeDependency>> = BTreeMap::new();
+        let fetches: IndexMap<PackageSpec, Vec<NodeDependency>> = IndexMap::new();
         let fetches = Arc::new(Mutex::new(fetches));
 
         let mut package_stream = package_stream
             .map(|dep: NodeDependency| {
-                let spec = format!("{}@{}", dep.name, dep.spec);
                 let maybe_spec = if let Some(mut fetches) = fetches.try_lock() {
-                    if let Some(list) = fetches.get_mut(&spec) {
+                    if let Some(list) = fetches.get_mut(&dep.spec) {
                         // Package fetch is already in-flight, add dependency
                         // to the existing list.
                         list.push(dep);
                         None
                     } else {
                         // Fetch package since we are the first one to get here.
-                        fetches.insert(spec.clone(), vec![dep]);
-                        Some(spec)
+                        fetches.insert(dep.spec.clone(), vec![dep.clone()]);
+                        Some(dep.spec.clone())
                     }
                 } else {
                     // Mutex is locked - fetch the package
-                    Some(spec)
+                    Some(dep.spec)
                 };
                 futures::future::ready(maybe_spec)
             })
             .filter_map(|maybe_spec| maybe_spec)
-            .map(|spec| self.nassun.resolve(spec.clone()).map_ok(move |p| (p, spec)))
+            .map(|spec| {
+                self.nassun
+                    .resolve_spec(spec.clone())
+                    .map_ok(move |p| (p, spec))
+            })
             .buffer_unordered(self.concurrency)
             .ready_chunks(self.concurrency);
 
@@ -96,15 +100,9 @@ impl<'a> Resolver<'a> {
         while !q.is_empty() || in_flight != 0 {
             while let Some(node_idx) = q.pop_front() {
                 let mut names = HashSet::new();
-                let manifest = self.graph[node_idx].manifest.clone();
                 // Grab all the deps from the current package and fire off a
                 // lookup. These will be resolved concurrently.
-                for ((name, spec), dep_type) in self.package_deps(node_idx, &manifest) {
-                    // `dependencies` > `optionalDependencies` ->
-                    // `peerDependencies` -> `devDependencies` (if we're looking
-                    // at root)
-                    let name = UniCase::new(name.clone());
-
+                for (name, (spec, dep_type)) in self.graph[node_idx].dependency_reqs.clone() {
                     if names.contains(&name) {
                         continue;
                     } else {
@@ -113,7 +111,7 @@ impl<'a> Resolver<'a> {
 
                     let dep = NodeDependency {
                         name: name.clone(),
-                        spec: spec.to_string(),
+                        spec,
                         dep_type: dep_type.clone(),
                         node_idx,
                     };
@@ -121,8 +119,6 @@ impl<'a> Resolver<'a> {
                     if let Some(handler) = &self.on_resolution_added {
                         handler();
                     }
-
-                    let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
 
                     if let Some(_child_idx) = Self::satisfy_dependency(&mut self.graph, &dep)? {
                         if let Some(handler) = &self.on_resolve_progress {
@@ -148,7 +144,7 @@ impl<'a> Resolver<'a> {
                                     node_idx,
                                     kdl_lock,
                                     &name,
-                                    &requested,
+                                    &dep.spec,
                                 )
                                 .await?
                             {
@@ -158,7 +154,7 @@ impl<'a> Resolver<'a> {
                                     &mut self.graph,
                                     node_idx,
                                     package,
-                                    &requested,
+                                    &dep.spec,
                                     dep_type,
                                     lockfile_node.into(),
                                     Some(target_path),
@@ -227,13 +223,11 @@ impl<'a> Resolver<'a> {
                                 continue;
                             }
 
-                            let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
-
                             let child_idx = Self::place_child(
                                 &mut self.graph,
                                 dep.node_idx,
                                 package.clone(),
-                                &requested,
+                                &dep.spec,
                                 dep.dep_type,
                                 manifest.clone(),
                                 None,
@@ -275,16 +269,15 @@ impl<'a> Resolver<'a> {
         dep: &NodeDependency,
     ) -> Result<Option<NodeIndex>, NodeMaintainerError> {
         if let Some(satisfier_idx) = graph.find_by_name(dep.node_idx, &dep.name)? {
-            let requested = format!("{}@{}", dep.name, dep.spec).parse()?;
             if graph[satisfier_idx]
                 .package
                 .resolved()
-                .satisfies(&requested)?
+                .satisfies(&dep.spec)?
             {
                 let edge_idx = graph.inner.add_edge(
                     dep.node_idx,
                     satisfier_idx,
-                    Edge::new(requested, dep.dep_type.clone()),
+                    Edge::new(dep.spec.clone(), dep.dep_type.clone()),
                 );
                 graph[dep.node_idx]
                     .dependencies
@@ -349,7 +342,7 @@ impl<'a> Resolver<'a> {
         target_path: Option<Vec<UniCase<String>>>,
     ) -> Result<NodeIndex, NodeMaintainerError> {
         let child_name = UniCase::new(package.name().to_string());
-        let child_node = Node::new(package, corgi);
+        let child_node = Node::new(package, corgi, false)?;
         let child_idx = graph.inner.add_node(child_node);
         graph[child_idx].root = graph.root;
         // We needed to generate the node index before setting it in the node,
@@ -364,48 +357,43 @@ impl<'a> Resolver<'a> {
             Edge::new(requested.clone(), dep_type),
         );
 
-        let mut target_idx = graph.root;
-        let mut found_in_path = true;
-        // If we got a suggested target path, we'll try to use that first.
-        if let Some(target_path) = target_path {
-            for segment in target_path.iter().take(target_path.len() - 1) {
-                if let Some(new_target) = &graph[target_idx].children.get(segment) {
-                    target_idx = **new_target;
-                } else {
-                    // We couldn't find the target path. We'll just place the
-                    // node in the highest possible location.
-                    found_in_path = false;
-                    break;
-                }
-            }
-        } else {
-            found_in_path = false;
-        }
-
-        if !found_in_path {
-            // If we didn't have a path, or the path wasn't correct, we
-            // calculate the highest hierarchy location that we can place this
-            // node in.
-            let mut parent_idx = Some(dependent_idx);
-            target_idx = dependent_idx;
-            'outer: while let Some(curr_target_idx) = parent_idx {
-                if let Some(resolved) = graph.resolve_dep(curr_target_idx, &child_name) {
-                    for edge_ref in graph.inner.edges_directed(resolved, Direction::Incoming) {
-                        let (from, _) = graph
-                            .inner
-                            .edge_endpoints(edge_ref.id())
-                            .expect("Where did the edge go?!?!");
-                        if graph.is_ancestor(curr_target_idx, from)
-                            && !graph[resolved].package.resolved().satisfies(requested)?
-                        {
-                            break 'outer;
-                        }
+        let target_path = target_path.map(|target| {
+            let len = target.len();
+            target.into_iter().take(len - 1).collect::<VecDeque<_>>()
+        });
+        let mut target_idx = dependent_idx;
+        let mut parent_idx = Some(dependent_idx);
+        'outer: while let Some(curr_target_idx) = parent_idx {
+            if let Some(resolved) = graph.resolve_dep(curr_target_idx, &child_name) {
+                for edge_ref in graph.inner.edges_directed(resolved, Direction::Incoming) {
+                    let (from, _) = graph
+                        .inner
+                        .edge_endpoints(edge_ref.id())
+                        .expect("Where did the edge go?!?!");
+                    if graph.is_ancestor(curr_target_idx, from)
+                        && !graph[resolved].package.resolved().satisfies(requested)?
+                    {
+                        break 'outer;
                     }
                 }
+            }
 
-                // No conflict yet. Let's try to go higher!
-                target_idx = curr_target_idx;
-                parent_idx = graph[curr_target_idx].parent;
+            if let Some((req, _)) = graph[curr_target_idx].dependency_reqs.get(&child_name) {
+                if !graph[child_idx].package.resolved().satisfies(req)? {
+                    break 'outer;
+                }
+            }
+
+            // No conflict yet. Let's try to go higher!
+            target_idx = curr_target_idx;
+            parent_idx = graph[curr_target_idx].parent;
+
+            // Try and place it where the lockfile asks us to, but only if it
+            // makes sense for us to do so.
+            if let Some(locked) = &target_path {
+                if locked == &graph.node_path(target_idx) {
+                    break 'outer;
+                }
             }
         }
         {
@@ -424,39 +412,16 @@ impl<'a> Resolver<'a> {
         {
             // Finally, we add the backlink from the parent node to the child.
             let node = &mut graph[target_idx];
-            node.children.insert(child_name, child_idx);
+            if let Some(old) = node.children.insert(child_name, child_idx) {
+                tracing::error!(
+                    "clobbered {} with {} (requested: {}). This is a bug with the orogene resolver. Please report it.",
+                    graph[old].package.resolved(),
+                    graph[child_idx].package.resolved(),
+                    requested
+                );
+            }
         }
         Ok(child_idx)
-    }
-
-    fn package_deps<'b, 'c>(
-        &'b self,
-        node_idx: NodeIndex,
-        manifest: &'c CorgiManifest,
-    ) -> Box<dyn Iterator<Item = ((&'c String, &'c String), DepType)> + 'c + Send> {
-        let deps = manifest
-            .dependencies
-            .iter()
-            .map(|x| (x, DepType::Prod))
-            .chain(
-                manifest
-                    .optional_dependencies
-                    .iter()
-                    .map(|x| (x, DepType::Opt)),
-                // TODO: Place these properly.
-                // )
-                // .chain(
-                //     manifest
-                //         .peer_dependencies
-                //         .iter()
-                //         .map(|x| (x, DepType::Peer)),
-            );
-
-        if node_idx == self.graph.root {
-            Box::new(deps.chain(manifest.dev_dependencies.iter().map(|x| (x, DepType::Dev))))
-        } else {
-            Box::new(deps)
-        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
