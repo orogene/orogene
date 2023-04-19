@@ -1,9 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::Args;
 use indicatif::ProgressStyle;
-use miette::{IntoDiagnostic, Result};
+use miette::Result;
 use node_maintainer::{NodeMaintainer, NodeMaintainerOptions};
+use oro_common::CorgiManifest;
 use rand::seq::IteratorRandom;
 use tracing::{Instrument, Span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
@@ -115,7 +116,7 @@ pub struct ApplyArgs {
 }
 
 impl ApplyArgs {
-    pub async fn execute(&self) -> Result<()> {
+    pub async fn execute(&self, manifest: CorgiManifest) -> Result<()> {
         let total_time = std::time::Instant::now();
 
         if !self.apply {
@@ -124,7 +125,7 @@ impl ApplyArgs {
         }
 
         let root = &self.root;
-        let maintainer = self.resolve(root, self.configured_maintainer()).await?;
+        let maintainer = self.resolve(manifest, self.configured_maintainer()).await?;
 
         if !self.lockfile_only {
             self.prune(&maintainer).await?;
@@ -148,7 +149,7 @@ impl ApplyArgs {
         }
 
         tracing::info!(
-            "{}Apply node_modules/ in {}s. {}",
+            "{}Applied node_modules/ in {}s. {}",
             self.emoji_tada(),
             total_time.elapsed().as_millis() as f32 / 1000.0,
             hackerish_encouragement()
@@ -215,7 +216,11 @@ impl ApplyArgs {
         nm
     }
 
-    async fn resolve(&self, root: &Path, builder: NodeMaintainerOptions) -> Result<NodeMaintainer> {
+    async fn resolve(
+        &self,
+        root_manifest: CorgiManifest,
+        builder: NodeMaintainerOptions,
+    ) -> Result<NodeMaintainer> {
         // Set up progress bar and timing stuff.
         let resolve_time = std::time::Instant::now();
         let resolve_span = tracing::debug_span!("resolving");
@@ -232,9 +237,7 @@ impl ApplyArgs {
         let resolve_span_enter = resolve_span.enter();
 
         // Actually do a resolve.
-        let resolved_nm = builder
-            .resolve_spec(root.canonicalize().into_diagnostic()?.to_string_lossy())
-            .await?;
+        let resolved_nm = builder.resolve_manifest(root_manifest).await?;
 
         // Wrap up progress bar and print messages.
         std::mem::drop(resolve_span_enter);

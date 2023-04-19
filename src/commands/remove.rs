@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use clap::Args;
 use miette::{IntoDiagnostic, Result};
 use nassun::PackageSpec;
+use oro_common::CorgiManifest;
 use oro_pretty_json::Formatted;
 
 use crate::apply_args::ApplyArgs;
@@ -45,6 +46,20 @@ impl OroCommand for RemoveCmd {
             }
         }
 
+        if self.apply.locked {
+            // NOTE: we force locked to be false here, because it doesn't make
+            // sense to run this command in locked mode.
+            tracing::info!("Ignoring --locked option. It doesn't make sense to run this command in locked mode.");
+            self.apply.locked = false;
+        }
+
+        let corgi: CorgiManifest =
+            serde_json::from_str(&oro_pretty_json::to_string_pretty(&manifest).into_diagnostic()?)
+                .into_diagnostic()?;
+
+        // Then, we apply the change.
+        self.apply.execute(corgi).await?;
+
         async_std::fs::write(
             self.apply.root.join("package.json"),
             oro_pretty_json::to_string_pretty(&manifest).into_diagnostic()?,
@@ -58,15 +73,7 @@ impl OroCommand for RemoveCmd {
             if count == 1 { "y" } else { "ies" },
         );
 
-        if self.apply.locked {
-            // NOTE: we force locked to be false here, because it doesn't make
-            // sense to run this command in locked mode.
-            tracing::info!("Ignoring --locked option. It doesn't make sense to run this command in locked mode.");
-            self.apply.locked = false;
-        }
-
-        // Then, we apply the change.
-        self.apply.execute().await
+        Ok(())
     }
 }
 
