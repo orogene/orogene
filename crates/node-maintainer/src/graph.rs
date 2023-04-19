@@ -9,10 +9,9 @@ use indexmap::IndexMap;
 use kdl::KdlDocument;
 use nassun::{package::Package, PackageResolution, PackageSpec};
 use oro_common::CorgiManifest;
-use petgraph::{
-    stable_graph::{EdgeIndex, NodeIndex, StableGraph},
-    Direction,
-};
+use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
+#[cfg(not(target_arch = "wasm32"))]
+use petgraph::Direction;
 use unicase::UniCase;
 
 use crate::{error::NodeMaintainerError, Lockfile, LockfileNode};
