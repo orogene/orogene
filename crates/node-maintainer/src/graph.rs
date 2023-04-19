@@ -163,6 +163,7 @@ impl IndexMut<EdgeIndex> for Graph {
 }
 
 impl Graph {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn is_optional(&self, node: NodeIndex) -> bool {
         for edge_ref in self.inner.edges_directed(node, Direction::Incoming) {
             if edge_ref.weight().dep_type != DepType::Opt {
