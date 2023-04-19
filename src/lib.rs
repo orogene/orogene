@@ -108,6 +108,20 @@ pub struct Orogene {
     )]
     scoped_registries: Vec<(String, Url)>,
 
+    /// Credentials to apply to registries when they're accessed. You can
+    /// provide credentials for multiple registries at a time, and different
+    /// credential fields for a registry.
+    ///
+    /// The syntax is `--credentials my.registry.com:username=foo
+    /// --credentials my.registry.com:password=sekrit`.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        value_parser = parse_nested_key_value::<String, String, String>
+    )]
+    credentials: Vec<(String, String, String)>,
+
     /// Location of disk cache.
     ///
     /// Default location varies by platform.
@@ -467,6 +481,31 @@ where
         .ok_or_else(|| format!("invalid KEY=VALUE pair: no `=` found in `{s}`"))?;
 
     Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
+}
+
+fn parse_nested_key_value<T, U, V>(
+    s: &str,
+) -> Result<(T, U, V), Box<dyn std::error::Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr,
+    T::Err: std::error::Error + Send + Sync + 'static,
+    U: std::str::FromStr,
+    U::Err: std::error::Error + Send + Sync + 'static,
+    V: std::str::FromStr,
+    V::Err: std::error::Error + Send + Sync + 'static,
+{
+    let colon_pos = s
+        .find(':')
+        .ok_or_else(|| format!("invalid TOP_KEY:NESTED_KEY=VALUE entry: no `:` found in `{s}`",))?;
+    let eq_pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid TOP_KEY:NESTED_KEY=VALUE entry: no `=` found in `{s}`"))?;
+
+    Ok((
+        s[..colon_pos].parse()?,
+        s[colon_pos + 1..eq_pos].parse()?,
+        s[eq_pos + 1..].parse()?,
+    ))
 }
 
 #[derive(Debug, Subcommand)]

@@ -4,7 +4,7 @@ use std::{collections::HashSet, ffi::OsString, path::PathBuf};
 
 pub use clap::{ArgMatches, Command};
 pub use config::Config as OroConfig;
-use config::{builder::DefaultState, ConfigBuilder, Environment, File};
+use config::{builder::DefaultState, ConfigBuilder, Environment, File, ValueKind};
 use kdl_source::KdlFormat;
 use miette::Result;
 
@@ -63,6 +63,10 @@ impl OroConfigLayerExt for Command {
             .ignore_errors(true)
             .get_matches_from(&args.clone());
         for opt in long_opts {
+            // TODO: _prepend_ args unconditionally if they're coming from
+            // config, so multi-args get parsed right. Right now, if you have
+            // something in your config, it'll get completely overridden by
+            // the command line.
             if matches.value_source(&opt) != Some(clap::parser::ValueSource::CommandLine) {
                 let opt = opt.replace('_', "-");
                 if !args.contains(&OsString::from(format!("--no-{opt}"))) {
@@ -77,8 +81,19 @@ impl OroConfigLayerExt for Command {
                         args.push(OsString::from(value));
                     } else if let Ok(value) = config.get_table(&opt) {
                         for (key, val) in value {
-                            args.push(OsString::from(format!("--{}", opt)));
-                            args.push(OsString::from(format!("{key}={val}")))
+                            match &val.kind {
+                                ValueKind::Table(map) => {
+                                    for (k, v) in map {
+                                        args.push(OsString::from(format!("--{}", opt)));
+                                        args.push(OsString::from(format!("{key}:{k}={v}")));
+                                    }
+                                }
+                                // TODO: error if val.kind is an Array
+                                _ => {
+                                    args.push(OsString::from(format!("--{}", opt)));
+                                    args.push(OsString::from(format!("{key}={val}")));
+                                }
+                            }
                         }
                     } else if let Ok(value) = config.get_array(&opt) {
                         for val in value {
