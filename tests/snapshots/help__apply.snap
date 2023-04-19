@@ -119,6 +119,12 @@ Registry to use for a specific `@scope`, using `--scoped-registry @scope=https:/
 
 Can be provided multiple times to specify multiple scoped registries.
 
+#### `--credentials <CREDENTIALS>`
+
+Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.
+
+The syntax is `--credentials my.registry.com:username=foo --credentials my.registry.com:password=sekrit`.
+
 #### `--cache <CACHE>`
 
 Location of disk cache.
