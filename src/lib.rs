@@ -287,6 +287,7 @@ impl Orogene {
                             .with_timer(tracing_subscriber::fmt::time::uptime())
                             .with_writer(non_blocking)
                             .with_target(false)
+                            .with_ansi(false)
                             .with_filter(targets),
                     )
                     .init();
@@ -305,6 +306,7 @@ impl Orogene {
                             .with_timer(tracing_subscriber::fmt::time::uptime())
                             .with_writer(non_blocking)
                             .with_target(false)
+                            .with_ansi(false)
                             .with_filter(targets),
                     )
                     .init();
