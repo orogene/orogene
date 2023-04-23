@@ -139,6 +139,13 @@ impl NodeMaintainerOptions {
         self
     }
 
+    /// Credentials map used for all registries
+    /// This will be resolved into a proper credentials map inside nassun
+    pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Self {
+        self.nassun_opts = self.nassun_opts.credentials(credentials);
+        self
+    }
+
     /// Root directory of the project.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn root(mut self, path: impl AsRef<Path>) -> Self {

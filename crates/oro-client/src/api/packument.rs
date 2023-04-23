@@ -1,7 +1,10 @@
+use base64::{engine::general_purpose, Engine as _};
 use oro_common::{CorgiPackument, Packument};
 use reqwest::{StatusCode, Url};
+#[cfg(not(target = "wasm"))]
+use reqwest_middleware::RequestBuilder;
 
-use crate::{OroClient, OroClientError};
+use crate::{credentials::Credentials, OroClient, OroClientError};
 
 pub(crate) const CORGI_HEADER: &str =
     "application/vnd.npm.install-v1+json; q=1.0,application/json; q=0.8,*/*";
@@ -38,17 +41,16 @@ impl OroClient {
         url: &Url,
         use_corgi: bool,
     ) -> Result<String, OroClientError> {
+        let client = self.client.get(url.clone()).header(
+            "Accept",
+            if use_corgi {
+                CORGI_HEADER
+            } else {
+                "application/json"
+            },
+        );
         Ok(self
-            .client
-            .get(url.clone())
-            .header(
-                "Accept",
-                if use_corgi {
-                    CORGI_HEADER
-                } else {
-                    "application/json"
-                },
-            )
+            .with_credentials(url, client)?
             .send()
             .await?
             .error_for_status()
@@ -64,6 +66,34 @@ impl OroClient {
             })?
             .text()
             .await?)
+    }
+
+    fn with_credentials(
+        &self,
+        url: &Url,
+        builder: RequestBuilder,
+    ) -> Result<RequestBuilder, OroClientError> {
+        let credentials = url.host_str().and_then(|h| self.credentials.get(h));
+        if let Some(cred) = credentials {
+            match cred {
+                Credentials::Basic { username, password } => {
+                    Ok(builder.basic_auth(username, Some(password)))
+                }
+                Credentials::EncodedBasic(auth) => {
+                    let decoded = general_purpose::STANDARD.decode(auth)?;
+                    let string = String::from_utf8_lossy(&decoded);
+                    let mut parts = string.split(':');
+                    if let Some(username) = parts.next() {
+                        Ok(builder.basic_auth(username, parts.next()))
+                    } else {
+                        Err(OroClientError::AuthStringMissingUsername(auth.clone()))
+                    }
+                }
+                Credentials::Token(token) => Ok(builder.bearer_auth(token)),
+            }
+        } else {
+            Ok(builder)
+        }
     }
 }
 
@@ -125,6 +155,72 @@ mod test {
         Mock::given(method("GET"))
             .and(path("some-pkg"))
             .and(header("accept", "application/json"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(&json!({
+                "versions": {
+                    "1.0.0": {
+                        "name": "some-pkg",
+                        "version": "1.0.0",
+                        "dependencies": {
+                            "some-dep": "1.0.0"
+                        }
+                    }
+                }
+            })))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        assert_eq!(
+            client.packument("some-pkg").await?,
+            Packument {
+                versions: hashmap!(
+                    "1.0.0".parse()? => VersionMetadata {
+                        manifest: Manifest {
+                            name: Some("some-pkg".to_string()),
+                            version: Some("1.0.0".parse()?),
+                            dependencies: IndexMap::from([
+                                ("some-dep".to_string(), "1.0.0".to_string())
+                            ]),
+                            ..Default::default()
+                        },
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+        );
+
+        Ok(())
+    }
+
+    #[async_std::test]
+    async fn fetch_with_credentials() -> Result<()> {
+        let mock_server = MockServer::start().await;
+        let url: Url = mock_server.uri().parse().into_diagnostic()?;
+        let host = url.host_str().unwrap();
+        let cred_config = vec![
+            (
+                host.to_string(),
+                "username".to_string(),
+                "testuser".to_string(),
+            ),
+            (
+                host.to_string(),
+                "password".to_string(),
+                "testpassword".to_string(),
+            ),
+        ];
+        let client = OroClient::builder()
+            .registry(url)
+            .credentials(cred_config)?
+            .build();
+
+        Mock::given(method("GET"))
+            .and(path("some-pkg"))
+            .and(header("accept", "application/json"))
+            .and(header(
+                "authorization",
+                "Basic dGVzdHVzZXI6dGVzdHBhc3N3b3Jk",
+            ))
             .respond_with(ResponseTemplate::new(200).set_body_json(&json!({
                 "versions": {
                     "1.0.0": {

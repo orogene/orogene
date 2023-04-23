@@ -68,6 +68,21 @@ pub enum OroClientError {
     #[error(transparent)]
     #[diagnostic(code(oro_client::request_middleware_error), url(docsrs))]
     RequestMiddlewareError(#[from] reqwest_middleware::Error),
+
+    /// An error during reading the configuration
+    #[error("Could not parse credentials config. {0}")]
+    #[diagnostic(code(oro_client::credentials_config_error), url(docsrs))]
+    CredentialsConfigError(String),
+
+    /// Auth string did not include a username when decoded.
+    #[error("Auth string did not include a username when decoded.")]
+    #[diagnostic(code(oro_client::auth_string_missing_username), url(docsrs))]
+    AuthStringMissingUsername(String),
+
+    /// Failed to decode base64.
+    #[error(transparent)]
+    #[diagnostic(code(oro_client::base64_decode_error), url(docsrs))]
+    Base64DecodeError(#[from] base64::DecodeError),
 }
 
 impl OroClientError {
