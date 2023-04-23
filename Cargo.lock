@@ -2251,8 +2251,8 @@ name = "oro-client"
 version = "0.3.29"
 dependencies = [
  "async-std",
+ "base64 0.21.4",
  "chrono",
- "clap",
  "futures 0.3.28",
  "http-cache-reqwest",
  "indexmap 1.9.3",

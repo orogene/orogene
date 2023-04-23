@@ -15,7 +15,7 @@ rust-version.workspace = true
 oro-common = { version = "=0.3.29", path = "../oro-common" }
 
 chrono = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
+base64 = { workspace = true }
 futures = { workspace = true, features = ["io-compat"] }
 indexmap = { workspace = true }
 miette = { workspace = true }

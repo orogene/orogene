@@ -1,10 +1,10 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 #[cfg(not(target_arch = "wasm32"))]
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache};
-#[cfg(target_arch = "wasm32")]
+use miette::Result;
 use reqwest::Client;
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest::ClientBuilder;
@@ -14,13 +14,13 @@ use reqwest_middleware::ClientWithMiddleware;
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use url::Url;
 
-#[cfg(not(target_arch = "wasm32"))]
-use crate::OroClientError;
+use crate::{credentials::Credentials, OroClientError};
 
 #[derive(Clone, Debug)]
 pub struct OroClientBuilder {
     registry: Url,
     fetch_retries: u32,
+    credentials: HashMap<String, Credentials>,
     #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
     #[cfg(not(target_arch = "wasm32"))]
@@ -35,6 +35,7 @@ impl Default for OroClientBuilder {
     fn default() -> Self {
         Self {
             registry: Url::parse("https://registry.npmjs.org").unwrap(),
+            credentials: HashMap::new(),
             #[cfg(not(target_arch = "wasm32"))]
             cache: None,
             #[cfg(not(target_arch = "wasm32"))]
@@ -59,6 +60,28 @@ impl OroClientBuilder {
     pub fn registry(mut self, registry: Url) -> Self {
         self.registry = registry;
         self
+    }
+
+    pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Result<Self> {
+        let mut vars = HashMap::new();
+        for (registry, key, value) in credentials.into_iter() {
+            if !vars.contains_key(&registry) {
+                vars.insert(registry.clone(), HashMap::new());
+            }
+            let existing = vars
+                .get_mut(&registry)
+                .and_then(|reg| reg.insert(key.clone(), value.clone()));
+            if existing.is_some() {
+                Err(OroClientError::CredentialsConfigError(format!(
+                    "Key \"{}\" already exists for registry {}",
+                    key, registry
+                )))?
+            }
+        }
+        for (registry, config) in vars.into_iter() {
+            self.credentials.insert(registry, config.try_into()?);
+        }
+        Ok(self)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -154,6 +177,7 @@ impl OroClientBuilder {
 
         OroClient {
             registry: Arc::new(self.registry),
+            #[cfg(not(target_arch = "wasm32"))]
             client: client_builder.build(),
             client_uncached: client_uncached_builder.build(),
         }

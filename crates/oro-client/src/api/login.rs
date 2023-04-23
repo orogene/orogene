@@ -1,6 +1,5 @@
 use crate::notify::Notify;
 use crate::{OroClient, OroClientError};
-use clap::clap_derive::ValueEnum;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use reqwest::header::{HeaderMap, WWW_AUTHENTICATE};
 use reqwest::StatusCode;
@@ -14,8 +13,7 @@ pub enum DoneURLResponse {
     Duration(Duration),
 }
 
-#[doc(hidden)]
-#[derive(Debug, PartialEq, Clone, ValueEnum)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AuthType {
     Web,
     Legacy,
