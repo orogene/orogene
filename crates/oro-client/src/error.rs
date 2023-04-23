@@ -41,6 +41,11 @@ pub enum OroClientError {
     #[error(transparent)]
     #[diagnostic(code(oro_client::request_middleware_error), url(docsrs))]
     RequestMiddlewareError(#[from] reqwest_middleware::Error),
+
+    /// An error during reading the configuration
+    #[error("Could not parse credentials config. {0}")]
+    #[diagnostic(code(oro_client::credentials_config_error), url(docsrs))]
+    CredentialsConfigError(String),
 }
 
 impl OroClientError {

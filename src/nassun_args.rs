@@ -16,6 +16,9 @@ pub struct NassunArgs {
     registry: Url,
 
     #[arg(from_global)]
+    credentials: Vec<(String, String, String)>,
+
+    #[arg(from_global)]
     scoped_registries: Vec<(String, Url)>,
 
     #[arg(from_global)]
@@ -30,6 +33,7 @@ impl NassunArgs {
         Self {
             default_tag: apply_args.default_tag.clone(),
             registry: apply_args.registry.clone(),
+            credentials: apply_args.credentials.clone(),
             scoped_registries: apply_args.scoped_registries.clone(),
             root: apply_args.root.clone(),
             cache: apply_args.cache.clone(),

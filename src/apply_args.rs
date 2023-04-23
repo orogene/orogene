@@ -100,6 +100,9 @@ pub struct ApplyArgs {
     pub registry: Url,
 
     #[arg(from_global)]
+    pub credentials: Vec<(String, String, String)>,
+
+    #[arg(from_global)]
     pub scoped_registries: Vec<(String, Url)>,
 
     #[arg(from_global)]

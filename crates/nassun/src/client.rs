@@ -27,6 +27,7 @@ pub struct NassunOpts {
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
+    credentials: Vec<(String, String, String)>,
     memoize_metadata: bool,
 }
 
@@ -54,6 +55,15 @@ impl NassunOpts {
             Some(scope.strip_prefix('@').unwrap_or(scope).to_string()),
             registry,
         );
+        self
+    }
+
+    /// Set the credential-config for this instance. The config has the form (registry,key,value)
+    /// where registry is the host of the registry, key is the key of a single entry in the respective
+    /// config JSON object and value is the corresponding value. A single registry may have multiple entries
+    /// in this vector (e.g. "username" & "password"). The format will be handled by by OroClient.
+    pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Self {
+        self.credentials = credentials;
         self
     }
 
@@ -96,6 +106,9 @@ impl NassunOpts {
         } else {
             Arc::new(None)
         };
+        client_builder = client_builder
+            .credentials(self.credentials)
+            .expect("failed to set credential list");
         let client = client_builder.build();
         Nassun {
             #[cfg(not(target_arch = "wasm32"))]

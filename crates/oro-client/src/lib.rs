@@ -2,6 +2,7 @@
 
 mod api;
 mod client;
+mod credentials;
 mod error;
 
 pub use api::packument;
