@@ -17,6 +17,7 @@
 [![CI](https://img.shields.io/github/checks-status/orogene/orogene/main)](https://github.com/orogene/orogene/actions/workflows/ci.yml?query=branch%3Amain)
 [![Project
 Roadmap](https://img.shields.io/badge/Roadmap-Orogene%20v1.0-informational)](https://github.com/orgs/orogene/projects/2/views/1)
+[![chat](https://img.shields.io/matrix/orogene:matrix.org?label=Matrix%20chat)](https://matrix.to/#/#orogene:matrix.org)
 
 Orogene is a next-generation package manager for tools that use
 `node_modules/`, such as bundlers, CLI tools, and Node.js-based
