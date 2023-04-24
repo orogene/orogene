@@ -1,16 +1,14 @@
 use std::{
     collections::{HashMap, HashSet},
-    io::{BufRead, BufReader},
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         atomic::{self, AtomicUsize},
         Arc,
     },
 };
 
-use futures::{StreamExt, TryStreamExt};
+use futures::{lock::Mutex, StreamExt, TryStreamExt};
 use oro_common::BuildManifest;
-use oro_script::OroScript;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use ssri::Integrity;
 
@@ -18,13 +16,23 @@ use crate::{graph::Graph, NodeMaintainerError, META_FILE_NAME, STORE_DIR_NAME};
 
 use super::LinkerOptions;
 
-pub(crate) struct IsolatedLinker(pub(crate) LinkerOptions);
+pub(crate) struct IsolatedLinker {
+    pub(crate) pending_rebuild: Arc<Mutex<HashSet<NodeIndex>>>,
+    pub(crate) opts: LinkerOptions,
+}
 
 impl IsolatedLinker {
+    pub fn new(opts: LinkerOptions) -> Self {
+        Self {
+            pending_rebuild: Arc::new(Mutex::new(HashSet::new())),
+            opts,
+        }
+    }
+
     pub async fn prune(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
         let start = std::time::Instant::now();
 
-        let prefix = self.0.root.join("node_modules");
+        let prefix = self.opts.root.join("node_modules");
 
         if !prefix.exists() {
             tracing::debug!(
@@ -36,7 +44,7 @@ impl IsolatedLinker {
 
         let store = prefix.join(STORE_DIR_NAME);
 
-        if self.0.actual_tree.is_none() || !async_std::path::Path::new(&store).exists().await {
+        if self.opts.actual_tree.is_none() || !async_std::path::Path::new(&store).exists().await {
             // If there's no actual tree previously calculated, we can't trust
             // *anything* inside node_modules, so everything is immediately
             // extraneous and we wipe it all. Sorry.
@@ -78,7 +86,7 @@ impl IsolatedLinker {
         let prefix_ref = &prefix;
         futures::stream::iter(indices)
             .map(Ok)
-            .try_for_each_concurrent(self.0.concurrency, move |idx| async move {
+            .try_for_each_concurrent(self.opts.concurrency, move |idx| async move {
                 let pkg = &graph[idx].package;
 
                 let pkg_nm = if idx == graph.root {
@@ -164,7 +172,7 @@ impl IsolatedLinker {
         async_std::fs::read_dir(&store)
             .await?
             .map(|entry| Ok((entry, pruned.clone())))
-            .try_for_each_concurrent(self.0.concurrency, move |(entry, pruned)| async move {
+            .try_for_each_concurrent(self.opts.concurrency, move |(entry, pruned)| async move {
                 let entry = entry?;
                 let _path = entry.path();
                 let path: &Path = _path.as_ref();
@@ -233,27 +241,42 @@ impl IsolatedLinker {
         tracing::debug!("Applying node_modules/...");
         let start = std::time::Instant::now();
 
-        let root = &self.0.root;
+        let root = &self.opts.root;
         let store = root.join("node_modules").join(STORE_DIR_NAME);
         let store_ref = &store;
         let stream = futures::stream::iter(graph.inner.node_indices());
         let concurrent_count = Arc::new(AtomicUsize::new(0));
+        let pending_rebuild = self.pending_rebuild.clone();
         let actually_extracted = Arc::new(AtomicUsize::new(0));
         let total = graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
         let node_modules = root.join("node_modules");
         std::fs::create_dir_all(&node_modules)?;
-        let prefer_copy = self.0.prefer_copy
-            || match self.0.cache.as_deref() {
+        let prefer_copy = self.opts.prefer_copy
+            || match self.opts.cache.as_deref() {
                 Some(cache) => super::supports_reflink(cache, &node_modules),
                 None => false,
             };
-        let validate = self.0.validate;
+        let validate = self.opts.validate;
         stream
-            .map(|idx| Ok((idx, concurrent_count.clone(), total_completed.clone(), actually_extracted.clone())))
+            .map(|idx| {
+                Ok((
+                    idx,
+                    concurrent_count.clone(),
+                    total_completed.clone(),
+                    actually_extracted.clone(),
+                    pending_rebuild.clone(),
+                ))
+            })
             .try_for_each_concurrent(
-                self.0.concurrency,
-                move |(child_idx, concurrent_count, total_completed, actually_extracted)| async move {
+                self.opts.concurrency,
+                move |(
+                    child_idx,
+                    concurrent_count,
+                    total_completed,
+                    actually_extracted,
+                    pending_rebuild,
+                )| async move {
                     if child_idx == graph.root {
                         link_deps(graph, child_idx, store_ref, &root.join("node_modules")).await?;
                         return Ok(());
@@ -265,7 +288,10 @@ impl IsolatedLinker {
 
                     // Actual package contents are extracted to
                     // `node_modules/.oro-store/<package-name>-<hash>/node_modules/<package-name>`
-                    let target_dir = store_ref.join(package_dir_name(graph, child_idx)).join("node_modules").join(pkg.name());
+                    let target_dir = store_ref
+                        .join(package_dir_name(graph, child_idx))
+                        .join("node_modules")
+                        .join(pkg.name());
 
                     let start = std::time::Instant::now();
 
@@ -275,11 +301,35 @@ impl IsolatedLinker {
                             .extract_to_dir(&target_dir, prefer_copy, validate)
                             .await?;
                         actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
+                        let target_dir = target_dir.clone();
+                        let build_mani = async_std::task::spawn_blocking(move || {
+                            BuildManifest::from_path(target_dir.join("package.json")).map_err(|e| {
+                                NodeMaintainerError::BuildManifestReadError(
+                                    target_dir.join("package.json"),
+                                    e,
+                                )
+                            })
+                        })
+                        .await?;
+                        if build_mani.scripts.contains_key("preinstall")
+                            || build_mani.scripts.contains_key("install")
+                            || build_mani.scripts.contains_key("postinstall")
+                            || build_mani.scripts.contains_key("prepare")
+                            || !build_mani.bin.is_empty()
+                        {
+                            pending_rebuild.lock().await.insert(child_idx);
+                        }
                     }
 
-                    link_deps(graph, child_idx, store_ref, &target_dir.join("node_modules")).await?;
+                    link_deps(
+                        graph,
+                        child_idx,
+                        store_ref,
+                        &target_dir.join("node_modules"),
+                    )
+                    .await?;
 
-                    if let Some(on_extract) = &self.0.on_extract_progress {
+                    if let Some(on_extract) = &self.opts.on_extract_progress {
                         on_extract(&graph[child_idx].package);
                     }
 
@@ -300,27 +350,25 @@ impl IsolatedLinker {
             node_modules.join(META_FILE_NAME),
             graph.to_kdl()?.to_string(),
         )?;
-        let actually_extracted = actually_extracted.load(atomic::Ordering::SeqCst);
+        let extracted_count = actually_extracted.load(atomic::Ordering::SeqCst);
 
         tracing::debug!(
-            "Extracted {actually_extracted} package{} in {}ms.",
-            if actually_extracted == 1 { "" } else { "s" },
+            "Extracted {extracted_count} package{} in {}ms.",
+            if extracted_count == 1 { "" } else { "s" },
             start.elapsed().as_millis(),
         );
-        Ok(actually_extracted)
+        Ok(extracted_count)
     }
 
-    async fn link_bins(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
-        tracing::debug!("Linking bins...");
-        let start = std::time::Instant::now();
-        let root = &self.0.root;
+    pub async fn link_bins(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
+        let root = &self.opts.root;
         let store = root.join("node_modules").join(STORE_DIR_NAME);
         let store_ref = &store;
         let linked = Arc::new(AtomicUsize::new(0));
 
-        futures::stream::iter(graph.inner.node_indices())
+        futures::stream::iter(self.pending_rebuild.lock().await.iter().copied())
             .map(|idx| Ok((idx, linked.clone())))
-            .try_for_each_concurrent(self.0.concurrency, move |(idx, linked)| async move {
+            .try_for_each_concurrent(self.opts.concurrency, move |(idx, linked)| async move {
                 if idx == graph.root {
                     let added = link_dep_bins(
                         graph,
@@ -349,150 +397,20 @@ impl IsolatedLinker {
             .await?;
 
         let linked = linked.load(atomic::Ordering::SeqCst);
-        tracing::debug!(
-            "Linked {linked} package bins in {}ms.",
-            start.elapsed().as_millis()
-        );
         Ok(linked)
     }
 
-    pub async fn rebuild(
-        &self,
-        graph: &Graph,
-        ignore_scripts: bool,
-    ) -> Result<(), NodeMaintainerError> {
-        tracing::debug!("Running lifecycle scripts...");
-        let start = std::time::Instant::now();
-        if !ignore_scripts {
-            self.run_scripts(graph, "preinstall").await?;
-        }
-        self.link_bins(graph).await?;
-        if !ignore_scripts {
-            self.run_scripts(graph, "install").await?;
-            self.run_scripts(graph, "postinstall").await?;
-        }
-        tracing::debug!(
-            "Ran lifecycle scripts in {}ms.",
-            start.elapsed().as_millis()
-        );
-        Ok(())
-    }
-
-    async fn run_scripts(&self, graph: &Graph, event: &str) -> Result<(), NodeMaintainerError> {
-        tracing::debug!("Running {event} lifecycle scripts");
-        let start = std::time::Instant::now();
-        let root = &self.0.root;
-        let store = root.join("node_modules").join(STORE_DIR_NAME);
-        let store_ref = &store;
-        futures::stream::iter(graph.inner.node_indices())
-            .map(Ok)
-            .try_for_each_concurrent(self.0.script_concurrency, move |idx| async move {
-                let pkg_dir = if idx == graph.root {
-                    root.clone()
-                } else {
-                    let pkg = &graph[idx].package;
-                    store_ref
-                        .join(package_dir_name(graph, idx))
-                        .join("node_modules")
-                        .join(pkg.name())
-                };
-
-                let is_optional = graph.is_optional(idx);
-
-                let build_mani =
-                    BuildManifest::from_path(pkg_dir.join("package.json")).map_err(|e| {
-                        NodeMaintainerError::BuildManifestReadError(pkg_dir.join("package.json"), e)
-                    })?;
-
-                let name = graph[idx].package.name().to_string();
-                if build_mani.scripts.contains_key(event) {
-                    let package_dir = pkg_dir.clone();
-                    let package_dir_clone = package_dir.clone();
-                    let event = event.to_owned();
-                    let event_clone = event.clone();
-                    let span = tracing::info_span!("script");
-                    let _span_enter = span.enter();
-                    if let Some(on_script_start) = &self.0.on_script_start {
-                        on_script_start(&graph[idx].package, &event);
-                    }
-                    std::mem::drop(_span_enter);
-                    let mut script = match async_std::task::spawn_blocking(move || {
-                        OroScript::new(package_dir, event_clone)?
-                            .workspace_path(package_dir_clone)
-                            .spawn()
-                    })
-                    .await
-                    {
-                        Ok(script) => script,
-                        Err(e) if is_optional => {
-                            let e: NodeMaintainerError = e.into();
-                            tracing::debug!("Error in optional dependency script: {}", e);
-                            return Ok(());
-                        }
-                        Err(e) => return Err(e.into()),
-                    };
-                    let stdout = script.stdout.take();
-                    let stderr = script.stderr.take();
-                    let stdout_name = name.clone();
-                    let stderr_name = name.clone();
-                    let stdout_on_line = self.0.on_script_line.clone();
-                    let stderr_on_line = self.0.on_script_line.clone();
-                    let stdout_span = span;
-                    let stderr_span = stdout_span.clone();
-                    let event_clone = event.clone();
-                    let join = futures::try_join!(
-                        async_std::task::spawn_blocking(move || {
-                            let _enter = stdout_span.enter();
-                            if let Some(stdout) = stdout {
-                                for line in BufReader::new(stdout).lines() {
-                                    let line = line?;
-                                    tracing::debug!("stdout::{stdout_name}::{event}: {}", line);
-                                    if let Some(on_script_line) = &stdout_on_line {
-                                        on_script_line(&line);
-                                    }
-                                }
-                            }
-                            Ok::<_, NodeMaintainerError>(())
-                        }),
-                        async_std::task::spawn_blocking(move || {
-                            let _enter = stderr_span.enter();
-                            if let Some(stderr) = stderr {
-                                for line in BufReader::new(stderr).lines() {
-                                    let line = line?;
-                                    tracing::debug!(
-                                        "stderr::{stderr_name}::{event_clone}: {}",
-                                        line
-                                    );
-                                    if let Some(on_script_line) = &stderr_on_line {
-                                        on_script_line(&line);
-                                    }
-                                }
-                            }
-                            Ok::<_, NodeMaintainerError>(())
-                        }),
-                        async_std::task::spawn_blocking(move || {
-                            script.wait()?;
-                            Ok::<_, NodeMaintainerError>(())
-                        }),
-                    );
-                    match join {
-                        Ok(_) => {}
-                        Err(e) if is_optional => {
-                            tracing::debug!("Error in optional dependency script: {}", e);
-                            return Ok(());
-                        }
-                        Err(e) => return Err(e),
-                    }
-                }
-
-                Ok::<_, NodeMaintainerError>(())
-            })
-            .await?;
-        tracing::debug!(
-            "Ran lifecycle scripts for {event} in {}ms.",
-            start.elapsed().as_millis()
-        );
-        Ok(())
+    pub fn package_dir(&self, graph: &Graph, idx: NodeIndex) -> (PathBuf, PathBuf) {
+        let pkg = &graph[idx].package;
+        let dir = self
+            .opts
+            .root
+            .join("node_modules")
+            .join(STORE_DIR_NAME)
+            .join(package_dir_name(graph, idx))
+            .join("node_modules")
+            .join(pkg.name());
+        (dir.clone(), dir)
     }
 }
 
