@@ -69,6 +69,11 @@ pub enum NassunError {
     #[diagnostic(code(nassun::cache::extract), url(docsrs))]
     ExtractCacheError(#[source] cacache::Error, Option<PathBuf>),
 
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error("Missing file index for cache entry for {0}.")]
+    #[diagnostic(code(nassun::cache::missing_index), url(docsrs))]
+    CacheMissingIndexError(String),
+
     /// A generic IO error occurred. Refer tot he error message for more
     /// details.
     #[error(transparent)]
@@ -154,6 +159,11 @@ pub enum NassunError {
     #[error("Dummy package does not have a name.")]
     #[diagnostic(code(nassun::dummy_no_name), url(docsrs))]
     DummyNoName,
+
+    /// An error occurred while serializing tarball metadata to cache.
+    #[error("Failed to serialize tarball metadata to cache: {0}")]
+    #[diagnostic(code(nassun::cache::serialize), url(docsrs))]
+    SerializeCacheError(String),
 
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that

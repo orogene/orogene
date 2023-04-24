@@ -1,4 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
+use std::collections::HashMap;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Seek};
@@ -19,6 +21,8 @@ use cacache::WriteOpts;
 #[cfg(not(target_arch = "wasm32"))]
 use futures::AsyncReadExt;
 use futures::{AsyncRead, StreamExt};
+#[cfg(not(target_arch = "wasm32"))]
+use oro_common::BuildManifest;
 #[cfg(not(target_arch = "wasm32"))]
 use ssri::IntegrityOpts;
 use ssri::{Integrity, IntegrityChecker};
@@ -200,9 +204,10 @@ impl TempTarball {
         dir: &Path,
         tarball_integrity: Option<Integrity>,
         cache: Option<&Path>,
-        prefer_copy: bool,
+        mut prefer_copy: bool,
     ) -> Result<Integrity> {
-        let mut file_index = serde_json::Map::new();
+        let mut build_mani: Option<BuildManifest> = None;
+        let mut tarball_index = TarballIndex::default();
         let mut drain_buf = [0u8; 1024 * 8];
 
         self.rewind()?;
@@ -233,6 +238,7 @@ impl TempTarball {
                 )
             })?;
             let header = file.header();
+            let mode = header.mode().unwrap_or(0o644) | 0o600;
             let entry_path = header.path().map_err(|e| {
                 NassunError::ExtractIoError(e, None, "reading path from entry header.".into())
             })?;
@@ -266,12 +272,43 @@ impl TempTarball {
                         .commit()
                         .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
 
-                    extract_from_cache(cache, &sri, &path, prefer_copy, false)?;
+                    extract_from_cache(cache, &sri, &path, prefer_copy, false, mode)?;
 
-                    file_index.insert(
-                        entry_subpath.to_string_lossy().into(),
-                        sri.to_string().into(),
-                    );
+                    let entry_subpath = entry_subpath.to_string_lossy().to_string();
+
+                    // We check whether the package has any install scripts.
+                    // If so, we need to re-extract all previous files as full
+                    // copies and mark the package as having scripts in it.
+                    if entry_subpath == "package.json" {
+                        let manifest = BuildManifest::from_path(&path)?;
+                        if ["preinstall", "install", "postinstall"]
+                            .iter()
+                            .any(|s| manifest.scripts.contains_key(*s))
+                            || !manifest.bin.is_empty()
+                        {
+                            tarball_index.should_copy = true;
+                            if !prefer_copy {
+                                prefer_copy = true;
+                                for (entry, (sri, mode)) in &tarball_index.files {
+                                    let path = dir.join(entry);
+                                    std::fs::remove_file(&path)?;
+                                    let sri = sri.parse()?;
+                                    extract_from_cache(
+                                        cache,
+                                        &sri,
+                                        &path,
+                                        prefer_copy,
+                                        false,
+                                        *mode,
+                                    )?;
+                                }
+                            }
+                        }
+                        build_mani = Some(manifest);
+                    }
+                    tarball_index
+                        .files
+                        .insert(entry_subpath, (sri.to_string(), mode));
                 } else {
                     let mut writer = std::fs::OpenOptions::new()
                         .write(true)
@@ -289,10 +326,22 @@ impl TempTarball {
                     std::io::copy(&mut file, &mut writer).map_err(|e| {
                         NassunError::ExtractIoError(
                             e,
-                            Some(path),
+                            Some(path.clone()),
                             "Copying file to node_modules destination.".into(),
                         )
                     })?;
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))
+                            .map_err(|e| {
+                                NassunError::ExtractIoError(
+                                    e,
+                                    Some(path.clone()),
+                                    "setting permissions on extracted file.".into(),
+                                )
+                            })?;
+                    }
                 }
             } else {
                 loop {
@@ -303,6 +352,16 @@ impl TempTarball {
                         break;
                     }
                 }
+            }
+        }
+
+        if let Some(BuildManifest { bin, .. }) = &build_mani {
+            for binpath in bin.values() {
+                tarball_index
+                    .bin_paths
+                    .push(binpath.to_string_lossy().to_string());
+                #[cfg(unix)]
+                set_bin_mode(&dir.join(binpath))?;
             }
         }
 
@@ -326,7 +385,11 @@ impl TempTarball {
                 WriteOpts::new()
                     // This is just so the index entry is loadable.
                     .integrity("sha256-deadbeef".parse().unwrap())
-                    .metadata(file_index.into()),
+                    .raw_metadata(
+                        rkyv::util::to_bytes::<_, 1024>(&tarball_index)
+                            .map_err(|e| NassunError::SerializeCacheError(format!("{e}")))?
+                            .into_vec(),
+                    ),
             )
             .map_err(|e| NassunError::ExtractCacheError(e, None))?;
         }
@@ -356,6 +419,15 @@ impl std::io::Seek for TempTarball {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[derive(rkyv::Archive, rkyv::Serialize, Default)]
+#[archive(check_bytes)]
+pub(crate) struct TarballIndex {
+    pub(crate) should_copy: bool,
+    pub(crate) bin_paths: Vec<String>,
+    pub(crate) files: HashMap<String, (String, u32)>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn strip_one(path: &Path) -> Option<&Path> {
     let mut comps = path.components();
     comps.next().map(|_| comps.as_path())
@@ -373,10 +445,8 @@ pub(crate) fn extract_from_cache(
     to: &Path,
     prefer_copy: bool,
     validate: bool,
+    #[allow(unused_variables)] mode: u32,
 ) -> Result<()> {
-    // TODO: enable `prefer_copy` if the package has install scripts. Maybe
-    // this can be cached as part of tarball caching, right in the object, and
-    // we make the determination at that point.
     if prefer_copy {
         copy_from_cache(cache, sri, to, validate)?;
     } else {
@@ -396,6 +466,38 @@ pub(crate) fn extract_from_cache(
             .call()
             .or_else(|_| copy_from_cache(cache, sri, to, validate))?;
     }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(to, std::fs::Permissions::from_mode(mode)).map_err(|e| {
+            NassunError::ExtractIoError(
+                e,
+                Some(to.to_path_buf()),
+                "setting permissions on extracted file.".into(),
+            )
+        })?;
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+pub(crate) fn set_bin_mode(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let metadata = std::fs::metadata(path).map_err(|e| {
+        NassunError::ExtractIoError(
+            e,
+            Some(path.to_path_buf()),
+            "Getting extracted file metadata.".into(),
+        )
+    })?;
+    let mode = metadata.permissions().mode();
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode | 0o111)).map_err(|e| {
+        NassunError::ExtractIoError(
+            e,
+            Some(path.to_path_buf()),
+            "setting permissions on extracted file.".into(),
+        )
+    })?;
     Ok(())
 }
 

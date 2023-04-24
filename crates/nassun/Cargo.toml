@@ -49,6 +49,7 @@ backon = { workspace = true }
 cacache = { workspace = true }
 flate2 = { workspace = true }
 io_tee = { workspace = true }
+rkyv = { workspace = true, features = ["validation"] }
 tar = { workspace = true }
 tempfile = { workspace = true }
 which = { workspace = true }

@@ -409,14 +409,15 @@ impl IsolatedLinker {
                     let package_dir = pkg_dir.clone();
                     let package_dir_clone = package_dir.clone();
                     let event = event.to_owned();
-                    let span = tracing::info_span!("script::{name}::{event}");
+                    let event_clone = event.clone();
+                    let span = tracing::info_span!("script");
                     let _span_enter = span.enter();
                     if let Some(on_script_start) = &self.0.on_script_start {
                         on_script_start(&graph[idx].package, &event);
                     }
                     std::mem::drop(_span_enter);
                     let mut script = match async_std::task::spawn_blocking(move || {
-                        OroScript::new(package_dir, event)?
+                        OroScript::new(package_dir, event_clone)?
                             .workspace_path(package_dir_clone)
                             .spawn()
                     })
@@ -438,13 +439,14 @@ impl IsolatedLinker {
                     let stderr_on_line = self.0.on_script_line.clone();
                     let stdout_span = span;
                     let stderr_span = stdout_span.clone();
+                    let event_clone = event.clone();
                     let join = futures::try_join!(
                         async_std::task::spawn_blocking(move || {
                             let _enter = stdout_span.enter();
                             if let Some(stdout) = stdout {
                                 for line in BufReader::new(stdout).lines() {
                                     let line = line?;
-                                    tracing::debug!("stdout::{stdout_name}: {}", line);
+                                    tracing::debug!("stdout::{stdout_name}::{event}: {}", line);
                                     if let Some(on_script_line) = &stdout_on_line {
                                         on_script_line(&line);
                                     }
@@ -457,7 +459,10 @@ impl IsolatedLinker {
                             if let Some(stderr) = stderr {
                                 for line in BufReader::new(stderr).lines() {
                                     let line = line?;
-                                    tracing::debug!("stderr::{stderr_name}: {}", line);
+                                    tracing::debug!(
+                                        "stderr::{stderr_name}::{event_clone}: {}",
+                                        line
+                                    );
                                     if let Some(on_script_line) = &stderr_on_line {
                                         on_script_line(&line);
                                     }
