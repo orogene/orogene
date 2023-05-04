@@ -1,0 +1,358 @@
+<html class="dark" id="oranda" lang="en"><head><title>orogene</title><meta content="https://orogene.dev" property="og:url"/><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="&#96;node_modules/&#96; package manager and utility toolkit." name="description"/><meta content="&#96;node_modules/&#96; package manager and utility toolkit." name="description"/><meta content="&#96;node_modules/&#96; package manager and utility toolkit." property="og:description"/><meta content="website" property="og:type"/><meta content="orogene" property="og:title"/><meta content="interest-cohort=()" http_equiv="Permissions-Policy"/><link href="oranda.css" rel="stylesheet"/></head><body><div class="container"><div class="repo_banner"><a href="https://github.com/orogene/orogene"><div class="github-icon" aria-hidden="true"></div>Check out our GitHub</a></div><main><header><h1 class="title">orogene</h1><nav class="nav"><ul><li><a href="/">Home</a></li><li><a href="/BENCHMARKS.html">Benchmarks</a></li><li><a href="/CONTRIBUTING.html">Contributing</a></li><li><a href="/artifacts.html">Install</a></li><li><a href="/book/">Docs</a></li><li><a href="/changelog.html">Changelog</a></li></ul></nav></header><div><div><h1>Releases</h1><div class="releases-wrapper"><nav class="releases-nav"><ul><li><a href="#v0.3.23">v0.3.23</a></li><li><a href="#v0.3.22">v0.3.22</a></li><li><a href="#v0.3.19">v0.3.19</a></li><li><a href="#v0.3.18">v0.3.18</a></li><li><a href="#v0.3.17">v0.3.17</a></li><li><a href="#v0.3.16">v0.3.16</a></li><li><a href="#v0.3.15">v0.3.15</a></li><li><a href="#v0.3.14">v0.3.14</a></li><li><a href="#v0.3.13">v0.3.13</a></li><li><a href="#v0.3.12">v0.3.12</a></li><li><a href="#v0.3.11">v0.3.11</a></li><li><a href="#v0.3.10">v0.3.10</a></li><li><a href="#v0.3.9">v0.3.9</a></li><li><a href="#v0.3.8">v0.3.8</a></li><li><a href="#v0.3.7">v0.3.7</a></li><li><a href="#v0.3.6">v0.3.6</a></li><li><a href="#v0.3.5">v0.3.5</a></li><li><a href="#v0.3.4">v0.3.4</a></li><li><a href="#v0.3.3">v0.3.3</a></li><li><a href="#v0.2.2">v0.2.2</a></li><li><a href="#v0.2.0">v0.2.0</a></li></ul></nav><div class="releases-list"><section class="release"><h2 id="v0.3.23"><a href="#v0.3.23">0.3.23 (2023-04-18)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.23</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Apr 18 2023 at 21:31 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div><a href="/artifacts.html"><button class="business-button primary">Install</button></a></section><section class="release"><h2 id="v0.3.22"><a href="#v0.3.22">0.3.22 (2023-04-18)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.22</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Apr 18 2023 at 06:48 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.19"><a href="#v0.3.19">0.3.19 (2023-04-10)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.19</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Apr 10 2023 at 05:52 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.18"><a href="#v0.3.18">0.3.18 (2023-04-07)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.18</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Apr  7 2023 at 20:51 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.17"><a href="#v0.3.17">0.3.17 (2023-04-03)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.17</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Apr  3 2023 at 03:12 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.16"><a href="#v0.3.16">0.3.16 (2023-04-01)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.16</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Apr  1 2023 at 22:34 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.15"><a href="#v0.3.15">0.3.15 (2023-03-31)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.15</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 31 2023 at 06:09 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.14"><a href="#v0.3.14">0.3.14 (2023-03-26)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.14</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 26 2023 at 01:38 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.13"><a href="#v0.3.13">0.3.13 (2023-03-25)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.13</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 25 2023 at 05:15 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.12"><a href="#v0.3.12">0.3.12 (2023-03-25)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.12</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 25 2023 at 04:50 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.11"><a href="#v0.3.11">0.3.11 (2023-03-19)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.11</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 19 2023 at 19:36 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.10"><a href="#v0.3.10">0.3.10 (2023-03-13)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.10</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 13 2023 at 08:44 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.9"><a href="#v0.3.9">0.3.9 (2023-03-12)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.9</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar 12 2023 at 10:14 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.8"><a href="#v0.3.8">0.3.8 (2023-03-09)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.8</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar  9 2023 at 05:29 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.7"><a href="#v0.3.7">0.3.7 (2023-03-07)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.7</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar  7 2023 at 10:23 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.6"><a href="#v0.3.6">0.3.6 (2023-03-07)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.6</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar  7 2023 at 06:59 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.5"><a href="#v0.3.5">0.3.5 (2023-03-06)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.5</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar  6 2023 at 21:11 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.4"><a href="#v0.3.4">0.3.4 (2023-03-06)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.4</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar  6 2023 at 02:11 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.3.3"><a href="#v0.3.3">v0.3.3</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.3.3</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Mar  6 2023 at 00:21 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.2.2"><a href="#v0.2.2">v0.2.2</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.2.2</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Feb 26 2023 at 03:34 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section><section class="release"><h2 id="v0.2.0"><a href="#v0.2.0">0.2.0 (2023-02-26)</a></h2><div class="release-info"><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>v0.2.0</span><span class="flex gap-2 items-center"><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>Feb 26 2023 at 02:39 UTC</span></div><div class="mb-6 release-body"><h3>Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d" rel="noopener noreferrer">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e" rel="noopener noreferrer">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23" rel="noopener noreferrer">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b" rel="noopener noreferrer">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97" rel="noopener noreferrer">b1f6bc82</a>)</li>
+</ul>
+<h3>Miscellaneous Tasks</h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372" rel="noopener noreferrer">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f" rel="noopener noreferrer">be5712e2</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+</div></section></div></div></div></div></main><footer class="footer"><a href="https://github.com/orogene/orogene"><div class="github-icon" aria-hidden="true"></div></a><span>orogene, Apache-2.0 license.</span></footer></div><script src="/artifacts.js"></script></body></html>
