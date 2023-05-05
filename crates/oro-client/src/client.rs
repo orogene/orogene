@@ -136,7 +136,7 @@ impl OroClient {
     pub fn with_registry(&self, registry: Url) -> Self {
         Self {
             registry: Arc::new(registry),
-            credentials: Arc::new(HashMap::new()),
+            credentials: self.credentials.clone(),
             client: self.client.clone(),
             client_uncached: self.client_uncached.clone(),
         }
