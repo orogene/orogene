@@ -1,5 +1,6 @@
 use oro_common::{CorgiPackument, Packument};
 use reqwest::{StatusCode, Url};
+#[cfg(not(target = "wasm"))]
 use reqwest_middleware::RequestBuilder;
 
 use crate::{credentials::Credentials, OroClient, OroClientError};
@@ -70,8 +71,8 @@ impl OroClient {
         let credentials = url.host_str().and_then(|h| self.credentials.get(h));
         if let Some(cred) = credentials {
             match cred {
-                Credentials::Basic(data) => {
-                    builder.basic_auth(&data.username, Some(&data.password))
+                Credentials::Basic { username, password } => {
+                    builder.basic_auth(username, Some(password))
                 }
                 Credentials::Token(token) => builder.bearer_auth(token),
             }
@@ -83,8 +84,6 @@ impl OroClient {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod test {
-    use std::collections::HashMap;
-
     use indexmap::IndexMap;
     use maplit::hashmap;
     use miette::{IntoDiagnostic, Result};
@@ -93,8 +92,6 @@ mod test {
     use serde_json::json;
     use wiremock::matchers::{header, headers, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
-
-    use crate::OroClientBuilder;
 
     use super::*;
 

@@ -45,13 +45,13 @@ impl OroClientBuilder {
 
     pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Result<Self> {
         let mut vars = HashMap::new();
-        for (registry, key, value) in credentials.iter() {
-            if !vars.contains_key(registry) {
-                vars.insert(registry, HashMap::new());
+        for (registry, key, value) in credentials.into_iter() {
+            if !vars.contains_key(&registry) {
+                vars.insert(registry.clone(), HashMap::new());
             }
             let existing = vars
-                .get_mut(registry)
-                .and_then(|reg| reg.insert(key, value));
+                .get_mut(&registry)
+                .and_then(|reg| reg.insert(key.clone(), value.clone()));
             if existing.is_some() {
                 Err(OroClientError::CredentialsConfigError(format!(
                     "Key \"{}\" already exists for registry {}",
@@ -59,9 +59,8 @@ impl OroClientBuilder {
                 )))?
             }
         }
-        for (&registry, config) in vars.iter() {
-            self.credentials
-                .insert(registry.to_owned(), config.try_into()?);
+        for (registry, config) in vars.into_iter() {
+            self.credentials.insert(registry, config.try_into()?);
         }
         Ok(self)
     }

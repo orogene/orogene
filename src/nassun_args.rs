@@ -48,6 +48,7 @@ impl NassunArgs {
         for (scope, registry) in &self.scoped_registries {
             nassun_opts = nassun_opts.scope_registry(scope.clone(), registry.clone());
         }
+        nassun_opts = nassun_opts.credentials(self.credentials.clone());
         if let Some(cache) = &self.cache {
             nassun_opts = nassun_opts.cache(cache.clone());
         }

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -131,6 +132,13 @@ impl NodeMaintainerOptions {
     /// multiple times.
     pub fn scope_registry(mut self, scope: impl AsRef<str>, registry: Url) -> Self {
         self.nassun_opts = self.nassun_opts.scope_registry(scope, registry);
+        self
+    }
+
+    /// Credentials map used for all registries
+    /// This will be resolved into a proper credentials map inside nassun
+    pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Self {
+        self.nassun_opts = self.nassun_opts.credentials(credentials);
         self
     }
 

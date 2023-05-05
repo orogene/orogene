@@ -99,6 +99,7 @@ pub struct ApplyArgs {
     #[arg(from_global)]
     pub registry: Url,
 
+    /// The credentials map contained in the config. This is handed
     #[arg(from_global)]
     pub credentials: Vec<(String, String, String)>,
 
@@ -165,6 +166,7 @@ impl ApplyArgs {
         let mut nm = NodeMaintainerOptions::new();
         nm = nm
             .registry(self.registry.clone())
+            .credentials(self.credentials.clone())
             .locked(self.locked)
             .default_tag(&self.default_tag)
             .concurrency(self.concurrency)
