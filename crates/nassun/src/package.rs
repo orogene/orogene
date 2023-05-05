@@ -15,6 +15,8 @@ use crate::error::Result;
 use crate::fetch::PackageFetcher;
 use crate::resolver::PackageResolution;
 use crate::tarball::Tarball;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::tarball::TarballIndex;
 
 /// A resolved package. A concrete version has been determined from its
 /// PackageSpec by the version resolver.
@@ -254,20 +256,26 @@ impl Package {
         dir: &Path,
         cache: &Path,
         entry: cacache::Metadata,
-        prefer_copy: bool,
+        mut prefer_copy: bool,
         validate: bool,
     ) -> Result<()> {
         let dir = PathBuf::from(dir);
         let cache = PathBuf::from(cache);
+        let name = self.name().to_owned();
         async_std::task::spawn_blocking(move || {
             let mut created = std::collections::HashSet::new();
-            let map = entry
-                .metadata
-                .as_object()
-                .expect("how is this not an object?");
-            for (path, sri) in map {
-                let sri: Integrity = sri.as_str().expect("how is this not a string?").parse()?;
-                let path = dir.join(path);
+            let index = unsafe {
+                rkyv::util::archived_root::<TarballIndex>(
+                    entry
+                        .raw_metadata
+                        .as_ref()
+                        .ok_or_else(|| NassunError::CacheMissingIndexError(name))?,
+                )
+            };
+            prefer_copy = index.should_copy || prefer_copy;
+            for (path, (sri, mode)) in index.files.iter() {
+                let sri: Integrity = sri.parse()?;
+                let path = dir.join(&path[..]);
                 let parent = PathBuf::from(path.parent().expect("this will always have a parent"));
                 if !created.contains(&parent) {
                     std::fs::create_dir_all(path.parent().expect("this will always have a parent"))
@@ -281,7 +289,20 @@ impl Package {
                     created.insert(parent);
                 }
 
-                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, validate)?;
+                crate::tarball::extract_from_cache(
+                    &cache,
+                    &sri,
+                    &path,
+                    prefer_copy,
+                    validate,
+                    *mode,
+                )?;
+            }
+            #[cfg(unix)]
+            for binpath in index.bin_paths.iter() {
+                {
+                    crate::tarball::set_bin_mode(&dir.join(&binpath[..]))?;
+                }
             }
             Ok::<_, NassunError>(())
         })

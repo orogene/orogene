@@ -313,7 +313,7 @@ impl NodeMaintainerOptions {
         resolver.graph[node].root = node;
         let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
-        let linker = Linker::hoisted(LinkerOptions {
+        let linker_opts = LinkerOptions {
             actual_tree: _actual_tree,
             concurrency: self.concurrency,
             script_concurrency: self.script_concurrency,
@@ -325,10 +325,20 @@ impl NodeMaintainerOptions {
             on_extract_progress: self.on_extract_progress,
             on_script_start: self.on_script_start,
             on_script_line: self.on_script_line,
-        });
+        };
         #[cfg(target_arch = "wasm32")]
         let linker = Linker::null();
-        let nm = NodeMaintainer { graph, linker };
+        let nm = NodeMaintainer {
+            graph,
+            #[cfg(target_arch = "wasm32")]
+            linker: Linker::null(),
+            #[cfg(not(target_arch = "wasm32"))]
+            linker: if self.hoisted {
+                Linker::hoisted(linker_opts)
+            } else {
+                Linker::isolated(linker_opts)
+            },
+        };
         #[cfg(debug_assertions)]
         nm.graph.validate()?;
         Ok(nm)
