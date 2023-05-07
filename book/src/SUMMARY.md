@@ -8,6 +8,7 @@
 
 - [Configuration](./guide/configuration.md)
 - [Managing `node_modules/`](./guide/node_modules.md)
+- [Telemetry](./guide/telemetry.md)
 
 ---
 

@@ -32,11 +32,16 @@ chrono = { workspace = true }
 chrono-humanize = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
-humansize = { workspace = true }
+dialoguer = { workspace = true, default_features = false }
 directories = { workspace = true }
+humansize = { workspace = true }
 indicatif = { workspace = true }
+is_ci = { workspace = true }
+is-terminal = { workspace = true }
+kdl = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 rand = { workspace = true, default_features = false }
+sentry = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 supports-unicode = { workspace = true }
@@ -80,6 +85,7 @@ console_error_panic_hook = "0.1.7"
 darling = "0.10.2"
 dashmap = "4.0.0-rc6"
 derive_builder = "0.11.2"
+dialoguer = "0.10.4"
 directories = "4.0.1"
 dunce = "1.0.3"
 flate2 = "1.0.25"
@@ -87,6 +93,8 @@ futures = "0.3.26"
 indexmap = "1.9.3"
 indicatif = "0.17.3"
 io_tee = "0.1.1"
+is-terminal = "0.4.7"
+is_ci = "1.1.1"
 http-cache-reqwest = "0.6.0"
 humansize = "1.1.0"
 insta = "1.28.0"
@@ -112,6 +120,7 @@ reqwest = "0.11.14"
 reqwest-middleware = "0.2.0"
 resvg = "0.29.0"
 rkyv = "0.7.41"
+sentry = "0.31.0"
 serde = "1.0.152"
 serde_json = "1.0.93"
 serde-wasm-bindgen = "0.4.5"

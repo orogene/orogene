@@ -183,4 +183,18 @@ Disable printing emoji.
 
 By default, this will show emoji when outputting to a TTY that supports unicode.
 
+#### `--no-first-time`
+
+Skip first-time setup
+
+#### `--no-telemetry`
+
+Disable telemetry.
+
+Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.
+
+#### `--sentry-dsn <SENTRY_DSN>`
+
+Sentry DSN (access token) where telemetry will be sent (if enabled)
+
 
