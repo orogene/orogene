@@ -1,5 +1,29 @@
 # Orogene Release Changelog
 
+<a name="0.3.24"></a>
+## 0.3.24 (2023-05-10)
+
+### Features
+
+* **optional:** ignore install script failures for truly optional dependencies ([09fcc77d](https://github.com/orogene/orogene/commit/09fcc77dc1ce0c3c0ce29c376c8cf53fe600a576))
+* **credentials:** add support for parsing credentials (for later consumption) ([59f0a11c](https://github.com/orogene/orogene/commit/59f0a11c0b0e3639359780767b868f6f3c036df1))
+* **telemetry:** implement opt-in crash and usage telemetry (#262) ([8d5e1f59](https://github.com/orogene/orogene/commit/8d5e1f591aedc0bbc2691b4e65b4652147f236d6))
+
+### Bug Fixes
+
+* **apply:** only update package.json on apply success ([1e775ad0](https://github.com/orogene/orogene/commit/1e775ad006a265b7162fbac6ff4f11de039f393c))
+* **wasm:** missed a spot again with wasm ([c4fcb328](https://github.com/orogene/orogene/commit/c4fcb328e2cd92c2efd391c2ae72a271c126d93c))
+* **wasm:** again ([b745c5bb](https://github.com/orogene/orogene/commit/b745c5bb76ae238e65bfac8238485d269e96253e))
+* **docs:** add --credentials to command docs ([24b60124](https://github.com/orogene/orogene/commit/24b60124399c0e6b36da4efe156dad3f3b85d4b3))
+* **debug-log:** stop printing ansi codes to debug log ([3c1cd69f](https://github.com/orogene/orogene/commit/3c1cd69fd8c3dab6cebea45162dab153751c12b4))
+* **bin:** semi-preserve file modes and make binaries executable (#259) ([f01ed09d](https://github.com/orogene/orogene/commit/f01ed09d4b24db42e3901feebfc5bbc2dc0f4254))
+* **apply:** fix regression where only hoisted linker was used ([78f41202](https://github.com/orogene/orogene/commit/78f4120254fe21bf788accc60bf35dc3c054628d))
+* **misc:** fix a couple of straggler warnings ([594081f4](https://github.com/orogene/orogene/commit/594081f40db64624cd0aacf1c165118c6ce14b42))
+
+### Documentation
+
+* **readme:** improvements to README ([7b63b073](https://github.com/orogene/orogene/commit/7b63b073f3d68135133686c5defe941c8e5637a3))
+
 <a name="0.3.23"></a>
 ## 0.3.23 (2023-04-18)
 
