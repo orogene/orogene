@@ -79,14 +79,19 @@
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
 use std::{
+    borrow::Cow,
     collections::VecDeque,
     ffi::OsString,
-    path::{Path, PathBuf},
+    panic::PanicInfo,
+    path::{Path, PathBuf}, sync::Arc,
 };
 
 use async_trait::async_trait;
 use clap::{Args, Command, CommandFactory, FromArgMatches as _, Parser, Subcommand};
+use dialoguer::{theme::ColorfulTheme, Confirm};
 use directories::ProjectDirs;
+use is_terminal::IsTerminal;
+use kdl::{KdlDocument, KdlNode, KdlValue};
 use miette::{IntoDiagnostic, Result};
 use oro_config::{OroConfig, OroConfigLayerExt, OroConfigOptions};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -220,6 +225,33 @@ pub struct Orogene {
         default_value_t = supports_unicode::on(supports_unicode::Stream::Stderr)
     )]
     emoji: bool,
+
+    /// Skip first-time setup.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "no-first-time",
+        action = clap::ArgAction::SetFalse,
+    )]
+    first_time: bool,
+
+    /// Disable telemetry.
+    ///
+    /// Telemetry for Orogene is opt-in, anonymous, and is used to help the
+    /// team improve the product. It is usually configured on first run, but
+    /// you can use this flag to force-disable it either in an individual CLI
+    /// call, or in a project-local oro.kdl.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "no-telemetry",
+        action = clap::ArgAction::SetFalse,
+    )]
+    telemetry: bool,
+
+    /// Sentry DSN (access token) where telemetry will be sent (if enabled).
+    #[arg(help_heading = "Global Options", global = true, long)]
+    sentry_dsn: Option<String>,
 
     #[command(subcommand)]
     subcommand: OroCmd,
@@ -424,6 +456,176 @@ impl Orogene {
         Ok(())
     }
 
+    fn first_time_setup(&mut self) -> Result<()> {
+        // We skip first-time-setup operations in CI entirely.
+        if self.first_time && !is_ci::cached() {
+            tracing::info!("Performing first-time setup...");
+            if let Some(dirs) = ProjectDirs::from("", "", "orogene") {
+                let config_dir = dirs.config_dir();
+                if !config_dir.exists() {
+                    std::fs::create_dir_all(config_dir).unwrap();
+                }
+                let config_path = config_dir.join("oro.kdl");
+                let mut config: KdlDocument = std::fs::read_to_string(&config_path)
+                    .unwrap_or_default()
+                    .parse()?;
+                let telemetry_exists = config.query("options > telemetry")?.is_some();
+                if config.get("options").is_none() {
+                    config.nodes_mut().push(KdlNode::new("options"));
+                }
+                if std::io::stdout().is_terminal() {
+                    if let Some(opts) = config.get_mut("options") {
+                        self.telemetry = self.prompt_telemetry_opt_in()?;
+                        if !telemetry_exists {
+                            let mut node = KdlNode::new("telemetry");
+                            node.push(KdlValue::Bool(self.telemetry));
+                            opts.ensure_children();
+                            if let Some(doc) = opts.children_mut().as_mut() {
+                                doc.nodes_mut().push(node)
+                            }
+                        }
+                        if let Some(opt) = config
+                            .get_mut("options")
+                            .unwrap()
+                            .children_mut()
+                            .as_mut()
+                            .unwrap()
+                            .get_mut("telemetry")
+                        {
+                            if let Some(val) = opt.get_mut(0) {
+                                *val = self.telemetry.into();
+                            } else {
+                                opt.push(KdlValue::Bool(self.telemetry));
+                            }
+                        }
+                    }
+                }
+                if config.query("options > first-time")?.is_none() {
+                    let mut node = KdlNode::new("first-time");
+                    node.push(KdlValue::Bool(false));
+                    let opts = config.get_mut("options").unwrap();
+                    opts.ensure_children();
+                    if let Some(doc) = opts.children_mut().as_mut() {
+                        doc.nodes_mut().push(node)
+                    }
+                }
+                if let Some(opt) = config
+                    .get_mut("options")
+                    .unwrap()
+                    .children_mut()
+                    .as_mut()
+                    .unwrap()
+                    .get_mut("first-time")
+                {
+                    if let Some(val) = opt.get_mut(0) {
+                        *val = false.into();
+                    } else {
+                        opt.push(KdlValue::Bool(false));
+                    }
+                }
+                std::fs::write(config_path, config.to_string()).into_diagnostic()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn prompt_telemetry_opt_in(&self) -> Result<bool> {
+        tracing::info!("Orogene is able to collect anonymous usage statistics and");
+        tracing::info!("crash reports to help the team improve the tool.");
+        tracing::info!(
+            "Anonymous, aggregate metrics are publicly available (see `oro telemetry`),"
+        );
+        tracing::info!("and no personally identifiable information is collected.");
+        tracing::info!("This is entirely opt-in, but we would appreciate it if you considered it!");
+        Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("Do you wish to enable anonymous telemetry?")
+            .interact()
+            .into_diagnostic()
+    }
+
+    fn setup_telemetry(
+        &self,
+        log_file: Option<PathBuf>,
+    ) -> Result<Option<sentry::ClientInitGuard>> {
+        if !self.telemetry {
+            return Ok(None);
+        }
+
+        if let Some(dsn) = self
+            .sentry_dsn
+            .as_deref()
+            .or_else(|| option_env!("OROGENE_SENTRY_DSN"))
+        {
+            let ret = sentry::init(
+                sentry::ClientOptions {
+                    dsn: Some(dsn.parse().into_diagnostic()?),
+                    release: sentry::release_name!(),
+                    server_name: None,
+                    sample_rate: 1.0,
+                    user_agent: Cow::from(format!(
+                        "orogene@{} ({}/{})",
+                        env!("CARGO_PKG_VERSION"),
+                        std::env::consts::OS,
+                        std::env::consts::ARCH,
+                    )),
+                    default_integrations: false,
+                    before_send: Some(Arc::new(|mut event| {
+                        event.server_name = None; // Don't send server name
+                        Some(event)
+                    })),
+                    ..Default::default()
+                }
+                .add_integration(
+                    sentry::integrations::backtrace::AttachStacktraceIntegration::default(),
+                )
+                .add_integration(
+                    sentry::integrations::panic::PanicIntegration::default().add_extractor(
+                        move |info: &PanicInfo| {
+                            if let Some(log_file) = log_file.as_deref() {
+                                sentry::configure_scope(|s| {
+                                    s.add_attachment(sentry::protocol::Attachment {
+                                        filename: log_file
+                                            .file_name()
+                                            .map(|f| f.to_string_lossy().to_string())
+                                            .unwrap_or_else(|| "oro-debug.log".into()),
+                                        content_type: Some("text/plain".into()),
+                                        buffer: std::fs::read(log_file).unwrap_or_default(),
+                                        ty: None,
+                                    });
+                                });
+                            }
+                            let msg = sentry::integrations::panic::message_from_panic_info(info);
+                            Some(sentry::protocol::Event {
+                                exception: vec![sentry::protocol::Exception {
+                                    ty: "panic".into(),
+                                    mechanism: Some(sentry::protocol::Mechanism {
+                                        ty: "panic".into(),
+                                        handled: Some(false),
+                                        ..Default::default()
+                                    }),
+                                    value: Some(msg.to_string()),
+                                    stacktrace: sentry::integrations::backtrace::current_stacktrace(
+                                    ),
+                                    ..Default::default()
+                                }]
+                                .into(),
+                                level: sentry::Level::Fatal,
+                                ..Default::default()
+                            })
+                        },
+                    ),
+                )
+                .add_integration(sentry::integrations::contexts::ContextIntegration::new())
+                .add_integration(
+                    sentry::integrations::backtrace::ProcessStacktraceIntegration::default(),
+                ),
+            );
+            Ok(Some(ret))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub async fn load() -> Result<()> {
         let start = std::time::Instant::now();
         // We have to instantiate Orogene twice: once to pick up "base" config
@@ -438,13 +640,16 @@ impl Orogene {
         let config = oro.build_config()?;
         let mut args = std::env::args_os().collect::<Vec<_>>();
         Self::layer_command_args(&command, &mut args, &config)?;
-        let oro = Orogene::from_arg_matches(&command.get_matches_from(&args)).into_diagnostic()?;
+        let mut oro =
+            Orogene::from_arg_matches(&command.get_matches_from(&args)).into_diagnostic()?;
         let log_file = oro
             .cache
             .clone()
             .or_else(|| config.get::<String>("cache").ok().map(PathBuf::from))
             .map(|c| c.join("_logs").join(log_file_name()));
-        let _guard = oro.setup_logging(log_file.as_deref())?;
+        let _logging_guard = oro.setup_logging(log_file.as_deref())?;
+        oro.first_time_setup()?;
+        let _telemetry_guard = oro.setup_telemetry(log_file.clone())?;
         oro.execute().await.map_err(|e| {
             // We toss this in a debug so execution errors show up in our
             // debug logs. Unfortunately, we can't do the same for other
@@ -453,7 +658,20 @@ impl Orogene {
             tracing::debug!("{e:?}");
             if let Some(log_file) = log_file.as_deref() {
                 tracing::warn!("A debug log was written to {}", log_file.display());
+                sentry::configure_scope(|s| {
+                    s.add_attachment(sentry::protocol::Attachment {
+                        filename: log_file
+                            .file_name()
+                            .map(|f| f.to_string_lossy().to_string())
+                            .unwrap_or_else(|| "oro-debug.log".into()),
+                        content_type: Some("text/plain".into()),
+                        buffer: std::fs::read(log_file).unwrap_or_default(),
+                        ty: None,
+                    });
+                });
             }
+            let dyn_err: &dyn std::error::Error = e.as_ref();
+            sentry::capture_error(dyn_err);
             e
         })?;
         tracing::debug!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
