@@ -562,7 +562,7 @@ impl Orogene {
                     dsn: Some(dsn.parse().into_diagnostic()?),
                     release: sentry::release_name!(),
                     server_name: None,
-                    sample_rate: 1.0,
+                    sample_rate: 0.1,
                     user_agent: Cow::from(format!(
                         "orogene@{} ({}/{})",
                         env!("CARGO_PKG_VERSION"),
