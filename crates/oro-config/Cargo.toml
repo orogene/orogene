@@ -1,6 +1,6 @@
 [package]
 name = "oro-config"
-version = "0.3.24"
+version = "0.3.25"
 description = "Configuration management for Orogene."
 readme = "README.md"
 license = "Apache-2.0"
