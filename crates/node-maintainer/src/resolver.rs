@@ -413,7 +413,7 @@ impl<'a> Resolver<'a> {
         }
         // Finally, we put everything in its place.
         {
-            let mut child_node = &mut graph[child_idx];
+            let child_node = &mut graph[child_idx];
             // The parent is the _hierarchy_ location, so we set its parent
             // accordingly.
             child_node.parent = Some(target_idx);

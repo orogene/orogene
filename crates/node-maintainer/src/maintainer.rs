@@ -319,8 +319,6 @@ impl NodeMaintainerOptions {
             on_script_start: self.on_script_start,
             on_script_line: self.on_script_line,
         };
-        #[cfg(target_arch = "wasm32")]
-        let linker = Linker::null();
         let nm = NodeMaintainer {
             graph,
             #[cfg(target_arch = "wasm32")]
