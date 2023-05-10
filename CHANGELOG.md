@@ -1,5 +1,13 @@
 # Orogene Release Changelog
 
+<a name="0.3.25"></a>
+## 0.3.25 (2023-05-10)
+
+### Bug Fixes
+
+* **fmt:** cargo fmt --all ([887c2576](https://github.com/orogene/orogene/commit/887c2576ed5b771d7c863384b980ecaa21abc361))
+* **telemetry:** lower telemetry sample rate ([ffbd6a88](https://github.com/orogene/orogene/commit/ffbd6a88fbc395ee9a8327b0b2fa09b8619425ab))
+
 <a name="0.3.24"></a>
 ## 0.3.24 (2023-05-10)
 
