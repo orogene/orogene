@@ -83,7 +83,8 @@ use std::{
     collections::VecDeque,
     ffi::OsString,
     panic::PanicInfo,
-    path::{Path, PathBuf}, sync::Arc,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use async_trait::async_trait;
