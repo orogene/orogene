@@ -3,12 +3,15 @@
         "Benchmarks": "./BENCHMARKS.md",
         "Contributing": "./CONTRIBUTING.md"
     },
+    "favicon": "./assets/favicon.ico",
     "changelog": true,
     "md_book": "./book/book",
     "static_dir": "assets",
     "artifacts": {
         "cargo_dist": true,
         "package_managers": {
+            "npm": "npm install -g orogene",
+            "npx": "npx oro -h",
             "crates.io": "cargo install orogene"
         }
     }
