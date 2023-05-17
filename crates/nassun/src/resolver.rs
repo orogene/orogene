@@ -70,7 +70,7 @@ impl PackageResolution {
     pub fn satisfies(&self, spec: &PackageSpec) -> Result<bool, NassunError> {
         use PackageResolution as PR;
         use PackageSpec as PS;
-        Ok(match (self, spec) {
+        Ok(match (self, spec.target()) {
             (PR::Npm { version, .. }, PS::Npm { requested, .. }) => {
                 match requested {
                     Some(VersionSpec::Version(v)) => version == v,
