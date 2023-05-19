@@ -382,12 +382,15 @@ impl LockfileNode {
             .skip(1)
             .map(|s| s.into())
             .collect::<Vec<_>>();
-        let name = npm
-            .name
-            .clone()
-            .map(UniCase::new)
-            .or_else(|| path.last().cloned())
-            .ok_or_else(|| NodeMaintainerError::NpmLockMissingName(Box::new(npm.clone())))?;
+        let name = if path_str.is_empty() {
+            UniCase::new("".into())
+        } else {
+            npm.name
+                .clone()
+                .map(UniCase::new)
+                .or_else(|| path.last().cloned())
+                .ok_or_else(|| NodeMaintainerError::NpmLockMissingName(Box::new(npm.clone())))?
+        };
         let integrity = npm
             .integrity
             .as_ref()
