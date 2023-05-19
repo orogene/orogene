@@ -7,7 +7,7 @@ use futures::{AsyncRead, Stream};
 
 pub use async_tar_wasm::Header;
 
-use crate::error::Result;
+use crate::error::{IoContext, Result};
 use crate::tarball::Tarball;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -61,7 +61,9 @@ impl Entry {
     /// It is recommended to use this method instead of inspecting the header
     /// directly to ensure that various archive formats are handled correctly.
     pub fn path(&self) -> Result<Cow<'_, Path>> {
-        Ok(self.0.path()?)
+        self.0
+            .path()
+            .io_context(|| "Failed to read path from tarball entry".into())
     }
 
     /// Writes this file to the specified location.
@@ -75,7 +77,11 @@ impl Entry {
     /// the location dst will be overwritten.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn unpack(&mut self, dst: impl AsRef<Path>) -> Result<()> {
-        self.0.unpack(dst).await?;
+        let dst = dst.as_ref();
+        self.0
+            .unpack(dst)
+            .await
+            .io_context(|| format!("Failed to unpack tarball into {}.", dst.display()))?;
         Ok(())
     }
 
@@ -91,7 +97,11 @@ impl Entry {
     /// a ‘..’ in its path, this function will skip it and return false.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn unpack_in(&mut self, dst: impl AsRef<Path>) -> Result<()> {
-        self.0.unpack_in(dst).await?;
+        let dst = dst.as_ref();
+        self.0
+            .unpack_in(dst)
+            .await
+            .io_context(|| format!("Failed to unpack tarball in {}.", dst.display()))?;
         Ok(())
     }
 }

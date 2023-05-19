@@ -12,7 +12,7 @@ use oro_common::BuildManifest;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use ssri::Integrity;
 
-use crate::{graph::Graph, NodeMaintainerError, META_FILE_NAME, STORE_DIR_NAME};
+use crate::{error::IoContext, graph::Graph, NodeMaintainerError, META_FILE_NAME, STORE_DIR_NAME};
 
 use super::LinkerOptions;
 
@@ -48,18 +48,43 @@ impl IsolatedLinker {
             // If there's no actual tree previously calculated, we can't trust
             // *anything* inside node_modules, so everything is immediately
             // extraneous and we wipe it all. Sorry.
-            let mut entries = async_std::fs::read_dir(&prefix).await?;
+            let mut entries = async_std::fs::read_dir(&prefix).await.io_context(|| {
+                format!(
+                    "Failed to read contents of node_modules at {}.",
+                    prefix.display()
+                )
+            })?;
             while let Some(entry) = entries.next().await {
-                let entry = entry?;
+                let entry = entry.io_context(|| {
+                    format!(
+                        "Failed to read directory entry from prefix at {}.",
+                        prefix.display()
+                    )
+                })?;
                 let path = entry.path();
-                let ty = entry.file_type().await?;
+                let ty = entry.file_type().await.io_context(|| {
+                    format!(
+                        "Failed to get file type from entry at {}.",
+                        entry.path().display()
+                    )
+                })?;
                 if ty.is_dir() {
-                    async_std::fs::remove_dir_all(&path).await?;
+                    async_std::fs::remove_dir_all(&path).await.io_context(|| format!("Failed to rimraf contents of directory at {} while pruning node_modules.", entry.path().display()))?;
                 } else if ty.is_file() {
-                    async_std::fs::remove_file(&path).await?;
+                    async_std::fs::remove_file(&path).await.io_context(|| {
+                        format!(
+                            "Failed to delete file at {} while pruning node_modules.",
+                            entry.path().display()
+                        )
+                    })?;
                 } else if ty.is_symlink() && async_std::fs::remove_file(entry.path()).await.is_err()
                 {
-                    async_std::fs::remove_dir_all(&path).await?;
+                    async_std::fs::remove_dir_all(&path).await.io_context(|| {
+                        format!(
+                            "Failed to delete {} while pruning node_modules.",
+                            entry.path().display()
+                        )
+                    })?;
                 }
             }
 
@@ -98,6 +123,7 @@ impl IsolatedLinker {
                         .join(pkg.name())
                         .join("node_modules")
                 };
+                let pkg_nm_ref = &pkg_nm;
 
                 let mut expected_deps = HashMap::new();
 
@@ -117,24 +143,60 @@ impl IsolatedLinker {
                     let expected_ref = Arc::new(expected_deps);
 
                     async_std::fs::read_dir(&pkg_nm)
-                        .await?
+                        .await
+                        .io_context(|| {
+                            format!(
+                                "Failed to read contents of node_modules at {}.",
+                                pkg_nm.display()
+                            )
+                        })?
                         .map(|e| Ok((e, expected_ref.clone())))
                         .try_for_each(move |(entry, expected)| async move {
-                            let entry = entry?;
+                            let entry = entry.io_context(|| {
+                                format!(
+                                    "Failed to read directory entry from prefix at {}.",
+                                    pkg_nm_ref.display()
+                                )
+                            })?;
                             let path = entry.path();
                             if let Some(target) = expected.get(&path) {
                                 let target = target.clone();
-                                let ty = entry.file_type().await?;
+                                let ty = entry.file_type().await.io_context(|| {
+                                    format!(
+                                        "Failed to get file type from entry at {}.",
+                                        entry.path().display()
+                                    )
+                                })?;
                                 if ty.is_file() {
-                                    async_std::fs::remove_file(&path).await?;
+                                    async_std::fs::remove_file(&path).await.io_context(|| {
+                                        format!(
+                                            "Failed to delete file at {} while pruning node_modules.",
+                                            entry.path().display()
+                                        )
+                                    })?;
                                 } else if ty.is_dir() {
-                                    async_std::fs::remove_dir_all(&path).await?;
-                                } else if ty.is_symlink() && target != path.read_link().await? {
+                                    async_std::fs::remove_dir_all(&path).await.io_context(|| {
+                                        format!(
+                                            "Failed to rimraf contents of directory at {} while pruning node_modules.",
+                                            entry.path().display()
+                                        )
+                                    })?;
+                                } else if ty.is_symlink() && target != path.read_link().await.io_context(|| format!("Failed to read symlink at {} while pruning node_modules.", path.display()))? {
                                     if async_std::fs::remove_file(&path).await.is_err() {
-                                        async_std::fs::remove_dir_all(&path).await?;
+                                        async_std::fs::remove_dir_all(&path).await.io_context(|| {
+                                            format!(
+                                                "Failed to delete {} while pruning node_modules.",
+                                                path.display()
+                                            )
+                                        })?;
                                     }
                                 } else if ty.is_dir() {
-                                    async_std::fs::remove_dir_all(&path).await?;
+                                    async_std::fs::remove_dir_all(&path).await.io_context(|| {
+                                        format!(
+                                            "Failed to delete {} while pruning node_modules.",
+                                            path.display()
+                                        )
+                                    })?;
                                 } else {
                                     #[cfg(windows)]
                                     let path_clone = path.clone();
@@ -147,10 +209,18 @@ impl IsolatedLinker {
                                                 ) != target,
                                         )
                                     })
-                                    .await?
-                                        && async_std::fs::remove_file(&path).await.is_err()
-                                    {
-                                        async_std::fs::remove_dir_all(&path).await?;
+                                    .await.io_context(|| {
+                                        format!(
+                                            "Failed to check if {} is a junction while pruning node_modules.",
+                                            path.display()
+                                        )
+                                    })? && async_std::fs::remove_file(&path).await.is_err() {
+                                        async_std::fs::remove_dir_all(&path).await.io_context(|| {
+                                            format!(
+                                                "Failed to delete {} while pruning node_modules.",
+                                                path.display()
+                                            )
+                                        })?;
                                     }
                                 }
                             }
@@ -170,14 +240,25 @@ impl IsolatedLinker {
         // Clean out any extraneous things in the store dir itself. We've
         // already verified the store dir at least exists.
         async_std::fs::read_dir(&store)
-            .await?
+            .await
+            .io_context(|| {
+                format!(
+                    "Failed to read contents of package store at {} while pruning node_modules.",
+                    store.display()
+                )
+            })?
             .map(|entry| Ok((entry, pruned.clone())))
             .try_for_each_concurrent(self.opts.concurrency, move |(entry, pruned)| async move {
-                let entry = entry?;
+                let entry = entry.io_context(|| {
+                    format!(
+                        "Failed to read directory entry from package store at {} while pruning node_modules.",
+                        store_ref.display()
+                    )
+                })?;
                 let _path = entry.path();
                 let path: &Path = _path.as_ref();
                 if !expected_ref.contains(path) {
-                    let ty = entry.file_type().await?;
+                    let ty = entry.file_type().await.io_context(|| format!("Failed to get file type for package store entry at {} while pruning node_modules.", path.display()))?;
                     if ty.is_dir() {
                         if path
                             .file_name()
@@ -185,35 +266,53 @@ impl IsolatedLinker {
                             .to_string_lossy()
                             .starts_with('@')
                         {
-                            let mut iter = async_std::fs::read_dir(path).await?;
+                            let mut iter = async_std::fs::read_dir(path).await.io_context(|| {
+                                format!("Failed to read directory {} while pruning scoped package dir in package store.", path.display())
+                            })?;
                             while let Some(next) = iter.next().await {
-                                let next = next?;
+                                let next = next.io_context(|| {
+                                    format!("Failed to read dir entry from {} while pruning scoped package dir in package store.", path.display())
+                                })?;
                                 if !expected_ref.contains::<std::path::PathBuf>(&next.path().into())
                                 {
-                                    let ty = next.file_type().await?;
+                                    let ty = next.file_type().await.io_context(|| {
+                                        format!("Failed to get file type for entry at {} while pruning scoped package dir in package store.", next.path().display())
+                                    })?;
                                     if ty.is_file() {
-                                        async_std::fs::remove_file(next.path()).await?;
+                                        async_std::fs::remove_file(next.path()).await.io_context(|| {
+                                            format!("Failed to delete file at {} while pruning scoped package dir in package store.", next.path().display())
+                                        })?;
                                     } else if ty.is_dir() {
-                                        async_std::fs::remove_dir_all(next.path()).await?;
+                                        async_std::fs::remove_dir_all(next.path()).await.io_context(|| {
+                                            format!("Failed to rimraf contents of directory at {} while pruning scoped package dir in package store.", next.path().display())
+                                        })?;
                                     } else if ty.is_symlink()
                                         && async_std::fs::remove_file(next.path()).await.is_err()
                                     {
-                                        async_std::fs::remove_dir_all(next.path()).await?;
+                                        async_std::fs::remove_dir_all(next.path()).await.io_context(|| {
+                                            format!("Failed to delete {} while pruning scoped package dir in package store.", next.path().display())
+                                        })?;
                                     }
                                     pruned.fetch_add(1, atomic::Ordering::SeqCst);
                                 }
                             }
                         } else {
-                            async_std::fs::remove_dir_all(entry.path()).await?;
+                            async_std::fs::remove_dir_all(entry.path()).await.io_context(|| {
+                                format!("Failed to rimraf contents of directory at {} while pruning node_modules.", entry.path().display())
+                            })?;
                             pruned.fetch_add(1, atomic::Ordering::SeqCst);
                         }
                     } else if ty.is_file() {
-                        async_std::fs::remove_file(entry.path()).await?;
+                        async_std::fs::remove_file(entry.path()).await.io_context(|| {
+                            format!("Failed to delete file at {} while pruning node_modules.", entry.path().display())
+                        })?;
                         pruned.fetch_add(1, atomic::Ordering::SeqCst);
                     } else if ty.is_symlink()
                         && async_std::fs::remove_file(entry.path()).await.is_err()
                     {
-                        async_std::fs::remove_dir_all(entry.path()).await?;
+                        async_std::fs::remove_dir_all(entry.path()).await.io_context(|| {
+                            format!("Failed to delete {} while pruning node_modules.", entry.path().display())
+                        })?;
                         pruned.fetch_add(1, atomic::Ordering::SeqCst);
                     }
                 }
@@ -251,7 +350,12 @@ impl IsolatedLinker {
         let total = graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
         let node_modules = root.join("node_modules");
-        std::fs::create_dir_all(&node_modules)?;
+        std::fs::create_dir_all(&node_modules).io_context(|| {
+            format!(
+                "Failed to create node_modules directory at {} for extraction.",
+                node_modules.display()
+            )
+        })?;
         let prefer_copy = self.opts.prefer_copy
             || match self.opts.cache.as_deref() {
                 Some(cache) => super::supports_reflink(cache, &node_modules),
@@ -346,10 +450,13 @@ impl IsolatedLinker {
                 },
             )
             .await?;
-        std::fs::write(
-            node_modules.join(META_FILE_NAME),
-            graph.to_kdl()?.to_string(),
-        )?;
+        let meta = node_modules.join(META_FILE_NAME);
+        std::fs::write(&meta, graph.to_kdl()?.to_string()).io_context(|| {
+            format!(
+                "Failed to write Orogene meta file into node_modules, at {}.",
+                meta.display()
+            )
+        })?;
         let extracted_count = actually_extracted.load(atomic::Ordering::SeqCst);
 
         tracing::debug!(
@@ -454,14 +561,17 @@ async fn link_deps(
         )
         .expect("this should never fail");
         async_std::task::spawn_blocking(move || {
-            std::fs::create_dir_all(dep_nm_entry.parent().expect("definitely has a parent"))?;
+            let path = dep_nm_entry.parent().expect("definitely has a parent");
+            std::fs::create_dir_all(path).io_context(|| {
+                format!("Failed to create directory for dependency in package store at {} while linking dep.", path.display())
+            })?;
             if dep_nm_entry.symlink_metadata().is_err() {
                 // We don't check the link target here because we assume prune() has already been run and removed any incorrect links.
                 #[cfg(windows)]
                 std::os::windows::fs::symlink_dir(&relative, &dep_nm_entry)
-                    .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry))?;
+                    .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry)).io_context(|| format!("Failed to create symlink or juncion for dependency, from {} to {}.", dep_store_dir.display(), dep_nm_entry.display()))?;
                 #[cfg(unix)]
-                std::os::unix::fs::symlink(&relative, &dep_nm_entry)?;
+                std::os::unix::fs::symlink(&relative, &dep_nm_entry).io_context(|| format!("Failed to create symlink while linking dependency, from {} to {}.", relative.display(), dep_nm_entry.display()))?;
             }
             Ok::<(), NodeMaintainerError>(())
         })
@@ -495,12 +605,27 @@ async fn link_dep_bins(
             async_std::task::spawn_blocking(move || {
                 // We only create a symlink if the target bin exists.
                 if from.symlink_metadata().is_ok() {
-                    std::fs::create_dir_all(target_bin)?;
+                    std::fs::create_dir_all(&target_bin).io_context(|| {
+                        format!(
+                            "Failed to create target bin directory at {}.",
+                            target_bin.display()
+                        )
+                    })?;
                     if let Ok(meta) = to.symlink_metadata() {
                         if meta.is_dir() {
-                            std::fs::remove_dir_all(&to)?;
+                            std::fs::remove_dir_all(&to).io_context(|| {
+                                format!(
+                                    "Failed to rimraf existing bin directory at {}.",
+                                    to.display()
+                                )
+                            })?;
                         } else {
-                            std::fs::remove_file(&to)?;
+                            std::fs::remove_file(&to).io_context(|| {
+                                format!(
+                                    "Failed to rm existing file in bin directory location at {}.",
+                                    to.display()
+                                )
+                            })?;
                         }
                     }
                     super::link_bin(&from, &to)?;

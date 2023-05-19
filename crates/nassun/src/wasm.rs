@@ -9,7 +9,7 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 use wasm_streams::ReadableStream;
 
-use crate::error::NassunError;
+use crate::error::{IoContext, NassunError};
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
@@ -341,7 +341,7 @@ impl Package {
                                 }
                                 x as u32
                             })
-                            .map_err(|e| -> NassunError { e.into() })?
+                            .io_context(|| "Failed to get mtime from entry header.".into())?
                             .into(),
                     )?;
                     js_sys::Reflect::set(
@@ -355,7 +355,7 @@ impl Package {
                                 }
                                 x as u32
                             })
-                            .map_err(|e| -> NassunError { e.into() })?
+                            .io_context(|| "Failed to get entry size from entry header.".into())?
                             .into(),
                     )?;
                     js_sys::Reflect::set(

@@ -11,7 +11,7 @@ use petgraph::stable_graph::NodeIndex;
 use unicase::UniCase;
 use walkdir::WalkDir;
 
-use crate::error::NodeMaintainerError;
+use crate::error::{IoContext, NodeMaintainerError};
 use crate::graph::Graph;
 use crate::{META_FILE_NAME, STORE_DIR_NAME};
 
@@ -51,17 +51,46 @@ impl HoistedLinker {
             // If there's no actual tree previously calculated, we can't trust
             // *anything* inside node_modules, so everything is immediately
             // extraneous and we wipe it all. Sorry.
-            let mut entries = async_std::fs::read_dir(&prefix).await?;
+            let mut entries = async_std::fs::read_dir(&prefix).await.io_context(|| {
+                format!(
+                    "Failed to read contents of node_modules at {}",
+                    prefix.display()
+                )
+            })?;
             while let Some(entry) = entries.next().await {
-                let entry = entry?;
-                let ty = entry.file_type().await?;
+                let entry = entry.io_context(|| {
+                    format!(
+                        "Failed to read directory entry from prefix at {}",
+                        prefix.display()
+                    )
+                })?;
+                let ty = entry.file_type().await.io_context(|| {
+                    format!(
+                        "Failed to get file type from entry at {}.",
+                        entry.path().display()
+                    )
+                })?;
                 if ty.is_dir() {
-                    async_std::fs::remove_dir_all(entry.path()).await?;
+                    async_std::fs::remove_dir_all(entry.path()).await.io_context(|| format!("Failed to rimraf contents of directory at {} while pruning node_modules.", entry.path().display()))?;
                 } else if ty.is_file() {
-                    async_std::fs::remove_file(entry.path()).await?;
+                    async_std::fs::remove_file(entry.path())
+                        .await
+                        .io_context(|| {
+                            format!(
+                                "Failed to delete file at {} while pruning node_modules.",
+                                entry.path().display()
+                            )
+                        })?;
                 } else if ty.is_symlink() && async_std::fs::remove_file(entry.path()).await.is_err()
                 {
-                    async_std::fs::remove_dir_all(entry.path()).await?;
+                    async_std::fs::remove_dir_all(entry.path())
+                        .await
+                        .io_context(|| {
+                            format!(
+                                "Failed to delete {} while pruning node_modules.",
+                                entry.path().display()
+                            )
+                        })?;
                 }
             }
 
@@ -167,13 +196,27 @@ impl HoistedLinker {
                     pb(entry_path);
                 }
                 tracing::trace!("Pruning extraneous directory: {}", entry.path().display());
-                async_std::fs::remove_dir_all(entry.path()).await?;
+                async_std::fs::remove_dir_all(entry.path())
+                    .await
+                    .io_context(|| {
+                        format!(
+                            "Failed to prune extraneous directory at {}",
+                            entry.path().display()
+                        )
+                    })?;
             } else {
                 if let Some(pb) = &self.opts.on_prune_progress {
                     pb(entry_path);
                 }
                 tracing::trace!("Pruning extraneous file: {}", entry.path().display());
-                async_std::fs::remove_file(entry.path()).await?;
+                async_std::fs::remove_file(entry.path())
+                    .await
+                    .io_context(|| {
+                        format!(
+                            "Failed to prune extraneous file at {}",
+                            entry.path().display()
+                        )
+                    })?;
             }
         }
 
@@ -204,7 +247,12 @@ impl HoistedLinker {
         let total = graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
         let node_modules = root.join("node_modules");
-        std::fs::create_dir_all(&node_modules)?;
+        std::fs::create_dir_all(&node_modules).io_context(|| {
+            format!(
+                "Failed to create project node_modules directory at {}.",
+                node_modules.display()
+            )
+        })?;
         let prefer_copy = self.opts.prefer_copy
             || match self.opts.cache.as_deref() {
                 Some(cache) => super::supports_reflink(cache, &node_modules),
@@ -287,10 +335,9 @@ impl HoistedLinker {
                 },
             )
             .await?;
-        std::fs::write(
-            node_modules.join(META_FILE_NAME),
-            graph.to_kdl()?.to_string(),
-        )?;
+        let meta = node_modules.join(META_FILE_NAME);
+        std::fs::write(&meta, graph.to_kdl()?.to_string())
+            .io_context(|| format!("Failed to write Orogene meta file to {}.", meta.display()))?;
         let extracted_count = actually_extracted.load(atomic::Ordering::SeqCst);
 
         tracing::debug!(
@@ -315,7 +362,7 @@ impl HoistedLinker {
         {
             let entry = entry?;
             if entry.path().file_name() == bin_file_name {
-                async_std::fs::remove_dir_all(entry.path()).await?;
+                async_std::fs::remove_dir_all(entry.path()).await.io_context(|| format!("Failed to remove directory at {} while clearing out existing node_modules/.bin directories.", entry.path().display()))?;
             }
         }
         futures::stream::iter(self.pending_rebuild.lock().await.iter().copied())
@@ -355,14 +402,33 @@ impl HoistedLinker {
                     let name = name.clone();
                     async_std::task::spawn_blocking(move || {
                         // We only create a symlink if the target bin exists.
+                        let target_dir = &target_dir;
                         if from.symlink_metadata().is_ok() {
-                            std::fs::create_dir_all(target_dir)?;
+                            std::fs::create_dir_all(target_dir).io_context(|| {
+                                format!(
+                                    "Failed to create .bin dir at {} while linking {} bin.",
+                                    target_dir.display(),
+                                    name,
+                                )
+                            })?;
                             // TODO: use a DashMap here to prevent race conditions, maybe?
                             if let Ok(meta) = to.symlink_metadata() {
                                 if meta.is_dir() {
-                                    std::fs::remove_dir_all(&to)?;
+                                    std::fs::remove_dir_all(&to).io_context(|| {
+                                        format!(
+                                            "Failed to remove existing bin dir at {} while linking {} bin.",
+                                            to.display(),
+                                            name,
+                                        )
+                                    })?;
                                 } else {
-                                    std::fs::remove_file(&to)?;
+                                    std::fs::remove_file(&to).io_context(|| {
+                                        format!(
+                                            "Failed to remove existing bin file at {} while linking {} bin.",
+                                            to.display(),
+                                            name,
+                                        )
+                                    })?;
                                 }
                             }
                             super::link_bin(&from, &to)?;

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Output, Stdio};
 
 pub use error::OroScriptError;
-use error::Result;
+use error::{IoContext, Result};
 use oro_common::BuildManifest;
 use regex::Regex;
 
@@ -23,7 +23,8 @@ pub struct OroScript<'a> {
 
 impl<'a> OroScript<'a> {
     pub fn new(package_path: impl AsRef<Path>, event: impl AsRef<str>) -> Result<Self> {
-        let package_path = dunce::canonicalize(package_path.as_ref())?;
+        let package_path = package_path.as_ref();
+        let package_path = dunce::canonicalize(package_path).io_context(|| format!("Failed to canonicalize package path at {} while preparing to run a package script.", package_path.display()))?;
         let shell = if cfg!(target_os = "windows") {
             if let Some(com_spec) = std::env::var_os("ComSpec") {
                 com_spec
@@ -147,7 +148,13 @@ impl<'a> OroScript<'a> {
             self.cmd.arg(script);
         } else {
             let package_path = &self.package_path;
-            let pkg = BuildManifest::from_path(package_path.join("package.json"))?;
+            let json = package_path.join("package.json");
+            let pkg = BuildManifest::from_path(&json).io_context(|| {
+                format!(
+                    "Failed to read BuildManifest from path at {} while running package script.",
+                    json.display()
+                )
+            })?;
             let script = pkg
                 .scripts
                 .get(event)

@@ -6,7 +6,7 @@ use oro_package_spec::{GitInfo, PackageSpec, VersionSpec};
 use ssri::Integrity;
 use url::Url;
 
-use crate::error::NassunError;
+use crate::error::{IoContext, NassunError};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 
@@ -81,7 +81,10 @@ impl PackageResolution {
                 }
             }
             (PR::Dir { path: pr_path, .. }, PS::Dir { path: ps_path }) => {
-                pr_path == &ps_path.canonicalize()?
+                pr_path
+                    == &ps_path.canonicalize().io_context(|| {
+                        format!("Failed to canonicalize path: {}.", ps_path.display())
+                    })?
             }
             // TODO: Implement this.
             (PR::Git { .. }, PS::Git(..)) => false,
@@ -151,9 +154,12 @@ impl PackageResolver {
         let spec = wanted.target();
 
         if let Dir { ref path } = spec {
+            let p = self.base_dir.join(path);
             return Ok(PackageResolution::Dir {
                 name: name.into(),
-                path: self.base_dir.join(path).canonicalize()?,
+                path: p
+                    .canonicalize()
+                    .io_context(|| format!("Failed to canonicalize path at {}.", p.display()))?,
             });
         }
 
