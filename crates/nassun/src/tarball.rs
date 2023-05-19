@@ -30,6 +30,8 @@ use ssri::{Integrity, IntegrityChecker};
 use tempfile::NamedTempFile;
 
 use crate::entries::{Entries, Entry};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::IoContext;
 use crate::error::{NassunError, Result};
 use crate::TarballStream;
 
@@ -210,7 +212,12 @@ impl TempTarball {
         let mut tarball_index = TarballIndex::default();
         let mut drain_buf = [0u8; 1024 * 8];
 
-        self.rewind()?;
+        self.rewind().io_context(|| {
+            format!(
+                "Failed to seek to the beginning of temp tarball fd while extracting to dir: {}",
+                dir.display()
+            )
+        })?;
 
         let mut reader = std::io::BufReader::new(self);
         let mut integrity = IntegrityOpts::new().algorithm(ssri::Algorithm::Sha512);
@@ -280,7 +287,12 @@ impl TempTarball {
                     // If so, we need to re-extract all previous files as full
                     // copies and mark the package as having scripts in it.
                     if entry_subpath == "package.json" {
-                        let manifest = BuildManifest::from_path(&path)?;
+                        let manifest = BuildManifest::from_path(&path).io_context(|| {
+                            format!(
+                                "Failed to read BuildManifest from path at {}.",
+                                path.display()
+                            )
+                        })?;
                         if ["preinstall", "install", "postinstall"]
                             .iter()
                             .any(|s| manifest.scripts.contains_key(*s))
@@ -291,7 +303,7 @@ impl TempTarball {
                                 prefer_copy = true;
                                 for (entry, (sri, mode)) in &tarball_index.files {
                                     let path = dir.join(entry);
-                                    std::fs::remove_file(&path)?;
+                                    std::fs::remove_file(&path).io_context(|| format!("Failed to remove target file while extracting a new version, at {}.", path.display()))?;
                                     let sri = sri.parse()?;
                                     extract_from_cache(
                                         cache,

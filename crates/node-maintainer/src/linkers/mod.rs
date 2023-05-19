@@ -23,8 +23,8 @@ use petgraph::stable_graph::NodeIndex;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    graph::Graph, Lockfile, NodeMaintainerError, ProgressHandler, PruneProgress, ScriptLineHandler,
-    ScriptStartHandler,
+    error::IoContext, graph::Graph, Lockfile, NodeMaintainerError, ProgressHandler, PruneProgress,
+    ScriptLineHandler, ScriptStartHandler,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -305,12 +305,18 @@ impl Linker {
             let stdout_span = span;
             let stderr_span = stdout_span.clone();
             let event_clone = event.clone();
+            let stdout_resolved = graph[idx].package.resolved().clone();
+            let stderr_resolved = stdout_resolved.clone();
             let join = futures::try_join!(
                 async_std::task::spawn_blocking(move || {
                     let _enter = stdout_span.enter();
                     if let Some(stdout) = stdout {
                         for line in BufReader::new(stdout).lines() {
-                            let line = line?;
+                            let line = line.io_context(|| {
+                                format!(
+                                    "Failed to read line from stdout while executing script for {stdout_resolved}",
+                                )
+                            })?;
                             tracing::debug!("stdout::{stdout_name}::{event}: {line}");
                             if let Some(on_script_line) = &stdout_on_line {
                                 on_script_line(&line);
@@ -323,7 +329,11 @@ impl Linker {
                     let _enter = stderr_span.enter();
                     if let Some(stderr) = stderr {
                         for line in BufReader::new(stderr).lines() {
-                            let line = line?;
+                            let line = line.io_context(|| {
+                                format!(
+                                    "Failed to read line from stdout while executing script for {stderr_resolved}",
+                                )
+                            })?;
                             tracing::debug!("stderr::{stderr_name}::{event_clone}: {line}");
                             if let Some(on_script_line) = &stderr_on_line {
                                 on_script_line(&line);
@@ -396,16 +406,38 @@ pub(crate) fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn link_bin(from: &Path, to: &Path) -> Result<(), NodeMaintainerError> {
     #[cfg(windows)]
-    oro_shim_bin::shim_bin(from, to)?;
+    oro_shim_bin::shim_bin(from, to).io_context(|| {
+        format!(
+            "Failed to create shim for {} at {}",
+            from.display(),
+            to.display()
+        )
+    })?;
     #[cfg(not(windows))]
     {
         use std::os::unix::fs::PermissionsExt;
-        let meta = from.metadata()?;
+        let meta = from.metadata().io_context(|| {
+            format!(
+                "Failed to read file metadata while linking bin from {}",
+                from.display()
+            )
+        })?;
         let mut perms = meta.permissions();
         perms.set_mode(0o755);
-        std::fs::set_permissions(from, perms)?;
+        std::fs::set_permissions(from, perms).io_context(|| {
+            format!(
+                "Failed to set new permissions for {} while linking bin.",
+                from.display()
+            )
+        })?;
         let relative = pathdiff::diff_paths(from, to.parent().unwrap()).unwrap();
-        std::os::unix::fs::symlink(relative, to)?;
+        std::os::unix::fs::symlink(&relative, to).io_context(|| {
+            format!(
+                "Failed to simlink bin from {} to {}",
+                relative.display(),
+                to.display()
+            )
+        })?;
     }
     Ok(())
 }

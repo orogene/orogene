@@ -4,9 +4,9 @@ use thiserror::Error;
 #[derive(Debug, Error, Diagnostic)]
 pub enum OroScriptError {
     /// Generic IO-related error. Refer to the error message for more details.
-    #[error(transparent)]
+    #[error("{0}")]
     #[diagnostic(code(oro_script::io_error), url(docsrs))]
-    IoError(#[from] std::io::Error),
+    IoError(String, #[source] std::io::Error),
 
     /// Generic serde-related error. Refer to the error message for more
     /// details.
@@ -54,3 +54,17 @@ pub enum OroScriptError {
 }
 
 pub(crate) type Result<T> = std::result::Result<T, OroScriptError>;
+
+pub trait IoContext {
+    type T;
+
+    fn io_context(self, context: impl FnOnce() -> String) -> Result<Self::T>;
+}
+
+impl<T> IoContext for std::result::Result<T, std::io::Error> {
+    type T = T;
+
+    fn io_context(self, context: impl FnOnce() -> String) -> Result<Self::T> {
+        self.map_err(|e| OroScriptError::IoError(context(), e))
+    }
+}

@@ -242,20 +242,33 @@ mod test {
 
     use tempfile::{tempdir, TempDir};
 
+    use crate::error::IoContext;
+
     fn setup_dirs() -> Result<(impl PackageFetcher, PackageSpec, TempDir, PathBuf, PathBuf)> {
-        let tmp = tempdir()?;
+        let tmp = tempdir().io_context(|| "Failed to make temp dir".into())?;
         let package_path = tmp.path().join("oro-test");
         let cache_path = tmp.path().join("cache");
-        std::fs::create_dir_all(&package_path)?;
-        std::fs::create_dir_all(&cache_path)?;
-        let mut package_file = File::create(package_path.join("package.json"))?;
-        package_file.write_all(
-            r#"{
+        std::fs::create_dir_all(&package_path)
+            .io_context(|| format!("Failed to create path at {}.", package_path.display()))?;
+        std::fs::create_dir_all(&cache_path)
+            .io_context(|| format!("Failed to create path at {}.", cache_path.display()))?;
+        let pkg_json = package_path.join("package.json");
+        let mut package_file = File::create(&pkg_json)
+            .io_context(|| format!("Failed to create file at {}.", pkg_json.display()))?;
+        package_file
+            .write_all(
+                r#"{
             "name": "oro-test",
             "version": "1.4.2"
         }"#
-            .as_bytes(),
-        )?;
+                .as_bytes(),
+            )
+            .io_context(|| {
+                format!(
+                    "Failed to write mock file contents to {}.",
+                    pkg_json.display()
+                )
+            })?;
         let dir_fetcher = DirFetcher;
 
         let package_spec = PackageSpec::Dir {

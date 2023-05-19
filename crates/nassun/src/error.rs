@@ -76,9 +76,9 @@ pub enum NassunError {
 
     /// A generic IO error occurred. Refer tot he error message for more
     /// details.
-    #[error(transparent)]
+    #[error("{0}")]
     #[diagnostic(code(nassun::io::generic), url(docsrs))]
-    IoError(#[from] std::io::Error),
+    IoError(String, #[source] std::io::Error),
 
     /// A generic oro-client error.
     #[error(transparent)]
@@ -178,3 +178,17 @@ pub enum NassunError {
 
 /// The result type returned by calls to this library
 pub type Result<T> = std::result::Result<T, NassunError>;
+
+pub trait IoContext {
+    type T;
+
+    fn io_context(self, context: impl FnOnce() -> String) -> Result<Self::T>;
+}
+
+impl<T> IoContext for std::result::Result<T, std::io::Error> {
+    type T = T;
+
+    fn io_context(self, context: impl FnOnce() -> String) -> Result<Self::T> {
+        self.map_err(|e| NassunError::IoError(context(), e))
+    }
+}

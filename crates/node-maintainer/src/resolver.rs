@@ -17,6 +17,8 @@ use petgraph::visit::EdgeRef;
 use petgraph::Direction;
 use unicase::UniCase;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::IoContext;
 use crate::error::NodeMaintainerError;
 use crate::graph::{DepType, Edge, Graph, Node};
 #[cfg(not(target_arch = "wasm32"))]
@@ -443,7 +445,12 @@ impl<'a> Resolver<'a> {
         if self.actual_tree.is_none() && meta.exists() {
             // If anything went wrong, we go ahead and delete the meta file,
             // if it exists, because it's probably corrupted.
-            async_std::fs::remove_file(meta).await?;
+            async_std::fs::remove_file(&meta).await.io_context(|| {
+                format!(
+                    "Failed to remove Orogene meta file from node_modules, at {}",
+                    meta.display()
+                )
+            })?;
         }
         Ok(())
     }

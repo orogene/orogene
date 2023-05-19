@@ -8,6 +8,8 @@ use nassun::package::Package;
 use oro_common::CorgiManifest;
 use url::Url;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::error::IoContext;
 use crate::error::NodeMaintainerError;
 use crate::graph::{Graph, Node};
 use crate::linkers::Linker;
@@ -243,9 +245,9 @@ impl NodeMaintainerOptions {
         if let Some(root) = &self.root {
             let kdl_lock = root.join("package-lock.kdl");
             if kdl_lock.exists() {
-                match async_std::fs::read_to_string(kdl_lock)
+                match async_std::fs::read_to_string(&kdl_lock)
                     .await
-                    .map_err(NodeMaintainerError::IoError)
+                    .io_context(|| format!("Failed to read {}", kdl_lock.display()))
                     .and_then(Lockfile::from_kdl)
                 {
                     Ok(lock) => return Ok(Some(lock)),
@@ -254,9 +256,9 @@ impl NodeMaintainerOptions {
             }
             let npm_lock = root.join("package-lock.json");
             if npm_lock.exists() {
-                match async_std::fs::read_to_string(npm_lock)
+                match async_std::fs::read_to_string(&npm_lock)
                     .await
-                    .map_err(NodeMaintainerError::IoError)
+                    .io_context(|| format!("Failed to read {}", npm_lock.display()))
                     .and_then(Lockfile::from_npm)
                 {
                     Ok(lock) => return Ok(Some(lock)),
@@ -265,9 +267,9 @@ impl NodeMaintainerOptions {
             }
             let npm_lock = root.join("npm-shrinkwrap.json");
             if npm_lock.exists() {
-                match async_std::fs::read_to_string(npm_lock)
+                match async_std::fs::read_to_string(&npm_lock)
                     .await
-                    .map_err(NodeMaintainerError::IoError)
+                    .io_context(|| format!("Failed to read {}", npm_lock.display()))
                     .and_then(Lockfile::from_npm)
                 {
                     Ok(lock) => return Ok(Some(lock)),
@@ -451,7 +453,10 @@ impl NodeMaintainer {
     /// Writes the contents of a `package-lock.kdl` file to the file path.
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
-        fs::write(path.as_ref(), self.graph.to_kdl()?.to_string()).await?;
+        let path = path.as_ref();
+        fs::write(path, self.graph.to_kdl()?.to_string())
+            .await
+            .io_context(|| format!("Failed to write lockfile to {}", path.display()))?;
         Ok(())
     }
 

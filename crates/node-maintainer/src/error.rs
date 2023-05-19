@@ -97,9 +97,9 @@ pub enum NodeMaintainerError {
     PackageSpecError(#[from] oro_package_spec::PackageSpecError),
 
     /// Generic IO Error.
-    #[error(transparent)]
+    #[error("{0}")]
     #[diagnostic(code(node_maintainer::io_error), url(docsrs))]
-    IoError(#[from] std::io::Error),
+    IoError(String, #[source] std::io::Error),
 
     #[cfg(not(target_arch = "wasm32"))]
     /// Generic error returned from Nassun.
@@ -176,5 +176,19 @@ pub enum NodeMaintainerError {
 impl<T> From<mpsc::TrySendError<T>> for NodeMaintainerError {
     fn from(_: mpsc::TrySendError<T>) -> Self {
         NodeMaintainerError::TrySendError
+    }
+}
+
+pub trait IoContext {
+    type T;
+
+    fn io_context(self, context: impl FnOnce() -> String) -> Result<Self::T, NodeMaintainerError>;
+}
+
+impl<T> IoContext for Result<T, std::io::Error> {
+    type T = T;
+
+    fn io_context(self, context: impl FnOnce() -> String) -> Result<Self::T, NodeMaintainerError> {
+        self.map_err(|e| NodeMaintainerError::IoError(context(), e))
     }
 }
