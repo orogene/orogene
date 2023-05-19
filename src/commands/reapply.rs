@@ -19,18 +19,27 @@ impl OroCommand for ReapplyCmd {
     async fn execute(mut self) -> Result<()> {
         let total_time = std::time::Instant::now();
 
-        tracing::info!(
-            "{}Clearing node_modules/...",
-            if self.apply.emoji { "🚮 " } else { "" },
-        );
+        let nm = self.apply.root.join("node_modules");
 
-        std::fs::remove_dir_all(self.apply.root.join("node_modules")).into_diagnostic()?;
+        if nm.exists() {
+            tracing::info!(
+                "{}Clearing node_modules/...",
+                if self.apply.emoji { "🚮 " } else { "" },
+            );
 
-        tracing::info!(
-            "{}node_modules/ cleared in {}s.",
-            if self.apply.emoji { "🚮 " } else { "" },
-            total_time.elapsed().as_millis() as f32 / 1000.0,
-        );
+            std::fs::remove_dir_all(nm).into_diagnostic()?;
+
+            tracing::info!(
+                "{}node_modules/ cleared in {}s.",
+                if self.apply.emoji { "🚮 " } else { "" },
+                total_time.elapsed().as_millis() as f32 / 1000.0,
+            );
+        } else {
+            tracing::info!(
+                "{}node_modules/ does not exist. Nothing to clear.",
+                if self.apply.emoji { "🚮 " } else { "" },
+            )
+        }
 
         let corgi: CorgiManifest = serde_json::from_str(
             &async_std::fs::read_to_string(self.apply.root.join("package.json"))
