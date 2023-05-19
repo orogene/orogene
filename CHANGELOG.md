@@ -1,5 +1,18 @@
 # Orogene Release Changelog
 
+<a name="0.3.26"></a>
+## 0.3.26 (2023-05-19)
+
+### Features
+
+* **scripts:** run lifecycle scripts in correct dependency order (#263) ([00979ae8](https://github.com/orogene/orogene/commit/00979ae8af581ffeb37786f7da71b7a80022f826))
+* **error:** Add extra context to all std::io::Error messages (#268) ([8749a526](https://github.com/orogene/orogene/commit/8749a5262d0b0412e0fbc5f3d8b8d2c4f179c0a3))
+
+### Bug Fixes
+
+* **resolver:** `PackageResolution::satisfies()` should use the spec target ([4f0fbba7](https://github.com/orogene/orogene/commit/4f0fbba75fe04f89383c23a39c354a67fdca1f00))
+* **node-maintainer:** stop failing when root package entry in lockfile is missing package name ([b7ac680b](https://github.com/orogene/orogene/commit/b7ac680b161003cc67683597ce65d28119803fc6))
+
 <a name="0.3.25"></a>
 ## 0.3.25 (2023-05-10)
 
