@@ -107,6 +107,32 @@ pub enum NodeMaintainerError {
     #[diagnostic(transparent)]
     NassunError(#[from] nassun::NassunError),
 
+    /// Failed to create either a symlink or a junction while linking
+    /// dependencies using the isolated linker.
+    ///
+    /// This can happen if the user does not have permission to create
+    /// symlinks on a Windows system, and the fallback junction operation
+    /// fails for some reason--likely because junctions are also unsupported.
+    ///
+    /// Since only administrator-elevated users can create symlinks on
+    /// Windows, the best workaround for this issue is to switch to the
+    /// hoisted linker.
+    ///
+    /// In Orogene, this is the `--hoisted` flag, or `options { hoisted true;
+    /// }` in oro.kdl.
+    #[cfg(windows)]
+    #[error("Failed to create either a symlink or junction from {} to {}.", .0.display(), .1.display())]
+    #[diagnostic(
+        code(node_maintainer::junctions_not_supported),
+        url(docsrs),
+        help("The isolated linker requires your Windows user to either be able to create symlinks, which requires Administrator privileges, or create junctions, which require an NTFS filesystem, among other things. If you see this message, you might consider switching to the 'hoisted' linker instead.")
+    )]
+    JunctionsNotSupported(
+        std::path::PathBuf,
+        std::path::PathBuf,
+        #[source] std::io::Error,
+    ),
+
     #[cfg(target_arch = "wasm32")]
     /// Generic error returned from Nassun.
     #[error(transparent)]
