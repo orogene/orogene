@@ -1,6 +1,6 @@
 [package]
 name = "orogene"
-version = "0.3.26"
+version = "0.3.27"
 description = "`node_modules/` package manager and utility toolkit."
 readme = "README.md"
 build = "build.rs"
@@ -17,13 +17,13 @@ tag = true
 
 [dependencies]
 # Workspace Deps
-nassun = { version = "=0.3.26", path = "./crates/nassun" }
-node-maintainer = { version = "=0.3.26", path = "./crates/node-maintainer" }
-oro-client = { version = "=0.3.26", path = "./crates/oro-client" }
-oro-common = { version = "=0.3.26", path = "./crates/oro-common" }
-oro-config = { version = "=0.3.26", path = "./crates/oro-config" }
-oro-package-spec = { version = "=0.3.26", path = "./crates/oro-package-spec" }
-oro-pretty-json = { version = "=0.3.26", path = "./crates/oro-pretty-json" }
+nassun = { version = "=0.3.27", path = "./crates/nassun" }
+node-maintainer = { version = "=0.3.27", path = "./crates/node-maintainer" }
+oro-client = { version = "=0.3.27", path = "./crates/oro-client" }
+oro-common = { version = "=0.3.27", path = "./crates/oro-common" }
+oro-config = { version = "=0.3.27", path = "./crates/oro-config" }
+oro-package-spec = { version = "=0.3.27", path = "./crates/oro-package-spec" }
+oro-pretty-json = { version = "=0.3.27", path = "./crates/oro-pretty-json" }
 
 # Regular deps
 async-std = { workspace = true, features = [
