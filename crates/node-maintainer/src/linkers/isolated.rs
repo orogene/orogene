@@ -361,7 +361,6 @@ impl IsolatedLinker {
                 Some(cache) => super::supports_reflink(cache, &node_modules),
                 None => false,
             };
-        let validate = self.opts.validate;
         stream
             .map(|idx| {
                 Ok((
@@ -402,7 +401,7 @@ impl IsolatedLinker {
                     if !target_dir.exists() {
                         graph[child_idx]
                             .package
-                            .extract_to_dir(&target_dir, prefer_copy, validate)
+                            .extract_to_dir(&target_dir, prefer_copy)
                             .await?;
                         actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
                         let target_dir = target_dir.clone();

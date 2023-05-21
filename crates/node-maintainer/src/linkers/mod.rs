@@ -39,7 +39,6 @@ pub(crate) struct LinkerOptions {
     pub(crate) script_concurrency: usize,
     pub(crate) cache: Option<PathBuf>,
     pub(crate) prefer_copy: bool,
-    pub(crate) validate: bool,
     pub(crate) root: PathBuf,
     pub(crate) on_prune_progress: Option<PruneProgress>,
     pub(crate) on_extract_progress: Option<ProgressHandler>,

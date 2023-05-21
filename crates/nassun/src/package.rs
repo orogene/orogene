@@ -132,18 +132,12 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         prefer_copy: bool,
-        validate: bool,
     ) -> Result<Integrity> {
-        async fn inner(
-            me: &Package,
-            dir: &Path,
-            prefer_copy: bool,
-            validate: bool,
-        ) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy, validate)
+        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy)
                 .await
         }
-        inner(self, dir.as_ref(), prefer_copy, validate).await
+        inner(self, dir.as_ref(), prefer_copy).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -154,18 +148,11 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         prefer_copy: bool,
-        validate: bool,
     ) -> Result<Integrity> {
-        async fn inner(
-            me: &Package,
-            dir: &Path,
-            prefer_copy: bool,
-            validate: bool,
-        ) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, None, prefer_copy, validate)
-                .await
+        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, None, prefer_copy).await
         }
-        inner(self, dir.as_ref(), prefer_copy, validate).await
+        inner(self, dir.as_ref(), prefer_copy).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -177,19 +164,16 @@ impl Package {
         dir: impl AsRef<Path>,
         sri: Integrity,
         prefer_copy: bool,
-        validate: bool,
     ) -> Result<Integrity> {
         async fn inner(
             me: &Package,
             dir: &Path,
             sri: Integrity,
             prefer_copy: bool,
-            validate: bool,
         ) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy, validate)
-                .await
+            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy).await
         }
-        inner(self, dir.as_ref(), sri, prefer_copy, validate).await
+        inner(self, dir.as_ref(), sri, prefer_copy).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -198,7 +182,6 @@ impl Package {
         dir: &Path,
         integrity: Option<&Integrity>,
         prefer_copy: bool,
-        validate: bool,
     ) -> Result<Integrity> {
         if let Some(sri) = integrity {
             if let Some(cache) = self.cache.as_deref() {
@@ -210,7 +193,7 @@ impl Package {
                     // (bad data, etc), then go ahead and do a network
                     // extract.
                     match self
-                        .extract_from_cache(dir, cache, entry, prefer_copy, validate)
+                        .extract_from_cache(dir, cache, entry, prefer_copy)
                         .await
                     {
                         Ok(_) => return Ok(sri),
@@ -257,7 +240,6 @@ impl Package {
         cache: &Path,
         entry: cacache::Metadata,
         mut prefer_copy: bool,
-        validate: bool,
     ) -> Result<()> {
         let dir = PathBuf::from(dir);
         let cache = PathBuf::from(cache);
@@ -289,14 +271,7 @@ impl Package {
                     created.insert(parent);
                 }
 
-                crate::tarball::extract_from_cache(
-                    &cache,
-                    &sri,
-                    &path,
-                    prefer_copy,
-                    validate,
-                    *mode,
-                )?;
+                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, *mode)?;
             }
             #[cfg(unix)]
             for binpath in index.bin_paths.iter() {

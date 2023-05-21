@@ -41,12 +41,6 @@ When extracting packages, prefer to copy files files instead of linking them.
 
 This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).
 
-#### `--validate`
-
-Validate the integrity of installed files.
-
-When this is true, orogene will verify all files extracted from the cache, as well as verify that any files in the existing `node_modules` are unmodified. If verification fails, the packages will be reinstalled.
-
 #### `--lockfile-only`
 
 Whether to skip restoring packages into `node_modules` and just resolve the tree and write the lockfile
