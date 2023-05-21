@@ -569,7 +569,9 @@ async fn link_deps(
                 // We don't check the link target here because we assume prune() has already been run and removed any incorrect links.
                 #[cfg(windows)]
                 std::os::windows::fs::symlink_dir(&relative, &dep_nm_entry)
-                    .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry)).io_context(|| format!("Failed to create symlink or juncion for dependency, from {} to {}.", dep_store_dir.display(), dep_nm_entry.display()))?;
+                    .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry)).map_err(|e| {
+                        NodeMaintainerError::JunctionsNotSupported(dep_store_dir, dep_nm_entry, e)
+                    })?;
                 #[cfg(unix)]
                 std::os::unix::fs::symlink(&relative, &dep_nm_entry).io_context(|| format!("Failed to create symlink while linking dependency, from {} to {}.", relative.display(), dep_nm_entry.display()))?;
             }
