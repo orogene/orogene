@@ -1,5 +1,17 @@
 # Orogene Release Changelog
 
+<a name="0.3.27"></a>
+## 0.3.27 (2023-05-21)
+
+### Features
+
+* **xxhash:** switch to xxhash, and always validate extraction (#274) ([dfdb378c](https://github.com/orogene/orogene/commit/dfdb378cbd5a7c7aa30012323c43770b933dcb14))
+
+### Bug Fixes
+
+* **reapply:** stop erroring on reapply if node_modules doesn't exist ([940333a9](https://github.com/orogene/orogene/commit/940333a96f865905b83debc5ea90704652c600ae))
+* **node-maintainer:** return a more useful error message when symlink/junction creation both fail on Windows (#270) ([e254c393](https://github.com/orogene/orogene/commit/e254c39367bc662209bfb4c4a3b165d2ba849d0b))
+
 <a name="0.3.26"></a>
 ## 0.3.26 (2023-05-19)
 
