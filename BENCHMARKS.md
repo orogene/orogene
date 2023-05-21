@@ -51,6 +51,21 @@ peak memory usage (resident set size) for each scenario (collected with
 | `npm` | 1,048.9 mb | 448.2 mb | 833.7 mb | 121.7 mb |
 | `yarn` | 751.1 mb | 334.4 mb | 251.9 mb | 129.3 mb |
 
+## Reproducing Benchmarks
+
+The benchmark script has several requirements:
+
+1. You must run `cargo build --release` first.
+2. You must install [`hyperfine`](https://github.com/sharkdp/hyperfine) on
+   your system.
+3. NPM + npx must be installed.
+4. [`bun`](https://bun.sh/) must be installed.
+5. You must do `npx pnpm -h` and `npx yarn -h` once before running the script,
+   to preload both package managers.
+
+Once that's done, you can run the benchmarks and regenerate the images using:
+`cargo run --example render-benchmarks`.
+
 ## Caveat Emptor
 
 At the speeds at which orogene operates, these benchmarks can vary widely
