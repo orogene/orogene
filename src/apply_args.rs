@@ -33,15 +33,6 @@ pub struct ApplyArgs {
     #[arg(long)]
     pub prefer_copy: bool,
 
-    /// Validate the integrity of installed files.
-    ///
-    /// When this is true, orogene will verify all files extracted from the
-    /// cache, as well as verify that any files in the existing `node_modules`
-    /// are unmodified. If verification fails, the packages will be
-    /// reinstalled.
-    #[arg(long)]
-    pub validate: bool,
-
     /// Whether to skip restoring packages into `node_modules` and just
     /// resolve the tree and write the lockfile.
     #[arg(long)]
@@ -168,7 +159,6 @@ impl ApplyArgs {
             .script_concurrency(self.script_concurrency)
             .root(root)
             .prefer_copy(self.prefer_copy)
-            .validate(self.validate)
             .hoisted(self.hoisted)
             .on_resolution_added(move || {
                 Span::current().pb_inc_length(1);

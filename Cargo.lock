@@ -458,15 +458,16 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "cacache"
-version = "11.5.2"
+version = "11.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a61f9f035b98caee1c86f2283542474d8d9c24e7a527eeb69dae03c201c29090"
+checksum = "11e3f7fcc57143528b55ff07ce71b4608d674d2929c2365f768c6c5bcaaa7a17"
 dependencies = [
  "async-std",
  "digest",
  "either",
  "futures 0.3.28",
  "hex",
+ "libc",
  "memmap2",
  "miette",
  "reflink",
@@ -1773,9 +1774,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.140"
+version = "0.2.144"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99227334921fae1a979cf0bfdfcc6b3e5ce376ef57e16fb6fb3ea2ed6095f80c"
+checksum = "2b00cc1c228a6782d0f076e7b232802e0c5689d41bb5df366f2a6b6621cfdfe1"
 
 [[package]]
 name = "link-cplusplus"
@@ -3355,9 +3356,9 @@ dependencies = [
 
 [[package]]
 name = "ssri"
-version = "8.1.0"
+version = "9.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "312a252a15c120718e8ce073aefab69d0de6fba7daadeb869edfc6e6a1e1a417"
+checksum = "b5327a6eb28e137e180380169adeae3ac6128438ca1e8a8dc80118f3d1812cbd"
 dependencies = [
  "base64 0.21.0",
  "digest",
@@ -3367,6 +3368,7 @@ dependencies = [
  "sha-1",
  "sha2",
  "thiserror",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -4527,6 +4529,12 @@ name = "xmlparser"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d25c75bf9ea12c4040a97f829154768bbbce366287e2dc044af160cd79a13fd"
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "735a71d46c4d68d71d4b24d03fdc2b98e38cea81730595801db779c04fe80d70"
 
 [[package]]
 name = "yaml-rust"

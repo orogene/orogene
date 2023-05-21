@@ -162,16 +162,6 @@ impl NodeMaintainerOptions {
         self
     }
 
-    /// When this is true, node-maintainer will validate integrity hashes for
-    /// all files extracted from the cache, as well as verify that any files
-    /// in the existing `node_modules` are unmodified. If verification fails,
-    /// the packages will be reinstalled.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn validate(mut self, validate: bool) -> Self {
-        self.validate = validate;
-        self
-    }
-
     /// Use the hoisted installation mode, where all dependencies and their
     /// transitive dependencies are installed as high up in the `node_modules`
     /// tree as possible. This can potentially mean that packages have access
@@ -314,7 +304,6 @@ impl NodeMaintainerOptions {
             script_concurrency: self.script_concurrency,
             cache: self.cache,
             prefer_copy: self.prefer_copy,
-            validate: self.validate,
             root: proj_root,
             on_prune_progress: self.on_prune_progress,
             on_extract_progress: self.on_extract_progress,
@@ -371,7 +360,6 @@ impl NodeMaintainerOptions {
             script_concurrency: self.script_concurrency,
             cache: self.cache,
             prefer_copy: self.prefer_copy,
-            validate: self.validate,
             root: proj_root,
             on_prune_progress: self.on_prune_progress,
             on_extract_progress: self.on_extract_progress,

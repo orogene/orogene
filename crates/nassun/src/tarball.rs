@@ -220,7 +220,7 @@ impl TempTarball {
         })?;
 
         let mut reader = std::io::BufReader::new(self);
-        let mut integrity = IntegrityOpts::new().algorithm(ssri::Algorithm::Sha512);
+        let mut integrity = IntegrityOpts::new().algorithm(ssri::Algorithm::Xxh3);
         let mut tee_reader = io_tee::TeeReader::new(&mut reader, &mut integrity);
         let gz = std::io::BufReader::new(flate2::read::GzDecoder::new(&mut tee_reader));
         let mut ar = tar::Archive::new(gz);
@@ -264,6 +264,7 @@ impl TempTarball {
 
                 if let Some(cache) = cache {
                     let mut writer = WriteOpts::new()
+                        .algorithm(cacache::Algorithm::Xxh3)
                         .open_hash_sync(cache)
                         .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
 
@@ -279,7 +280,7 @@ impl TempTarball {
                         .commit()
                         .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
 
-                    extract_from_cache(cache, &sri, &path, prefer_copy, false, mode)?;
+                    extract_from_cache(cache, &sri, &path, prefer_copy, mode)?;
 
                     let entry_subpath = entry_subpath.to_string_lossy().to_string();
 
@@ -305,14 +306,7 @@ impl TempTarball {
                                     let path = dir.join(entry);
                                     std::fs::remove_file(&path).io_context(|| format!("Failed to remove target file while extracting a new version, at {}.", path.display()))?;
                                     let sri = sri.parse()?;
-                                    extract_from_cache(
-                                        cache,
-                                        &sri,
-                                        &path,
-                                        prefer_copy,
-                                        false,
-                                        *mode,
-                                    )?;
+                                    extract_from_cache(cache, &sri, &path, prefer_copy, *mode)?;
                                 }
                             }
                         }
@@ -396,7 +390,7 @@ impl TempTarball {
                 &tarball_key(&integrity),
                 WriteOpts::new()
                     // This is just so the index entry is loadable.
-                    .integrity("sha256-deadbeef".parse().unwrap())
+                    .integrity("xxh3-deadbeef".parse().unwrap())
                     .raw_metadata(
                         rkyv::util::to_bytes::<_, 1024>(&tarball_index)
                             .map_err(|e| NassunError::SerializeCacheError(format!("{e}")))?
@@ -456,17 +450,16 @@ pub(crate) fn extract_from_cache(
     sri: &Integrity,
     to: &Path,
     prefer_copy: bool,
-    validate: bool,
     #[allow(unused_variables)] mode: u32,
 ) -> Result<()> {
     if prefer_copy {
-        copy_from_cache(cache, sri, to, validate)?;
+        copy_from_cache(cache, sri, to)?;
     } else {
         // HACK: This is horrible, but on wsl2 (at least), this
         // was sometimes crashing with an ENOENT (?!), which
         // really REALLY shouldn't happen. So we just retry a few
         // times and hope the problem goes away.
-        let op = || hard_link_from_cache(cache, sri, to, validate);
+        let op = || hard_link_from_cache(cache, sri, to);
         op.retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
             .notify(|err, wait| {
                 tracing::debug!(
@@ -476,7 +469,7 @@ pub(crate) fn extract_from_cache(
                 )
             })
             .call()
-            .or_else(|_| copy_from_cache(cache, sri, to, validate))?;
+            .or_else(|_| copy_from_cache(cache, sri, to))?;
     }
     #[cfg(unix)]
     {
@@ -514,25 +507,15 @@ pub(crate) fn set_bin_mode(path: &Path) -> Result<()> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path, validate: bool) -> Result<()> {
-    if validate {
-        cacache::copy_hash_sync(cache, sri, to)
-            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
-    } else {
-        cacache::copy_hash_unchecked_sync(cache, sri, to)
-            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
-    }
+fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
+    cacache::copy_hash_sync(cache, sri, to)
+        .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path, validate: bool) -> Result<()> {
-    if validate {
-        cacache::hard_link_hash_sync(cache, sri, to)
-            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
-    } else {
-        cacache::hard_link_hash_unchecked_sync(cache, sri, to)
-            .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
-    }
+fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
+    cacache::hard_link_hash_sync(cache, sri, to)
+        .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
