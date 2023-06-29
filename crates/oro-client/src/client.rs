@@ -9,6 +9,8 @@ use reqwest::Client;
 use reqwest::ClientBuilder;
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::ClientWithMiddleware;
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use url::Url;
 
 #[derive(Clone, Debug)]
@@ -16,6 +18,8 @@ pub struct OroClientBuilder {
     registry: Url,
     #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
+    #[cfg(not(target_arch = "wasm32"))]
+    fetch_retries: u32,
 }
 
 impl Default for OroClientBuilder {
@@ -24,6 +28,8 @@ impl Default for OroClientBuilder {
             registry: Url::parse("https://registry.npmjs.org").unwrap(),
             #[cfg(not(target_arch = "wasm32"))]
             cache: None,
+            #[cfg(not(target_arch = "wasm"))]
+            fetch_retries: 2,
         }
     }
 }
@@ -44,6 +50,12 @@ impl OroClientBuilder {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
+        self.fetch_retries = fetch_retries;
+        self
+    }
+
     pub fn build(self) -> OroClient {
         #[cfg(target_arch = "wasm32")]
         let client_uncached = Client::new();
@@ -57,7 +69,13 @@ impl OroClientBuilder {
             .expect("Failed to build HTTP client.");
 
         #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone());
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.fetch_retries);
+        #[cfg(not(target_arch = "wasm32"))]
+        let retry_strategy = RetryTransientMiddleware::new_with_policy(retry_policy);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone())
+            .with(retry_strategy);
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(cache_loc) = self.cache {

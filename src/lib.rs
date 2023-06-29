@@ -256,6 +256,14 @@ pub struct Orogene {
 
     #[command(subcommand)]
     subcommand: OroCmd,
+
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = 2,
+    )]
+    pub fetch_retries: u32,
 }
 
 impl Orogene {

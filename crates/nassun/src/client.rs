@@ -28,6 +28,7 @@ pub struct NassunOpts {
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
     memoize_metadata: bool,
+    fetch_retries: u32,
 }
 
 impl NassunOpts {
@@ -78,6 +79,11 @@ impl NassunOpts {
         self
     }
 
+    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
+        self.fetch_retries = fetch_retries;
+        self
+    }
+
     /// Build a new Nassun instance from this options object.
     pub fn build(self) -> Nassun {
         let registry = self
@@ -88,7 +94,9 @@ impl NassunOpts {
         #[cfg(target_arch = "wasm32")]
         let client_builder = OroClient::builder().registry(registry);
         #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = OroClient::builder().registry(registry);
+        let mut client_builder = OroClient::builder()
+            .registry(registry)
+            .fetch_retries(self.fetch_retries);
         #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
             client_builder = client_builder.cache(cache.clone());
