@@ -55,8 +55,8 @@ impl Lockfile {
         doc["requires"] = json!(true);
         let mut packages = self.packages.iter().collect::<Vec<_>>();
         packages.sort_by(|(a, _), (b, _)| a.cmp(b));
-        let mut deps_v1 = IndexMap::new();
         let mut deps = IndexMap::new();
+        let mut deps_v1 = IndexMap::new();
         deps.insert("".to_string(), self.root.to_json());
         for (name, pkg) in packages {
             deps.insert("node_modules/".to_string() + name.as_str(), pkg.to_json());
@@ -64,7 +64,6 @@ impl Lockfile {
         }
         doc["packages"] = json!(deps);
         doc["dependencies"] = json!(deps_v1);
-
         JsonDocument(doc)
     }
 
@@ -412,8 +411,10 @@ impl LockfileNode {
     }
 
     fn to_json(&self) -> JsonDocument {
-        let mut doc = json!({"name": self.name.as_ref()});
-
+        let mut doc = json!({});
+        if self.is_root {
+            doc["name"] = json!(self.name.as_ref());
+        }
         if let Some(ref version) = self.version {
             doc["version"] = json!(version);
         }
@@ -447,7 +448,10 @@ impl LockfileNode {
     }
 
     fn to_json_v1(&self) -> JsonDocument {
-        let mut doc = json!({"name": self.name.as_ref()});
+        let mut doc = json!({});
+        if self.is_root {
+            doc["name"] = json!(self.name.as_ref());
+        }
         if let Some(ref version) = self.version {
             doc["version"] = json!(version);
         }

@@ -475,6 +475,7 @@ impl NodeMaintainer {
         self.graph.to_kdl()
     }
 
+    /// Returns a [`JsonDocument`] representation of the current resolved graph.
     pub fn to_json(&self) -> Result<JsonDocument, NodeMaintainerError> {
         self.graph.to_json()
     }
