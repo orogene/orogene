@@ -10,7 +10,7 @@ use reqwest::ClientBuilder;
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::ClientWithMiddleware;
 use reqwest::{Proxy, NoProxy};
-use url::{Url};
+use url::Url;
 
 use crate::OroClientError;
 
@@ -19,6 +19,12 @@ pub struct OroClientBuilder {
     registry: Url,
     #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy_url: Option<&'static str>,
+    #[cfg(not(target_arch = "wasm32"))]
+    no_proxy: Option<&'static str>,
 }
 
 impl Default for OroClientBuilder {
@@ -27,6 +33,12 @@ impl Default for OroClientBuilder {
             registry: Url::parse("https://registry.npmjs.org").unwrap(),
             #[cfg(not(target_arch = "wasm32"))]
             cache: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            proxy: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            proxy_url: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            no_proxy: Some("NO_PROXY"),
         }
     }
 }
@@ -47,20 +59,45 @@ impl OroClientBuilder {
         self
     }
 
-    pub fn build(self) -> OroClient {
-        let proxy = Proxy::all("").expect("Invalid Proxy Setting");
+    pub fn set_proxy(mut self, proxy: bool) -> Self {
+        self.proxy = proxy;
+        self
+    }
 
+    pub fn set_proxy_url<'a>(mut self, proxy_url: &'static str) -> Self {
+        let other = self.clone();
+        self.proxy_url = Some(proxy_url);
+        other.set_proxy(true);
+        self
+    }
+
+    pub fn set_no_proxy<'a>(mut self, no_proxy: &'static str) -> Self {
+        self.no_proxy = Some(no_proxy);
+        self
+    }
+
+    pub fn build(self) -> OroClient {
         #[cfg(target_arch = "wasm32")]
-        let client_uncached = Client::new();
+        let mut client_uncached = Client::new();
 
         #[cfg(not(target_arch = "wasm32"))]
-        let client_uncached = ClientBuilder::new()
+        let mut client_core = ClientBuilder::new()
             .user_agent("orogene")
             .pool_max_idle_per_host(20)
-            .timeout(std::time::Duration::from_secs(60 * 5))
-            .proxy(proxy)
-            .build()
-            .expect("Failed to build HTTP client.");
+            .timeout(std::time::Duration::from_secs(60 * 5));
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(url) = self.proxy_url {
+            client_core = client_core.proxy(self.set_request_proxy(url).unwrap());
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if !self.proxy {
+            client_core = client_core.no_proxy();
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let client_uncached = client_core.build().expect("Fail to build HTTP client.");
 
         #[cfg(not(target_arch = "wasm32"))]
         let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone());
@@ -85,6 +122,31 @@ impl OroClientBuilder {
             client: client_uncached.clone(),
             client_uncached,
         }
+    }
+
+
+    fn get_no_proxy(&self) -> Option<NoProxy> {
+        if let Some(no_proxy_conf) = self.no_proxy {
+            if no_proxy_conf != "NO_PROXY" || no_proxy_conf != "" {
+                Some(NoProxy::from_string(no_proxy_conf));
+            }
+        }
+
+        NoProxy::from_env().or(None)
+    }
+
+    fn set_request_proxy(&self, url: &str) -> Result<Proxy, OroClientError> {
+        let url_info = Url::parse(url).expect("Fail to parse proxy url");
+        let username = url_info.username();
+        let password = url_info.password();
+        let mut proxy = Proxy::all(url_info.as_ref())?;
+
+        if let Some(password_str) = password {
+            proxy = proxy.basic_auth(username, password_str);
+        }
+
+        proxy = proxy.no_proxy(self.get_no_proxy());
+        Ok(proxy)
     }
 }
 
@@ -124,29 +186,5 @@ impl Default for OroClient {
         OroClientBuilder::new()
             .registry(Url::parse("https://registry.npmjs.org").unwrap())
             .build()
-    }
-}
-
-fn set_proxy(proxy_url: &str) -> Result<Proxy, OroClientError> {
-    let url_component = Url::parse(proxy_url)?;
-    let url_component_info = url_component.clone();
-    let username = url_component_info.username();
-    let password = url_component_info.password();
-    let proxy = Proxy::all(url_component)?;
-    println!("{:?}", username);
-    println!("{:?}", password);
-
-    Ok(proxy)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn set_proxy_test() {
-        let result = set_proxy("https://github.com");
-        let result = set_proxy("https://eryue0220@gmail:orogene+test@github.com");
-        println!("{:?}", result);
     }
 }
