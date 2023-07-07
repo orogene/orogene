@@ -103,7 +103,7 @@ impl NassunOpts {
             if let Some(proxy_url) = self.proxy_config.proxy_url {
                 client_builder = client_builder.set_proxy_url(proxy_url);
             }
-            if let Some(no_proxy_conf) = self.proxy_config.no_proxy {
+            if let Some(no_proxy_conf) = self.proxy_config.no_proxy_domain {
                 client_builder = client_builder.set_no_proxy(no_proxy_conf);
             }
         }

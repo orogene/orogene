@@ -18,7 +18,7 @@ use crate::OroClientError;
 pub struct OroClientProxyConfig {
     pub proxy: bool,
     pub proxy_url: Option<String>,
-    pub no_proxy: Option<String>,
+    pub no_proxy_domain: Option<String>,
 }
 
 impl Default for OroClientProxyConfig {
@@ -26,7 +26,7 @@ impl Default for OroClientProxyConfig {
         Self {
             proxy: false,
             proxy_url: None,
-            no_proxy: Some("NO_PROXY".to_string()),
+            no_proxy_domain: Some("NO_PROXY".to_string()),
         }
     }
 }
@@ -43,8 +43,8 @@ impl OroClientProxyConfig {
         self
     }
 
-    pub fn set_no_proxy_url(mut self, no_proxy: impl AsRef<str>) -> Self {
-        self.no_proxy = Some(no_proxy.as_ref().into());
+    pub fn set_no_proxy_domain(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
+        self.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
         self
     }
 }
@@ -97,8 +97,8 @@ impl OroClientBuilder {
         self
     }
 
-    pub fn set_no_proxy(mut self, no_proxy: impl AsRef<str>) -> Self {
-        self.proxy_config.no_proxy = Some(no_proxy.as_ref().into());
+    pub fn set_no_proxy(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
+        self.proxy_config.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
         self
     }
 
@@ -152,7 +152,7 @@ impl OroClientBuilder {
 
 
     fn get_no_proxy(&self) -> Option<NoProxy> {
-        if let Some(ref no_proxy_conf) = self.proxy_config.no_proxy {
+        if let Some(ref no_proxy_conf) = self.proxy_config.no_proxy_domain {
             if no_proxy_conf != "NO_PROXY" || no_proxy_conf != "" {
                 Some(NoProxy::from_string(no_proxy_conf));
             }
