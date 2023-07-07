@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
-use oro_client::OroClient;
+use oro_client::{OroClient, OroClientProxyConfig};
 use oro_common::{CorgiManifest, CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use url::Url;
 
@@ -28,6 +28,8 @@ pub struct NassunOpts {
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
     memoize_metadata: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy_config: OroClientProxyConfig,
 }
 
 impl NassunOpts {
@@ -96,7 +98,16 @@ impl NassunOpts {
         } else {
             Arc::new(None)
         };
-        let client = client_builder.build();
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.proxy_config.proxy {
+            if let Some(proxy_url) = self.proxy_config.proxy_url {
+                client_builder = client_builder.set_proxy_url(proxy_url);
+            }
+            if let Some(no_proxy_conf) = self.proxy_config.no_proxy {
+                client_builder = client_builder.set_no_proxy(no_proxy_conf);
+            }
+        }
+        let client: OroClient = client_builder.build();
         Nassun {
             #[cfg(not(target_arch = "wasm32"))]
             cache,

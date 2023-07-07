@@ -256,6 +256,39 @@ pub struct Orogene {
 
     #[command(subcommand)]
     subcommand: OroCmd,
+
+    /// Use proxy to delegate the network.
+    /// 
+    /// Proxy is opt-in, it uses for outgoing http/https request. 
+    /// If enabled, should set proxy-url too.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = false,
+    )]
+    proxy: bool,
+
+    /// A proxy to use for outgoing http requests. 
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "proxy-url",
+        default_value = None
+    )]
+    proxy_url: Option<String>,
+
+    /// Domain extensions that should bypass any proxies.
+    /// 
+    /// using `--no-proxy-domain` to set. For example: ".host1.com, ".host2.com" ，or through
+    /// environment variable "NO_PROXY" to setsuch as "NO_PROXY=.host1.com, ".host2.com"
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "no-proxy-domain",
+        default_value = "NO_PROXY"
+    )]
+    no_proxy_domain: Option<String>,
 }
 
 impl Orogene {
