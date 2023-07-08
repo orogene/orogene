@@ -36,7 +36,7 @@ chrono = { workspace = true }
 chrono-humanize = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
-dialoguer = { workspace = true, default_features = false }
+dialoguer = { workspace = true, default-features = false }
 directories = { workspace = true }
 humansize = { workspace = true }
 indicatif = { workspace = true }
@@ -44,7 +44,7 @@ is_ci = { workspace = true }
 is-terminal = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
-rand = { workspace = true, default_features = false }
+rand = { workspace = true, default-features = false }
 sentry = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -81,12 +81,12 @@ chrono = "0.4.23"
 chrono-humanize = "0.0.11"
 clap = "4.2.1"
 colored = "2.0.0"
-config = "0.13.2"
+config = { version = "0.13.2", default-features = false }
 console_error_panic_hook = "0.1.7"
 darling = "0.10.2"
 dashmap = "4.0.0-rc6"
 derive_builder = "0.11.2"
-dialoguer = "0.10.4"
+dialoguer = { version = "0.10.4", default-features = false }
 directories = "4.0.1"
 dunce = "1.0.3"
 flate2 = "1.0.25"
@@ -114,7 +114,7 @@ poloto = "17.1.0"
 pretty_assertions = "1.3.0"
 proc-macro2 = "1.0.18"
 quote = "1.0.7"
-rand = "0.8.5"
+rand = { version = "0.8.5", default-features = false }
 reflink = "0.1.3"
 regex = "1.7.2"
 reqwest = "0.11.14"
@@ -138,7 +138,7 @@ tracing = "0.1.37"
 tracing-appender = "0.2.2"
 tracing-indicatif = "0.3.0"
 tracing-subscriber = "0.3.16"
-tsify = "0.4.3"
+tsify = { version = "0.4.3", default-features = false }
 url = "2.3.1"
 walkdir = "2.3.2"
 wasm-bindgen = "0.2.84"

@@ -887,6 +887,6 @@ impl OroCommand for HelpMarkdownCmd {
 
             return Ok(());
         }
-        Err(miette::miette!("Command not found: {self.command_name}"))
+        Err(miette::miette!("Command not found: {0}", self.command_name))
     }
 }
