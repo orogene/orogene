@@ -8,10 +8,12 @@ use reqwest::Client;
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest::ClientBuilder;
 #[cfg(not(target_arch = "wasm32"))]
+use reqwest::{NoProxy, Proxy};
+#[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::ClientWithMiddleware;
-use reqwest::{Proxy, NoProxy};
 use url::Url;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::OroClientError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -86,17 +88,20 @@ impl OroClientBuilder {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn set_proxy(mut self, proxy: bool) -> Self {
         self.proxy_config.proxy = proxy;
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn set_proxy_url(mut self, proxy_url: impl AsRef<str>) -> Self {
         self.proxy_config.proxy_url = Some(proxy_url.as_ref().into());
         self.proxy_config.proxy = true;
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn set_no_proxy(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
         self.proxy_config.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
         self
@@ -150,7 +155,7 @@ impl OroClientBuilder {
         }
     }
 
-
+    #[cfg(not(target_arch = "wasm32"))]
     fn get_no_proxy(&self) -> Option<NoProxy> {
         if let Some(ref no_proxy_conf) = self.proxy_config.no_proxy_domain {
             if no_proxy_conf != "NO_PROXY" || no_proxy_conf != "" {
@@ -161,6 +166,7 @@ impl OroClientBuilder {
         NoProxy::from_env().or(None)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn set_request_proxy(&self, url: &str) -> Result<Proxy, OroClientError> {
         let url_info = Url::parse(url).expect("Fail to parse proxy url");
         let username = url_info.username();
