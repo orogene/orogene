@@ -1,5 +1,6 @@
 ---
 source: tests/help.rs
+assertion_line: 12
 expression: "sub_md(\"apply\")"
 ---
 stderr:
@@ -170,5 +171,9 @@ Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve
 #### `--sentry-dsn <SENTRY_DSN>`
 
 Sentry DSN (access token) where telemetry will be sent (if enabled)
+
+#### `--fetch-retries <FETCH_RETRIES>`
+
+\[default: 2]
 
 

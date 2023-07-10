@@ -261,7 +261,7 @@ pub struct Orogene {
         help_heading = "Global Options",
         global = true,
         long,
-        default_value_t = 2,
+        default_value_t = 2
     )]
     pub fetch_retries: u32,
 }

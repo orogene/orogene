@@ -28,7 +28,7 @@ impl Default for OroClientBuilder {
             registry: Url::parse("https://registry.npmjs.org").unwrap(),
             #[cfg(not(target_arch = "wasm32"))]
             cache: None,
-            #[cfg(not(target_arch = "wasm"))]
+            #[cfg(not(target_arch = "wasm32"))]
             fetch_retries: 2,
         }
     }
@@ -74,8 +74,8 @@ impl OroClientBuilder {
         let retry_strategy = RetryTransientMiddleware::new_with_policy(retry_policy);
 
         #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone())
-            .with(retry_strategy);
+        let mut client_builder =
+            reqwest_middleware::ClientBuilder::new(client_uncached.clone()).with(retry_strategy);
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(cache_loc) = self.cache {
