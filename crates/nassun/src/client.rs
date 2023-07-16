@@ -106,9 +106,7 @@ impl NassunOpts {
         };
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(url) = self.proxy_url {
-            if self.proxy {
-                client_builder = client_builder.set_proxy_url(url).unwrap();
-            }
+            client_builder = client_builder.set_proxy_url(url).unwrap();
         }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(url) = self.no_proxy_domain {
