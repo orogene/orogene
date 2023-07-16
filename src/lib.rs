@@ -278,15 +278,14 @@ pub struct Orogene {
     )]
     proxy_url: Option<String>,
 
-    /// Domain extensions that should bypass any proxies.
+    /// Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
     ///
-    /// using `--no-proxy-domain` to set. For example: ".host1.com, ".host2.com" ，or through
-    /// environment variable "NO_PROXY" to setsuch as "NO_PROXY=.host1.com, ".host2.com"
+    /// Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
     #[arg(
         help_heading = "Global Options",
         global = true,
         long = "no-proxy-domain",
-        default_value = "NO_PROXY"
+        default_value = None
     )]
     no_proxy_domain: Option<String>,
 }

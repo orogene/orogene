@@ -16,48 +16,17 @@ use url::Url;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::OroClientError;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct OroClientProxyConfig {
-    pub proxy: bool,
-    pub proxy_url: Option<String>,
-    pub no_proxy_domain: Option<String>,
-}
-
-impl Default for OroClientProxyConfig {
-    fn default() -> Self {
-        Self {
-            proxy: false,
-            proxy_url: None,
-            no_proxy_domain: Some("NO_PROXY".to_string()),
-        }
-    }
-}
-
-impl OroClientProxyConfig {
-    pub fn set_proxy(mut self, proxy: bool) -> Self {
-        self.proxy = proxy;
-        self
-    }
-
-    pub fn set_proxy_url(mut self, proxy_url: impl AsRef<str>) -> Self {
-        self.proxy_url = Some(proxy_url.as_ref().into());
-        self.proxy = true;
-        self
-    }
-
-    pub fn set_no_proxy_domain(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
-        self.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
-        self
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct OroClientBuilder {
     registry: Url,
     #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
     #[cfg(not(target_arch = "wasm32"))]
-    proxy_config: OroClientProxyConfig,
+    proxy: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy_url: Option<Proxy>,
+    #[cfg(not(target_arch = "wasm32"))]
+    no_proxy_domain: Option<String>,
 }
 
 impl Default for OroClientBuilder {
@@ -67,7 +36,11 @@ impl Default for OroClientBuilder {
             #[cfg(not(target_arch = "wasm32"))]
             cache: None,
             #[cfg(not(target_arch = "wasm32"))]
-            proxy_config: OroClientProxyConfig::default(),
+            proxy: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            proxy_url: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            no_proxy_domain: None,
         }
     }
 }
@@ -90,20 +63,34 @@ impl OroClientBuilder {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn set_proxy(mut self, proxy: bool) -> Self {
-        self.proxy_config.proxy = proxy;
+        self.proxy = proxy;
         self
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn set_proxy_url(mut self, proxy_url: impl AsRef<str>) -> Self {
-        self.proxy_config.proxy_url = Some(proxy_url.as_ref().into());
-        self.proxy_config.proxy = true;
-        self
+    pub fn set_proxy_url(mut self, proxy_url: impl AsRef<str>) -> Result<Self, OroClientError> {
+        match Url::parse(proxy_url.as_ref().into()) {
+            Ok(url_info) => {
+                let username = url_info.username();
+                let password = url_info.password();
+                let mut proxy = Proxy::all(url_info.as_ref())?;
+
+                if let Some(password_str) = password {
+                    proxy = proxy.basic_auth(username, password_str);
+                }
+
+                proxy = proxy.no_proxy(self.get_no_proxy());
+                self.proxy_url = Some(proxy);
+                self.proxy = true;
+                Ok(self)
+            }
+            Err(e) => Err(OroClientError::UrlParseError(e)),
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn set_no_proxy(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
-        self.proxy_config.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
+        self.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
         self
     }
 
@@ -118,12 +105,12 @@ impl OroClientBuilder {
             .timeout(std::time::Duration::from_secs(60 * 5));
 
         #[cfg(not(target_arch = "wasm32"))]
-        if let Some(ref url) = self.proxy_config.proxy_url {
-            client_core = client_core.proxy(self.set_request_proxy(url).unwrap());
+        if let Some(url) = self.proxy_url {
+            client_core = client_core.proxy(url);
         }
 
         #[cfg(not(target_arch = "wasm32"))]
-        if !self.proxy_config.proxy {
+        if !self.proxy {
             client_core = client_core.no_proxy();
         }
 
@@ -157,28 +144,13 @@ impl OroClientBuilder {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn get_no_proxy(&self) -> Option<NoProxy> {
-        if let Some(ref no_proxy_conf) = self.proxy_config.no_proxy_domain {
-            if no_proxy_conf != "NO_PROXY" || no_proxy_conf != "" {
-                Some(NoProxy::from_string(no_proxy_conf));
+        if let Some(ref no_proxy_conf) = self.no_proxy_domain {
+            if no_proxy_conf != "" {
+                return NoProxy::from_string(no_proxy_conf);
             }
         }
 
         NoProxy::from_env().or(None)
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn set_request_proxy(&self, url: &str) -> Result<Proxy, OroClientError> {
-        let url_info = Url::parse(url).expect("Fail to parse proxy url");
-        let username = url_info.username();
-        let password = url_info.password();
-        let mut proxy = Proxy::all(url_info.as_ref())?;
-
-        if let Some(password_str) = password {
-            proxy = proxy.basic_auth(username, password_str);
-        }
-
-        proxy = proxy.no_proxy(self.get_no_proxy());
-        Ok(proxy)
     }
 }
 

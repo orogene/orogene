@@ -3,8 +3,6 @@ use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
 use oro_client::OroClient;
-#[cfg(not(target_arch = "wasm32"))]
-use oro_client::OroClientProxyConfig;
 use oro_common::{CorgiManifest, CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use url::Url;
 
@@ -31,7 +29,11 @@ pub struct NassunOpts {
     registries: HashMap<Option<String>, Url>,
     memoize_metadata: bool,
     #[cfg(not(target_arch = "wasm32"))]
-    proxy_config: OroClientProxyConfig,
+    proxy: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy_url: Option<String>,
+    #[cfg(not(target_arch = "wasm32"))]
+    no_proxy_domain: Option<String>,
 }
 
 impl NassunOpts {
@@ -92,7 +94,9 @@ impl NassunOpts {
         #[cfg(target_arch = "wasm32")]
         let client_builder = OroClient::builder().registry(registry);
         #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = OroClient::builder().registry(registry);
+        let mut client_builder = OroClient::builder()
+            .registry(registry)
+            .set_proxy(self.proxy);
         #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
             client_builder = client_builder.cache(cache.clone());
@@ -101,15 +105,14 @@ impl NassunOpts {
             Arc::new(None)
         };
         #[cfg(not(target_arch = "wasm32"))]
-        if self.proxy_config.proxy {
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Some(proxy_url) = self.proxy_config.proxy_url {
-                client_builder = client_builder.set_proxy_url(proxy_url);
+        if let Some(url) = self.proxy_url {
+            if self.proxy {
+                client_builder = client_builder.set_proxy_url(url).unwrap();
             }
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Some(no_proxy_conf) = self.proxy_config.no_proxy_domain {
-                client_builder = client_builder.set_no_proxy(no_proxy_conf);
-            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(url) = self.no_proxy_domain {
+            client_builder = client_builder.set_no_proxy(url);
         }
         let client: OroClient = client_builder.build();
         Nassun {
