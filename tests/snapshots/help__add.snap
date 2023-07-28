@@ -204,10 +204,8 @@ A proxy to use for outgoing http requests
 
 #### `--no-proxy-domain <NO_PROXY_DOMAIN>`
 
-Domain extensions that should bypass any proxies.
+Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
 
-using `--no-proxy-domain` to set. For example: ".host1.com, ".host2.com" ，or through environment variable "NO_PROXY" to setsuch as "NO_PROXY=.host1.com, ".host2.com"
-
-\[default: NO_PROXY]
+Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
 
 
