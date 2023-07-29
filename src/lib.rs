@@ -778,6 +778,10 @@ pub enum OroCmd {
 
     Apply(commands::apply::ApplyCmd),
 
+    Login(commands::login::LoginCmd),
+
+    Logout(commands::logout::LogoutCmd),
+
     Ping(commands::ping::PingCmd),
 
     Reapply(commands::reapply::ReapplyCmd),
@@ -797,6 +801,8 @@ impl OroCommand for Orogene {
         match self.subcommand {
             OroCmd::Add(cmd) => cmd.execute().await,
             OroCmd::Apply(cmd) => cmd.execute().await,
+            OroCmd::Login(cmd) => cmd.execute().await,
+            OroCmd::Logout(cmd) => cmd.execute().await,
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Reapply(cmd) => cmd.execute().await,
             OroCmd::Remove(cmd) => cmd.execute().await,
@@ -887,6 +893,6 @@ impl OroCommand for HelpMarkdownCmd {
 
             return Ok(());
         }
-        Err(miette::miette!("Command not found: {self.command_name}"))
+        Err(miette::miette!("Command not found: {0}", self.command_name))
     }
 }

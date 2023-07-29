@@ -14,9 +14,12 @@ rust-version.workspace = true
 [dependencies]
 oro-common = { version = "=0.3.27", path = "../oro-common" }
 
+chrono = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 futures = { workspace = true, features = ["io-compat"] }
 indexmap = { workspace = true }
 miette = { workspace = true }
+percent-encoding = { workspace = true }
 reqwest = { workspace = true, features = ["json", "gzip", "stream"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

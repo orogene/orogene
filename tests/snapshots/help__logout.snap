@@ -1,0 +1,108 @@
+---
+source: tests/help.rs
+expression: "sub_md(\"logout\")"
+---
+stderr:
+
+stdout:
+# oro logout
+
+Logout from the registry
+
+### Usage:
+
+```
+oro logout [OPTIONS]
+```
+
+### Options
+
+#### `-h, --help`
+
+Print help (see a summary with '-h')
+
+#### `-V, --version`
+
+Print version
+
+### Global Options
+
+#### `--root <ROOT>`
+
+Path to the project to operate on.
+
+By default, Orogene will look up from the current working directory until it finds a directory with a `package.json` file or a `node_modules/` directory.
+
+\[default: .]
+
+#### `--registry <REGISTRY>`
+
+Registry used for unscoped packages
+
+\[default: https://registry.npmjs.org]
+
+#### `--scoped-registry <SCOPED_REGISTRIES>`
+
+Registry to use for a specific `@scope`, using `--scoped-registry @scope=https://foo.com` format.
+
+Can be provided multiple times to specify multiple scoped registries.
+
+#### `--credentials <CREDENTIALS>`
+
+Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.
+
+The syntax is `--credentials my.registry.com:username=foo --credentials my.registry.com:password=sekrit`.
+
+#### `--cache <CACHE>`
+
+Location of disk cache.
+
+Default location varies by platform.
+
+#### `--config <CONFIG>`
+
+File to read configuration values from.
+
+When specified, global configuration loading is disabled and configuration values will only be read from this location.
+
+#### `--loglevel <LOGLEVEL>`
+
+Log output level/directive.
+
+Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format `target[span{field=value}]=level`.
+
+\[default: info]
+
+#### `-q, --quiet`
+
+Disable all output
+
+#### `--json`
+
+Format output as JSON
+
+#### `--no-progress`
+
+Disable the progress bars
+
+#### `--no-emoji`
+
+Disable printing emoji.
+
+By default, this will show emoji when outputting to a TTY that supports unicode.
+
+#### `--no-first-time`
+
+Skip first-time setup
+
+#### `--no-telemetry`
+
+Disable telemetry.
+
+Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.
+
+#### `--sentry-dsn <SENTRY_DSN>`
+
+Sentry DSN (access token) where telemetry will be sent (if enabled)
+
+
