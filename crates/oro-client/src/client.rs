@@ -69,7 +69,7 @@ impl OroClientBuilder {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn set_proxy_url(mut self, proxy_url: impl AsRef<str>) -> Result<Self, OroClientError> {
-        match Url::parse(proxy_url.as_ref().into()) {
+        match Url::parse(proxy_url.as_ref()) {
             Ok(url_info) => {
                 let username = url_info.username();
                 let password = url_info.password();
@@ -96,7 +96,7 @@ impl OroClientBuilder {
 
     pub fn build(self) -> OroClient {
         #[cfg(target_arch = "wasm32")]
-        let mut client_uncached = Client::new();
+        let client_uncached = Client::new();
 
         #[cfg(not(target_arch = "wasm32"))]
         let mut client_core = ClientBuilder::new()
@@ -145,7 +145,7 @@ impl OroClientBuilder {
     #[cfg(not(target_arch = "wasm32"))]
     fn get_no_proxy(&self) -> Option<NoProxy> {
         if let Some(ref no_proxy_conf) = self.no_proxy_domain {
-            if no_proxy_conf != "" {
+            if !no_proxy_conf.is_empty() {
                 return NoProxy::from_string(no_proxy_conf);
             }
         }
