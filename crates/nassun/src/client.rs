@@ -28,6 +28,13 @@ pub struct NassunOpts {
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
     memoize_metadata: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy: bool,
+    #[cfg(not(target_arch = "wasm32"))]
+    proxy_url: Option<String>,
+    #[cfg(not(target_arch = "wasm32"))]
+    no_proxy_domain: Option<String>,
+    #[cfg(not(target_arch = "wasm32"))]
     fetch_retries: u32,
 }
 
@@ -79,6 +86,7 @@ impl NassunOpts {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
         self.fetch_retries = fetch_retries;
         self
@@ -96,7 +104,8 @@ impl NassunOpts {
         #[cfg(not(target_arch = "wasm32"))]
         let mut client_builder = OroClient::builder()
             .registry(registry)
-            .fetch_retries(self.fetch_retries);
+            .fetch_retries(self.fetch_retries)
+            .set_proxy(self.proxy);
         #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
             client_builder = client_builder.cache(cache.clone());
@@ -104,7 +113,15 @@ impl NassunOpts {
         } else {
             Arc::new(None)
         };
-        let client = client_builder.build();
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(url) = self.proxy_url {
+            client_builder = client_builder.set_proxy_url(url).unwrap();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(url) = self.no_proxy_domain {
+            client_builder = client_builder.set_no_proxy(url);
+        }
+        let client: OroClient = client_builder.build();
         Nassun {
             #[cfg(not(target_arch = "wasm32"))]
             cache,

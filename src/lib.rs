@@ -257,13 +257,46 @@ pub struct Orogene {
     #[command(subcommand)]
     subcommand: OroCmd,
 
+    /// Use proxy to delegate the network.
+    ///
+    /// Proxy is opt-in, it uses for outgoing http/https request.
+    /// If enabled, should set proxy-url too.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = false
+    )]
+    proxy: bool,
+
+    /// A proxy to use for outgoing http requests.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "proxy-url",
+        default_value = None
+    )]
+    proxy_url: Option<String>,
+
+    /// Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
+    ///
+    /// Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "no-proxy-domain",
+        default_value = None
+    )]
+    no_proxy_domain: Option<String>,
+
+    /// Package will retry when network failed.
     #[arg(
         help_heading = "Global Options",
         global = true,
         long,
         default_value_t = 2
     )]
-    pub fetch_retries: u32,
+    fetch_retries: u32,
 }
 
 impl Orogene {

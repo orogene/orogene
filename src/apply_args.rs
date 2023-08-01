@@ -104,6 +104,18 @@ pub struct ApplyArgs {
 
     #[arg(from_global)]
     pub emoji: bool,
+
+    #[arg(from_global)]
+    pub proxy: bool,
+
+    #[arg(from_global)]
+    pub proxy_url: Option<String>,
+
+    #[arg(from_global)]
+    pub no_proxy: Option<String>,
+
+    #[arg(from_global)]
+    pub fetch_retries: u32,
 }
 
 impl ApplyArgs {
