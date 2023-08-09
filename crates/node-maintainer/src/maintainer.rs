@@ -16,7 +16,7 @@ use crate::linkers::Linker;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::linkers::LinkerOptions;
 use crate::resolver::Resolver;
-use crate::{IntoKdl, Lockfile};
+use crate::{IntoKdl, JsonDocument, Lockfile};
 
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;
@@ -440,7 +440,10 @@ impl NodeMaintainer {
 
     /// Writes the contents of a `package-lock.kdl` file to the file path.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn write_lockfile(&self, path: impl AsRef<Path>) -> Result<(), NodeMaintainerError> {
+    pub async fn write_kdl_lockfile(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<(), NodeMaintainerError> {
         let path = path.as_ref();
         fs::write(path, self.graph.to_kdl()?.to_string())
             .await
@@ -448,7 +451,21 @@ impl NodeMaintainer {
         Ok(())
     }
 
+    /// Writes the contents of a `package-lock.json` file to the file path.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn write_json_lockfile(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> Result<(), NodeMaintainerError> {
+        let path = path.as_ref();
+        fs::write(path, self.graph.to_json()?.to_string())
+            .await
+            .io_context(|| format!("Failed to write lockfile to {}", path.display()))?;
+        Ok(())
+    }
+
     /// Returns a [`crate::Lockfile`] representation of the current resolved graph.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn to_lockfile(&self) -> Result<crate::Lockfile, NodeMaintainerError> {
         self.graph.to_lockfile()
     }
@@ -456,6 +473,11 @@ impl NodeMaintainer {
     /// Returns a [`kdl::KdlDocument`] representation of the current resolved graph.
     pub fn to_kdl(&self) -> Result<kdl::KdlDocument, NodeMaintainerError> {
         self.graph.to_kdl()
+    }
+
+    /// Returns a [`JsonDocument`] representation of the current resolved graph.
+    pub fn to_json(&self) -> Result<JsonDocument, NodeMaintainerError> {
+        self.graph.to_json()
     }
 
     /// Returns a [`Package`] for the given package spec, if it is present in

@@ -11,7 +11,7 @@ use wiremock::{
 };
 
 #[async_std::test]
-async fn basic_flatten() -> Result<()> {
+async fn basic_flatten_kdl() -> Result<()> {
     let mock_server = MockServer::start().await;
     // This tests a basic linear dependency chain with no conflicts flattens
     // completely: a -> b -> c -> d
@@ -82,7 +82,7 @@ pkg "d" {
 }
 
 #[async_std::test]
-async fn nesting_simple_conflict() -> Result<()> {
+async fn nesting_simple_conflict_kdl() -> Result<()> {
     let mock_server = MockServer::start().await;
     // Testing that simple conflicts get resolved correctly.
     let mock_data = r#"
@@ -164,7 +164,7 @@ pkg "d" "c" {
 }
 
 #[async_std::test]
-async fn nesting_sibling_conflict() -> Result<()> {
+async fn nesting_sibling_conflict_kdl() -> Result<()> {
     let mock_server = MockServer::start().await;
     // This tests that when a dependency conflict comes from different
     // branches of a tree, the "phantom" hoisted dependency is correctly
@@ -245,6 +245,339 @@ pkg "d" {
     Ok(())
 }
 
+#[async_std::test]
+async fn basic_flatten_json() -> Result<()> {
+    let mock_server = MockServer::start().await;
+    // This tests a basic linear dependency chain with no conflicts flattens
+    // completely: a -> b -> c -> d
+    let mock_data = r#"
+    a {
+        version "1.0.0"
+        dependencies {
+            b "^2.0.0"
+        }
+    }
+    b {
+        version "2.0.0"
+        dependencies {
+            c "^3.0.0"
+        }
+    }
+    c {
+        version "3.0.0"
+        dependencies {
+            d "^4.0.0"
+        }
+    }
+    d {
+        version "4.0.0"
+    }
+    "#;
+    mocks_from_kdl(&mock_server, mock_data.parse()?).await;
+    let nm = NodeMaintainer::builder()
+        .concurrency(1)
+        .registry(mock_server.uri().parse().into_diagnostic()?)
+        .resolve_spec("a@^1")
+        .await?;
+
+    assert_eq!(
+        &nm.to_json()?.to_string(),
+        r#"{
+  "name": "a",
+  "version": "1.0.0",
+  "lockfileVersion": 1,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "a",
+      "version": "1.0.0",
+      "dependencies": {
+        "b": ">=2.0.0 <3.0.0-0"
+      }
+    },
+    "node_modules/b": {
+      "version": "2.0.0",
+      "resolved": "https://example.com/-/b-2.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "dependencies": {
+        "c": ">=3.0.0 <4.0.0-0"
+      }
+    },
+    "node_modules/c": {
+      "version": "3.0.0",
+      "resolved": "https://example.com/-/c-3.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "dependencies": {
+        "d": ">=4.0.0 <5.0.0-0"
+      }
+    },
+    "node_modules/d": {
+      "version": "4.0.0",
+      "resolved": "https://example.com/-/d-4.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    }
+  },
+  "dependencies": {
+    "b": {
+      "version": "2.0.0",
+      "resolved": "https://example.com/-/b-2.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "requires": {
+        "c": ">=3.0.0 <4.0.0-0"
+      }
+    },
+    "c": {
+      "version": "3.0.0",
+      "resolved": "https://example.com/-/c-3.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "requires": {
+        "d": ">=4.0.0 <5.0.0-0"
+      }
+    },
+    "d": {
+      "version": "4.0.0",
+      "resolved": "https://example.com/-/d-4.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    }
+  }
+}"#
+    );
+    Ok(())
+}
+
+#[async_std::test]
+async fn nesting_simple_conflict_json() -> Result<()> {
+    let mock_server = MockServer::start().await;
+    // Testing that simple conflicts get resolved correctly.
+    let mock_data = r#"
+    a {
+        version "1.0.0"
+        dependencies {
+            b "^2.0.0"
+        }
+    }
+    b {
+        version "2.0.0"
+        dependencies {
+            c "^3.0.0"
+            d "^4.0.0"
+        }
+    }
+    c {
+        version "3.0.0"
+    }
+    c {
+        version "5.0.0"
+    }
+    d {
+        version "4.0.0"
+        dependencies {
+            // This one will conflict with the `c@3.0.0` already placed in the
+            // root, so it should be nested under `d`
+            c "^5.0.0"
+        }
+    }
+    "#;
+    mocks_from_kdl(&mock_server, mock_data.parse()?).await;
+    let nm = NodeMaintainer::builder()
+        .concurrency(1)
+        .registry(mock_server.uri().parse().into_diagnostic()?)
+        .resolve_spec("a@^1")
+        .await?;
+
+    assert_eq!(
+        nm.to_json()?.to_string(),
+        r#"{
+  "name": "a",
+  "version": "1.0.0",
+  "lockfileVersion": 1,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "a",
+      "version": "1.0.0",
+      "dependencies": {
+        "b": ">=2.0.0 <3.0.0-0"
+      }
+    },
+    "node_modules/b": {
+      "version": "2.0.0",
+      "resolved": "https://example.com/-/b-2.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "dependencies": {
+        "c": ">=3.0.0 <4.0.0-0",
+        "d": ">=4.0.0 <5.0.0-0"
+      }
+    },
+    "node_modules/c": {
+      "version": "3.0.0",
+      "resolved": "https://example.com/-/c-3.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    },
+    "node_modules/d": {
+      "version": "4.0.0",
+      "resolved": "https://example.com/-/d-4.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "dependencies": {
+        "c": ">=5.0.0 <6.0.0-0"
+      }
+    },
+    "node_modules/d/node_modules/c": {
+      "version": "5.0.0",
+      "resolved": "https://example.com/-/c-5.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    }
+  },
+  "dependencies": {
+    "b": {
+      "version": "2.0.0",
+      "resolved": "https://example.com/-/b-2.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "requires": {
+        "c": ">=3.0.0 <4.0.0-0",
+        "d": ">=4.0.0 <5.0.0-0"
+      }
+    },
+    "c": {
+      "version": "3.0.0",
+      "resolved": "https://example.com/-/c-3.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    },
+    "d": {
+      "version": "4.0.0",
+      "resolved": "https://example.com/-/d-4.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "requires": {
+        "c": ">=5.0.0 <6.0.0-0"
+      }
+    },
+    "d/node_modules/c": {
+      "version": "5.0.0",
+      "resolved": "https://example.com/-/c-5.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    }
+  }
+}"#
+    );
+    Ok(())
+}
+
+#[async_std::test]
+async fn nesting_sibling_conflict_json() -> Result<()> {
+    let mock_server = MockServer::start().await;
+    // This tests that when a dependency conflict comes from different
+    // branches of a tree, the "phantom" hoisted dependency is correctly
+    // detected, and the one we were trying to bubble up is correctly nested.
+    let mock_data = r#"
+    a {
+        version "1.0.0"
+        dependencies {
+            b "^2.0.0"
+            c "^3.0.0"
+        }
+    }
+    b {
+        version "2.0.0"
+        dependencies {
+            d "^4.0.0"
+        }
+    }
+    c {
+        version "3.0.0"
+        dependencies {
+            d "^5.0.0"
+        }
+    }
+    d {
+        version "4.0.0"
+    }
+    d {
+        version "5.0.0"
+    }
+    "#;
+    mocks_from_kdl(&mock_server, mock_data.parse()?).await;
+    let nm = NodeMaintainer::builder()
+        .concurrency(1)
+        .registry(mock_server.uri().parse().into_diagnostic()?)
+        .resolve_spec("a@^1")
+        .await?;
+
+    assert_eq!(
+        nm.to_json()?.to_string(),
+        r#"{
+  "name": "a",
+  "version": "1.0.0",
+  "lockfileVersion": 1,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "a",
+      "version": "1.0.0",
+      "dependencies": {
+        "b": ">=2.0.0 <3.0.0-0",
+        "c": ">=3.0.0 <4.0.0-0"
+      }
+    },
+    "node_modules/b": {
+      "version": "2.0.0",
+      "resolved": "https://example.com/-/b-2.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "dependencies": {
+        "d": ">=4.0.0 <5.0.0-0"
+      }
+    },
+    "node_modules/c": {
+      "version": "3.0.0",
+      "resolved": "https://example.com/-/c-3.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "dependencies": {
+        "d": ">=5.0.0 <6.0.0-0"
+      }
+    },
+    "node_modules/c/node_modules/d": {
+      "version": "5.0.0",
+      "resolved": "https://example.com/-/d-5.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    },
+    "node_modules/d": {
+      "version": "4.0.0",
+      "resolved": "https://example.com/-/d-4.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    }
+  },
+  "dependencies": {
+    "b": {
+      "version": "2.0.0",
+      "resolved": "https://example.com/-/b-2.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "requires": {
+        "d": ">=4.0.0 <5.0.0-0"
+      }
+    },
+    "c": {
+      "version": "3.0.0",
+      "resolved": "https://example.com/-/c-3.0.0.tgz",
+      "integrity": "sha512-deadbeef",
+      "requires": {
+        "d": ">=5.0.0 <6.0.0-0"
+      }
+    },
+    "c/node_modules/d": {
+      "version": "5.0.0",
+      "resolved": "https://example.com/-/d-5.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    },
+    "d": {
+      "version": "4.0.0",
+      "resolved": "https://example.com/-/d-4.0.0.tgz",
+      "integrity": "sha512-deadbeef"
+    }
+  }
+}"#
+    );
+    Ok(())
+}
+
 async fn mocks_from_kdl(mock_server: &MockServer, doc: KdlDocument) {
     let mut packuments = HashMap::new();
     for node in doc.nodes() {
@@ -284,7 +617,6 @@ async fn mocks_from_kdl(mock_server: &MockServer, doc: KdlDocument) {
         // Last version gets "latest"
         packument["dist-tags"]["latest"] = json!(version);
     }
-
     for (name, packument) in packuments {
         Mock::given(method("GET"))
             .and(path(name))

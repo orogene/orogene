@@ -140,7 +140,7 @@ impl ApplyArgs {
 
         if self.lockfile {
             maintainer
-                .write_lockfile(root.join("package-lock.kdl"))
+                .write_kdl_lockfile(root.join("package-lock.kdl"))
                 .await?;
             tracing::info!(
                 "{}Wrote lockfile to package-lock.kdl.",

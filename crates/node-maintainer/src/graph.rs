@@ -14,7 +14,7 @@ use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
 use petgraph::Direction;
 use unicase::UniCase;
 
-use crate::{error::NodeMaintainerError, Lockfile, LockfileNode};
+use crate::{error::NodeMaintainerError, JsonDocument, Lockfile, LockfileNode};
 
 #[cfg(debug_assertions)]
 use NodeMaintainerError::GraphValidationError;
@@ -215,6 +215,10 @@ impl Graph {
 
     pub fn to_kdl(&self) -> Result<KdlDocument, NodeMaintainerError> {
         Ok(self.to_lockfile()?.to_kdl())
+    }
+
+    pub fn to_json(&self) -> Result<JsonDocument, NodeMaintainerError> {
+        Ok(self.to_lockfile()?.to_json())
     }
 
     pub(crate) fn node_parent_iter(&self, idx: NodeIndex) -> NodeParentIterator {
