@@ -1,5 +1,6 @@
 use base64::{engine::general_purpose, Engine as _};
 use kdl::{KdlDocument, KdlNode, KdlValue};
+use reqwest::header::HeaderValue;
 
 pub enum Credentials {
     AuthToken(String),
@@ -125,4 +126,18 @@ fn extract_string(input: &KdlNode) -> String {
         .as_string()
         .unwrap()
         .into()
+}
+
+impl TryFrom<Credentials> for HeaderValue {
+    type Error = crate::error::OroNpmAccountError;
+
+    fn try_from(value: Credentials) -> Result<Self, Self::Error> {
+        match value {
+            Credentials::AuthToken(auth_token) => {
+                Ok(HeaderValue::from_str(&format!("Bearer {auth_token}"))?)
+            }
+            Credentials::Auth(auth) => Ok(HeaderValue::from_str(&format!("Basic {auth}"))?),
+            _ => Err(Self::Error::UnsupportedConversionError),
+        }
+    }
 }

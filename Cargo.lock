@@ -2253,6 +2253,7 @@ dependencies = [
  "miette",
  "open",
  "oro-client",
+ "reqwest",
  "thiserror",
  "url",
 ]
