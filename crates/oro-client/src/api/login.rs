@@ -59,7 +59,7 @@ struct WebOTPResponse {
 }
 
 impl OroClient {
-    fn build_header(auth_type: &AuthType) -> HeaderMap {
+    fn build_header(auth_type: AuthType) -> HeaderMap {
         let mut headers = HashMap::new();
 
         headers.insert(
@@ -78,7 +78,7 @@ impl OroClient {
     }
 
     pub async fn login_web(&self) -> Result<LoginWeb, OroClientError> {
-        let headers = Self::build_header(&AuthType::Web);
+        let headers = Self::build_header(AuthType::Web);
         let url = self.registry.join("-/v1/login")?;
         let text = self
             .client
@@ -97,13 +97,12 @@ impl OroClient {
 
     pub async fn login_couch(
         &self,
-        username: &String,
-        password: &String,
-        otp: &Option<String>,
+        username: &str,
+        password: &str,
+        otp: Option<&str>,
     ) -> Result<LoginCouchResponse, OroClientError> {
-        let mut headers = Self::build_header(&AuthType::Legacy);
-        let username_: Cow<'_, str> = utf8_percent_encode(username, NON_ALPHANUMERIC).into();
-        let username_: &str = &username_;
+        let mut headers = Self::build_header(AuthType::Legacy);
+        let username_ = utf8_percent_encode(username.as_ref(), NON_ALPHANUMERIC).to_string();
         let url = self
             .registry
             .join(&format!("-/user/org.couchdb.user:{username_}"))?;
@@ -184,13 +183,13 @@ impl OroClient {
 
     pub async fn fetch_done_url(
         &self,
-        done_url: &String,
+        done_url: impl AsRef<str>,
     ) -> Result<DoneURLResponse, OroClientError> {
-        let headers = Self::build_header(&AuthType::Web);
+        let headers = Self::build_header(AuthType::Web);
 
         let response = self
             .client_uncached
-            .get(done_url)
+            .get(done_url.as_ref())
             .headers(headers)
             .send()
             .await?
@@ -201,7 +200,9 @@ impl OroClient {
                 let text = response.text().await?;
                 Ok(DoneURLResponse::Token(
                     serde_json::from_str::<Token>(&text)
-                        .map_err(|e| OroClientError::from_json_err(e, done_url.to_string(), text))?
+                        .map_err(|e| {
+                            OroClientError::from_json_err(e, done_url.as_ref().to_string(), text)
+                        })?
                         .token,
                 ))
             }
@@ -279,7 +280,7 @@ mod test {
 
             assert_eq!(
                 client
-                    .login_couch(&"test".to_owned(), &"password".to_owned(), &None)
+                    .login_couch(&"test".to_owned(), &"password".to_owned(), None)
                     .await?,
                 LoginCouchResponse::Token(body.token),
                 "Works with credentials"
@@ -308,7 +309,7 @@ mod test {
 
             assert_eq!(
                 client
-                    .login_couch(&"test".to_owned(), &"password".to_owned(), &None)
+                    .login_couch(&"test".to_owned(), &"password".to_owned(), None)
                     .await?,
                 LoginCouchResponse::WebOTP {
                     auth_url: body.auth_url.unwrap(),
@@ -330,7 +331,7 @@ mod test {
 
             assert_eq!(
                 client
-                    .login_couch(&"test".to_owned(), &"password".to_owned(), &None)
+                    .login_couch(&"test".to_owned(), &"password".to_owned(), None)
                     .await?,
                 LoginCouchResponse::CrassicOTP
             )
@@ -350,7 +351,7 @@ mod test {
             assert!(
                 matches!(
                     client
-                        .login_couch(&"test".to_owned(), &"password".to_owned(), &None)
+                        .login_couch(&"test".to_owned(), &"password".to_owned(), None)
                         .await,
                     Err(OroClientError::BadJson { .. })
                 ),
@@ -371,7 +372,7 @@ mod test {
             assert!(
                 matches!(
                     client
-                        .login_couch(&"test".to_owned(), &"password".to_owned(), &None)
+                        .login_couch(&"test".to_owned(), &"password".to_owned(), None)
                         .await,
                     Err(OroClientError::NoSuchUserError)
                 ),
@@ -392,7 +393,7 @@ mod test {
             assert!(
                 matches!(
                     client
-                        .login_couch(&"test".to_owned(), &"password".to_owned(), &None)
+                        .login_couch(&"test".to_owned(), &"password".to_owned(), None)
                         .await,
                     Err(OroClientError::ResponseError(_))
                 ),
@@ -407,6 +408,8 @@ mod test {
     async fn fetch_done_url() -> Result<()> {
         let mock_server = MockServer::start().await;
         let client = OroClient::new(mock_server.uri().parse().into_diagnostic()?);
+        let done_url = client.registry.join("-/v1/done").unwrap();
+        let done_url = done_url.as_str();
 
         {
             let body = Token {
@@ -423,16 +426,7 @@ mod test {
                 .await;
 
             assert_eq!(
-                client
-                    .fetch_done_url(
-                        &client
-                            .registry
-                            .join("-/v1/done")
-                            .unwrap()
-                            .as_str()
-                            .to_string(),
-                    )
-                    .await?,
+                client.fetch_done_url(done_url).await?,
                 DoneURLResponse::Token(body.token)
             );
         }
@@ -448,16 +442,7 @@ mod test {
                 .await;
 
             assert_eq!(
-                client
-                    .fetch_done_url(
-                        &client
-                            .registry
-                            .join("-/v1/done")
-                            .unwrap()
-                            .as_str()
-                            .to_string(),
-                    )
-                    .await?,
+                client.fetch_done_url(done_url).await?,
                 DoneURLResponse::Duration(Duration::from_secs(5)),
                 "Works with \"retry-after\" header"
             );
@@ -475,16 +460,7 @@ mod test {
 
             assert!(
                 matches!(
-                    client
-                        .fetch_done_url(
-                            &client
-                                .registry
-                                .join("-/v1/done")
-                                .unwrap()
-                                .as_str()
-                                .to_string(),
-                        )
-                        .await,
+                    client.fetch_done_url(done_url).await,
                     Err(OroClientError::BadJson { .. })
                 ),
                 "If the response has no \"token\" key and the status code is 200, this will fail"
@@ -503,16 +479,7 @@ mod test {
 
             assert!(
                 matches!(
-                    client
-                        .fetch_done_url(
-                            &client
-                                .registry
-                                .join("-/v1/done")
-                                .unwrap()
-                                .as_str()
-                                .to_string(),
-                        )
-                        .await,
+                    client.fetch_done_url(done_url).await,
                     Err(OroClientError::ResponseError(_))
                 ),
                 "If the retry-after header is not set and the status code is 202, this will fail"
@@ -531,16 +498,7 @@ mod test {
 
             assert!(
                 matches!(
-                    client
-                        .fetch_done_url(
-                            &client
-                                .registry
-                                .join("-/v1/done")
-                                .unwrap()
-                                .as_str()
-                                .to_string(),
-                        )
-                        .await,
+                    client.fetch_done_url(done_url).await,
                     Err(OroClientError::ResponseError(_))
                 ),
                 "If the status code is not 200 or 202, this will fail"

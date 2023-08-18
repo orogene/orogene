@@ -32,7 +32,7 @@ pub async fn login(auth_type: &AuthType, registry: &Url) -> Result<Token, OroNpm
                 .interact()
                 .map_err(OroNpmAccountError::ReadUserInputError)?;
 
-            match client.login_couch(&username, &password, &None).await? {
+            match client.login_couch(&username, &password, None).await? {
                 LoginCouchResponse::WebOTP { auth_url, done_url } => {
                     open(auth_url).map_err(OroNpmAccountError::OpenURLError)?;
 
@@ -51,7 +51,7 @@ pub async fn login(auth_type: &AuthType, registry: &Url) -> Result<Token, OroNpm
                         .interact()
                         .map_err(OroNpmAccountError::ReadUserInputError)?;
 
-                    match client.login_couch(&username, &password, &Some(otp)).await? {
+                    match client.login_couch(&username, &password, Some(&otp)).await? {
                         LoginCouchResponse::Token(token) => Ok(Token { token }),
                         _ => Err(OroNpmAccountError::UnexpectedResponseError),
                     }
