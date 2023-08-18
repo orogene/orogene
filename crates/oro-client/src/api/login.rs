@@ -279,9 +279,7 @@ mod test {
                 .await;
 
             assert_eq!(
-                client
-                    .login_couch(&"test".to_owned(), &"password".to_owned(), None)
-                    .await?,
+                client.login_couch("test", "password", None).await?,
                 LoginCouchResponse::Token(body.token),
                 "Works with credentials"
             );
@@ -308,9 +306,7 @@ mod test {
                 .await;
 
             assert_eq!(
-                client
-                    .login_couch(&"test".to_owned(), &"password".to_owned(), None)
-                    .await?,
+                client.login_couch("test", "password", None).await?,
                 LoginCouchResponse::WebOTP {
                     auth_url: body.auth_url.unwrap(),
                     done_url: body.done_url.unwrap()
@@ -330,9 +326,7 @@ mod test {
                 .await;
 
             assert_eq!(
-                client
-                    .login_couch(&"test".to_owned(), &"password".to_owned(), None)
-                    .await?,
+                client.login_couch("test", "password", None).await?,
                 LoginCouchResponse::CrassicOTP
             )
         }
@@ -350,9 +344,7 @@ mod test {
 
             assert!(
                 matches!(
-                    client
-                        .login_couch(&"test".to_owned(), &"password".to_owned(), None)
-                        .await,
+                    client.login_couch("test", "password", None).await,
                     Err(OroClientError::BadJson { .. })
                 ),
                 "If the response has no \"token\" key and the status code is 200, this will fail"
@@ -371,9 +363,7 @@ mod test {
 
             assert!(
                 matches!(
-                    client
-                        .login_couch(&"test".to_owned(), &"password".to_owned(), None)
-                        .await,
+                    client.login_couch("test", "password", None).await,
                     Err(OroClientError::NoSuchUserError)
                 ),
                 "If the status code is 400, the client returns \"NoSuchUserError\""
@@ -392,9 +382,7 @@ mod test {
 
             assert!(
                 matches!(
-                    client
-                        .login_couch(&"test".to_owned(), &"password".to_owned(), None)
-                        .await,
+                    client.login_couch("test", "password", None).await,
                     Err(OroClientError::ResponseError(_))
                 ),
                 "If the status code is 402 or higher, this will fail"
