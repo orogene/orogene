@@ -146,6 +146,7 @@ wasm-bindgen-futures = "0.4.34"
 wasm-streams = "0.2.3"
 which = "4.0.2"
 wiremock = "0.5.17"
+reqwest-retry = "0.2.2"
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]

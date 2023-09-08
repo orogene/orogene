@@ -113,6 +113,9 @@ pub struct ApplyArgs {
 
     #[arg(from_global)]
     pub no_proxy: Option<String>,
+
+    #[arg(from_global)]
+    pub fetch_retries: u32,
 }
 
 impl ApplyArgs {

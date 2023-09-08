@@ -288,6 +288,15 @@ pub struct Orogene {
         default_value = None
     )]
     no_proxy_domain: Option<String>,
+
+    /// Package will retry when network failed.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = 2
+    )]
+    fetch_retries: u32,
 }
 
 impl Orogene {

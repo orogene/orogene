@@ -11,6 +11,8 @@ use reqwest::ClientBuilder;
 use reqwest::{NoProxy, Proxy};
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::ClientWithMiddleware;
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use url::Url;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -27,6 +29,8 @@ pub struct OroClientBuilder {
     proxy_url: Option<Proxy>,
     #[cfg(not(target_arch = "wasm32"))]
     no_proxy_domain: Option<String>,
+    #[cfg(not(target_arch = "wasm32"))]
+    fetch_retries: u32,
 }
 
 impl Default for OroClientBuilder {
@@ -41,6 +45,8 @@ impl Default for OroClientBuilder {
             proxy_url: None,
             #[cfg(not(target_arch = "wasm32"))]
             no_proxy_domain: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            fetch_retries: 2,
         }
     }
 }
@@ -58,6 +64,12 @@ impl OroClientBuilder {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.cache = Some(PathBuf::from(cache.as_ref()));
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
+        self.fetch_retries = fetch_retries;
         self
     }
 
@@ -118,7 +130,13 @@ impl OroClientBuilder {
         let client_uncached = client_core.build().expect("Fail to build HTTP client.");
 
         #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone());
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.fetch_retries);
+        #[cfg(not(target_arch = "wasm32"))]
+        let retry_strategy = RetryTransientMiddleware::new_with_policy(retry_policy);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut client_builder =
+            reqwest_middleware::ClientBuilder::new(client_uncached.clone()).with(retry_strategy);
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(cache_loc) = self.cache {

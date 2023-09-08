@@ -34,6 +34,8 @@ pub struct NassunOpts {
     proxy_url: Option<String>,
     #[cfg(not(target_arch = "wasm32"))]
     no_proxy_domain: Option<String>,
+    #[cfg(not(target_arch = "wasm32"))]
+    fetch_retries: u32,
 }
 
 impl NassunOpts {
@@ -84,6 +86,12 @@ impl NassunOpts {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
+        self.fetch_retries = fetch_retries;
+        self
+    }
+
     /// Build a new Nassun instance from this options object.
     pub fn build(self) -> Nassun {
         let registry = self
@@ -96,6 +104,7 @@ impl NassunOpts {
         #[cfg(not(target_arch = "wasm32"))]
         let mut client_builder = OroClient::builder()
             .registry(registry)
+            .fetch_retries(self.fetch_retries)
             .set_proxy(self.proxy);
         #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
