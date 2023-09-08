@@ -178,7 +178,7 @@ impl IsolatedLinker {
                                     async_std::fs::remove_dir_all(&path).await.io_context(|| {
                                         format!(
                                             "Failed to rimraf contents of directory at {} while pruning node_modules.",
-                                            entry.path().display()
+                                            path.display()
                                         )
                                     })?;
                                 } else if ty.is_symlink() && target != path.read_link().await.io_context(|| format!("Failed to read symlink at {} while pruning node_modules.", path.display()))? {
@@ -190,13 +190,6 @@ impl IsolatedLinker {
                                             )
                                         })?;
                                     }
-                                } else if ty.is_dir() {
-                                    async_std::fs::remove_dir_all(&path).await.io_context(|| {
-                                        format!(
-                                            "Failed to delete {} while pruning node_modules.",
-                                            path.display()
-                                        )
-                                    })?;
                                 } else {
                                     #[cfg(windows)]
                                     let path_clone = path.clone();
