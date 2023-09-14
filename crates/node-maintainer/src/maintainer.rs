@@ -172,6 +172,24 @@ impl NodeMaintainerOptions {
         self
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy(mut self, proxy: bool) -> Self {
+        self.nassun_opts = self.nassun_opts.proxy(proxy);
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy_url(mut self, proxy_url: impl AsRef<str>) -> Self {
+        self.nassun_opts = self.nassun_opts.proxy_url(proxy_url.as_ref());
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn no_proxy_domain(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
+        self.nassun_opts = self.nassun_opts.no_proxy_domain(no_proxy_domain.as_ref());
+        self
+    }
+
     pub fn on_resolution_added<F>(mut self, f: F) -> Self
     where
         F: Fn() + Send + Sync + 'static,
