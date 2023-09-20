@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
-use kdl::{KdlDocument, KdlNode, KdlValue};
+use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use reqwest::header::HeaderValue;
 
 pub enum Credentials {
@@ -28,38 +28,32 @@ pub fn set_credentials_by_uri(uri: &str, credentials: &Credentials, config: &mut
 
     if let Some(user) = config
         .get_mut("options")
-        .unwrap()
-        .children_mut()
-        .as_mut()
-        .unwrap()
-        .get_mut("user")
-        .unwrap()
-        .children_mut()
+        .and_then(|options| options.children_mut().as_mut())
+        .and_then(|options_children| options_children.get_mut("auth"))
+        .and_then(|user| user.children_mut().as_mut())
     {
         match credentials {
             Credentials::AuthToken(auth_token) => {
                 let current_node = user.nodes_mut();
-                let mut node = KdlNode::new(format!("{uri}:_authToken"));
+                let mut node = KdlNode::new(uri);
                 clean_nodes(uri, current_node);
-                node.push(KdlValue::String(auth_token.to_owned()));
+                node.push(KdlEntry::new_prop("auth-token", auth_token.as_ref()));
                 current_node.push(node);
             }
             Credentials::Auth(token) => {
                 let current_node = user.nodes_mut();
-                let mut node = KdlNode::new(format!("{uri}:_auth"));
+                let mut node = KdlNode::new(uri);
                 clean_nodes(uri, current_node);
-                node.push(KdlValue::String(token.to_owned()));
+                node.push(KdlEntry::new_prop("auth", token.as_ref()));
                 current_node.push(node);
             }
             Credentials::UsernameAndPassword { username, password } => {
                 let current_node = user.nodes_mut();
-                let mut username_node = KdlNode::new(format!("{uri}:username"));
-                let mut password_node = KdlNode::new(format!("{uri}:password"));
+                let mut node = KdlNode::new(uri);
                 clean_nodes(uri, current_node);
-                username_node.push(KdlValue::String(username.to_owned()));
-                password_node.push(KdlValue::String(general_purpose::STANDARD.encode(password)));
-                current_node.push(username_node);
-                current_node.push(password_node);
+                node.push(KdlEntry::new_prop("username", username.as_ref()));
+                node.push(KdlEntry::new_prop("password", password.as_ref()));
+                current_node.push(node);
             }
         }
     }
@@ -71,11 +65,12 @@ pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credent
         .and_then(|options| options.children())
         .and_then(|options_children| options_children.get("user"))
         .and_then(|user| user.children())
+        .and_then(|user_children| user_children.get(uri))
         .and_then(|user_children| {
-            let token = user_children.get(&format!("{uri}:_auth"));
-            let auth_token = user_children.get(&format!("{uri}:_authToken"));
-            let username = user_children.get(&format!("{uri}:username"));
-            let password = user_children.get(&format!("{uri}:_password"));
+            let token = user_children.get("auth");
+            let auth_token = user_children.get("auth-token");
+            let username = user_children.get("username");
+            let password = user_children.get("password");
 
             match (token, auth_token, username, password) {
                 (.., Some(username), Some(password)) => {
@@ -109,23 +104,11 @@ pub fn clear_crendentials_by_uri(uri: &str, config: &mut KdlDocument) {
 }
 
 fn clean_nodes(uri: &str, nodes: &mut Vec<KdlNode>) {
-    nodes.retain_mut(|node| {
-        !(node.name().value() == format!("{uri}:_authToken")
-            || node.name().value() == format!("{uri}:_auth")
-            || node.name().value() == format!("{uri}:username")
-            || node.name().value() == format!("{uri}:_password"))
-    });
+    nodes.retain_mut(|node| node.name().value() != uri);
 }
 
-fn extract_string(input: &KdlNode) -> String {
-    input
-        .entries()
-        .last()
-        .unwrap()
-        .value()
-        .as_string()
-        .unwrap()
-        .into()
+fn extract_string(input: &KdlValue) -> String {
+    input.as_string().unwrap().into()
 }
 
 impl TryFrom<Credentials> for HeaderValue {

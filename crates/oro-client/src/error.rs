@@ -44,9 +44,9 @@ pub enum OroClientError {
     ResponseError(Response),
 
     /// No such user.
-    #[error("No such user.")]
+    #[error("No such user. (provided username: {0})")]
     #[diagnostic(code(oro_client::no_such_user_error), url(docsrs))]
-    NoSuchUserError,
+    NoSuchUserError(String),
 
     /// Incorrect or missing password.
     #[error("Incorrect or missing password.")]

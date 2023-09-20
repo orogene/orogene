@@ -5,7 +5,6 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use reqwest::header::{HeaderMap, WWW_AUTHENTICATE};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -102,7 +101,7 @@ impl OroClient {
         otp: Option<&str>,
     ) -> Result<LoginCouchResponse, OroClientError> {
         let mut headers = Self::build_header(AuthType::Legacy);
-        let username_ = utf8_percent_encode(username.as_ref(), NON_ALPHANUMERIC).to_string();
+        let username_ = utf8_percent_encode(username, NON_ALPHANUMERIC).to_string();
         let url = self
             .registry
             .join(&format!("-/user/org.couchdb.user:{username_}"))?;
@@ -134,7 +133,7 @@ impl OroClient {
             .notify();
 
         match response.status() {
-            StatusCode::BAD_REQUEST => Err(OroClientError::NoSuchUserError),
+            StatusCode::BAD_REQUEST => Err(OroClientError::NoSuchUserError(username.to_owned())),
             StatusCode::UNAUTHORIZED => {
                 let www_authenticate = response
                     .headers()
@@ -364,7 +363,7 @@ mod test {
             assert!(
                 matches!(
                     client.login_couch("test", "password", None).await,
-                    Err(OroClientError::NoSuchUserError)
+                    Err(OroClientError::NoSuchUserError(_))
                 ),
                 "If the status code is 400, the client returns \"NoSuchUserError\""
             )
