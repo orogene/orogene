@@ -39,7 +39,7 @@ junction = { workspace = true }
 oro-script = { version = "=0.3.27", path = "../oro-script" }
 oro-shim-bin = { version = "=0.3.27", path = "../oro-shim-bin" }
 
-reflink = { workspace = true }
+reflink-copy = { workspace = true }
 indicatif = { workspace = true }
 pathdiff = { workspace = true }
 tempfile = { workspace = true }

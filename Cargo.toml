@@ -118,7 +118,7 @@ pretty_assertions = "1.3.0"
 proc-macro2 = "1.0.18"
 quote = "1.0.7"
 rand = "0.8.5"
-reflink = "0.1.3"
+reflink-copy = "0.1.5"
 regex = "1.7.2"
 reqwest = "0.11.14"
 reqwest-middleware = "0.2.0"
@@ -149,6 +149,7 @@ wasm-bindgen-futures = "0.4.34"
 wasm-streams = "0.2.3"
 which = "4.0.2"
 wiremock = "0.5.17"
+reqwest-retry = "0.2.2"
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]

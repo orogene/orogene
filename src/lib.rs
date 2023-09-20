@@ -288,6 +288,15 @@ pub struct Orogene {
         default_value = None
     )]
     no_proxy_domain: Option<String>,
+
+    /// Package will retry when network failed.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = 2
+    )]
+    fetch_retries: u32,
 }
 
 impl Orogene {
@@ -608,9 +617,7 @@ impl Orogene {
                     })),
                     ..Default::default()
                 }
-                .add_integration(
-                    sentry::integrations::backtrace::AttachStacktraceIntegration::default(),
-                )
+                .add_integration(sentry::integrations::backtrace::AttachStacktraceIntegration)
                 .add_integration(
                     sentry::integrations::panic::PanicIntegration::default().add_extractor(
                         move |info: &PanicInfo| {
@@ -649,9 +656,7 @@ impl Orogene {
                     ),
                 )
                 .add_integration(sentry::integrations::contexts::ContextIntegration::new())
-                .add_integration(
-                    sentry::integrations::backtrace::ProcessStacktraceIntegration::default(),
-                ),
+                .add_integration(sentry::integrations::backtrace::ProcessStacktraceIntegration),
             );
             Ok(Some(ret))
         } else {
@@ -925,6 +930,6 @@ impl OroCommand for HelpMarkdownCmd {
 
             return Ok(());
         }
-        Err(miette::miette!("Command not found: {0}", self.command_name))
+        Err(miette::miette!("Command not found: {}", self.command_name))
     }
 }

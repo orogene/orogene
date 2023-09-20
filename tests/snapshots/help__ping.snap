@@ -122,4 +122,10 @@ Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
 
 Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
 
+#### `--fetch-retries <FETCH_RETRIES>`
+
+Package will retry when network failed
+
+\[default: 2]
+
 

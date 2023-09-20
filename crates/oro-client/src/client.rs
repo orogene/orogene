@@ -11,6 +11,8 @@ use reqwest::ClientBuilder;
 use reqwest::{NoProxy, Proxy};
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest_middleware::ClientWithMiddleware;
+#[cfg(not(target_arch = "wasm32"))]
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use url::Url;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -27,6 +29,8 @@ pub struct OroClientBuilder {
     proxy_url: Option<Proxy>,
     #[cfg(not(target_arch = "wasm32"))]
     no_proxy_domain: Option<String>,
+    #[cfg(not(target_arch = "wasm32"))]
+    fetch_retries: u32,
 }
 
 impl Default for OroClientBuilder {
@@ -41,6 +45,8 @@ impl Default for OroClientBuilder {
             proxy_url: None,
             #[cfg(not(target_arch = "wasm32"))]
             no_proxy_domain: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            fetch_retries: 2,
         }
     }
 }
@@ -62,13 +68,19 @@ impl OroClientBuilder {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn set_proxy(mut self, proxy: bool) -> Self {
+    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
+        self.fetch_retries = fetch_retries;
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy(mut self, proxy: bool) -> Self {
         self.proxy = proxy;
         self
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn set_proxy_url(mut self, proxy_url: impl AsRef<str>) -> Result<Self, OroClientError> {
+    pub fn proxy_url(mut self, proxy_url: impl AsRef<str>) -> Result<Self, OroClientError> {
         match Url::parse(proxy_url.as_ref()) {
             Ok(url_info) => {
                 let username = url_info.username();
@@ -79,7 +91,7 @@ impl OroClientBuilder {
                     proxy = proxy.basic_auth(username, password_str);
                 }
 
-                proxy = proxy.no_proxy(self.get_no_proxy());
+                proxy = proxy.no_proxy(self.get_no_proxy_domain());
                 self.proxy_url = Some(proxy);
                 self.proxy = true;
                 Ok(self)
@@ -89,7 +101,7 @@ impl OroClientBuilder {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn set_no_proxy(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
+    pub fn no_proxy_domain(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
         self.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
         self
     }
@@ -118,7 +130,13 @@ impl OroClientBuilder {
         let client_uncached = client_core.build().expect("Fail to build HTTP client.");
 
         #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = reqwest_middleware::ClientBuilder::new(client_uncached.clone());
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.fetch_retries);
+        #[cfg(not(target_arch = "wasm32"))]
+        let retry_strategy = RetryTransientMiddleware::new_with_policy(retry_policy);
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let mut client_builder =
+            reqwest_middleware::ClientBuilder::new(client_uncached.clone()).with(retry_strategy);
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(cache_loc) = self.cache {
@@ -143,7 +161,7 @@ impl OroClientBuilder {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn get_no_proxy(&self) -> Option<NoProxy> {
+    fn get_no_proxy_domain(&self) -> Option<NoProxy> {
         if let Some(ref no_proxy_conf) = self.no_proxy_domain {
             if !no_proxy_conf.is_empty() {
                 return NoProxy::from_string(no_proxy_conf);
