@@ -19,9 +19,9 @@ pub fn set_credentials_by_uri(uri: &str, credentials: &Credentials, config: &mut
     if let Some(opts) = config.get_mut("options") {
         opts.ensure_children();
         if let Some(children) = opts.children_mut().as_mut() {
-            if children.get_mut("user").is_none() {
-                children.nodes_mut().push(KdlNode::new("user"));
-                children.get_mut("user").unwrap().ensure_children();
+            if children.get_mut("auth").is_none() {
+                children.nodes_mut().push(KdlNode::new("auth"));
+                children.get_mut("auth").unwrap().ensure_children();
             }
         }
     }
@@ -63,7 +63,7 @@ pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credent
     config
         .get("options")
         .and_then(|options| options.children())
-        .and_then(|options_children| options_children.get("user"))
+        .and_then(|options_children| options_children.get("auth"))
         .and_then(|user| user.children())
         .and_then(|user_children| user_children.get(uri))
         .and_then(|user_children| {
