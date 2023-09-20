@@ -66,11 +66,11 @@ pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credent
         .and_then(|options_children| options_children.get("auth"))
         .and_then(|user| user.children())
         .and_then(|user_children| user_children.get(uri))
-        .and_then(|user_children| {
-            let token = user_children.get("auth");
-            let auth_token = user_children.get("auth-token");
-            let username = user_children.get("username");
-            let password = user_children.get("password");
+        .and_then(|credentials| {
+            let token = credentials.get("auth");
+            let auth_token = credentials.get("auth-token");
+            let username = credentials.get("username");
+            let password = credentials.get("password");
 
             match (token, auth_token, username, password) {
                 (.., Some(username), Some(password)) => {
