@@ -35,7 +35,7 @@ impl OroCommand for LoginCmd {
             }
             let config_path = config_dir.join("oro.kdl");
             let mut config: KdlDocument = std::fs::read_to_string(&config_path)
-                .unwrap_or_default()
+                .into_diagnostic()?
                 .parse()?;
 
             tracing::info!("Login in on {}", &registry);
