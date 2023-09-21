@@ -6,6 +6,7 @@ use kdl::KdlDocument;
 use miette::{IntoDiagnostic, Result};
 use oro_client::OroClient;
 use oro_npm_account::config::{self, Credentials};
+use std::path::PathBuf;
 use url::Url;
 
 /// Logout from the registry.
@@ -13,15 +14,20 @@ use url::Url;
 pub struct LogoutCmd {
     #[arg(from_global)]
     registry: Url,
+
+    #[arg(from_global)]
+    config: Option<PathBuf>,
 }
 
 #[async_trait]
 impl OroCommand for LogoutCmd {
     async fn execute(self) -> Result<()> {
-        if let Some(dirs) = ProjectDirs::from("", "", "orogene") {
+        if let Some(config_dir) = &self
+            .config
+            .or(ProjectDirs::from("", "", "orogene").map(|config| config.config_dir().into()))
+        {
             let client = OroClient::new(self.registry.clone());
             let registry = self.registry.to_string();
-            let config_dir = dirs.config_dir();
             if !config_dir.exists() {
                 std::fs::create_dir_all(config_dir).unwrap();
             }

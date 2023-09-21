@@ -7,6 +7,7 @@ use miette::{IntoDiagnostic, Result};
 use oro_client::login::{AuthType, LoginOptions};
 use oro_npm_account::config::{self, Credentials};
 use oro_npm_account::login::login;
+use std::path::PathBuf;
 use url::Url;
 
 /// Log in to the registry.
@@ -14,6 +15,9 @@ use url::Url;
 pub struct LoginCmd {
     #[arg(from_global)]
     registry: Url,
+
+    #[arg(from_global)]
+    config: Option<PathBuf>,
 
     /// What authentication strategy to use with login.
     #[arg(long, value_enum, default_value_t = AuthType::Web)]
@@ -27,9 +31,11 @@ pub struct LoginCmd {
 #[async_trait]
 impl OroCommand for LoginCmd {
     async fn execute(self) -> Result<()> {
-        if let Some(dirs) = ProjectDirs::from("", "", "orogene") {
+        if let Some(config_dir) = &self
+            .config
+            .or(ProjectDirs::from("", "", "orogene").map(|config| config.config_dir().into()))
+        {
             let registry = self.registry.to_string();
-            let config_dir = dirs.config_dir();
             if !config_dir.exists() {
                 std::fs::create_dir_all(config_dir).unwrap();
             }
