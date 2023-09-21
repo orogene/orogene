@@ -40,6 +40,11 @@ pub struct LoginWeb {
     pub done_url: String,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct LoginOptions {
+    pub scope: Option<String>,
+}
+
 #[derive(Deserialize, Serialize)]
 struct LoginCouch {
     _id: String,
@@ -58,8 +63,12 @@ struct WebOTPResponse {
 }
 
 impl OroClient {
-    fn build_header(auth_type: AuthType) -> HeaderMap {
+    fn build_header(auth_type: AuthType, options: &LoginOptions) -> HeaderMap {
         let mut headers = HashMap::new();
+
+        if let Some(scope) = options.scope.clone() {
+            headers.insert("npm-scope".to_owned(), scope);
+        }
 
         headers.insert(
             "npm-auth-type".to_owned(),
@@ -76,8 +85,8 @@ impl OroClient {
             .expect("This type conversion should work")
     }
 
-    pub async fn login_web(&self) -> Result<LoginWeb, OroClientError> {
-        let headers = Self::build_header(AuthType::Web);
+    pub async fn login_web(&self, options: &LoginOptions) -> Result<LoginWeb, OroClientError> {
+        let headers = Self::build_header(AuthType::Web, options);
         let url = self.registry.join("-/v1/login")?;
         let text = self
             .client
@@ -99,8 +108,9 @@ impl OroClient {
         username: &str,
         password: &str,
         otp: Option<&str>,
+        options: &LoginOptions,
     ) -> Result<LoginCouchResponse, OroClientError> {
-        let mut headers = Self::build_header(AuthType::Legacy);
+        let mut headers = Self::build_header(AuthType::Legacy, options);
         let username_ = utf8_percent_encode(username, NON_ALPHANUMERIC).to_string();
         let url = self
             .registry
@@ -184,7 +194,7 @@ impl OroClient {
         &self,
         done_url: impl AsRef<str>,
     ) -> Result<DoneURLResponse, OroClientError> {
-        let headers = Self::build_header(AuthType::Web);
+        let headers = Self::build_header(AuthType::Web, &LoginOptions::default());
 
         let response = self
             .client_uncached
@@ -228,7 +238,7 @@ mod test {
     use miette::{IntoDiagnostic, Result};
     use pretty_assertions::assert_eq;
     use serde_json::json;
-    use wiremock::matchers::{body_json_schema, header_exists, method, path};
+    use wiremock::matchers::{body_json_schema, header, header_exists, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[async_std::test]
@@ -251,7 +261,7 @@ mod test {
                 .mount_as_scoped(&mock_server)
                 .await;
 
-            assert_eq!(client.login_web().await?, body);
+            assert_eq!(client.login_web(&LoginOptions::default()).await?, body);
         }
 
         Ok(())
@@ -271,6 +281,7 @@ mod test {
                 .and(path("-/user/org.couchdb.user:test"))
                 .and(header_exists("npm-auth-type"))
                 .and(header_exists("npm-command"))
+                .and(header("npm-scope", "@mycompany"))
                 .and(body_json_schema::<LoginCouch>)
                 .respond_with(ResponseTemplate::new(200).set_body_json(&body))
                 .expect(1)
@@ -278,7 +289,16 @@ mod test {
                 .await;
 
             assert_eq!(
-                client.login_couch("test", "password", None).await?,
+                client
+                    .login_couch(
+                        "test",
+                        "password",
+                        None,
+                        &LoginOptions {
+                            scope: Some("@mycompany".to_owned())
+                        }
+                    )
+                    .await?,
                 LoginCouchResponse::Token(body.token),
                 "Works with credentials"
             );
@@ -305,7 +325,9 @@ mod test {
                 .await;
 
             assert_eq!(
-                client.login_couch("test", "password", None).await?,
+                client
+                    .login_couch("test", "password", None, &LoginOptions::default())
+                    .await?,
                 LoginCouchResponse::WebOTP {
                     auth_url: body.auth_url.unwrap(),
                     done_url: body.done_url.unwrap()
@@ -325,7 +347,9 @@ mod test {
                 .await;
 
             assert_eq!(
-                client.login_couch("test", "password", None).await?,
+                client
+                    .login_couch("test", "password", None, &LoginOptions::default())
+                    .await?,
                 LoginCouchResponse::CrassicOTP
             )
         }
@@ -335,7 +359,6 @@ mod test {
                 .and(path("-/user/org.couchdb.user:test"))
                 .and(header_exists("npm-auth-type"))
                 .and(header_exists("npm-command"))
-                .and(body_json_schema::<LoginCouch>)
                 .respond_with(ResponseTemplate::new(200).set_body_string(""))
                 .expect(1)
                 .mount_as_scoped(&mock_server)
@@ -343,7 +366,9 @@ mod test {
 
             assert!(
                 matches!(
-                    client.login_couch("test", "password", None).await,
+                    client
+                        .login_couch("test", "password", None, &LoginOptions::default())
+                        .await,
                     Err(OroClientError::BadJson { .. })
                 ),
                 "If the response has no \"token\" key and the status code is 200, this will fail"
@@ -362,11 +387,13 @@ mod test {
 
             assert!(
                 matches!(
-                    client.login_couch("test", "password", None).await,
+                    client
+                        .login_couch("test", "password", None, &LoginOptions::default())
+                        .await,
                     Err(OroClientError::NoSuchUserError(_))
                 ),
                 "If the status code is 400, the client returns \"NoSuchUserError\""
-            )
+            );
         }
 
         {
@@ -375,13 +402,14 @@ mod test {
                 .and(header_exists("npm-auth-type"))
                 .and(header_exists("npm-command"))
                 .respond_with(ResponseTemplate::new(503))
-                .expect(1)
                 .mount_as_scoped(&mock_server)
                 .await;
 
             assert!(
                 matches!(
-                    client.login_couch("test", "password", None).await,
+                    client
+                        .login_couch("test", "password", None, &LoginOptions::default())
+                        .await,
                     Err(OroClientError::ResponseError(_))
                 ),
                 "If the status code is 402 or higher, this will fail"

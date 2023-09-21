@@ -2,15 +2,19 @@ use crate::error::OroNpmAccountError;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, Password};
 use open::that as open;
-use oro_client::login::{AuthType, DoneURLResponse, LoginCouchResponse, Token};
+use oro_client::login::{AuthType, DoneURLResponse, LoginCouchResponse, LoginOptions, Token};
 use oro_client::OroClient;
 use url::Url;
 
-pub async fn login(auth_type: &AuthType, registry: &Url) -> Result<Token, OroNpmAccountError> {
+pub async fn login(
+    auth_type: &AuthType,
+    registry: &Url,
+    options: &LoginOptions,
+) -> Result<Token, OroNpmAccountError> {
     let client = OroClient::new(registry.clone());
     match auth_type {
         AuthType::Web => {
-            let login_web = client.login_web().await?;
+            let login_web = client.login_web(options).await?;
             open(login_web.login_url).map_err(OroNpmAccountError::OpenURLError)?;
 
             loop {
@@ -32,7 +36,10 @@ pub async fn login(auth_type: &AuthType, registry: &Url) -> Result<Token, OroNpm
                 .interact()
                 .map_err(OroNpmAccountError::ReadUserInputError)?;
 
-            match client.login_couch(&username, &password, None).await? {
+            match client
+                .login_couch(&username, &password, None, options)
+                .await?
+            {
                 LoginCouchResponse::WebOTP { auth_url, done_url } => {
                     open(auth_url).map_err(OroNpmAccountError::OpenURLError)?;
 
@@ -51,7 +58,10 @@ pub async fn login(auth_type: &AuthType, registry: &Url) -> Result<Token, OroNpm
                         .interact()
                         .map_err(OroNpmAccountError::ReadUserInputError)?;
 
-                    match client.login_couch(&username, &password, Some(&otp)).await? {
+                    match client
+                        .login_couch(&username, &password, Some(&otp), options)
+                        .await?
+                    {
                         LoginCouchResponse::Token(token) => Ok(Token { token }),
                         _ => Err(OroNpmAccountError::UnexpectedResponseError),
                     }

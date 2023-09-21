@@ -36,26 +36,57 @@ pub fn set_credentials_by_uri(uri: &str, credentials: &Credentials, config: &mut
             Credentials::AuthToken(auth_token) => {
                 let current_node = user.nodes_mut();
                 let mut node = KdlNode::new(uri);
-                clean_nodes(uri, current_node);
+                clean_auth_nodes(uri, current_node);
                 node.push(KdlEntry::new_prop("auth-token", auth_token.as_ref()));
                 current_node.push(node);
             }
             Credentials::Auth(token) => {
                 let current_node = user.nodes_mut();
                 let mut node = KdlNode::new(uri);
-                clean_nodes(uri, current_node);
+                clean_auth_nodes(uri, current_node);
                 node.push(KdlEntry::new_prop("auth", token.as_ref()));
                 current_node.push(node);
             }
             Credentials::UsernameAndPassword { username, password } => {
                 let current_node = user.nodes_mut();
                 let mut node = KdlNode::new(uri);
-                clean_nodes(uri, current_node);
+                clean_auth_nodes(uri, current_node);
                 node.push(KdlEntry::new_prop("username", username.as_ref()));
                 node.push(KdlEntry::new_prop("password", password.as_ref()));
                 current_node.push(node);
             }
         }
+    }
+}
+
+pub fn set_scoped_registry(scope: &str, registry: &str, config: &mut KdlDocument) {
+    if config.get_mut("options").is_none() {
+        config.nodes_mut().push(KdlNode::new("options"));
+    }
+    if let Some(opts) = config.get_mut("options") {
+        opts.ensure_children();
+        if let Some(children) = opts.children_mut().as_mut() {
+            if children.get_mut("scoped-registries").is_none() {
+                children.nodes_mut().push(KdlNode::new("scoped-registries"));
+                children
+                    .get_mut("scoped-registries")
+                    .unwrap()
+                    .ensure_children();
+            }
+        }
+    }
+
+    if let Some(scoped_registries) = config
+        .get_mut("options")
+        .and_then(|options| options.children_mut().as_mut())
+        .and_then(|options_children| options_children.get_mut("scoped-registries"))
+        .and_then(|scoped_registries| scoped_registries.children_mut().as_mut())
+    {
+        let current_node = scoped_registries.nodes_mut();
+        let mut node = KdlNode::new(scope);
+        clean_scoped_registry_nodes(scope, current_node);
+        node.push(KdlValue::String(registry.to_owned()));
+        current_node.push(node);
     }
 }
 
@@ -99,12 +130,16 @@ pub fn clear_crendentials_by_uri(uri: &str, config: &mut KdlDocument) {
         .and_then(|options_children| options_children.get_mut("user"))
         .and_then(|user| user.children_mut().as_mut())
     {
-        clean_nodes(uri, user_children.nodes_mut());
+        clean_auth_nodes(uri, user_children.nodes_mut());
     };
 }
 
-fn clean_nodes(uri: &str, nodes: &mut Vec<KdlNode>) {
+fn clean_auth_nodes(uri: &str, nodes: &mut Vec<KdlNode>) {
     nodes.retain_mut(|node| node.name().value() != uri);
+}
+
+fn clean_scoped_registry_nodes(scope: &str, nodes: &mut Vec<KdlNode>) {
+    nodes.retain_mut(|node| node.name().value() != scope);
 }
 
 fn extract_string(input: &KdlValue) -> String {

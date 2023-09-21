@@ -4,7 +4,7 @@ use clap::Args;
 use directories::ProjectDirs;
 use kdl::KdlDocument;
 use miette::{IntoDiagnostic, Result};
-use oro_client::login::AuthType;
+use oro_client::login::{AuthType, LoginOptions};
 use oro_npm_account::config::{self, Credentials};
 use oro_npm_account::login::login;
 use url::Url;
@@ -18,6 +18,10 @@ pub struct LoginCmd {
     /// What authentication strategy to use with login.
     #[arg(long, value_enum, default_value_t = AuthType::Web)]
     auth_type: AuthType,
+
+    /// Associate an operation with a scope for a scoped registry.
+    #[arg(long)]
+    scope: Option<String>,
 }
 
 #[async_trait]
@@ -36,9 +40,15 @@ impl OroCommand for LoginCmd {
 
             tracing::info!("Login in on {}", &registry);
 
-            let token = login(&self.auth_type, &self.registry)
-                .await
-                .into_diagnostic()?;
+            let token = login(
+                &self.auth_type,
+                &self.registry,
+                &LoginOptions {
+                    scope: self.scope.clone(),
+                },
+            )
+            .await
+            .into_diagnostic()?;
 
             tracing::info!("Logged in on {}", &registry);
 
@@ -47,6 +57,10 @@ impl OroCommand for LoginCmd {
                 &Credentials::AuthToken(token.token),
                 &mut config,
             );
+
+            if let Some(scope) = self.scope {
+                config::set_scoped_registry(&scope, &registry, &mut config);
+            }
 
             std::fs::write(&config_path, config.to_string()).into_diagnostic()?;
         }
