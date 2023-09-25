@@ -105,8 +105,8 @@ pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credent
 
             match (token, auth_token, username, password) {
                 (.., Some(username), Some(password)) => {
-                    let username = extract_string(username);
-                    let password = extract_string(password);
+                    let username = username.as_string()?;
+                    let password = password.as_string()?;
                     let password = general_purpose::STANDARD.decode(password).unwrap();
                     let password = String::from_utf8_lossy(&password).to_string();
 
@@ -115,9 +115,9 @@ pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credent
                     ))
                 }
                 (_, Some(auth_token), ..) => {
-                    Some(Credentials::AuthToken(extract_string(auth_token)))
+                    Some(Credentials::AuthToken(auth_token.as_string()?.into()))
                 }
-                (Some(token), ..) => Some(Credentials::Auth(extract_string(token))),
+                (Some(token), ..) => Some(Credentials::Auth(token.as_string()?.into())),
                 _ => None,
             }
         })
@@ -140,10 +140,6 @@ fn clean_auth_nodes(uri: &str, nodes: &mut Vec<KdlNode>) {
 
 fn clean_scoped_registry_nodes(scope: &str, nodes: &mut Vec<KdlNode>) {
     nodes.retain_mut(|node| node.name().value() != scope);
-}
-
-fn extract_string(input: &KdlValue) -> String {
-    input.as_string().unwrap().into()
 }
 
 impl TryFrom<Credentials> for HeaderValue {

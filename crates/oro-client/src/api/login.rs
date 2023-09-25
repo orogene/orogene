@@ -217,7 +217,10 @@ impl OroClient {
             }
             StatusCode::ACCEPTED => {
                 if let Some(retry_after) = response.headers().get("retry-after") {
-                    let retry_after = retry_after.to_str().unwrap().parse::<u64>().unwrap();
+                    let retry_after = retry_after.to_str()
+                        .expect("The \"retry-after\" header that's included in the response should be string.")
+                        .parse::<u64>()
+                        .expect("The \"retry-after\" header that's included in the response should be able to parse to number.");
                     Ok(DoneURLResponse::Duration(Duration::from_secs(retry_after)))
                 } else {
                     Err(OroClientError::ResponseError(
