@@ -402,6 +402,7 @@ mod test {
                 .and(header_exists("npm-auth-type"))
                 .and(header_exists("npm-command"))
                 .respond_with(ResponseTemplate::new(503))
+                .expect(1)
                 .mount_as_scoped(&mock_server)
                 .await;
 
