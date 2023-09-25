@@ -24,6 +24,10 @@ What authentication strategy to use with login
 \[default: web]
 \[possible values: web, legacy]
 
+#### `--scope <SCOPE>`
+
+Associate an operation with a scope for a scoped registry
+
 #### `-h, --help`
 
 Print help (see a summary with '-h')
@@ -127,5 +131,11 @@ A proxy to use for outgoing http requests
 Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
 
 Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
+
+#### `--fetch-retries <FETCH_RETRIES>`
+
+Package will retry when network failed
+
+\[default: 2]
 
 
