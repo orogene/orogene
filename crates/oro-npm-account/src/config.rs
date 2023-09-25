@@ -107,7 +107,7 @@ pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credent
                 (.., Some(username), Some(password)) => {
                     let username = username.as_string()?;
                     let password = password.as_string()?;
-                    let password = general_purpose::STANDARD.decode(password).unwrap();
+                    let password = general_purpose::STANDARD.decode(password).ok()?;
                     let password = String::from_utf8_lossy(&password).to_string();
 
                     Some(Credentials::Auth(

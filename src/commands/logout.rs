@@ -33,7 +33,7 @@ impl OroCommand for LogoutCmd {
             }
             let config_path = config_dir.join("oro.kdl");
             let mut config: KdlDocument = std::fs::read_to_string(&config_path)
-                .unwrap_or_default()
+                .into_diagnostic()?
                 .parse()?;
 
             match config::get_credentials_by_uri(&registry, &config) {

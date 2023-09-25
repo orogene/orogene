@@ -18,11 +18,6 @@ pub enum OroNpmAccountError {
     #[diagnostic(code(oro_npm_account::read_user_input_error), url(docsrs))]
     ReadUserInputError(std::io::Error),
 
-    /// Failed to decode base64.
-    #[error(transparent)]
-    #[diagnostic(code(oro_npm_account::base64_decode_error), url(docsrs))]
-    Base64DecodeError(#[from] base64::DecodeError),
-
     /// Invalid header value
     #[error(transparent)]
     #[diagnostic(code(oro_npm_accout::invalid_header_value), url(docsrs))]
