@@ -24,7 +24,7 @@ pub enum AuthType {
 #[derive(Debug, PartialEq, Clone)]
 pub enum LoginCouchResponse {
     WebOTP { auth_url: String, done_url: String },
-    CrassicOTP,
+    ClassicOTP,
     Token(String),
 }
 
@@ -161,7 +161,7 @@ impl OroClient {
                         if let (Some(auth_url), Some(done_url)) = (json.auth_url, json.done_url) {
                             Ok(LoginCouchResponse::WebOTP { auth_url, done_url })
                         } else {
-                            Ok(LoginCouchResponse::CrassicOTP)
+                            Ok(LoginCouchResponse::ClassicOTP)
                         }
                     } else {
                         Err(OroClientError::OTPRequiredError)
@@ -353,7 +353,7 @@ mod test {
                 client
                     .login_couch("test", "password", None, &LoginOptions::default())
                     .await?,
-                LoginCouchResponse::CrassicOTP
+                LoginCouchResponse::ClassicOTP
             )
         }
 

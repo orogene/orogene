@@ -52,7 +52,7 @@ pub async fn login(
                         }
                     }
                 }
-                LoginCouchResponse::CrassicOTP => {
+                LoginCouchResponse::ClassicOTP => {
                     let otp: String = Input::with_theme(&ColorfulTheme::default())
                         .with_prompt("This operation requires a one-time password. Enter OTP:")
                         .interact()
