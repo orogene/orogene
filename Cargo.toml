@@ -15,6 +15,10 @@ rust-version.workspace = true
 [package.metadata.release]
 tag = true
 
+[package.metadata.wix]
+upgrade-guid = "C5FC7FE8-A6AB-4897-8B26-01220D1C3FAD"
+path-guid = "D7A7057F-9CE2-4FB0-A0CF-1293469361C5"
+
 [dependencies]
 # Workspace Deps
 nassun = { version = "=0.3.27", path = "./crates/nassun" }
@@ -154,24 +158,21 @@ reqwest-retry = "0.2.2"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.0.7"
+cargo-dist-version = "0.3.0"
 # The preferred Rust toolchain to use in CI (rustup toolchain syntax)
 rust-toolchain-version = "1.67.1"
-# CI backends to support (see 'cargo dist generate-ci')
+# CI backends to support
 ci = ["github"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "x86_64-apple-darwin",
-    "x86_64-pc-windows-msvc",
-    "aarch64-apple-darwin",
-]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
 # The installers to generate for each app
-installers = ["shell", "powershell", "npm"]
+installers = ["shell", "powershell", "npm", "homebrew", "msi"]
 # The archive format to use for windows builds (defaults .zip)
 windows-archive = ".tar.gz"
 # The archive format to use for non-windows builds (defaults .tar.xz)
 unix-archive = ".tar.gz"
+# Publish jobs to run in CI
+pr-run-mode = "plan"
 
 [build-dependencies]
 embed-resource = "1.3.3"
