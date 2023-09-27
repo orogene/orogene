@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path};
 use futures::{StreamExt, TryStreamExt};
 use js_sys::Promise;
 use miette::Diagnostic;
-use nassun::Package;
+use nassun::{Package, PackageJson};
 use serde::Deserialize;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
@@ -15,24 +15,32 @@ type Result<T> = std::result::Result<T, NodeMaintainerError>;
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_APPEND_CONTENT: &'static str = r#"
+/**
+ * Options for NodeMaintainer operations.
+ */
+export interface NodeMaintainerOptions {
+    registry?: string;
+    scopedRegistries?: Record<string, string>;
+    concurrency?: number;
+    kdlLock?: string;
+    npmLock?: string;
+    defaultTag?: string;
+}
+
+/**
+ * Error type for NodeMaintainer operations.
+ */
 export interface NodeMaintainerError {
     message: string;
     code?: string;
 }
 
-export interface PackageJson {
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-    peerDependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-    bundledDependencies?: string[];
-}
 "#;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(typescript_type = "PackageJson")]
-    pub type PackageJson;
+    #[wasm_bindgen(typescript_type = "NodeMaintainerOptions")]
+    pub type NodeMaintainerOptions;
 }
 
 impl From<NodeMaintainerError> for JsValue {
@@ -54,7 +62,7 @@ impl From<NodeMaintainerError> for JsValue {
 #[derive(Tsify, Debug, Deserialize)]
 #[allow(non_snake_case)]
 #[wasm_bindgen]
-pub struct NodeMaintainerOptions {
+pub struct ParsedNodeMaintainerOptions {
     #[tsify(optional)]
     registry: Option<String>,
     #[tsify(optional)]
@@ -87,10 +95,16 @@ impl NodeMaintainer {
 
 #[wasm_bindgen]
 impl NodeMaintainer {
-    fn opts_from_js_value(opts: JsValue) -> Result<crate::maintainer::NodeMaintainerOptions> {
+    fn opts_from_js_value(
+        opts: Option<NodeMaintainerOptions>,
+    ) -> Result<crate::maintainer::NodeMaintainerOptions> {
         console_error_panic_hook::set_once();
         let mut opts_builder = crate::maintainer::NodeMaintainer::builder();
-        let opts: Option<NodeMaintainerOptions> = serde_wasm_bindgen::from_value(opts)?;
+        let opts: Option<ParsedNodeMaintainerOptions> = if let Some(opts) = opts {
+            serde_wasm_bindgen::from_value(opts.into())?
+        } else {
+            None
+        };
         if let Some(opts) = opts {
             if let Some(registry) = opts.registry {
                 opts_builder = opts_builder.registry(
@@ -127,7 +141,10 @@ impl NodeMaintainer {
 
     /// Resolves a dependency tree using `spec` as the root package.
     #[wasm_bindgen(js_name = "resolveSpec")]
-    pub async fn resolve_spec(spec: &str, opts: JsValue) -> Result<NodeMaintainer> {
+    pub async fn resolve_spec(
+        spec: &str,
+        opts: Option<NodeMaintainerOptions>,
+    ) -> Result<NodeMaintainer> {
         console_error_panic_hook::set_once();
         let opts_builder = Self::opts_from_js_value(opts)?;
         opts_builder
@@ -139,7 +156,10 @@ impl NodeMaintainer {
     /// Returns a dependency tree using a `package.json` manifest as the root
     /// package.
     #[wasm_bindgen(js_name = "resolveManifest")]
-    pub async fn resolve_manifest(manifest: PackageJson, opts: JsValue) -> Result<NodeMaintainer> {
+    pub async fn resolve_manifest(
+        manifest: PackageJson,
+        opts: Option<NodeMaintainerOptions>,
+    ) -> Result<NodeMaintainer> {
         console_error_panic_hook::set_once();
         let manifest = serde_wasm_bindgen::from_value(manifest.into())?;
         let opts_builder = Self::opts_from_js_value(opts)?;
@@ -203,13 +223,19 @@ impl NodeMaintainer {
 
 /// Resolves a dependency tree using `spec` as the root package.
 #[wasm_bindgen(js_name = "resolveSpec")]
-pub async fn resolve_spec(spec: &str, opts: JsValue) -> Result<NodeMaintainer> {
+pub async fn resolve_spec(
+    spec: &str,
+    opts: Option<NodeMaintainerOptions>,
+) -> Result<NodeMaintainer> {
     NodeMaintainer::resolve_spec(spec, opts).await
 }
 
 /// Returns a dependency tree using a `package.json` manifest as the root
 /// package.
 #[wasm_bindgen(js_name = "resolveManifest")]
-pub async fn resolve_manifest(manifest: PackageJson, opts: JsValue) -> Result<NodeMaintainer> {
+pub async fn resolve_manifest(
+    manifest: PackageJson,
+    opts: Option<NodeMaintainerOptions>,
+) -> Result<NodeMaintainer> {
     NodeMaintainer::resolve_manifest(manifest, opts).await
 }
