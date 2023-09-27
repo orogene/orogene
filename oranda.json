@@ -14,7 +14,7 @@
       "preferred_funding": "github"
     },
     "mdbook": {
-      "path": "./book/book"
+      "path": "./book"
     },
     "artifacts": {
       "package_managers": {
