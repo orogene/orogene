@@ -5,6 +5,7 @@ impl OroClient {
         Ok(self
             .client
             .get(self.registry.join("-/ping?write=true")?)
+            .header("X-Oro-Registry", self.registry.to_string())
             .send()
             .await?
             .error_for_status()?

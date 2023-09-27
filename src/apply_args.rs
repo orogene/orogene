@@ -10,6 +10,8 @@ use tracing::{Instrument, Span};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use url::Url;
 
+use crate::nassun_args::NassunArgs;
+
 /// Applies the current project's requested dependencies to `node_modules/`,
 /// adding, removing, and updating dependencies as needed. This command is
 /// intended to be an idempotent way to make sure your `node_modules` is in
@@ -90,12 +92,23 @@ pub struct ApplyArgs {
     #[arg(from_global)]
     pub registry: Url,
 
-    /// The credentials map contained in the config. This is handed
-    #[arg(from_global)]
-    pub credentials: Vec<(String, String, String)>,
-
     #[arg(from_global)]
     pub scoped_registries: Vec<(String, Url)>,
+
+    #[arg(from_global)]
+    pub proxy: bool,
+
+    #[arg(from_global)]
+    pub proxy_url: Option<String>,
+
+    #[arg(from_global)]
+    pub no_proxy_domain: Option<String>,
+
+    #[arg(from_global)]
+    pub retries: u32,
+
+    #[arg(from_global)]
+    pub auth: Vec<(String, String, String)>,
 
     #[arg(from_global)]
     pub json: bool,
@@ -108,18 +121,6 @@ pub struct ApplyArgs {
 
     #[arg(from_global)]
     pub emoji: bool,
-
-    #[arg(from_global)]
-    pub proxy: bool,
-
-    #[arg(from_global)]
-    pub proxy_url: Option<String>,
-
-    #[arg(from_global)]
-    pub no_proxy_domain: Option<String>,
-
-    #[arg(from_global)]
-    pub fetch_retries: u32,
 }
 
 impl ApplyArgs {
@@ -132,7 +133,9 @@ impl ApplyArgs {
         }
 
         let root = &self.root;
-        let maintainer = self.resolve(manifest, self.configured_maintainer()).await?;
+        let maintainer = self
+            .resolve(manifest, self.configured_maintainer()?)
+            .await?;
 
         if !self.lockfile_only {
             self.prune(&maintainer).await?;
@@ -164,20 +167,18 @@ impl ApplyArgs {
         Ok(())
     }
 
-    fn configured_maintainer(&self) -> NodeMaintainerOptions {
+    fn configured_maintainer(&self) -> Result<NodeMaintainerOptions> {
         let root = &self.root;
+        let nassun = NassunArgs::from_apply_args(self).to_nassun()?;
         let mut nm = NodeMaintainerOptions::new();
         nm = nm
-            .registry(self.registry.clone())
-            .credentials(self.credentials.clone())
+            .nassun(nassun)
             .locked(self.locked)
-            .default_tag(&self.default_tag)
             .concurrency(self.concurrency)
             .script_concurrency(self.script_concurrency)
             .root(root)
             .prefer_copy(self.prefer_copy)
             .hoisted(self.hoisted)
-            .proxy(self.proxy)
             .on_resolution_added(move || {
                 Span::current().pb_inc_length(1);
             })
@@ -213,23 +214,11 @@ impl ApplyArgs {
                 span.pb_set_message(line);
             });
 
-        if let Some(no_proxy_domain) = self.no_proxy_domain.as_deref() {
-            nm = nm.no_proxy_domain(no_proxy_domain);
-        }
-
-        if let Some(proxy_url) = self.proxy_url.as_deref() {
-            nm = nm.proxy_url(proxy_url);
-        }
-
-        for (scope, registry) in &self.scoped_registries {
-            nm = nm.scope_registry(scope, registry.clone());
-        }
-
         if let Some(cache) = self.cache.as_deref() {
             nm = nm.cache(cache);
         }
 
-        nm
+        Ok(nm)
     }
 
     async fn resolve(

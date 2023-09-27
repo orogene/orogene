@@ -1,10 +1,7 @@
-use base64::{engine::general_purpose, Engine as _};
 use oro_common::{CorgiPackument, Packument};
 use reqwest::{StatusCode, Url};
-#[cfg(not(target = "wasm"))]
-use reqwest_middleware::RequestBuilder;
 
-use crate::{credentials::Credentials, OroClient, OroClientError};
+use crate::{OroClient, OroClientError};
 
 pub(crate) const CORGI_HEADER: &str =
     "application/vnd.npm.install-v1+json; q=1.0,application/json; q=0.8,*/*";
@@ -41,16 +38,18 @@ impl OroClient {
         url: &Url,
         use_corgi: bool,
     ) -> Result<String, OroClientError> {
-        let client = self.client.get(url.clone()).header(
-            "Accept",
-            if use_corgi {
-                CORGI_HEADER
-            } else {
-                "application/json"
-            },
-        );
         Ok(self
-            .with_credentials(url, client)?
+            .client
+            .get(url.clone())
+            .header("X-Oro-Registry", self.registry.to_string())
+            .header(
+                "Accept",
+                if use_corgi {
+                    CORGI_HEADER
+                } else {
+                    "application/json"
+                },
+            )
             .send()
             .await?
             .error_for_status()
@@ -66,34 +65,6 @@ impl OroClient {
             })?
             .text()
             .await?)
-    }
-
-    fn with_credentials(
-        &self,
-        url: &Url,
-        builder: RequestBuilder,
-    ) -> Result<RequestBuilder, OroClientError> {
-        let credentials = url.host_str().and_then(|h| self.credentials.get(h));
-        if let Some(cred) = credentials {
-            match cred {
-                Credentials::Basic { username, password } => {
-                    Ok(builder.basic_auth(username, Some(password)))
-                }
-                Credentials::EncodedBasic(auth) => {
-                    let decoded = general_purpose::STANDARD.decode(auth)?;
-                    let string = String::from_utf8_lossy(&decoded);
-                    let mut parts = string.split(':');
-                    if let Some(username) = parts.next() {
-                        Ok(builder.basic_auth(username, parts.next()))
-                    } else {
-                        Err(OroClientError::AuthStringMissingUsername(auth.clone()))
-                    }
-                }
-                Credentials::Token(token) => Ok(builder.bearer_auth(token)),
-            }
-        } else {
-            Ok(builder)
-        }
     }
 }
 
@@ -196,22 +167,9 @@ mod test {
     async fn fetch_with_credentials() -> Result<()> {
         let mock_server = MockServer::start().await;
         let url: Url = mock_server.uri().parse().into_diagnostic()?;
-        let host = url.host_str().unwrap();
-        let cred_config = vec![
-            (
-                host.to_string(),
-                "username".to_string(),
-                "testuser".to_string(),
-            ),
-            (
-                host.to_string(),
-                "password".to_string(),
-                "testpassword".to_string(),
-            ),
-        ];
         let client = OroClient::builder()
+            .basic_auth(url.clone(), "testuser".into(), Some("testpassword".into()))
             .registry(url)
-            .credentials(cred_config)?
             .build();
 
         Mock::given(method("GET"))

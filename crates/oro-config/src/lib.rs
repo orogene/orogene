@@ -85,7 +85,7 @@ impl OroConfigLayerExt for Command {
                                 ValueKind::Table(map) => {
                                     for (k, v) in map {
                                         args.push(OsString::from(format!("--{}", opt)));
-                                        args.push(OsString::from(format!("{key}:{k}={v}")));
+                                        args.push(OsString::from(format!("{{{key}}}{k}={v}")));
                                     }
                                 }
                                 // TODO: error if val.kind is an Array

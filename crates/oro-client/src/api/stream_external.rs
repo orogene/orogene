@@ -18,6 +18,7 @@ impl OroClient {
             // cache them, cache them manually.
             self.client_uncached
                 .get(url.to_string())
+                .header("X-Oro-Registry", self.registry.to_string())
                 .send()
                 .await?
                 .error_for_status()?

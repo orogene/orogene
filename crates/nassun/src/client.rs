@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use async_std::sync::Arc;
-use oro_client::OroClient;
+use oro_client::{OroClient, OroClientBuilder};
 use oro_common::{CorgiManifest, CorgiPackument, CorgiVersionMetadata, Packument, VersionMetadata};
 use url::Url;
 
@@ -20,23 +20,16 @@ use crate::resolver::{PackageResolution, PackageResolver};
 use crate::tarball::Tarball;
 
 /// Build a new Nassun instance with specified options.
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct NassunOpts {
+    client_builder: OroClientBuilder,
+    client: Option<OroClient>,
     #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
     base_dir: Option<PathBuf>,
     default_tag: Option<String>,
     registries: HashMap<Option<String>, Url>,
-    credentials: Vec<(String, String, String)>,
     memoize_metadata: bool,
-    #[cfg(not(target_arch = "wasm32"))]
-    proxy: bool,
-    #[cfg(not(target_arch = "wasm32"))]
-    proxy_url: Option<String>,
-    #[cfg(not(target_arch = "wasm32"))]
-    no_proxy_domain: Option<String>,
-    #[cfg(not(target_arch = "wasm32"))]
-    fetch_retries: u32,
 }
 
 impl NassunOpts {
@@ -44,14 +37,24 @@ impl NassunOpts {
         Default::default()
     }
 
+    /// A preconfigured [`OroClient`] to use for requests. Providing this will
+    /// override all other client-related options.
+    pub fn client(mut self, client: OroClient) -> Self {
+        self.client = Some(client);
+        self
+    }
+
     /// Cache directory to use for requests.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.cache = Some(PathBuf::from(cache.as_ref()));
+        self.client_builder = self.client_builder.cache(cache.as_ref());
         self
     }
 
+    /// Sets the default registry for requests.
     pub fn registry(mut self, registry: Url) -> Self {
+        self.client_builder = self.client_builder.registry(registry.clone());
         self.registries.insert(None, registry);
         self
     }
@@ -66,12 +69,34 @@ impl NassunOpts {
         self
     }
 
-    /// Set the credential-config for this instance. The config has the form (registry,key,value)
-    /// where registry is the host of the registry, key is the key of a single entry in the respective
-    /// config JSON object and value is the corresponding value. A single registry may have multiple entries
-    /// in this vector (e.g. "username" & "password"). The format will be handled by by OroClient.
-    pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Self {
-        self.credentials = credentials;
+    /// Sets basic auth credentials for a registry.
+    pub fn basic_auth(
+        mut self,
+        registry: Url,
+        username: impl AsRef<str>,
+        password: Option<impl AsRef<str>>,
+    ) -> Self {
+        let username = username.as_ref();
+        let password = password.map(|p| p.as_ref().to_string());
+        self.client_builder =
+            self.client_builder
+                .basic_auth(registry, username.to_string(), password);
+        self
+    }
+
+    /// Sets bearer token credentials for a registry.
+    pub fn token_auth(mut self, registry: Url, token: impl AsRef<str>) -> Self {
+        self.client_builder = self
+            .client_builder
+            .token_auth(registry, token.as_ref().to_string());
+        self
+    }
+
+    /// Sets the legacy, pre-encoded auth token for a registry.
+    pub fn legacy_auth(mut self, registry: Url, legacy_auth_token: impl AsRef<str>) -> Self {
+        self.client_builder = self
+            .client_builder
+            .legacy_auth(registry, legacy_auth_token.as_ref().to_string());
         self
     }
 
@@ -96,67 +121,45 @@ impl NassunOpts {
         self
     }
 
+    /// Number of times to retry failed requests.
+    pub fn retries(mut self, retries: u32) -> Self {
+        self.client_builder = self.client_builder.retries(retries);
+        self
+    }
+
+    /// Whether to use a proxy for requests.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn proxy(mut self, proxy: bool) -> Self {
-        self.proxy = proxy;
+        self.client_builder = self.client_builder.proxy(proxy);
         self
     }
 
+    /// Proxy URL to use for requests. If `no_proxy_domain` is needed, it must
+    /// be called before this method.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn proxy_url(mut self, proxy_url: impl AsRef<str>) -> Self {
-        self.proxy_url = Some(proxy_url.as_ref().into());
-        self
+    pub fn proxy_url(mut self, proxy_url: impl AsRef<str>) -> Result<Self> {
+        self.client_builder = self.client_builder.proxy_url(proxy_url.as_ref())?;
+        Ok(self)
     }
 
+    /// Sets the NO_PROXY domain.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn no_proxy_domain(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
-        self.no_proxy_domain = Some(no_proxy_domain.as_ref().into());
-        self
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
-        self.fetch_retries = fetch_retries;
+        self.client_builder = self
+            .client_builder
+            .no_proxy_domain(no_proxy_domain.as_ref());
         self
     }
 
     /// Build a new Nassun instance from this options object.
     pub fn build(self) -> Nassun {
-        let registry = self
-            .registries
-            .get(&None)
-            .cloned()
-            .unwrap_or_else(|| "https://registry.npmjs.org/".parse().unwrap());
-        #[cfg(target_arch = "wasm32")]
-        let client_builder = OroClient::builder().registry(registry);
-        #[cfg(not(target_arch = "wasm32"))]
-        let mut client_builder = OroClient::builder()
-            .registry(registry)
-            .fetch_retries(self.fetch_retries)
-            .proxy(self.proxy);
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(domain) = self.no_proxy_domain {
-            client_builder = client_builder.no_proxy_domain(domain);
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(proxy) = self.proxy_url {
-            if let Ok(builder) = client_builder.clone().proxy_url(&proxy) {
-                client_builder = builder;
-            } else {
-                tracing::warn!("Failed to parse proxy URL: {}", proxy)
-            }
-        }
         #[cfg(not(target_arch = "wasm32"))]
         let cache = if let Some(cache) = self.cache {
-            client_builder = client_builder.cache(cache.clone());
             Arc::new(Some(cache))
         } else {
             Arc::new(None)
         };
-        client_builder = client_builder
-            .credentials(self.credentials)
-            .expect("failed to set credential list");
-        let client = client_builder.build();
+        let client = self.client.unwrap_or_else(|| self.client_builder.build());
         Nassun {
             #[cfg(not(target_arch = "wasm32"))]
             cache,

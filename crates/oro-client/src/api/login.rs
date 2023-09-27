@@ -41,6 +41,7 @@ pub struct LoginWeb {
 #[derive(Debug, Clone, Default)]
 pub struct LoginOptions {
     pub scope: Option<String>,
+    pub client: Option<OroClient>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -90,6 +91,7 @@ impl OroClient {
             .client
             .post(url.clone())
             .headers(headers)
+            .header("X-Oro-Registry", self.registry.to_string())
             .send()
             .await?
             .notify()
@@ -124,6 +126,7 @@ impl OroClient {
         let response = self
             .client
             .put(url.clone())
+            .header("X-Oro-Registry", self.registry.to_string())
             .headers(headers)
             .body(
                 serde_json::to_string(&LoginCouch {
@@ -197,6 +200,7 @@ impl OroClient {
         let response = self
             .client_uncached
             .get(done_url.as_ref())
+            .header("X-Oro-Registry", self.registry.to_string())
             .headers(headers)
             .send()
             .await?
@@ -296,7 +300,8 @@ mod test {
                         "password",
                         None,
                         &LoginOptions {
-                            scope: Some("@mycompany".to_owned())
+                            scope: Some("@mycompany".to_owned()),
+                            client: None,
                         }
                     )
                     .await?,
