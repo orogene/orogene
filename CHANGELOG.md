@@ -1,4 +1,11 @@
 # Orogene Release Changelog
+<a name="0.3.29"></a>
+## 0.3.29 (2023-09-27)
+
+### Features
+
+* **wasm:** publish NPM packages for nassun and node-maintainer as part of release ([f4f2ff22](https://github.com/orogene/orogene/commit/f4f2ff22cd6fec4bb5594f924c0773b9d92effa6))
+
 <a name="0.3.28"></a>
 ## 0.3.28 (2023-09-27)
 
