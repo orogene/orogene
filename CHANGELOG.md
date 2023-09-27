@@ -1,4 +1,21 @@
 # Orogene Release Changelog
+<a name="0.3.28"></a>
+## 0.3.28 (2023-09-27)
+
+### Features
+
+* **proxy:** support proxy configuration (#283) ([87facfe4](https://github.com/orogene/orogene/commit/87facfe44a14a61e94ee50c0a5f64724b065bdd8))
+* **login:** Add `oro login ` and `oro logout` commands (#290) ([39b3c6bd](https://github.com/orogene/orogene/commit/39b3c6bdfa5327276666ef86bf08cb02d3800a7d))
+* **dist:** bump cargo dist and add homebrew and msi artifacts ([218392d0](https://github.com/orogene/orogene/commit/218392d061fd234effb9fd12b5ba52e0d84c05c9))
+* **retry:** enable request retries on wasm, too ([1f25aa33](https://github.com/orogene/orogene/commit/1f25aa3383793e40e64d20939fb9702050b2ff24))
+* **wasm:** nicer TS types ([64d20dcc](https://github.com/orogene/orogene/commit/64d20dcc2361be9bc91894e1686e678ca827c836))
+
+### Bug Fixes
+
+* **proxy:** thread proxy settings through and tweak a few things along the way ([7d9b476e](https://github.com/orogene/orogene/commit/7d9b476ed2f732485b9f25655ed0598f0c2110aa))
+* **site:** modernize oranda config ([427f672f](https://github.com/orogene/orogene/commit/427f672f8ffa3da699c42612ea642eb824587de3))
+* **wasm:** get things working on wasm again! ([ec9e6e36](https://github.com/orogene/orogene/commit/ec9e6e36ce72719dacd15710ed7e3e3ae7498913))
+* **lib:** fix readme/license fields in oro-npm-account ([0842d2bf](https://github.com/orogene/orogene/commit/0842d2bf00e825cebda3fe110a07451ffcea5c72))
 
 <a name="0.3.27"></a>
 ## 0.3.27 (2023-05-21)
