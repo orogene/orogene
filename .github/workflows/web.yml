@@ -42,7 +42,7 @@ jobs:
           mdbook build
 
       - name: Install oranda
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.0.2/oranda-v0.0.2-installer.sh | sh
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.4.1/oranda-installer.sh | sh
 
       - name: Run oranda
         run: oranda build
