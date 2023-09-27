@@ -208,7 +208,7 @@ impl ApplyArgs {
                 span.pb_set_message(line);
             });
 
-        if let Some(no_proxy_domain) = self.no_proxy_domain.as_deref()   {
+        if let Some(no_proxy_domain) = self.no_proxy_domain.as_deref() {
             nm = nm.no_proxy_domain(no_proxy_domain);
         }
 

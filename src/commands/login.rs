@@ -33,8 +33,14 @@ impl OroCommand for LoginCmd {
     async fn execute(self) -> Result<()> {
         if let Some(config_dir) = &self
             .config
-            .map(|config_path| config_path.parent().expect("must have a parent").to_path_buf())
-            .or(ProjectDirs::from("", "", "orogene").map(|config| config.config_dir().to_path_buf()))
+            .map(|config_path| {
+                config_path
+                    .parent()
+                    .expect("must have a parent")
+                    .to_path_buf()
+            })
+            .or(ProjectDirs::from("", "", "orogene")
+                .map(|config| config.config_dir().to_path_buf()))
         {
             let registry = self.registry.to_string();
             if !config_dir.exists() {
