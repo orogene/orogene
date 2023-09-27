@@ -20,7 +20,10 @@ use crate::{IntoKdl, Lockfile};
 
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub const META_FILE_NAME: &str = ".orogene-meta.kdl";
+#[cfg(not(target_arch = "wasm32"))]
 pub const STORE_DIR_NAME: &str = ".oro-store";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
