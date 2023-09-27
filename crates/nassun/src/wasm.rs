@@ -31,7 +31,59 @@ export interface Entry {
     path: string;
     contents: ReadableStream<Uint8Array>;
 }
+
+/**
+ * Options for Nassun operations.
+ */
+export interface NassunOptions {
+    /// Registry to use for unscoped packages, and as a default for scoped
+    /// packages. Defaults to `https://registry.npmjs.org/`.
+    registry?: string;
+    /// A map of scope prefixes to registries.
+    scopedRegistries?: Record<string, string>;
+}
+
+/**
+ * A package.json manifest.
+ */
+export interface PackageJson {
+    name?: string;
+    version?: string;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+    optionalDependencies?: Record<string, string>;
+    bundledDependencies?: string[] | boolean;
+}
+
+/**
+ * A package document that contains metadata for many package versions.
+ */
+export interface Packument {
+    versions: Record<string, PackageJson>;
+}
 "#;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(typescript_type = "Packument")]
+    pub type Packument;
+
+    #[wasm_bindgen(typescript_type = "PackageJson")]
+    pub type PackageJson;
+
+    #[wasm_bindgen(typescript_type = "NassunOptions")]
+    pub type NassunOptions;
+
+    #[wasm_bindgen(typescript_type = "string")]
+    pub type JsString;
+
+    #[wasm_bindgen(typescript_type = "ReadableStream<Entry>")]
+    pub type EntryReadableStream;
+
+    #[wasm_bindgen(typescript_type = "ReadableStream<Uint8Array>")]
+    pub type Uint8ArrayReadableStream;
+}
 
 type Result<T> = std::result::Result<T, NassunError>;
 
@@ -56,7 +108,7 @@ impl From<NassunError> for JsValue {
 /// To configure `Nassun`, and/or enable more efficient caching/reuse,
 /// look at `Package#packument` instead.
 #[wasm_bindgen]
-pub async fn packument(spec: &str, opts: JsValue) -> Result<JsValue> {
+pub async fn packument(spec: &str, opts: Option<NassunOptions>) -> Result<Packument> {
     Nassun::new(opts)?.resolve(spec).await?.packument().await
 }
 
@@ -67,7 +119,7 @@ pub async fn packument(spec: &str, opts: JsValue) -> Result<JsValue> {
 /// To configure `Nassun`, and/or enable more efficient caching/reuse,
 /// look at `Package#packument` instead.
 #[wasm_bindgen(js_name = "corgiPackument")]
-pub async fn corgi_packument(spec: &str, opts: JsValue) -> Result<JsValue> {
+pub async fn corgi_packument(spec: &str, opts: Option<NassunOptions>) -> Result<Packument> {
     Nassun::new(opts)?
         .resolve(spec)
         .await?
@@ -82,8 +134,13 @@ pub async fn corgi_packument(spec: &str, opts: JsValue) -> Result<JsValue> {
 /// configure `Nassun`, and/or enable more efficient caching/reuse, look at
 /// `Package#metadata` instead.
 #[wasm_bindgen]
-pub async fn metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
-    Nassun::new(opts)?.resolve(spec).await?.metadata().await
+pub async fn metadata(spec: &str, opts: Option<NassunOptions>) -> Result<PackageJson> {
+    Nassun::new(opts)?
+        .resolve(spec)
+        .await?
+        .metadata()
+        .await
+        .into()
 }
 
 /// Resolves a partial ("corgi") version of the version metadata from the
@@ -93,12 +150,13 @@ pub async fn metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
 /// configure `Nassun`, and/or enable more efficient caching/reuse, look at
 /// `Package#metadata` instead.
 #[wasm_bindgen(js_name = "corgiMetadata")]
-pub async fn corgi_metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
+pub async fn corgi_metadata(spec: &str, opts: Option<NassunOptions>) -> Result<PackageJson> {
     Nassun::new(opts)?
         .resolve(spec)
         .await?
         .corgi_metadata()
         .await
+        .into()
 }
 
 /// Resolves a tarball from the given package `spec`, using the
@@ -109,10 +167,7 @@ pub async fn corgi_metadata(spec: &str, opts: JsValue) -> Result<JsValue> {
 /// To configure `Nassun`, and/or enable more efficient caching/reuse,
 /// look at `Package#tarball` instead.
 #[wasm_bindgen]
-pub async fn tarball(
-    spec: &str,
-    opts: JsValue,
-) -> Result<wasm_streams::readable::sys::ReadableStream> {
+pub async fn tarball(spec: &str, opts: Option<NassunOptions>) -> Result<Uint8ArrayReadableStream> {
     Nassun::new(opts)?.resolve(spec).await?.tarball().await
 }
 
@@ -125,10 +180,7 @@ pub async fn tarball(
 /// configure `Nassun`, and/or enable more efficient caching/reuse, look at
 /// `Package#entries` instead.
 #[wasm_bindgen]
-pub async fn entries(
-    spec: &str,
-    opts: JsValue,
-) -> Result<wasm_streams::readable::sys::ReadableStream> {
+pub async fn entries(spec: &str, opts: Option<NassunOptions>) -> Result<EntryReadableStream> {
     Nassun::new(opts)?.resolve(spec).await?.entries().await
 }
 
@@ -162,10 +214,14 @@ impl Nassun {
 impl Nassun {
     /// Create a new Nassun instance with the given options.
     #[wasm_bindgen(constructor)]
-    pub fn new(opts: JsValue) -> Result<Nassun> {
+    pub fn new(opts: Option<NassunOptions>) -> Result<Nassun> {
         console_error_panic_hook::set_once();
         let mut opts_builder = crate::client::NassunOpts::new();
-        let opts: Option<NassunOpts> = serde_wasm_bindgen::from_value(opts)?;
+        let opts: Option<NassunOpts> = if let Some(opts) = opts {
+            serde_wasm_bindgen::from_value(opts.into())?
+        } else {
+            None
+        };
         if let Some(opts) = opts {
             if let Some(registry) = opts.registry {
                 opts_builder = opts_builder.registry(registry.parse()?);
@@ -186,33 +242,33 @@ impl Nassun {
     }
 
     /// Resolves a packument object for the given package `spec`.
-    pub async fn packument(&self, spec: &str) -> Result<JsValue> {
+    pub async fn packument(&self, spec: &str) -> Result<Packument> {
         self.resolve(spec).await?.packument().await
     }
 
     /// Resolves version metadata from the given package `spec`.
-    pub async fn metadata(&self, spec: &str) -> Result<JsValue> {
-        self.resolve(spec).await?.metadata().await
+    pub async fn metadata(&self, spec: &str) -> Result<PackageJson> {
+        self.resolve(spec).await?.metadata().await.into()
     }
 
     /// Resolves a partial (corgi) version of the packument object for the
     /// given package `spec`.
     #[wasm_bindgen(js_name = "corgiPackument")]
-    pub async fn corgi_packument(&self, spec: &str) -> Result<JsValue> {
+    pub async fn corgi_packument(&self, spec: &str) -> Result<Packument> {
         self.resolve(spec).await?.corgi_packument().await
     }
 
     /// Resolves a partial (corgi) version of the version metadata from the
     /// given package `spec`.
     #[wasm_bindgen(js_name = "corgiMetadata")]
-    pub async fn corgi_metadata(&self, spec: &str) -> Result<JsValue> {
-        self.resolve(spec).await?.corgi_metadata().await
+    pub async fn corgi_metadata(&self, spec: &str) -> Result<PackageJson> {
+        self.resolve(spec).await?.corgi_metadata().await.into()
     }
 
     /// Resolves a `ReadableStream<Uint8Array>` tarball from the given package
     /// `spec`. This tarball will have its data checked if the package
     /// metadata fetched includes integrity information.
-    pub async fn tarball(&self, spec: &str) -> Result<wasm_streams::readable::sys::ReadableStream> {
+    pub async fn tarball(&self, spec: &str) -> Result<Uint8ArrayReadableStream> {
         self.resolve(spec).await?.tarball().await
     }
 
@@ -220,7 +276,7 @@ impl Nassun {
     /// `spec`, using the default resolution algorithm. The source tarball will
     /// have its data checked if the package metadata fetched includes integrity
     /// information.
-    pub async fn entries(&self, spec: &str) -> Result<wasm_streams::readable::sys::ReadableStream> {
+    pub async fn entries(&self, spec: &str) -> Result<EntryReadableStream> {
         self.resolve(spec).await?.entries().await
     }
 }
@@ -230,11 +286,11 @@ impl Nassun {
 #[wasm_bindgen]
 pub struct Package {
     #[wasm_bindgen(skip)]
-    pub from: JsValue,
+    pub from: JsString,
     #[wasm_bindgen(skip)]
-    pub name: JsValue,
+    pub name: JsString,
     #[wasm_bindgen(skip)]
-    pub resolved: JsValue,
+    pub resolved: JsString,
     package: crate::package::Package,
     serializer: serde_wasm_bindgen::Serializer,
 }
@@ -243,9 +299,9 @@ impl Package {
     pub fn from_core_package(package: crate::package::Package) -> Package {
         let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
         Package {
-            from: JsValue::from_str(&package.from().to_string()),
-            name: JsValue::from_str(package.name()),
-            resolved: JsValue::from_str(&format!("{}", package.resolved())),
+            from: JsValue::from_str(&package.from().to_string()).into(),
+            name: JsValue::from_str(package.name()).into(),
+            resolved: JsValue::from_str(&format!("{}", package.resolved())).into(),
             package,
             serializer,
         }
@@ -256,70 +312,81 @@ impl Package {
 impl Package {
     /// Original package spec that this `Package` was resolved from.
     #[wasm_bindgen(getter)]
-    pub fn from(&self) -> JsValue {
-        self.from.clone()
+    pub fn from(&self) -> JsString {
+        self.from.clone().into()
     }
 
     /// Name of the package, as it should be used in the dependency graph.
     #[wasm_bindgen(getter)]
-    pub fn name(&self) -> JsValue {
-        self.name.clone()
+    pub fn name(&self) -> JsString {
+        self.name.clone().into()
     }
 
     /// The package resolution information that this `Package` was created from.
     #[wasm_bindgen(getter)]
-    pub fn resolved(&self) -> JsValue {
-        self.resolved.clone()
+    pub fn resolved(&self) -> JsString {
+        self.resolved.clone().into()
     }
 
     /// The partial (corgi) version of the packument that this `Package` was
     /// resolved from.
     #[wasm_bindgen(js_name = "corgiPackument")]
-    pub async fn corgi_packument(&self) -> Result<JsValue> {
+    pub async fn corgi_packument(&self) -> Result<Packument> {
         Ok(self
             .package
             .corgi_packument()
             .await?
-            .serialize(&self.serializer)?)
+            .serialize(&self.serializer)?
+            .into())
     }
 
     /// The partial (corgi) version of the version metadata, aka roughly the
     /// metadata defined in `package.json`.
     #[wasm_bindgen(js_name = "corgiMetadata")]
-    pub async fn corgi_metadata(&self) -> Result<JsValue> {
+    pub async fn corgi_metadata(&self) -> Result<PackageJson> {
         Ok(self
             .package
             .corgi_metadata()
             .await?
-            .serialize(&self.serializer)?)
+            .serialize(&self.serializer)?
+            .into())
     }
 
     /// The full packument that this `Package` was resolved from.
-    pub async fn packument(&self) -> Result<JsValue> {
+    pub async fn packument(&self) -> Result<Packument> {
         Ok(self
             .package
             .packument()
             .await?
-            .serialize(&self.serializer)?)
+            .serialize(&self.serializer)?
+            .into())
     }
 
     /// The version metadata, aka roughly the metadata defined in
     /// `package.json`.
-    pub async fn metadata(&self) -> Result<JsValue> {
-        Ok(self.package.metadata().await?.serialize(&self.serializer)?)
+    pub async fn metadata(&self) -> Result<PackageJson> {
+        Ok(self
+            .package
+            .metadata()
+            .await?
+            .serialize(&self.serializer)?
+            .into())
     }
 
     /// A `ReadableStream<Uint8Array>` tarball for this package. This tarball
     /// will have its data checked if the package metadata fetched includes
     /// integrity information.
-    pub async fn tarball(&self) -> Result<wasm_streams::readable::sys::ReadableStream> {
-        Ok(ReadableStream::from_async_read(self.package.tarball().await?, 1024).into_raw())
+    pub async fn tarball(&self) -> Result<Uint8ArrayReadableStream> {
+        let jsval: JsValue = ReadableStream::from_async_read(self.package.tarball().await?, 1024)
+            .into_raw()
+            .into();
+        Ok(jsval.into())
     }
 
     /// A `ReadableStream<Entry>` of entries for this package. The source
     /// tarball will have its data checked if the package metadata fetched
     /// includes integrity information.
-    pub async fn entries(&self) -> Result<wasm_streams::readable::sys::ReadableStream> {
+    pub async fn entries(&self) -> Result<EntryReadableStream> {
         let entries = self.package.entries().await?.then(|entry| async move {
             entry.map_err(|e| e.into()).and_then(
                 |entry: crate::entries::Entry| -> std::result::Result<JsValue, JsValue> {
@@ -374,6 +441,7 @@ impl Package {
                 },
             )
         });
-        Ok(ReadableStream::from_stream(entries).into_raw())
+        let jsval: JsValue = ReadableStream::from_stream(entries).into_raw().into();
+        Ok(jsval.into())
     }
 }
