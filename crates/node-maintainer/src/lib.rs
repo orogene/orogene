@@ -8,6 +8,7 @@ pub use nassun::{NassunError, NassunOpts};
 pub use error::*;
 pub use into_kdl::IntoKdl;
 pub use lockfile::*;
+#[cfg(not(target_arch = "wasm32"))]
 pub use maintainer::*;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
