@@ -24,7 +24,8 @@ impl OroCommand for LogoutCmd {
     async fn execute(self) -> Result<()> {
         if let Some(config_dir) = &self
             .config
-            .or(ProjectDirs::from("", "", "orogene").map(|config| config.config_dir().into()))
+            .map(|config_path| config_path.parent().expect("must have a parent").to_path_buf())
+            .or(ProjectDirs::from("", "", "orogene").map(|config| config.config_dir().to_path_buf()))
         {
             let client = OroClient::new(self.registry.clone());
             let registry = self.registry.to_string();
