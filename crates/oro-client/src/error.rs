@@ -65,7 +65,6 @@ pub enum OroClientError {
 
     /// A generic request middleware error happened while making a request.
     /// Refer to the error message for more details.
-    #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     #[diagnostic(code(oro_client::request_middleware_error), url(docsrs))]
     RequestMiddlewareError(#[from] reqwest_middleware::Error),
