@@ -2,6 +2,9 @@
 name = "oro-npm-account"
 version = "0.3.27"
 description = "Configure access token and execute the login process."
+readme = "README.md"
+license = "Apache-2.0"
+
 authors.workspace = true
 edition.workspace = true
 repository.workspace = true
