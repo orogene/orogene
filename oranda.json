@@ -1,18 +1,29 @@
 {
+  "build": {
     "additional_pages": {
-        "Benchmarks": "./BENCHMARKS.md",
-        "Contributing": "./CONTRIBUTING.md"
+      "Benchmarks": "./BENCHMARKS.md",
+      "Contributing": "./CONTRIBUTING.md"
     },
-    "favicon": "./assets/favicon.ico",
-    "changelog": true,
-    "md_book": "./book/book",
-    "static_dir": "assets",
+    "static_dir": "assets"
+  },
+  "styles": {
+    "favicon": "./assets/favicon.ico"
+  },
+  "components": {
+    "funding": {
+      "preferred_funding": "github"
+    },
+    "mdbook": {
+      "path": "./book/book"
+    },
     "artifacts": {
-        "cargo_dist": true,
-        "package_managers": {
-            "npm": "npm install -g orogene",
-            "npx": "npx oro -h",
-            "crates.io": "cargo install orogene"
+      "package_managers": {
+        "preferred": {
+          "npm": "npm install -g orogene",
+          "npx": "npx oro -h",
+          "crates.io": "cargo install orogene"
         }
+      }
     }
+  }
 }
