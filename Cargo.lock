@@ -2250,7 +2250,9 @@ dependencies = [
 name = "oro-client"
 version = "0.3.29"
 dependencies = [
+ "anyhow",
  "async-std",
+ "async-trait",
  "base64 0.21.4",
  "chrono",
  "futures 0.3.28",
@@ -2266,6 +2268,7 @@ dependencies = [
  "reqwest-retry",
  "serde",
  "serde_json",
+ "task-local-extensions",
  "thiserror",
  "tracing",
  "url",
@@ -2317,6 +2320,7 @@ dependencies = [
  "oro-client",
  "reqwest",
  "thiserror",
+ "tracing",
  "url",
 ]
 
@@ -2955,9 +2959,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest-middleware"
-version = "0.2.3"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff44108c7925d082f2861e683a88618b68235ad9cdc60d64d9d1188efc951cdb"
+checksum = "4531c89d50effe1fac90d095c8b133c20c5c714204feee0bfc3fd158e784209d"
 dependencies = [
  "anyhow",
  "async-trait",

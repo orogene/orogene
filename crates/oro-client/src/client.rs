@@ -4,7 +4,7 @@ use std::{collections::HashMap, sync::Arc};
 
 #[cfg(not(target_arch = "wasm32"))]
 use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache};
-use miette::Result;
+#[cfg(target_arch = "wasm32")]
 use reqwest::Client;
 #[cfg(not(target_arch = "wasm32"))]
 use reqwest::ClientBuilder;
@@ -14,12 +14,17 @@ use reqwest_middleware::ClientWithMiddleware;
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use url::Url;
 
-use crate::{credentials::Credentials, OroClientError};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::OroClientError;
+use crate::{
+    auth_middleware::{self, AuthMiddleware},
+    credentials::Credentials,
+};
 
 #[derive(Clone, Debug)]
 pub struct OroClientBuilder {
     registry: Url,
-    fetch_retries: u32,
+    retries: u32,
     credentials: HashMap<String, Credentials>,
     #[cfg(not(target_arch = "wasm32"))]
     cache: Option<PathBuf>,
@@ -45,9 +50,9 @@ impl Default for OroClientBuilder {
             #[cfg(not(target_arch = "wasm32"))]
             no_proxy_domain: None,
             #[cfg(not(test))]
-            fetch_retries: 2,
+            retries: 2,
             #[cfg(test)]
-            fetch_retries: 0,
+            retries: 0,
         }
     }
 }
@@ -62,37 +67,38 @@ impl OroClientBuilder {
         self
     }
 
-    pub fn credentials(mut self, credentials: Vec<(String, String, String)>) -> Result<Self> {
-        let mut vars = HashMap::new();
-        for (registry, key, value) in credentials.into_iter() {
-            if !vars.contains_key(&registry) {
-                vars.insert(registry.clone(), HashMap::new());
-            }
-            let existing = vars
-                .get_mut(&registry)
-                .and_then(|reg| reg.insert(key.clone(), value.clone()));
-            if existing.is_some() {
-                Err(OroClientError::CredentialsConfigError(format!(
-                    "Key \"{}\" already exists for registry {}",
-                    key, registry
-                )))?
-            }
-        }
-        for (registry, config) in vars.into_iter() {
-            self.credentials.insert(registry, config.try_into()?);
-        }
-        Ok(self)
+    pub fn basic_auth(mut self, registry: Url, username: String, password: Option<String>) -> Self {
+        self.credentials.insert(
+            auth_middleware::nerf_dart(&registry),
+            Credentials::Basic { username, password },
+        );
+        self
+    }
+
+    pub fn token_auth(mut self, registry: Url, token: String) -> Self {
+        self.credentials.insert(
+            auth_middleware::nerf_dart(&registry),
+            Credentials::Token(token),
+        );
+        self
+    }
+
+    pub fn legacy_auth(mut self, registry: Url, legacy_auth_token: String) -> Self {
+        self.credentials.insert(
+            auth_middleware::nerf_dart(&registry),
+            Credentials::EncodedBasic(legacy_auth_token),
+        );
+        self
+    }
+
+    pub fn retries(mut self, retries: u32) -> Self {
+        self.retries = retries;
+        self
     }
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn cache(mut self, cache: impl AsRef<Path>) -> Self {
         self.cache = Some(PathBuf::from(cache.as_ref()));
-        self
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn fetch_retries(mut self, fetch_retries: u32) -> Self {
-        self.fetch_retries = fetch_retries;
         self
     }
 
@@ -151,12 +157,14 @@ impl OroClientBuilder {
             client_core.build().expect("Fail to build HTTP client.")
         };
 
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.fetch_retries);
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.retries);
         let retry_strategy = RetryTransientMiddleware::new_with_policy(retry_policy);
+        let credentials = Arc::new(self.credentials);
 
         #[allow(unused_mut)]
-        let mut client_builder =
-            reqwest_middleware::ClientBuilder::new(client_raw.clone()).with(retry_strategy);
+        let mut client_builder = reqwest_middleware::ClientBuilder::new(client_raw.clone())
+            .with(retry_strategy)
+            .with(AuthMiddleware(credentials.clone()));
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(cache_loc) = self.cache {
@@ -169,15 +177,15 @@ impl OroClientBuilder {
             }));
         }
 
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.fetch_retries);
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(self.retries);
         let retry_strategy = RetryTransientMiddleware::new_with_policy(retry_policy);
 
-        let client_uncached_builder =
-            reqwest_middleware::ClientBuilder::new(client_raw).with(retry_strategy);
+        let client_uncached_builder = reqwest_middleware::ClientBuilder::new(client_raw)
+            .with(retry_strategy)
+            .with(AuthMiddleware(credentials));
 
         OroClient {
             registry: Arc::new(self.registry),
-            #[cfg(not(target_arch = "wasm32"))]
             client: client_builder.build(),
             client_uncached: client_uncached_builder.build(),
         }

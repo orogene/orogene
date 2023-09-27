@@ -27,7 +27,7 @@ pub struct ViewCmd {
 #[async_trait]
 impl OroCommand for ViewCmd {
     async fn execute(self) -> Result<()> {
-        let pkg = self.nassun_args.to_nassun().resolve(&self.pkg).await?;
+        let pkg = self.nassun_args.to_nassun()?.resolve(&self.pkg).await?;
         let packument = pkg.packument().await?;
         let metadata = pkg.metadata().await?;
         // TODO: oro view pkg [<field>[.<subfield>...]]

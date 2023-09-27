@@ -17,9 +17,10 @@ oro-client = { version = "=0.3.29", path = "../oro-client" }
 async-std = { workspace = true }
 base64 = { workspace = true }
 dialoguer = { workspace = true }
+kdl = { workspace = true }
+miette = { workspace = true }
 open = { workspace = true }
 reqwest = { workspace = true }
-kdl = { workspace = true }
-url = { workspace = true }
-miette = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }

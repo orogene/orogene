@@ -1,6 +1,5 @@
 ---
 source: tests/help.rs
-assertion_line: 32
 expression: "sub_md(\"view\")"
 ---
 stderr:
@@ -62,11 +61,13 @@ Registry to use for a specific `@scope`, using `--scoped-registry @scope=https:/
 
 Can be provided multiple times to specify multiple scoped registries.
 
-#### `--credentials <CREDENTIALS>`
+#### `--auth <AUTH>`
 
 Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.
 
-The syntax is `--credentials my.registry.com:username=foo --credentials my.registry.com:password=sekrit`.
+The syntax is `--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser`.
+
+Valid auth fields are: `token`, `username`, `password`, and `legacy-auth`.
 
 #### `--cache <CACHE>`
 
@@ -136,9 +137,9 @@ Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
 
 Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
 
-#### `--fetch-retries <FETCH_RETRIES>`
+#### `--retries <RETRIES>`
 
-Package will retry when network failed
+How many times to retry failed network operations
 
 \[default: 2]
 

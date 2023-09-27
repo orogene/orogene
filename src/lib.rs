@@ -114,6 +114,7 @@ use commands::OroCommand;
 pub use error::OroError;
 
 mod apply_args;
+mod client_args;
 mod commands;
 mod error;
 mod nassun_args;
@@ -165,15 +166,17 @@ pub struct Orogene {
     /// provide credentials for multiple registries at a time, and different
     /// credential fields for a registry.
     ///
-    /// The syntax is `--credentials my.registry.com:username=foo
-    /// --credentials my.registry.com:password=sekrit`.
+    /// The syntax is `--auth {my.registry.com}token=deadbeef
+    /// --auth {my.registry.com}username=myuser`.
+    ///
+    /// Valid auth fields are: `token`, `username`, `password`, and `legacy-auth`.
     #[arg(
         help_heading = "Global Options",
         global = true,
         long,
         value_parser = parse_nested_key_value::<String, String, String>
     )]
-    credentials: Vec<(String, String, String)>,
+    auth: Vec<(String, String, String)>,
 
     /// Location of disk cache.
     ///
@@ -293,14 +296,14 @@ pub struct Orogene {
     )]
     no_proxy_domain: Option<String>,
 
-    /// Package will retry when network failed.
+    /// How many times to retry failed network operations.
     #[arg(
         help_heading = "Global Options",
         global = true,
         long,
         default_value_t = 2
     )]
-    fetch_retries: u32,
+    retries: u32,
 }
 
 impl Orogene {
@@ -506,8 +509,12 @@ impl Orogene {
         // We skip first-time-setup operations in CI entirely.
         if self.first_time && !is_ci::cached() {
             tracing::info!("Performing first-time setup...");
-            if let Some(dirs) = ProjectDirs::from("", "", "orogene") {
-                let config_dir = dirs.config_dir();
+            if let Some(config_path) = self
+                .config
+                .clone()
+                .or_else(|| ProjectDirs::from("", "", "orogene").map(|p| p.config_dir().to_owned()))
+            {
+                let config_dir = config_path.parent().expect("must have parent");
                 if !config_dir.exists() {
                     std::fs::create_dir_all(config_dir).unwrap();
                 }
@@ -799,16 +806,19 @@ where
     V: std::str::FromStr,
     V::Err: std::error::Error + Send + Sync + 'static,
 {
-    let colon_pos = s
-        .find(':')
-        .ok_or_else(|| format!("invalid TOP_KEY:NESTED_KEY=VALUE entry: no `:` found in `{s}`",))?;
-    let eq_pos = s
-        .find('=')
-        .ok_or_else(|| format!("invalid TOP_KEY:NESTED_KEY=VALUE entry: no `=` found in `{s}`"))?;
+    let open_pos = s.find('{').ok_or_else(|| {
+        format!("invalid {{TOP_KEY}}NESTED_KEY=VALUE entry: no `{{` found in `{s}`",)
+    })?;
+    let close_pos = s.find('}').ok_or_else(|| {
+        format!("invalid {{TOP_KEY}}NESTED_KEY=VALUE entry: no `}}` found in `{s}`",)
+    })?;
+    let eq_pos = s.find('=').ok_or_else(|| {
+        format!("invalid {{TOP_KEY}}NESTED_KEY=VALUE entry: no `=` found in `{s}`")
+    })?;
 
     Ok((
-        s[..colon_pos].parse()?,
-        s[colon_pos + 1..eq_pos].parse()?,
+        s[open_pos + 1..close_pos].parse()?,
+        s[close_pos + 1..eq_pos].parse()?,
         s[eq_pos + 1..].parse()?,
     ))
 }

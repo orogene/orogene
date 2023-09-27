@@ -1,18 +1,19 @@
 use base64::{engine::general_purpose, Engine as _};
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use reqwest::header::HeaderValue;
+use url::Url;
 
 pub enum Credentials {
-    AuthToken(String),
+    Token(String),
     /// Decryptable username and password combinations
-    Auth(String),
-    UsernameAndPassword {
+    LegacyAuth(String),
+    BasicAuth {
         username: String,
-        password: String,
+        password: Option<String>,
     },
 }
 
-pub fn set_credentials_by_uri(uri: &str, credentials: &Credentials, config: &mut KdlDocument) {
+pub fn set_credentials_by_uri(uri: &Url, credentials: &Credentials, config: &mut KdlDocument) {
     if config.get_mut("options").is_none() {
         config.nodes_mut().push(KdlNode::new("options"));
     }
@@ -33,33 +34,35 @@ pub fn set_credentials_by_uri(uri: &str, credentials: &Credentials, config: &mut
         .and_then(|user| user.children_mut().as_mut())
     {
         match credentials {
-            Credentials::AuthToken(auth_token) => {
+            Credentials::Token(auth_token) => {
                 let current_node = user.nodes_mut();
-                let mut node = KdlNode::new(uri);
+                let mut node = KdlNode::new(uri.as_ref());
                 clean_auth_nodes(uri, current_node);
-                node.push(KdlEntry::new_prop("auth-token", auth_token.as_ref()));
+                node.push(KdlEntry::new_prop("token", auth_token.as_ref()));
                 current_node.push(node);
             }
-            Credentials::Auth(token) => {
+            Credentials::LegacyAuth(token) => {
                 let current_node = user.nodes_mut();
-                let mut node = KdlNode::new(uri);
+                let mut node = KdlNode::new(uri.as_ref());
                 clean_auth_nodes(uri, current_node);
-                node.push(KdlEntry::new_prop("auth", token.as_ref()));
+                node.push(KdlEntry::new_prop("legacy-auth", token.as_ref()));
                 current_node.push(node);
             }
-            Credentials::UsernameAndPassword { username, password } => {
+            Credentials::BasicAuth { username, password } => {
                 let current_node = user.nodes_mut();
-                let mut node = KdlNode::new(uri);
+                let mut node = KdlNode::new(uri.as_ref());
                 clean_auth_nodes(uri, current_node);
                 node.push(KdlEntry::new_prop("username", username.as_ref()));
-                node.push(KdlEntry::new_prop("password", password.as_ref()));
+                if let Some(pass) = password {
+                    node.push(KdlEntry::new_prop("password", pass.as_ref()));
+                }
                 current_node.push(node);
             }
         }
     }
 }
 
-pub fn set_scoped_registry(scope: &str, registry: &str, config: &mut KdlDocument) {
+pub fn set_scoped_registry(scope: &str, registry: &Url, config: &mut KdlDocument) {
     if config.get_mut("options").is_none() {
         config.nodes_mut().push(KdlNode::new("options"));
     }
@@ -85,57 +88,79 @@ pub fn set_scoped_registry(scope: &str, registry: &str, config: &mut KdlDocument
         let current_node = scoped_registries.nodes_mut();
         let mut node = KdlNode::new(scope);
         clean_scoped_registry_nodes(scope, current_node);
-        node.push(KdlValue::String(registry.to_owned()));
+        node.push(KdlValue::String(registry.as_ref().to_owned()));
         current_node.push(node);
     }
 }
 
-pub fn get_credentials_by_uri(uri: &str, config: &KdlDocument) -> Option<Credentials> {
+pub fn get_credentials_by_uri(uri: &Url, config: &KdlDocument) -> Option<Credentials> {
     config
         .get("options")
         .and_then(|options| options.children())
         .and_then(|options_children| options_children.get("auth"))
         .and_then(|user| user.children())
-        .and_then(|user_children| user_children.get(uri))
+        .and_then(|user_children| {
+            user_children.nodes().iter().find(|node| {
+                let Ok(node_url) = Url::parse(node.name().value()) else {
+                    return false;
+                };
+                oro_client::nerf_dart(&node_url) == oro_client::nerf_dart(uri)
+            })
+        })
         .and_then(|credentials| {
-            let token = credentials.get("auth");
-            let auth_token = credentials.get("auth-token");
+            let token = credentials.get("token");
+            let legacy_auth = credentials.get("legacy-auth");
             let username = credentials.get("username");
             let password = credentials.get("password");
 
-            match (token, auth_token, username, password) {
+            match (token, legacy_auth, username, password) {
+                (_, Some(token), ..) => Some(Credentials::Token(token.as_string()?.into())),
                 (.., Some(username), Some(password)) => {
                     let username = username.as_string()?;
                     let password = password.as_string()?;
                     let password = general_purpose::STANDARD.decode(password).ok()?;
                     let password = String::from_utf8_lossy(&password).to_string();
 
-                    Some(Credentials::Auth(
+                    Some(Credentials::LegacyAuth(
                         general_purpose::STANDARD.encode(format!("{username}:{password}")),
                     ))
                 }
-                (_, Some(auth_token), ..) => {
-                    Some(Credentials::AuthToken(auth_token.as_string()?.into()))
+                (Some(legacy_auth), ..) => {
+                    Some(Credentials::LegacyAuth(legacy_auth.as_string()?.into()))
                 }
-                (Some(token), ..) => Some(Credentials::Auth(token.as_string()?.into())),
                 _ => None,
             }
         })
 }
 
-pub fn clear_crendentials_by_uri(uri: &str, config: &mut KdlDocument) {
-    if let Some(user_children) = config
+pub fn clear_crendentials_by_uri(uri: &Url, config: &mut KdlDocument) {
+    if let Some(auth_children) = config
         .get_mut("options")
         .and_then(|options| options.children_mut().as_mut())
-        .and_then(|options_children| options_children.get_mut("user"))
-        .and_then(|user| user.children_mut().as_mut())
+        .and_then(|options_children| options_children.get_mut("auth"))
+        .and_then(|auth| auth.children_mut().as_mut())
     {
-        clean_auth_nodes(uri, user_children.nodes_mut());
+        clean_auth_nodes(uri, auth_children.nodes_mut());
+        if auth_children.nodes().is_empty() {
+            if let Some(children) = config
+                .get_mut("options")
+                .and_then(|options| options.children_mut().as_mut())
+            {
+                children
+                    .nodes_mut()
+                    .retain_mut(|node| node.name().value() != "auth");
+            }
+        }
     };
 }
 
-fn clean_auth_nodes(uri: &str, nodes: &mut Vec<KdlNode>) {
-    nodes.retain_mut(|node| node.name().value() != uri);
+fn clean_auth_nodes(uri: &Url, nodes: &mut Vec<KdlNode>) {
+    nodes.retain_mut(|node| {
+        let Ok(node_url) = Url::parse(node.name().value()) else {
+            return false;
+        };
+        oro_client::nerf_dart(&node_url) != oro_client::nerf_dart(uri)
+    });
 }
 
 fn clean_scoped_registry_nodes(scope: &str, nodes: &mut Vec<KdlNode>) {
@@ -147,10 +172,10 @@ impl TryFrom<Credentials> for HeaderValue {
 
     fn try_from(value: Credentials) -> Result<Self, Self::Error> {
         match value {
-            Credentials::AuthToken(auth_token) => {
+            Credentials::Token(auth_token) => {
                 Ok(HeaderValue::from_str(&format!("Bearer {auth_token}"))?)
             }
-            Credentials::Auth(auth) => Ok(HeaderValue::from_str(&format!("Basic {auth}"))?),
+            Credentials::LegacyAuth(auth) => Ok(HeaderValue::from_str(&format!("Basic {auth}"))?),
             _ => Err(Self::Error::UnsupportedConversionError),
         }
     }

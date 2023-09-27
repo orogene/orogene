@@ -11,10 +11,15 @@ pub async fn login(
     registry: &Url,
     options: &LoginOptions,
 ) -> Result<Token, OroNpmAccountError> {
-    let client = OroClient::new(registry.clone());
+    let client = options
+        .client
+        .clone()
+        .unwrap_or_else(|| OroClient::new(registry.clone()));
     match auth_type {
         AuthType::Web => {
             let login_web = client.login_web(options).await?;
+            // TODO: make clickable in supported terminals.
+            tracing::info!("Login URL: {}", login_web.login_url);
             open(login_web.login_url).map_err(OroNpmAccountError::OpenURLError)?;
 
             loop {

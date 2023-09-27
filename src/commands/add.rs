@@ -44,7 +44,7 @@ impl OroCommand for AddCmd {
                 .into_diagnostic()?,
         )
         .into_diagnostic()?;
-        let nassun = NassunArgs::from_apply_args(&self.apply).to_nassun();
+        let nassun = NassunArgs::from_apply_args(&self.apply).to_nassun()?;
         use PackageResolution as Pr;
         use PackageSpec as Ps;
         let mut count = 0;
