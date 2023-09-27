@@ -21,6 +21,8 @@ indexmap = { workspace = true }
 miette = { workspace = true }
 percent-encoding = { workspace = true }
 reqwest = { workspace = true, features = ["json", "gzip", "stream"] }
+reqwest-middleware = { workspace = true }
+reqwest-retry = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -29,8 +31,6 @@ url = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 http-cache-reqwest = { workspace = true }
-reqwest-middleware = { workspace = true }
-reqwest-retry = { workspace = true }
 
 [dev-dependencies]
 async-std = { workspace = true, features = ["attributes", "tokio1"] }
