@@ -1,6 +1,6 @@
 [package]
 name = "oro-shim-bin"
-version = "0.3.28"
+version = "0.3.29"
 description = "Generates shims for NPM bins"
 readme = "README.md"
 license = "Apache-2.0"

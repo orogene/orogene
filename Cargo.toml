@@ -1,6 +1,6 @@
 [package]
 name = "orogene"
-version = "0.3.28"
+version = "0.3.29"
 description = "`node_modules/` package manager and utility toolkit."
 readme = "README.md"
 build = "build.rs"
@@ -21,14 +21,14 @@ path-guid = "D7A7057F-9CE2-4FB0-A0CF-1293469361C5"
 
 [dependencies]
 # Workspace Deps
-nassun = { version = "=0.3.28", path = "./crates/nassun" }
-node-maintainer = { version = "=0.3.28", path = "./crates/node-maintainer" }
-oro-client = { version = "=0.3.28", path = "./crates/oro-client" }
-oro-common = { version = "=0.3.28", path = "./crates/oro-common" }
-oro-config = { version = "=0.3.28", path = "./crates/oro-config" }
-oro-npm-account = { version = "=0.3.28", path = "./crates/oro-npm-account" }
-oro-package-spec = { version = "=0.3.28", path = "./crates/oro-package-spec" }
-oro-pretty-json = { version = "=0.3.28", path = "./crates/oro-pretty-json" }
+nassun = { version = "=0.3.29", path = "./crates/nassun" }
+node-maintainer = { version = "=0.3.29", path = "./crates/node-maintainer" }
+oro-client = { version = "=0.3.29", path = "./crates/oro-client" }
+oro-common = { version = "=0.3.29", path = "./crates/oro-common" }
+oro-config = { version = "=0.3.29", path = "./crates/oro-config" }
+oro-npm-account = { version = "=0.3.29", path = "./crates/oro-npm-account" }
+oro-package-spec = { version = "=0.3.29", path = "./crates/oro-package-spec" }
+oro-pretty-json = { version = "=0.3.29", path = "./crates/oro-pretty-json" }
 
 # Regular deps
 async-std = { workspace = true, features = [
@@ -160,7 +160,7 @@ reqwest-retry = "0.2.2"
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
 cargo-dist-version = "0.3.0"
 # The preferred Rust toolchain to use in CI (rustup toolchain syntax)
-rust-toolchain-version = "1.67.1"
+rust-toolchain-version = "1.72.1"
 # CI backends to support
 ci = ["github"]
 # Target platforms to build apps for (Rust target-triple syntax)
