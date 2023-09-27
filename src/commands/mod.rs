@@ -3,6 +3,8 @@ use miette::Result;
 
 pub mod add;
 pub mod apply;
+pub mod login;
+pub mod logout;
 pub mod ping;
 pub mod reapply;
 pub mod remove;

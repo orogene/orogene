@@ -13,6 +13,16 @@ fn apply_markdown() {
 }
 
 #[test]
+fn login_markdown() {
+    insta::assert_snapshot!("login", sub_md("login"));
+}
+
+#[test]
+fn logout_markdown() {
+    insta::assert_snapshot!("logout", sub_md("logout"));
+}
+
+#[test]
 fn ping_markdown() {
     insta::assert_snapshot!("ping", sub_md("ping"));
 }

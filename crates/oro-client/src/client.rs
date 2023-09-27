@@ -45,8 +45,10 @@ impl Default for OroClientBuilder {
             proxy_url: None,
             #[cfg(not(target_arch = "wasm32"))]
             no_proxy_domain: None,
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(all(not(target_arch = "wasm32"), not(test)))]
             fetch_retries: 2,
+            #[cfg(all(not(target_arch = "wasm32"), test))]
+            fetch_retries: 0,
         }
     }
 }

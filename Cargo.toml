@@ -22,6 +22,7 @@ node-maintainer = { version = "=0.3.27", path = "./crates/node-maintainer" }
 oro-client = { version = "=0.3.27", path = "./crates/oro-client" }
 oro-common = { version = "=0.3.27", path = "./crates/oro-common" }
 oro-config = { version = "=0.3.27", path = "./crates/oro-config" }
+oro-npm-account = { version = "=0.3.27", path = "./crates/oro-npm-account" }
 oro-package-spec = { version = "=0.3.27", path = "./crates/oro-package-spec" }
 oro-pretty-json = { version = "=0.3.27", path = "./crates/oro-pretty-json" }
 
@@ -74,6 +75,7 @@ async-process = "1.0.1"
 async-std = "1.12.0"
 async-trait = "0.1.64"
 backon = "0.4.0"
+base64 = "0.21.2"
 bincode = "1.3.1"
 bytecount = "0.6.0"
 cacache = "11.6.0"
@@ -108,6 +110,7 @@ mockito = "1.0.0"
 node-semver = "2.1.0"
 nom = "7.1.3"
 once_cell = "1.17.1"
+open = "5.0.0"
 pathdiff = "0.2.1"
 percent-encoding = "2.1.0"
 poloto = "17.1.0"
