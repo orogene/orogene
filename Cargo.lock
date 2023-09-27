@@ -1978,7 +1978,7 @@ dependencies = [
 
 [[package]]
 name = "nassun"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "async-compression 0.3.15",
  "async-process",
@@ -2039,7 +2039,7 @@ dependencies = [
 
 [[package]]
 name = "node-maintainer"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "async-std",
  "colored",
@@ -2219,7 +2219,7 @@ dependencies = [
 
 [[package]]
 name = "oro-client"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "async-std",
  "chrono",
@@ -2245,7 +2245,7 @@ dependencies = [
 
 [[package]]
 name = "oro-common"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "derive_builder",
  "indexmap 1.9.3",
@@ -2263,7 +2263,7 @@ dependencies = [
 
 [[package]]
 name = "oro-config"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "clap",
  "config",
@@ -2277,7 +2277,7 @@ dependencies = [
 
 [[package]]
 name = "oro-npm-account"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "async-std",
  "base64 0.21.4",
@@ -2293,7 +2293,7 @@ dependencies = [
 
 [[package]]
 name = "oro-package-spec"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "bytecount",
  "miette",
@@ -2306,14 +2306,14 @@ dependencies = [
 
 [[package]]
 name = "oro-pretty-json"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "oro-script"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "dunce",
  "miette",
@@ -2328,7 +2328,7 @@ dependencies = [
 
 [[package]]
 name = "oro-shim-bin"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "insta",
  "once_cell",
@@ -2339,7 +2339,7 @@ dependencies = [
 
 [[package]]
 name = "orogene"
-version = "0.3.27"
+version = "0.3.28"
 dependencies = [
  "async-std",
  "async-trait",
