@@ -1,4 +1,23 @@
 # Orogene Release Changelog
+<a name="0.3.30"></a>
+## 0.3.30 (2023-09-28)
+
+### Features
+
+* **docker:** add Dockerfile to compile orogene in a rust-debian-bookworm container (#288) ([10575974](https://github.com/orogene/orogene/commit/10575974ab7c2f6fcb2f862b281be14a9f7dbfdf))
+* **auth:** add registry authentication support ([0513019f](https://github.com/orogene/orogene/commit/0513019f87f6d047bbb38864baa193e3a3711569))
+* **login:** add support for all auth types to `oro login`, including direct `--token` passing ([cf709946](https://github.com/orogene/orogene/commit/cf70994664938ad45cb26c58d6b7c636c75e5fe8))
+
+### Bug Fixes
+
+* **auth:** glue login and authentication stuff, refactor, and make it all work ([23cf1bc8](https://github.com/orogene/orogene/commit/23cf1bc8b03a0c8b4f46a634ac2faff195dfd050))
+* **auth:** don't send auth to non-registry URLs ([e84a2576](https://github.com/orogene/orogene/commit/e84a25768d0328c407224416680bf09ac48490f2))
+* **misc:** get rid of annoying default-features warnings ([84f45865](https://github.com/orogene/orogene/commit/84f45865267b61bb2f783b5cbc7cbccb475a2e46))
+
+### Documentation
+
+* **auth:** Add authentication/authorization docs ([7ee6a742](https://github.com/orogene/orogene/commit/7ee6a742b4e5b7005b9e48a9a8acc1a8e02bae56))
+
 <a name="0.3.29"></a>
 ## 0.3.29 (2023-09-27)
 
