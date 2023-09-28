@@ -385,7 +385,7 @@ pub(crate) fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
             return false;
         }
     };
-    let supports_reflink = reflink::reflink(temp.path(), tempdir.path().join("b"))
+    let supports_reflink = reflink_copy::reflink(temp.path(), tempdir.path().join("b"))
         .map(|_| true)
         .map_err(|e| {
             tracing::debug!(

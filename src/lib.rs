@@ -256,6 +256,47 @@ pub struct Orogene {
 
     #[command(subcommand)]
     subcommand: OroCmd,
+
+    /// Use proxy to delegate the network.
+    ///
+    /// Proxy is opt-in, it uses for outgoing http/https request.
+    /// If enabled, should set proxy-url too.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = false
+    )]
+    proxy: bool,
+
+    /// A proxy to use for outgoing http requests.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "proxy-url",
+        default_value = None
+    )]
+    proxy_url: Option<String>,
+
+    /// Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
+    ///
+    /// Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long = "no-proxy-domain",
+        default_value = None
+    )]
+    no_proxy_domain: Option<String>,
+
+    /// Package will retry when network failed.
+    #[arg(
+        help_heading = "Global Options",
+        global = true,
+        long,
+        default_value_t = 2
+    )]
+    fetch_retries: u32,
 }
 
 impl Orogene {
@@ -576,9 +617,7 @@ impl Orogene {
                     })),
                     ..Default::default()
                 }
-                .add_integration(
-                    sentry::integrations::backtrace::AttachStacktraceIntegration::default(),
-                )
+                .add_integration(sentry::integrations::backtrace::AttachStacktraceIntegration)
                 .add_integration(
                     sentry::integrations::panic::PanicIntegration::default().add_extractor(
                         move |info: &PanicInfo| {
@@ -617,9 +656,7 @@ impl Orogene {
                     ),
                 )
                 .add_integration(sentry::integrations::contexts::ContextIntegration::new())
-                .add_integration(
-                    sentry::integrations::backtrace::ProcessStacktraceIntegration::default(),
-                ),
+                .add_integration(sentry::integrations::backtrace::ProcessStacktraceIntegration),
             );
             Ok(Some(ret))
         } else {
@@ -778,6 +815,10 @@ pub enum OroCmd {
 
     Apply(commands::apply::ApplyCmd),
 
+    Login(commands::login::LoginCmd),
+
+    Logout(commands::logout::LogoutCmd),
+
     Ping(commands::ping::PingCmd),
 
     Reapply(commands::reapply::ReapplyCmd),
@@ -797,6 +838,8 @@ impl OroCommand for Orogene {
         match self.subcommand {
             OroCmd::Add(cmd) => cmd.execute().await,
             OroCmd::Apply(cmd) => cmd.execute().await,
+            OroCmd::Login(cmd) => cmd.execute().await,
+            OroCmd::Logout(cmd) => cmd.execute().await,
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Reapply(cmd) => cmd.execute().await,
             OroCmd::Remove(cmd) => cmd.execute().await,
@@ -887,6 +930,6 @@ impl OroCommand for HelpMarkdownCmd {
 
             return Ok(());
         }
-        Err(miette::miette!("Command not found: {0}", self.command_name))
+        Err(miette::miette!("Command not found: {}", self.command_name))
     }
 }

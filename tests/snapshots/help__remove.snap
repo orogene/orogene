@@ -1,5 +1,6 @@
 ---
 source: tests/help.rs
+assertion_line: 27
 expression: "sub_md(\"remove\")"
 ---
 stderr:
@@ -174,5 +175,27 @@ Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve
 #### `--sentry-dsn <SENTRY_DSN>`
 
 Sentry DSN (access token) where telemetry will be sent (if enabled)
+
+#### `--proxy`
+
+Use proxy to delegate the network.
+
+Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.
+
+#### `--proxy-url <PROXY_URL>`
+
+A proxy to use for outgoing http requests
+
+#### `--no-proxy-domain <NO_PROXY_DOMAIN>`
+
+Use commas to separate multiple entries, e.g. `.host1.com,.host2.com`.
+
+Can also be configured through the `NO_PROXY` environment variable, like `NO_PROXY=.host1.com`.
+
+#### `--fetch-retries <FETCH_RETRIES>`
+
+Package will retry when network failed
+
+\[default: 2]
 
 

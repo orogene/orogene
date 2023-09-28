@@ -1,36 +1,32 @@
 ---
 source: tests/help.rs
-assertion_line: 32
-expression: "sub_md(\"view\")"
+expression: "sub_md(\"login\")"
 ---
 stderr:
 
 stdout:
-# oro view
+# oro login
 
-Get information about a package
+Log in to the registry
 
 ### Usage:
 
 ```
-oro view [OPTIONS] <PKG>
+oro login [OPTIONS]
 ```
-
-[aliases: v, info]
-
-### Arguments
-
-#### `<PKG>`
-
-Package spec to look up
 
 ### Options
 
-#### `--default-tag <DEFAULT_TAG>`
+#### `--auth-type <AUTH_TYPE>`
 
-Default dist-tag to use when resolving package versions
+What authentication strategy to use with login
 
-\[default: latest]
+\[default: web]
+\[possible values: web, legacy]
+
+#### `--scope <SCOPE>`
+
+Associate an operation with a scope for a scoped registry
 
 #### `-h, --help`
 

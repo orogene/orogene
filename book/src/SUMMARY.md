@@ -16,6 +16,8 @@
 
 - [add](./commands/add.md)
 - [apply](./commands/apply.md)
+- [login](./commands/login.md)
+- [logout](./commands/logout.md)
 - [ping](./commands/ping.md)
 - [reapply](./commands/reapply.md)
 - [remove](./commands/remove.md)

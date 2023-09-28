@@ -104,6 +104,18 @@ pub struct ApplyArgs {
 
     #[arg(from_global)]
     pub emoji: bool,
+
+    #[arg(from_global)]
+    pub proxy: bool,
+
+    #[arg(from_global)]
+    pub proxy_url: Option<String>,
+
+    #[arg(from_global)]
+    pub no_proxy_domain: Option<String>,
+
+    #[arg(from_global)]
+    pub fetch_retries: u32,
 }
 
 impl ApplyArgs {
@@ -160,6 +172,7 @@ impl ApplyArgs {
             .root(root)
             .prefer_copy(self.prefer_copy)
             .hoisted(self.hoisted)
+            .proxy(self.proxy)
             .on_resolution_added(move || {
                 Span::current().pb_inc_length(1);
             })
@@ -194,6 +207,14 @@ impl ApplyArgs {
                 span.pb_inc(1);
                 span.pb_set_message(line);
             });
+
+        if let Some(no_proxy_domain) = self.no_proxy_domain.as_deref() {
+            nm = nm.no_proxy_domain(no_proxy_domain);
+        }
+
+        if let Some(proxy_url) = self.proxy_url.as_deref() {
+            nm = nm.proxy_url(proxy_url);
+        }
 
         for (scope, registry) in &self.scoped_registries {
             nm = nm.scope_registry(scope, registry.clone());

@@ -62,7 +62,9 @@ standalone binary but, **on Linux**, does require a valid installation of
 ### Building WASM packages
 
 There's currently two packages with support for WASM, only one of which should
-really be used right now: `crates/nassun` and `crates/node-maintainer`.
+really be used right now: `crates/nassun` and `crates/node-maintainer`. Both
+of them are published to the NPM registry as part of `orogene`'s release
+process.
 
 `node-maintainer` is orogene's dependency resolver and is responsible for
 calculating dependency trees based on package.json, lockfiles, etc. Extraction

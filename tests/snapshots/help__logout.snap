@@ -1,36 +1,21 @@
 ---
 source: tests/help.rs
-assertion_line: 32
-expression: "sub_md(\"view\")"
+expression: "sub_md(\"logout\")"
 ---
 stderr:
 
 stdout:
-# oro view
+# oro logout
 
-Get information about a package
+Logout from the registry
 
 ### Usage:
 
 ```
-oro view [OPTIONS] <PKG>
+oro logout [OPTIONS]
 ```
 
-[aliases: v, info]
-
-### Arguments
-
-#### `<PKG>`
-
-Package spec to look up
-
 ### Options
-
-#### `--default-tag <DEFAULT_TAG>`
-
-Default dist-tag to use when resolving package versions
-
-\[default: latest]
 
 #### `-h, --help`
 

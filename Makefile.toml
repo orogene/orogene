@@ -10,9 +10,65 @@ dependencies = ["changelog", "readmes"]
 
 [tasks.release]
 workspace = false
+dependencies = ["cargo-release", "wasm-publish"]
+
+[tasks.cargo-release]
+workspace = false
 install_crate = "cargo-release"
 command = "cargo"
 args = ["release", "--workspace", "${@}"]
+
+[tasks.wasm-publish]
+workspace = false
+dependencies = ["publish-npm-nassun", "publish-npm-node-maintainer"]
+
+[tasks.publish-npm-nassun]
+env = { "npm_config_registry" = "https://registry.npmjs.org/" }
+workspace = false
+dependencies = ["wasm-build-nassun"]
+command = "wasm-pack"
+args = ["publish", "crates/nassun", "--target", "web"]
+
+[tasks.publish-npm-node-maintainer]
+env = { "npm_config_registry" = "https://registry.npmjs.org/" }
+workspace = false
+dependencies = ["wasm-build-node-maintainer"]
+command = "wasm-pack"
+args = ["publish", "crates/node-maintainer", "--target", "web"]
+
+[tasks.wasm-build-nassun]
+workspace = false
+dependencies = ["wasm-build-nassun-base"]
+command = "node"
+args = ["-e", """
+const jsonPath = './crates/nassun/pkg/package.json';
+const fs = require('node:fs');
+const pkg = require(jsonPath);
+pkg["files"].push("nassun_bg.wasm.d.ts");
+fs.writeFileSync(jsonPath, JSON.stringify(pkg, null, 2));
+"""]
+
+[tasks.wasm-build-node-maintainer]
+workspace = false
+dependencies = ["wasm-build-node-maintainer-base"]
+command = "node"
+args = ["-e", """
+const jsonPath = './crates/node-maintainer/pkg/package.json';
+const fs = require('node:fs');
+const pkg = require(jsonPath);
+pkg["files"].push("node_maintainer_bg.wasm.d.ts");
+fs.writeFileSync(jsonPath, JSON.stringify(pkg, null, 2));
+"""]
+
+[tasks.wasm-build-nassun-base]
+workspace = false
+command = "wasm-pack"
+args = ["build", "crates/nassun", "--target", "web"]
+
+[tasks.wasm-build-node-maintainer-base]
+workspace = false
+command = "wasm-pack"
+args = ["build", "crates/node-maintainer", "--target", "web"]
 
 [tasks.readmes]
 workspace = false

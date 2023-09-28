@@ -20,7 +20,10 @@ use crate::{IntoKdl, Lockfile};
 
 pub const DEFAULT_CONCURRENCY: usize = 50;
 pub const DEFAULT_SCRIPT_CONCURRENCY: usize = 6;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub const META_FILE_NAME: &str = ".orogene-meta.kdl";
+#[cfg(not(target_arch = "wasm32"))]
 pub const STORE_DIR_NAME: &str = ".oro-store";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
@@ -169,6 +172,24 @@ impl NodeMaintainerOptions {
     /// might be useful for compatibility.
     pub fn hoisted(mut self, hoisted: bool) -> Self {
         self.hoisted = hoisted;
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy(mut self, proxy: bool) -> Self {
+        self.nassun_opts = self.nassun_opts.proxy(proxy);
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn proxy_url(mut self, proxy_url: impl AsRef<str>) -> Self {
+        self.nassun_opts = self.nassun_opts.proxy_url(proxy_url.as_ref());
+        self
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn no_proxy_domain(mut self, no_proxy_domain: impl AsRef<str>) -> Self {
+        self.nassun_opts = self.nassun_opts.no_proxy_domain(no_proxy_domain.as_ref());
         self
     }
 
