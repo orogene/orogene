@@ -1,6 +1,6 @@
 # `oro-npm-account`
 
-Configure access token and execute the login process.
+
 
 ## Orogene
 

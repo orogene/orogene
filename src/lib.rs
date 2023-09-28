@@ -12,7 +12,10 @@
 //! `node_modules/`, such as bundlers, CLI tools, and Node.js-based
 //! applications. It's fast, robust, and meant to be easily integrated into
 //! your workflows such that you never have to worry about whether your
-//! `node_modules/` is up to date.
+//! `node_modules/` is up to date. It even deduplicates your dependencies
+//! using a central store, and improves the experience using Copy-on-Write on
+//! supported filesystems, greatly reducing disk usage and speeding up
+//! loading.
 //!
 //! > *Note*: Orogene is still under heavy development and may not yet be
 //! > suitable for production use. It is missing some features that you might
@@ -40,7 +43,8 @@
 //! $ cargo install orogene
 //! ```
 //!
-//! You can also find install scripts and archive downloads in [the latest
+//! You can also find install scripts, windows MSI installers, and archive
+//! downloads in [the latest
 //! release](https://github.com/orogene/orogene/releases/latest).
 //!
 //! ## Usage
