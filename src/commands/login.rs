@@ -40,6 +40,23 @@ pub struct LoginCmd {
     #[arg(long, value_enum, default_value_t = LoginType::Web)]
     auth_type: LoginType,
 
+    /// Set an authorization token directly (the equivalent of NPM's `:token` or `:_authToken`).
+    #[arg(long)]
+    token: Option<String>,
+
+    /// Set a username directly instead of logging in to a registry.
+    #[arg(long)]
+    username: Option<String>,
+
+    /// If a `username` is provided, this (optional) password will be set
+    /// along with it.
+    #[arg(long)]
+    password: Option<String>,
+
+    /// Set a legacy authorization token (the equivalent of NPM's `:_auth`).
+    #[arg(long)]
+    legacy_token: Option<String>,
+
     /// Associate an operation with a scope for a scoped registry.
     #[arg(long)]
     scope: Option<String>,
@@ -64,22 +81,31 @@ impl OroCommand for LoginCmd {
 
             let builder: OroClientBuilder = self.client_args.try_into()?;
 
-            let token = login(
-                &self.auth_type.into(),
-                &self.registry,
-                &LoginOptions {
-                    scope: self.scope.clone(),
-                    client: Some(builder.registry(self.registry.clone()).build()),
-                },
-            )
-            .await
-            .into_diagnostic()?;
+            let credentials = if let Some(token) = &self.token {
+                Credentials::Token(token.clone())
+            } else if let Some(username) = &self.username {
+                Credentials::BasicAuth {
+                    username: username.clone(),
+                    password: self.password.clone(),
+                }
+            } else if let Some(legacy_token) = &self.legacy_token {
+                Credentials::LegacyAuth(legacy_token.clone())
+            } else {
+                let token = login(
+                    &self.auth_type.into(),
+                    &self.registry,
+                    &LoginOptions {
+                        scope: self.scope.clone(),
+                        client: Some(builder.registry(self.registry.clone()).build()),
+                    },
+                )
+                .await
+                .into_diagnostic()?;
 
-            config::set_credentials_by_uri(
-                &self.registry,
-                &Credentials::Token(token.token),
-                &mut config,
-            );
+                Credentials::Token(token.token)
+            };
+
+            config::set_credentials_by_uri(&self.registry, &credentials, &mut config);
 
             if let Some(scope) = self.scope {
                 config::set_scoped_registry(&scope, &self.registry, &mut config);

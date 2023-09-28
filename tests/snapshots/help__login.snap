@@ -24,6 +24,22 @@ What authentication strategy to use with login
 \[default: web]
 \[possible values: web, legacy]
 
+#### `--token <TOKEN>`
+
+Set an authorization token directly (the equivalent of NPM's `:token` or `:_authToken`)
+
+#### `--username <USERNAME>`
+
+Set a username directly instead of logging in to a registry
+
+#### `--password <PASSWORD>`
+
+If a `username` is provided, this (optional) password will be set along with it
+
+#### `--legacy-token <LEGACY_TOKEN>`
+
+Set a legacy authorization token (the equivalent of NPM's `:_auth`)
+
 #### `--scope <SCOPE>`
 
 Associate an operation with a scope for a scoped registry
