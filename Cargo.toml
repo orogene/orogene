@@ -175,6 +175,8 @@ windows-archive = ".tar.gz"
 unix-archive = ".tar.gz"
 # Publish jobs to run in CI
 pr-run-mode = "plan"
+# Skip checking whether the specified configuration files are up to date
+allow-dirty = ["msi"]
 
 [build-dependencies]
 embed-resource = "1.3.3"

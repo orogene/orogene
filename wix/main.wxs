@@ -95,6 +95,7 @@
                       2. Comment out or remove the `ComponentRef` tag with the "License" Id
                          attribute value further down in this file.
                     -->
+                    <!--
                     <Component Id='License' Guid='*'>
                         <File Id='LicenseFile'
                             Name='License'
@@ -102,7 +103,7 @@
                             Source='License.rtf'
                             KeyPath='yes'/>
                     </Component>
-                    
+                    -->
                     <Directory Id='Bin' Name='bin'>
                         <Component Id='Path' Guid='D7A7057F-9CE2-4FB0-A0CF-1293469361C5' KeyPath='yes'>
                             <Environment
@@ -140,8 +141,9 @@
               Comment out or remove the following `ComponentRef` tag to remove
               the license sidecar file from the installer.
             -->
+            <!--
             <ComponentRef Id='License'/>
-            
+            -->
             <ComponentRef Id='binary0'/>
 
             <Feature
@@ -156,7 +158,7 @@
 
         <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>
 
-        
+
         <!--
           Uncomment the following `Icon` and `Property` tags to change the product icon.
 
@@ -167,7 +169,7 @@
         <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
         <Property Id='ARPHELPLINK' Value='https://orogene.dev'/>
-        
+
         <UI>
             <UIRef Id='WixUI_FeatureTree'/>
             <!--
@@ -177,18 +179,19 @@
                  2. Comment out or remove the `<WiXVariable Id='WixUILicenseRtf'...` tag further down
 
             -->
-            <!--<Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>-->
-            <!--<Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>-->
-            
+            <Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>
+            <Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>
+
         </UI>
 
         <!--
           Disabling the EULA dialog in the installer requires commenting out
           or removing the following `WixVariable` tag
         -->
+        <!--
         <WixVariable Id='WixUILicenseRtf' Value='License.rtf'/>
-        
-        
+        -->
+
         <!--
           Uncomment the next `WixVariable` tag to customize the installer's
           Graphical User Interface (GUI) and add a custom banner image across
@@ -199,7 +202,7 @@
         -->
         <!--<WixVariable Id='WixUIBannerBmp' Value='wix\Banner.bmp'/>-->
 
-        
+
         <!--
           Uncomment the next `WixVariable` tag to customize the installer's
           Graphical User Interface (GUI) and add a custom image to the first
