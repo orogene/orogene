@@ -66,6 +66,17 @@ docs](https://orogene.dev/book/), or run `$ oro help`.
 If you just want to do something similar to `$ npm install`, you can run
 `$ oro apply` in your project and go from there.
 
+### Compiling with Docker
+
+```sh
+$ docker build -t orogene .
+```
+Test it with
+
+```sh
+docker run -it --rm --name oro orogene /usr/src/orogene/target/release/oro --version
+```
+
 ### Performance
 
 Orogene is very fast and uses significantly fewer resources than other
