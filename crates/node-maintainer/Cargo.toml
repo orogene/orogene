@@ -1,6 +1,6 @@
 [package]
 name = "node-maintainer"
-version = "0.3.29"
+version = "0.3.30"
 description = "NPM dependency tree resolver for Orogene."
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,9 +12,9 @@ homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-nassun = { version = "=0.3.29", path = "../nassun" }
-oro-common = { version = "=0.3.29", path = "../oro-common" }
-oro-package-spec = { version = "=0.3.29", path = "../oro-package-spec" }
+nassun = { version = "=0.3.30", path = "../nassun" }
+oro-common = { version = "=0.3.30", path = "../oro-common" }
+oro-package-spec = { version = "=0.3.30", path = "../oro-package-spec" }
 
 async-std = { workspace = true }
 colored = { workspace = true }
@@ -36,8 +36,8 @@ url = { workspace = true }
 junction = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-oro-script = { version = "=0.3.29", path = "../oro-script" }
-oro-shim-bin = { version = "=0.3.29", path = "../oro-shim-bin" }
+oro-script = { version = "=0.3.30", path = "../oro-script" }
+oro-shim-bin = { version = "=0.3.30", path = "../oro-shim-bin" }
 
 reflink-copy = { workspace = true }
 indicatif = { workspace = true }

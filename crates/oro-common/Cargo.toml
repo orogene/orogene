@@ -1,6 +1,6 @@
 [package]
 name = "oro-common"
-version = "0.3.29"
+version = "0.3.30"
 description = "Common types and utilities for Orogene."
 readme = "README.md"
 license = "Apache-2.0"
