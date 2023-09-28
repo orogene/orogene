@@ -19,14 +19,25 @@ impl Middleware for AuthMiddleware {
         extensions: &mut Extensions,
         next: Next<'_>,
     ) -> Result<Response> {
-        let reg = req
-            .headers()
-            .get("X-Oro-Registry")
-            .expect("Request did not have an x-oro-registry header. This is a bug in oro-client.");
-        let credentials = self.0.get(&nerf_dart(
-            &Url::parse(reg.to_str().expect("This should stringify just fine."))
-                .expect("This should have already been parsed and serialized previously."),
-        ));
+        let reg = Url::parse(
+            req.headers()
+                .get("X-Oro-Registry")
+                .expect(
+                    "Request did not have an x-oro-registry header. This is a bug in oro-client.",
+                )
+                .to_str()
+                .expect("This should stringify just fine."),
+        )
+        .expect("This should have already been parsed and serialized previously.");
+
+        // Don't add auth headers to requests to URLs outside the given
+        // registry.
+        let req_url = req.url().clone();
+        if reg.host_str() != req_url.host_str() || !req_url.path().starts_with(reg.path()) {
+            return next.run(req, extensions).await;
+        }
+
+        let credentials = self.0.get(&nerf_dart(&reg));
         if let Some(cred) = credentials {
             let auth_header = match cred {
                 Credentials::Basic { username, password } => {
