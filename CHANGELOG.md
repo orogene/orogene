@@ -1,4 +1,11 @@
 # Orogene Release Changelog
+<a name="0.3.31"></a>
+## 0.3.31 (2023-09-28)
+
+### Bug Fixes
+
+* **dist:** temporarily allow-dirty and remove license stuff (#293) ([39685826](https://github.com/orogene/orogene/commit/3968582665fe35d1e01388df2030b88f1ab3c31c))
+
 <a name="0.3.30"></a>
 ## 0.3.30 (2023-09-28)
 
