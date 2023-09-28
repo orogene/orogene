@@ -57,6 +57,7 @@ Options can be specified through `oro.kdl` by using the toplevel `options`
 node. For example:
 
 ```kdl
+// ./oro.kdl
 options {
     registry "https://my.private.registry/_path"
     emoji false
