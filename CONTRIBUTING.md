@@ -53,11 +53,21 @@ If you plan on builing wasm packages for orogene sub-crates, you'll also need:
 
 ### Building the CLI
 
+Linux has a couple of build requirements. These can be installed on ubuntu
+with the following command. Adapt as needed for your distro:
+
+```sh
+sudo apt-get install build-essential pkg-config libssl-dev
+```
+
+On Windows, you'll need a working `msvc`.
+
 You can build the CLI using a plain `cargo build` (optionally with
 `--release`), and binaries will be available in your local
-`./target/{debug,release}/oro[.exe]` directory. The `oro`/`oro.exe` is a
-standalone binary but, **on Linux**, does require a valid installation of
-`openssl 1` installed on the system in order to run.
+`./target/{debug,release}/oro[.exe]` directory.
+
+The `oro`/`oro.exe` is a standalone binary but, **on Linux**, does require a
+valid installation of `openssl 1` installed on the system in order to run.
 
 ### Building WASM packages
 
