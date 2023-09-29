@@ -246,14 +246,13 @@ impl Package {
         let name = self.name().to_owned();
         async_std::task::spawn_blocking(move || {
             let mut created = std::collections::HashSet::new();
-            let index = unsafe {
-                rkyv::util::archived_root::<TarballIndex>(
-                    entry
-                        .raw_metadata
-                        .as_ref()
-                        .ok_or_else(|| NassunError::CacheMissingIndexError(name))?,
-                )
-            };
+            let index = rkyv::check_archived_root::<TarballIndex>(
+                entry
+                    .raw_metadata
+                    .as_ref()
+                    .ok_or_else(|| NassunError::CacheMissingIndexError(name))?,
+            )
+            .map_err(|e| NassunError::DeserializeCacheError(e.to_string()))?;
             prefer_copy = index.should_copy || prefer_copy;
             for (path, (sri, mode)) in index.files.iter() {
                 let sri: Integrity = sri.parse()?;
@@ -299,14 +298,13 @@ impl fmt::Debug for Package {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn clean_from_cache(cache: &Path, sri: &Integrity, entry: cacache::Metadata) -> Result<()> {
-    let index = unsafe {
-        rkyv::util::archived_root::<TarballIndex>(
-            entry
-                .raw_metadata
-                .as_ref()
-                .ok_or_else(|| NassunError::CacheMissingIndexError("".into()))?,
-        )
-    };
+    let index = rkyv::check_archived_root::<TarballIndex>(
+        entry
+            .raw_metadata
+            .as_ref()
+            .ok_or_else(|| NassunError::CacheMissingIndexError("".into()))?,
+    )
+    .map_err(|e| NassunError::DeserializeCacheError(e.to_string()))?;
     for (sri, _) in index.files.values() {
         let sri: Integrity = sri.as_str().parse()?;
         match cacache::remove_hash_sync(cache, &sri) {

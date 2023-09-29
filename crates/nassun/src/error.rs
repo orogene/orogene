@@ -165,6 +165,11 @@ pub enum NassunError {
     #[diagnostic(code(nassun::cache::serialize), url(docsrs))]
     SerializeCacheError(String),
 
+    /// An error happened while deserializing cache metadata.
+    #[error("Failed to deserialize cache metadata: {0}")]
+    #[diagnostic(code(nassun::cache::deserialize), url(docsrs))]
+    DeserializeCacheError(String),
+
     /// A miscellaneous, usually internal error. This is used mainly to wrap
     /// either manual InternalErrors, or those using external errors that
     /// don't implement std::error::Error.
