@@ -306,6 +306,14 @@ impl Graph {
         path
     }
 
+    pub(crate) fn node_path_string(&self, node_idx: NodeIndex) -> String {
+        self.node_path(node_idx)
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join("/node_modules/")
+    }
+
     /// Validate that file system hierarchy (parent -> children) is compatible
     /// with graph edges (dependent -> dependency).
     #[cfg(debug_assertions)]

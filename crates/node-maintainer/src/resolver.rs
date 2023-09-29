@@ -426,10 +426,10 @@ impl<'a> Resolver<'a> {
                 tracing::error!(
                     "clobbered {} at {} with {} (requested: {} by {}). This is a bug with the orogene resolver. Please report it.",
                     graph[old].package.resolved(),
-                    graph.node_path(old).iter().map(|x| x.to_string()).collect::<Vec<_>>().join("/node_modules/"),
+                    graph.node_path_string(old),
                     graph[child_idx].package.resolved(),
                     requested,
-                    graph.node_path(dependent_idx).iter().map(|x| x.to_string()).collect::<Vec<_>>().join("/node_modules/")
+                    graph.node_path_string(dependent_idx)
                 );
             }
         }
