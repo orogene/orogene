@@ -234,7 +234,7 @@ impl ApplyArgs {
                 .template(&format!(
                     "{}Resolving {}",
                     self.emoji_magnifying_glass(),
-                    "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
+                    "{bar:20} [{pos}/{len}] {wide_msg:.dim}"
                 ))
                 .unwrap(),
         );
@@ -266,7 +266,7 @@ impl ApplyArgs {
                 .template(&format!(
                     "{}Pruning extraneous {}",
                     self.emoji_broom(),
-                    "{bar:40} [{pos}] {wide_msg:.dim}"
+                    "{bar:20} [{pos}] {wide_msg:.dim}"
                 ))
                 .unwrap(),
         );
@@ -297,7 +297,7 @@ impl ApplyArgs {
                 .template(&format!(
                     "{}Extracting {}",
                     self.emoji_package(),
-                    "{bar:40} [{pos}/{len}] {wide_msg:.dim}"
+                    "{bar:20} [{pos}/{len}] {wide_msg:.dim}"
                 ))
                 .unwrap(),
         );
