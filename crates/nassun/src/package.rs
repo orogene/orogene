@@ -299,12 +299,16 @@ impl fmt::Debug for Package {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn clean_from_cache(cache: &Path, sri: &Integrity, entry: cacache::Metadata) -> Result<()> {
-    let map = entry
-        .metadata
-        .as_object()
-        .expect("how is this not an object?");
-    for sri in map.values() {
-        let sri: Integrity = sri.as_str().expect("how is this not a string?").parse()?;
+    let index = unsafe {
+        rkyv::util::archived_root::<TarballIndex>(
+            entry
+                .raw_metadata
+                .as_ref()
+                .ok_or_else(|| NassunError::CacheMissingIndexError("".into()))?,
+        )
+    };
+    for (sri, _) in index.files.values() {
+        let sri: Integrity = sri.as_str().parse()?;
         match cacache::remove_hash_sync(cache, &sri) {
             Ok(_) => {}
             // We don't care if the file doesn't exist.
