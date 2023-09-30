@@ -43,6 +43,11 @@
 //! $ cargo install orogene
 //! ```
 //!
+//! Homebrew:
+//! ```sh
+//! $ brew install orogene/homebrew-tap/orogene
+//! ```
+//!
 //! You can also find install scripts, windows MSI installers, and archive
 //! downloads in [the latest
 //! release](https://github.com/orogene/orogene/releases/latest).
