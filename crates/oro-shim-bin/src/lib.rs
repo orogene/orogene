@@ -123,7 +123,7 @@ fn write_cmd_shim(
         };
         cmd.push_str(&convert_to_set_commands(vars.unwrap_or("")));
         cmd.push_str("\r\n");
-        cmd.push_str(&format!("IF EXISTS \"%dp0%\\{prog}.exe\" (\r\n"));
+        cmd.push_str(&format!("IF EXIST \"%dp0%\\{prog}.exe\" (\r\n"));
         cmd.push_str(&format!("  SET \"_prog=%dp0%\\{prog}.exe\"\r\n"));
         cmd.push_str(") ELSE (\r\n");
         cmd.push_str(&format!(

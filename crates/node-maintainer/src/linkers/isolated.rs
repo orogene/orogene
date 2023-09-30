@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BinaryHeap, HashMap, HashSet},
     path::{Path, PathBuf},
     sync::{
         atomic::{self, AtomicUsize},
@@ -18,6 +18,7 @@ use super::LinkerOptions;
 
 pub(crate) struct IsolatedLinker {
     pub(crate) pending_rebuild: Arc<Mutex<HashSet<NodeIndex>>>,
+    pub(crate) pending_bin_link: Arc<Mutex<BinaryHeap<NodeIndex>>>,
     pub(crate) opts: LinkerOptions,
 }
 
@@ -25,6 +26,7 @@ impl IsolatedLinker {
     pub fn new(opts: LinkerOptions) -> Self {
         Self {
             pending_rebuild: Arc::new(Mutex::new(HashSet::new())),
+            pending_bin_link: Arc::new(Mutex::new(BinaryHeap::new())),
             opts,
         }
     }
@@ -339,6 +341,7 @@ impl IsolatedLinker {
         let stream = futures::stream::iter(graph.inner.node_indices());
         let concurrent_count = Arc::new(AtomicUsize::new(0));
         let pending_rebuild = self.pending_rebuild.clone();
+        let pending_bin_link = self.pending_bin_link.clone();
         let actually_extracted = Arc::new(AtomicUsize::new(0));
         let total = graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
@@ -362,6 +365,7 @@ impl IsolatedLinker {
                     total_completed.clone(),
                     actually_extracted.clone(),
                     pending_rebuild.clone(),
+                    pending_bin_link.clone(),
                 ))
             })
             .try_for_each_concurrent(
@@ -372,6 +376,7 @@ impl IsolatedLinker {
                     total_completed,
                     actually_extracted,
                     pending_rebuild,
+                    pending_bin_link,
                 )| async move {
                     if child_idx == graph.root {
                         link_deps(graph, child_idx, store_ref, &root.join("node_modules")).await?;
@@ -411,9 +416,11 @@ impl IsolatedLinker {
                             || build_mani.scripts.contains_key("install")
                             || build_mani.scripts.contains_key("postinstall")
                             || build_mani.scripts.contains_key("prepare")
-                            || !build_mani.bin.is_empty()
                         {
                             pending_rebuild.lock().await.insert(child_idx);
+                        }
+                        if !build_mani.bin.is_empty() {
+                            pending_bin_link.lock().await.push(child_idx);
                         }
                     }
 
@@ -463,39 +470,13 @@ impl IsolatedLinker {
         let root = &self.opts.root;
         let store = root.join("node_modules").join(STORE_DIR_NAME);
         let store_ref = &store;
-        let linked = Arc::new(AtomicUsize::new(0));
+        let mut linked = 0;
 
-        futures::stream::iter(self.pending_rebuild.lock().await.iter().copied())
-            .map(|idx| Ok((idx, linked.clone())))
-            .try_for_each_concurrent(self.opts.concurrency, move |(idx, linked)| async move {
-                if idx == graph.root {
-                    let added = link_dep_bins(
-                        graph,
-                        idx,
-                        store_ref,
-                        &root.join("node_modules").join(".bin"),
-                    )
-                    .await?;
-                    linked.fetch_add(added, atomic::Ordering::SeqCst);
-                    return Ok(());
-                }
-
-                let pkg = &graph[idx].package;
-                let pkg_bin_dir = store_ref
-                    .join(package_dir_name(graph, idx))
-                    .join("node_modules")
-                    .join(pkg.name())
-                    .join("node_modules")
-                    .join(".bin");
-
-                let added = link_dep_bins(graph, idx, store_ref, &pkg_bin_dir).await?;
-                linked.fetch_add(added, atomic::Ordering::SeqCst);
-
-                Ok::<_, NodeMaintainerError>(())
-            })
-            .await?;
-
-        let linked = linked.load(atomic::Ordering::SeqCst);
+        let mut pending = self.pending_bin_link.lock().await;
+        while let Some(idx) = pending.pop() {
+            let added = link_dep_bins(graph, idx, root, store_ref).await?;
+            linked += added;
+        }
         Ok(linked)
     }
 
@@ -514,15 +495,10 @@ impl IsolatedLinker {
 }
 
 fn package_dir_name(graph: &Graph, idx: NodeIndex) -> String {
-    let pkg = &graph[idx].package;
-    let subdir = graph
-        .node_path(idx)
-        .iter()
-        .map(|x| x.to_string())
-        .collect::<Vec<_>>()
-        .join("/node_modules/");
+    let node = &graph[idx];
+    let subdir = graph.node_path_string(idx);
 
-    let mut name = pkg.name().to_string();
+    let mut name = node.name.to_string();
     name.push('@');
     let (_, mut hex) = Integrity::from(subdir).to_hex();
     hex.truncate(8);
@@ -577,34 +553,46 @@ async fn link_deps(
 async fn link_dep_bins(
     graph: &Graph,
     node: NodeIndex,
+    root_path: &Path,
     store_ref: &Path,
-    target_bin: &Path,
 ) -> Result<usize, NodeMaintainerError> {
+    if node == graph.root {
+        return Ok(0);
+    }
     let mut linked = 0;
-    for edge in graph.inner.edges_directed(node, Direction::Outgoing) {
-        let dep_pkg = &graph[edge.target()].package;
-        let dep_store_dir = store_ref
-            .join(package_dir_name(graph, edge.target()))
-            .join("node_modules")
-            .join(dep_pkg.name());
-        let build_mani =
-            BuildManifest::from_path(dep_store_dir.join("package.json")).map_err(|e| {
-                NodeMaintainerError::BuildManifestReadError(dep_store_dir.join("package.json"), e)
-            })?;
+    let node_path = store_ref
+        .join(package_dir_name(graph, node))
+        .join("node_modules")
+        .join(&graph[node].name.to_string());
+    let build_mani = BuildManifest::from_path(node_path.join("package.json")).map_err(|e| {
+        NodeMaintainerError::BuildManifestReadError(node_path.join("package.json"), e)
+    })?;
+    for edge in graph.inner.edges_directed(node, Direction::Incoming) {
+        let dep_node = &graph[edge.source()];
+        let dep_store_dir = if dep_node.idx == graph.root {
+            root_path.to_owned()
+        } else {
+            store_ref
+                .join(package_dir_name(graph, edge.source()))
+                .join("node_modules")
+                .join(&dep_node.name.to_string())
+        };
+        let dep_bin_dir = dep_store_dir.join("node_modules").join(".bin");
         for (name, path) in &build_mani.bin {
-            let target_bin = target_bin.to_owned();
-            let to = target_bin.join(name);
-            let from = dep_store_dir.join(path);
+            let to = dep_bin_dir.join(name);
+            let from = dep_store_dir.join("node_modules").join(name).join(path);
             let name = name.clone();
             async_std::task::spawn_blocking(move || {
                 // We only create a symlink if the target bin exists.
                 if from.symlink_metadata().is_ok() {
-                    std::fs::create_dir_all(&target_bin).io_context(|| {
-                        format!(
-                            "Failed to create target bin directory at {}.",
-                            target_bin.display()
-                        )
-                    })?;
+                    std::fs::create_dir_all(to.parent().expect("has a parent")).io_context(
+                        || {
+                            format!(
+                                "Failed to create target bin directory at {}.",
+                                to.parent().unwrap().display()
+                            )
+                        },
+                    )?;
                     if let Ok(meta) = to.symlink_metadata() {
                         if meta.is_dir() {
                             std::fs::remove_dir_all(&to).io_context(|| {
