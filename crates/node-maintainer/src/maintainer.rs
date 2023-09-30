@@ -348,10 +348,12 @@ impl NodeMaintainerOptions {
             on_resolution_added: self.on_resolution_added,
             on_resolve_progress: self.on_resolve_progress,
         };
-        let node = resolver
-            .graph
-            .inner
-            .add_node(Node::new(UniCase::new("".to_string()), root_pkg, root, true)?);
+        let node = resolver.graph.inner.add_node(Node::new(
+            UniCase::new("".to_string()),
+            root_pkg,
+            root,
+            true,
+        )?);
         resolver.graph[node].root = node;
         let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
@@ -404,10 +406,12 @@ impl NodeMaintainerOptions {
             on_resolve_progress: self.on_resolve_progress,
         };
         let corgi = root_pkg.corgi_metadata().await?.manifest;
-        let node = resolver
-            .graph
-            .inner
-            .add_node(Node::new(UniCase::new("".to_string()), root_pkg, corgi, true)?);
+        let node = resolver.graph.inner.add_node(Node::new(
+            UniCase::new("".to_string()),
+            root_pkg,
+            corgi,
+            true,
+        )?);
         resolver.graph[node].root = node;
         let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
