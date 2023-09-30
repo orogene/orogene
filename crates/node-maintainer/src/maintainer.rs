@@ -6,6 +6,7 @@ use async_std::fs;
 use nassun::client::{Nassun, NassunOpts};
 use nassun::package::Package;
 use oro_common::CorgiManifest;
+use unicase::UniCase;
 use url::Url;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -350,7 +351,7 @@ impl NodeMaintainerOptions {
         let node = resolver
             .graph
             .inner
-            .add_node(Node::new(root_pkg, root, true)?);
+            .add_node(Node::new(UniCase::new("".to_string()), root_pkg, root, true)?);
         resolver.graph[node].root = node;
         let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]
@@ -406,7 +407,7 @@ impl NodeMaintainerOptions {
         let node = resolver
             .graph
             .inner
-            .add_node(Node::new(root_pkg, corgi, true)?);
+            .add_node(Node::new(UniCase::new("".to_string()), root_pkg, corgi, true)?);
         resolver.graph[node].root = node;
         let (graph, _actual_tree) = resolver.run_resolver(lockfile).await?;
         #[cfg(not(target_arch = "wasm32"))]

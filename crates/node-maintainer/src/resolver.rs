@@ -351,7 +351,7 @@ impl<'a> Resolver<'a> {
         let requested = &dep.spec;
         let dep_type = dep.dep_type;
         let dependent_idx = dep.node_idx;
-        let child_node = Node::new(package, corgi, false)?;
+        let child_node = Node::new(child_name.clone(), package, corgi, false)?;
         let child_idx = graph.inner.add_node(child_node);
         graph[child_idx].root = graph.root;
         // We needed to generate the node index before setting it in the node,
