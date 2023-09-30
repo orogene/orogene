@@ -151,7 +151,7 @@ impl From<LockfileNode> for CorgiManifest {
             dev_dependencies: value.dev_dependencies,
             peer_dependencies: value.peer_dependencies,
             optional_dependencies: value.optional_dependencies,
-            bundled_dependencies: Vec::new(),
+            bundled_dependencies: None,
         }
     }
 }

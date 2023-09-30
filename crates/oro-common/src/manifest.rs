@@ -24,7 +24,7 @@ pub struct CorgiManifest {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub peer_dependencies: IndexMap<String, String>,
     #[serde(default, alias = "bundleDependencies", alias = "bundledDependencies")]
-    pub bundled_dependencies: Vec<String>,
+    pub bundled_dependencies: Option<BundledDependencies>,
 }
 
 #[derive(Builder, Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -183,10 +183,10 @@ pub struct Manifest {
         default,
         alias = "bundleDependencies",
         alias = "bundledDependencies",
-        skip_serializing_if = "Vec::is_empty"
+        skip_serializing_if = "empty_bundled_dependencies"
     )]
     #[builder(default)]
-    pub bundled_dependencies: Vec<String>,
+    pub bundled_dependencies: Option<BundledDependencies>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
@@ -266,6 +266,21 @@ where
 {
     Object(HashMap<K, V>),
     Value(serde_json::Value),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum BundledDependencies {
+    All(bool),
+    Some(Vec<String>),
+}
+
+fn empty_bundled_dependencies(bundled: &Option<BundledDependencies>) -> bool {
+    match bundled {
+        None => true,
+        Some(BundledDependencies::All(all)) => !all,
+        Some(BundledDependencies::Some(deps)) => deps.is_empty(),
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -423,7 +438,7 @@ mod tests {
                 .files(Some(vec!["*.js".into()]))
                 .os(vec!["windows".into(), "darwin".into()])
                 .cpu(vec!["x64".into()])
-                .bundled_dependencies(vec!["mydep".into()])
+                .bundled_dependencies(Some(BundledDependencies::Some(vec!["mydep".into()])))
                 .workspaces(vec!["packages/*".into()])
                 .build()
                 .unwrap()
