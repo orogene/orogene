@@ -1,4 +1,23 @@
 # Orogene Release Changelog
+<a name="0.3.32"></a>
+## 0.3.32 (2023-09-30)
+
+### Features
+
+* **dist:** automatically publish to a homebrew tap ([023ebcca](https://github.com/orogene/orogene/commit/023ebcca7d2b859b5c798535eaef16556f909341))
+
+### Bug Fixes
+
+* **cache:** cache recovery was working off JSON metadata, not new rkyv-based one ([7c566287](https://github.com/orogene/orogene/commit/7c56628731581a225890946aa6b292f0cf6f3ec9))
+* **unsafe:** use safe version of method that verifies data. No perf impact noticeable ([1a6b54ac](https://github.com/orogene/orogene/commit/1a6b54ac34c9b03ab1eab069d464c5475fa2adeb))
+* **resolver:** fix issue with aliases not being handled properly ([85d31713](https://github.com/orogene/orogene/commit/85d3171300375ae3799294f3ff759ad947aa8443))
+* **resolver:** node paths should use their fs name ([544639b7](https://github.com/orogene/orogene/commit/544639b7685a2738d1c2999b1ee10eb125236d23))
+* **resolver:** go ahead and try to resolve if we just have a version ([8d04d84b](https://github.com/orogene/orogene/commit/8d04d84b245ccd4599964c445c58193edf089664))
+
+### Documentation
+
+* **build:** document build requirements ([16391bec](https://github.com/orogene/orogene/commit/16391becd01f9236fc22207faef38e94cfaa6e60))
+
 <a name="0.3.31"></a>
 ## 0.3.31 (2023-09-28)
 
