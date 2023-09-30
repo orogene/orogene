@@ -704,30 +704,44 @@ impl Orogene {
         let _logging_guard = oro.setup_logging(log_file.as_deref())?;
         oro.first_time_setup()?;
         let _telemetry_guard = oro.setup_telemetry(log_file.clone())?;
-        oro.execute().await.map_err(|e| {
-            // We toss this in a debug so execution errors show up in our
-            // debug logs. Unfortunately, we can't do the same for other
-            // errors in this method because they all happen before the debug
-            // log is even set up.
-            tracing::debug!("{e:?}");
-            if let Some(log_file) = log_file.as_deref() {
-                tracing::warn!("A debug log was written to {}", log_file.display());
-                sentry::configure_scope(|s| {
-                    s.add_attachment(sentry::protocol::Attachment {
-                        filename: log_file
-                            .file_name()
-                            .map(|f| f.to_string_lossy().to_string())
-                            .unwrap_or_else(|| "oro-debug.log".into()),
-                        content_type: Some("text/plain".into()),
-                        buffer: std::fs::read(log_file).unwrap_or_default(),
-                        ty: None,
+        let do_term_progress = !oro.quiet && oro.progress;
+        if do_term_progress {
+            indet_term_progress();
+        }
+        oro.execute()
+            .await
+            .map(|_| {
+                if do_term_progress {
+                    reset_term_progress()
+                }
+            })
+            .map_err(|e| {
+                // We toss this in a debug so execution errors show up in our
+                // debug logs. Unfortunately, we can't do the same for other
+                // errors in this method because they all happen before the debug
+                // log is even set up.
+                if do_term_progress {
+                    reset_term_progress();
+                }
+                tracing::debug!("{e:?}");
+                if let Some(log_file) = log_file.as_deref() {
+                    tracing::warn!("A debug log was written to {}", log_file.display());
+                    sentry::configure_scope(|s| {
+                        s.add_attachment(sentry::protocol::Attachment {
+                            filename: log_file
+                                .file_name()
+                                .map(|f| f.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "oro-debug.log".into()),
+                            content_type: Some("text/plain".into()),
+                            buffer: std::fs::read(log_file).unwrap_or_default(),
+                            ty: None,
+                        });
                     });
-                });
-            }
-            let dyn_err: &dyn std::error::Error = e.as_ref();
-            sentry::capture_error(dyn_err);
-            e
-        })?;
+                }
+                let dyn_err: &dyn std::error::Error = e.as_ref();
+                sentry::capture_error(dyn_err);
+                e
+            })?;
         tracing::debug!("Ran in {}s", start.elapsed().as_millis() as f32 / 1000.0);
         Ok(())
     }
@@ -952,3 +966,15 @@ impl OroCommand for HelpMarkdownCmd {
         Err(miette::miette!("Command not found: {}", self.command_name))
     }
 }
+
+fn indet_term_progress() {
+    eprintln!("\u{1b}]9;4;3;0\u{1b}\\");
+}
+
+fn reset_term_progress() {
+    eprintln!("\u{1b}]9;4;0;0\u{1b}\\");
+}
+
+// fn set_progress(progress: u32) {
+//     eprintln!("\u{1b}]9;4;3;{progress}\u{1b}\\");
+// }
