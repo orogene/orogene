@@ -168,7 +168,7 @@ ci = ["github"]
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
 # The installers to generate for each app
-installers = ["shell", "powershell", "npm", "homebrew", "msi"]
+installers = ["shell", "powershell", "npm", "msi"]
 # The archive format to use for windows builds (defaults .zip)
 windows-archive = ".tar.gz"
 # The archive format to use for non-windows builds (defaults .tar.xz)
@@ -177,10 +177,6 @@ unix-archive = ".tar.gz"
 pr-run-mode = "plan"
 # Skip checking whether the specified configuration files are up to date
 allow-dirty = ["msi"]
-# A GitHub repo to push Homebrew formulas to
-tap = "orogene/homebrew-tap"
-# Publish jobs to run in CI
-publish-jobs = ["homebrew"]
 
 [build-dependencies]
 embed-resource = "1.3.3"
