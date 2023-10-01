@@ -21,7 +21,8 @@
         "preferred": {
           "npm": "npm install -g orogene",
           "npx": "npx oro -h",
-          "crates.io": "cargo install orogene"
+          "crates.io": "cargo install orogene",
+          "homebrew": "brew install orogene"
         }
       }
     }

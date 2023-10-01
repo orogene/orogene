@@ -58,6 +58,11 @@ Cargo:
 $ cargo install orogene
 ```
 
+Homebrew:
+```sh
+$ brew install orogene
+```
+
 You can also find install scripts, windows MSI installers, and archive
 downloads in [the latest
 release](https://github.com/orogene/orogene/releases/latest).
@@ -69,17 +74,6 @@ docs](https://orogene.dev/book/), or run `$ oro help`.
 
 If you just want to do something similar to `$ npm install`, you can run
 `$ oro apply` in your project and go from there.
-
-### Compiling with Docker
-
-```sh
-$ docker build -t orogene .
-```
-Test it with
-
-```sh
-docker run -it --rm --name oro orogene /usr/src/orogene/target/release/oro --version
-```
 
 ### Performance
 

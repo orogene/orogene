@@ -45,7 +45,7 @@
 //!
 //! Homebrew:
 //! ```sh
-//! $ brew install orogene/homebrew-tap/orogene
+//! $ brew install orogene
 //! ```
 //!
 //! You can also find install scripts, windows MSI installers, and archive
