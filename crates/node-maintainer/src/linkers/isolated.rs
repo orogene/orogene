@@ -32,6 +32,7 @@ impl IsolatedLinker {
     }
 
     pub async fn prune(&self, graph: &Graph) -> Result<usize, NodeMaintainerError> {
+        return Ok(0);
         let start = std::time::Instant::now();
 
         let prefix = self.opts.root.join("node_modules");
@@ -379,7 +380,7 @@ impl IsolatedLinker {
                     pending_bin_link,
                 )| async move {
                     if child_idx == graph.root {
-                        link_deps(graph, child_idx, store_ref, &root.join("node_modules")).await?;
+                        link_deps(graph, child_idx, store_ref, root).await?;
                         return Ok(());
                     }
 
@@ -397,40 +398,61 @@ impl IsolatedLinker {
                     let start = std::time::Instant::now();
 
                     if !target_dir.exists() {
-                        graph[child_idx]
-                            .package
-                            .extract_to_dir(&target_dir, prefer_copy)
-                            .await?;
-                        actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
-                        let target_dir = target_dir.clone();
+                        let has_integrity = pkg.resolved().integrity().is_some();
+                        if has_integrity {
+                            pkg.link_to_dir(&target_dir).await?;
+                        } else {
+                            pkg.extract_to_dir(&target_dir, prefer_copy).await?;
+                        }
+                        let target_dir_cloned = target_dir.clone();
                         let build_mani = async_std::task::spawn_blocking(move || {
-                            BuildManifest::from_path(target_dir.join("package.json")).map_err(|e| {
-                                NodeMaintainerError::BuildManifestReadError(
-                                    target_dir.join("package.json"),
-                                    e,
-                                )
-                            })
+                            BuildManifest::from_path(target_dir_cloned.join("package.json"))
+                                .map_err(|e| {
+                                    NodeMaintainerError::BuildManifestReadError(
+                                        target_dir_cloned.join("package.json"),
+                                        e,
+                                    )
+                                })
                         })
                         .await?;
-                        if build_mani.scripts.contains_key("preinstall")
+                        let has_build_scripts = build_mani.scripts.contains_key("preinstall")
                             || build_mani.scripts.contains_key("install")
                             || build_mani.scripts.contains_key("postinstall")
-                            || build_mani.scripts.contains_key("prepare")
-                        {
+                            || build_mani.scripts.contains_key("prepare");
+                        let node = &graph[child_idx];
+                        let depends_on_self =
+                            build_mani.dependencies.contains_key(&node.name.to_string())
+                                || build_mani.dev_dependencies.contains_key(&node.name.to_string())
+                                || build_mani
+                                    .optional_dependencies
+                                    .contains_key(&node.name.to_string())
+                                || build_mani.peer_dependencies.contains_key(&node.name.to_string());
+
+                        if has_integrity && (has_build_scripts || depends_on_self) {
+                            if async_std::fs::remove_file(&target_dir).await.is_err() {
+                                let td_clone = target_dir.clone();
+                                async_std::fs::remove_dir_all(&target_dir)
+                                    .await
+                                    .io_context(|| {
+                                        format!(
+                                            "Failed to delete {} while rolling back link.",
+                                            td_clone.display()
+                                        )
+                                    })?;
+                            }
+                            pkg.extract_to_dir(&target_dir, prefer_copy).await?;
+                        }
+
+                        if has_build_scripts {
                             pending_rebuild.lock().await.insert(child_idx);
                         }
                         if !build_mani.bin.is_empty() {
                             pending_bin_link.lock().await.push(child_idx);
                         }
+                        actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
                     }
 
-                    link_deps(
-                        graph,
-                        child_idx,
-                        store_ref,
-                        &target_dir.join("node_modules"),
-                    )
-                    .await?;
+                    link_deps(graph, child_idx, store_ref, &target_dir).await?;
 
                     if let Some(on_extract) = &self.opts.on_extract_progress {
                         on_extract(&graph[child_idx].package);
@@ -510,9 +532,30 @@ async fn link_deps(
     graph: &Graph,
     node: NodeIndex,
     store_ref: &Path,
-    target_nm: &Path,
+    target_dir: &Path,
 ) -> Result<(), NodeMaintainerError> {
     // Then we symlink/junction all of the package's dependencies into its `node_modules` dir.
+    let target_nm = if async_std::fs::symlink_metadata(target_dir)
+        .await
+        .io_context(|| {
+            format!(
+                "Failed to check whether {} is a directory while linking its deps.",
+                target_dir.display()
+            )
+        })?
+        .is_dir()
+    {
+        target_dir.join("node_modules")
+    } else if graph[node].name.starts_with('@') {
+        target_dir
+            .parent()
+            .expect("must have a parent")
+            .parent()
+            .expect("must have parent")
+            .to_owned()
+    } else {
+        target_dir.parent().expect("must have a parent").to_owned()
+    };
     for edge in graph.inner.edges_directed(node, Direction::Outgoing) {
         let dep_pkg = &graph[edge.target()].package;
         let dep_store_dir = store_ref
@@ -577,7 +620,31 @@ async fn link_dep_bins(
                 .join("node_modules")
                 .join(&dep_node.name.to_string())
         };
-        let dep_bin_dir = dep_store_dir.join("node_modules").join(".bin");
+        let dep_bin_dir = if async_std::fs::symlink_metadata(&dep_store_dir)
+            .await
+            .io_context(|| {
+                format!(
+                    "Failed to check whether {} is a directory while linking its deps.",
+                    &dep_store_dir.display()
+                )
+            })?
+            .is_dir()
+        {
+            dep_store_dir.join("node_modules")
+        } else if dep_node.name.starts_with('@') {
+            dep_store_dir
+                .parent()
+                .expect("must have a parent")
+                .parent()
+                .expect("must have parent")
+                .to_owned()
+        } else {
+            dep_store_dir
+                .parent()
+                .expect("must have a parent")
+                .to_owned()
+        }
+        .join(".bin");
         for (name, path) in &build_mani.bin {
             let to = dep_bin_dir.join(name);
             let from = dep_store_dir.join("node_modules").join(name).join(path);

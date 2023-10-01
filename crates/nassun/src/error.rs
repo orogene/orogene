@@ -6,6 +6,8 @@ use oro_common::CorgiVersionMetadata;
 use oro_package_spec::PackageSpec;
 use thiserror::Error;
 
+use crate::PackageResolution;
+
 /// Error type returned by all API calls.
 #[derive(Error, Debug, Diagnostic)]
 pub enum NassunError {
@@ -99,6 +101,36 @@ pub enum NassunError {
     #[error(transparent)]
     #[diagnostic(code(nassun::integrity_parse_error), url(docsrs))]
     IntegrityError(#[from] ssri::Error),
+
+    /// Tried to link a package that does not have integrity information.
+    #[error("Tried to link a package without integrity information.")]
+    #[diagnostic(code(nassun::no_integrity), url(docsrs))]
+    NoIntegrityError(Box<PackageResolution>),
+
+    /// Could not complete operation because a cache was not configuried.
+    #[error("No cache configured.")]
+    #[diagnostic(code(nassun::no_cache), url(docsrs))]
+    NoCacheError,
+
+    /// Junction failed while linking package directory to its destination.
+    #[cfg(windows)]
+    #[error("Failed to create either a symlink or junction from {} to {}.", .0.display(), .1.display())]
+    #[diagnostic(code(nassun::junctions_not_supported), url(docsrs))]
+    JunctionsNotSupported(
+        std::path::PathBuf,
+        std::path::PathBuf,
+        #[source] std::io::Error,
+    ),
+
+    /// Failed to write to the cache, usually an index entry during linking.
+    #[error("Failed to write to cache at {0}.")]
+    #[diagnostic(code(nassun::cache::write), url(docsrs))]
+    CacheWriteError(PathBuf, #[source] cacache::Error),
+
+    /// Failed to canonicalize a path while linking a package.
+    #[error("Failed to canonicalize path {0}.")]
+    #[diagnostic(code(nassun::canonicalize), url(docsrs))]
+    CanonicalizeError(PathBuf, #[source] std::io::Error),
 
     /// There's no tarball specified as part of the package metadata for a
     /// given package. This is likely a bug in the registry.

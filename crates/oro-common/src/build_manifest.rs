@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
@@ -38,6 +39,16 @@ pub struct BuildManifest {
     /// package.json scripts object.
     #[serde(default)]
     pub scripts: HashMap<String, String>,
+
+    // These are used by the isolated linker when figuring out whether to link or copy.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub dependencies: IndexMap<String, String>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub dev_dependencies: IndexMap<String, String>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub optional_dependencies: IndexMap<String, String>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub peer_dependencies: IndexMap<String, String>,
 }
 
 impl BuildManifest {
@@ -152,6 +163,7 @@ impl BuildManifest {
         Ok(Self {
             bin: normalized,
             scripts: raw.scripts,
+            ..Default::default()
         })
     }
 }

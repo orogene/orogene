@@ -33,6 +33,8 @@ use crate::entries::{Entries, Entry};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::IoContext;
 use crate::error::{NassunError, Result};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::PackageResolution;
 use crate::TarballStream;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -74,7 +76,7 @@ impl Tarball {
         dir: &Path,
         cache: Option<&Path>,
         prefer_copy: bool,
-    ) -> Result<Integrity> {
+    ) -> Result<TarballIndex> {
         let integrity = self.integrity.take();
         let temp = self.into_temp().await?;
         let dir = PathBuf::from(dir);
@@ -207,7 +209,7 @@ impl TempTarball {
         tarball_integrity: Option<Integrity>,
         cache: Option<&Path>,
         mut prefer_copy: bool,
-    ) -> Result<Integrity> {
+    ) -> Result<TarballIndex> {
         let mut build_mani: Option<BuildManifest> = None;
         let mut tarball_index = TarballIndex::default();
         let mut drain_buf = [0u8; 1024 * 8];
@@ -318,7 +320,7 @@ impl TempTarball {
                 } else {
                     let mut writer = std::fs::OpenOptions::new()
                         .write(true)
-                        .create_new(true)
+                        .create(true)
                         .open(&path)
                         .map_err(|e| {
                             NassunError::ExtractIoError(
@@ -383,6 +385,7 @@ impl TempTarball {
         }
 
         let integrity = tarball_integrity.unwrap_or_else(|| integrity.result());
+        tarball_index.integrity = integrity.to_string();
 
         if let Some(cache) = cache {
             cacache::index::insert(
@@ -400,7 +403,7 @@ impl TempTarball {
             .map_err(|e| NassunError::ExtractCacheError(e, None))?;
         }
 
-        Ok(integrity)
+        Ok(tarball_index)
     }
 }
 
@@ -428,9 +431,29 @@ impl std::io::Seek for TempTarball {
 #[derive(rkyv::Archive, rkyv::Serialize, Default)]
 #[archive(check_bytes)]
 pub(crate) struct TarballIndex {
+    pub(crate) integrity: String,
     pub(crate) should_copy: bool,
     pub(crate) bin_paths: Vec<String>,
     pub(crate) files: HashMap<String, (String, u32)>,
+}
+
+impl TarballIndex {
+    pub(crate) fn save(&self, cache: &Path, key: &str) -> Result<()> {
+        cacache::index::insert(
+            cache,
+            key,
+            cacache::WriteOpts::new()
+                // This is just so the index entry is loadable.
+                .integrity("xxh3-deadbeef".parse().unwrap())
+                .raw_metadata(
+                    rkyv::util::to_bytes::<_, 1024>(self)
+                        .map_err(|e| NassunError::SerializeCacheError(format!("{e}")))?
+                        .into_vec(),
+                ),
+        )
+        .map_err(|e| NassunError::CacheWriteError(cache.to_owned(), e))?;
+        Ok(())
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -442,6 +465,32 @@ fn strip_one(path: &Path) -> Option<&Path> {
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn tarball_key(integrity: &Integrity) -> String {
     format!("nassun::package::{integrity}")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn tarball_dir_key(resolved: &PackageResolution, sri: &Integrity) -> String {
+    format!("nassun::package_dir::{resolved}::{sri}")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn linkable_tarball_dir(
+    cache: &Path,
+    resolved: &PackageResolution,
+    sri: &Integrity,
+) -> PathBuf {
+    cache.join("_packages").join(tarball_dir_name(resolved, sri))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn tarball_dir_name(resolved: &PackageResolution, sri: &Integrity) -> PathBuf {
+    use PackageResolution::*;
+    match resolved {
+        Npm { name, version, .. } => {
+            let (algo, hash) = sri.to_hex();
+            PathBuf::from(format!("{name}@{version}-{algo}-{}", &hash[..8]))
+        },
+        _ => panic!("Unsupported package resolution type: {:?}", resolved)
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

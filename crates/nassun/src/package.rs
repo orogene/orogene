@@ -9,6 +9,8 @@ use oro_package_spec::PackageSpec;
 use ssri::Integrity;
 
 use crate::entries::Entries;
+#[cfg(unix)]
+use crate::error::IoContext;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::NassunError;
 use crate::error::Result;
@@ -124,66 +126,72 @@ impl Package {
         self.tarball_checked(integrity).await?.entries()
     }
 
-    /// Extract tarball to a directory, optionally caching its contents. The
-    /// tarball stream will have its integrity validated based on package
-    /// metadata. See [`Package::tarball`] for more information.
+    /// Links an entire package directory from the cache into a destination.
+    /// If the directory has not already been cached, the package will be
+    /// downloaded and cached automatically.
+    ///
+    /// If the package resolution does not include integrity information, this
+    /// will error.
     #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir(
-        &self,
-        dir: impl AsRef<Path>,
-        prefer_copy: bool,
-    ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy)
-                .await
-        }
-        inner(self, dir.as_ref(), prefer_copy).await
-    }
+    pub async fn link_to_dir(&self, dir: &Path) -> Result<Integrity> {
+        let Some(cache) = self.cache.as_deref() else {
+            return Err(NassunError::NoCacheError);
+        };
+        let Some(sri) = self.resolved.integrity().cloned() else {
+            return Err(NassunError::NoIntegrityError(Box::new(
+                self.resolved.clone(),
+            )));
+        };
+        let pkg_path = crate::tarball::linkable_tarball_dir(cache, &self.resolved, &sri);
+        if self.link_from_cache(cache, dir, &sri).await.is_err() {
+            // Try to download and cache again, then link.
+            let dir_key = crate::tarball::tarball_dir_key(self.resolved(), &sri);
+            self.tarball_checked(sri.clone())
+                .await?
+                .extract_from_tarball_data(&pkg_path, None, true)
+                .await?
+                .save(cache, &dir_key)?;
 
-    /// Extract tarball to a directory, optionally caching its contents. The
-    /// tarball stream will NOT have its integrity validated. See
-    /// [`Package::tarball_unchecked`] for more information.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir_unchecked(
-        &self,
-        dir: impl AsRef<Path>,
-        prefer_copy: bool,
-    ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, None, prefer_copy).await
+            self.link_from_cache(cache, dir, &sri).await?;
         }
-        inner(self, dir.as_ref(), prefer_copy).await
-    }
-
-    /// Extract tarball to a directory, optionally caching its contents. The
-    /// tarball stream will have its integrity validated based on
-    /// [`Integrity`]. See [`Package::tarball_checked`] for more information.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub async fn extract_to_dir_checked(
-        &self,
-        dir: impl AsRef<Path>,
-        sri: Integrity,
-        prefer_copy: bool,
-    ) -> Result<Integrity> {
-        async fn inner(
-            me: &Package,
-            dir: &Path,
-            sri: Integrity,
-            prefer_copy: bool,
-        ) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy).await
-        }
-        inner(self, dir.as_ref(), sri, prefer_copy).await
+        Ok(sri)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    async fn extract_to_dir_inner(
-        &self,
-        dir: &Path,
-        integrity: Option<&Integrity>,
-        prefer_copy: bool,
-    ) -> Result<Integrity> {
-        if let Some(sri) = integrity {
+    async fn link_from_cache(&self, cache: &Path, dest: &Path, sri: &Integrity) -> Result<()> {
+        std::fs::create_dir_all(dest.parent().expect("must have parent")).map_err(|e| {
+            NassunError::ExtractIoError(
+                e,
+                Some(PathBuf::from(dest.parent().unwrap())),
+                "creating destination directory for tarball.".into(),
+            )
+        })?;
+
+        let source = crate::tarball::linkable_tarball_dir(cache, &self.resolved, sri);
+        let source = source
+            .canonicalize()
+            .map_err(|e| NassunError::CanonicalizeError(source.clone(), e))?;
+        #[cfg(windows)]
+        std::os::windows::fs::symlink_dir(&source, dest)
+            .or_else(|_| junction::create(&source, dest))
+            .map_err(|e| {
+                NassunError::JunctionsNotSupported(source.to_owned(), dest.to_owned(), e)
+            })?;
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&source, &dest).io_context(|| {
+            format!(
+                "Failed to create symlink while linking dependency, from {} to {}.",
+                source.display(),
+                dest.display()
+            )
+        })?;
+        Ok(())
+    }
+
+    /// Extract tarball to a directory, optionally caching its contents.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn extract_to_dir(&self, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
+        if let Some(sri) = self.resolved.integrity() {
             if let Some(cache) = self.cache.as_deref() {
                 if let Some(entry) = cacache::index::find(cache, &crate::tarball::tarball_key(sri))
                     .map_err(|e| NassunError::ExtractCacheError(e, None))?
@@ -206,30 +214,40 @@ impl Package {
                                 tracing::debug!("removing corrupted cache entry.");
                                 clean_from_cache(cache, &sri, entry)?;
                             }
-                            return self
+                            return Ok(self
                                 .tarball_checked(sri)
                                 .await?
                                 .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
-                                .await;
+                                .await?
+                                .integrity
+                                .parse()?);
                         }
                     }
                 } else {
-                    return self
+                    return Ok(self
                         .tarball_checked(sri.clone())
                         .await?
                         .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
-                        .await;
+                        .await?
+                        .integrity
+                        .parse()?);
                 }
             }
-            self.tarball_checked(sri.clone())
+            Ok(self
+                .tarball_checked(sri.clone())
                 .await?
                 .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
-                .await
+                .await?
+                .integrity
+                .parse()?)
         } else {
-            self.tarball_unchecked()
+            Ok(self
+                .tarball_unchecked()
                 .await?
                 .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
-                .await
+                .await?
+                .integrity
+                .parse()?)
         }
     }
 
