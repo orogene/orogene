@@ -316,9 +316,16 @@ impl TempTarball {
                         .files
                         .insert(entry_subpath, (sri.to_string(), mode));
                 } else {
-                    let mut writer = std::fs::OpenOptions::new()
-                        .write(true)
-                        .create_new(true)
+                    let mut open_opts = std::fs::OpenOptions::new();
+                    open_opts.write(true).create_new(true);
+
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        open_opts.mode(mode);
+                    }
+
+                    let mut writer = open_opts
                         .open(&path)
                         .map_err(|e| {
                             NassunError::ExtractIoError(
@@ -328,7 +335,6 @@ impl TempTarball {
                             )
                         })
                         .map(std::io::BufWriter::new)?;
-
                     std::io::copy(&mut file, &mut writer).map_err(|e| {
                         NassunError::ExtractIoError(
                             e,
@@ -336,18 +342,6 @@ impl TempTarball {
                             "Copying file to node_modules destination.".into(),
                         )
                     })?;
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::PermissionsExt;
-                        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode))
-                            .map_err(|e| {
-                                NassunError::ExtractIoError(
-                                    e,
-                                    Some(path.clone()),
-                                    "setting permissions on extracted file.".into(),
-                                )
-                            })?;
-                    }
                 }
             } else {
                 loop {
