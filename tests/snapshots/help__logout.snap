@@ -3,6 +3,8 @@ source: tests/help.rs
 expression: "sub_md(\"logout\")"
 ---
 stderr:
+]9;4;3;0\
+]9;4;0;0\
 
 stdout:
 # oro logout
