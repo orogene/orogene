@@ -317,7 +317,7 @@ too that might be handy.
 * **restore:** improvements to restore command, and removal of resolve command ([4e9940dd](https://github.com/orogene/orogene/commit/4e9940dd04e632ecbf5c7a1b2068b66638e80824))
 * **restore:** print timings in seconds ([608d3f59](https://github.com/orogene/orogene/commit/608d3f599bbaf8591193a917157f243ae81dab16))
 * **memory:** significantly reduce memory use during resolution (#203) ([f7fb85d6](https://github.com/orogene/orogene/commit/f7fb85d60a5839b218916d8d54a331f390527716))
-* **hex:** offer hackerish words of encouragement! ([cf467da4](https://github.com/orogene/orogene/commit/cf467da40e2b9daa8762d79a0c96d516b0447388))
+* **hax:** offer hackerish words of encouragement! ([cf467da4](https://github.com/orogene/orogene/commit/cf467da40e2b9daa8762d79a0c96d516b0447388))
 
 ### Bug Fixes
 
