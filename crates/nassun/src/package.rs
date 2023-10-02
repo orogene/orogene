@@ -189,14 +189,14 @@ impl Package {
                     .map_err(|e| NassunError::ExtractCacheError(e, None))?
                 {
                     let sri = sri.clone();
-                    // If extracting from the cache failed for some reason
-                    // (bad data, etc), then go ahead and do a network
-                    // extract.
                     match self
                         .extract_from_cache(dir, cache, entry, prefer_copy)
                         .await
                     {
                         Ok(_) => return Ok(sri),
+                        // If extracting from the cache failed for some reason
+                        // (bad data, etc), then go ahead and do a network
+                        // extract.
                         Err(e) => {
                             tracing::warn!("extracting package {:?} from cache failed, possily due to cache corruption: {e}", self.resolved());
                             if let Some(entry) =
@@ -254,9 +254,9 @@ impl Package {
             )
             .map_err(|e| NassunError::DeserializeCacheError(e.to_string()))?;
             prefer_copy = index.should_copy || prefer_copy;
-            for (path, (sri, mode)) in index.files.iter() {
+            for (archived_path, (sri, mode)) in index.files.iter() {
                 let sri: Integrity = sri.parse()?;
-                let path = dir.join(&path[..]);
+                let path = dir.join(&archived_path[..]);
                 let parent = PathBuf::from(path.parent().expect("this will always have a parent"));
                 if !created.contains(&parent) {
                     std::fs::create_dir_all(path.parent().expect("this will always have a parent"))
@@ -270,13 +270,13 @@ impl Package {
                     created.insert(parent);
                 }
 
-                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, *mode)?;
-            }
-            #[cfg(unix)]
-            for binpath in index.bin_paths.iter() {
-                {
-                    crate::tarball::set_bin_mode(&dir.join(&binpath[..]))?;
-                }
+                let mode = if index.bin_paths.contains(archived_path) {
+                    *mode | 0o111
+                } else {
+                    *mode
+                };
+
+                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, mode)?;
             }
             Ok::<_, NassunError>(())
         })

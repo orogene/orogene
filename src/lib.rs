@@ -45,7 +45,7 @@
 //!
 //! Homebrew:
 //! ```sh
-//! $ brew install orogene/homebrew-tap/orogene
+//! $ brew install orogene
 //! ```
 //!
 //! You can also find install scripts, windows MSI installers, and archive
@@ -82,9 +82,8 @@
 //!
 //! [Warm cache comparison]:
 //!     https://orogene.dev/assets/benchmarks-warm-cache.png
-//! [the benchmarks page]: https://orogene.dev/BENCHMARKS.html
-//! [our contribution guide]:
-//!     https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
+//! [the benchmarks page]: https://orogene.dev/BENCHMARKS
+//! [our contribution guide]: https://orogene.dev/CONTRIBUTING/
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
 use std::{
@@ -968,11 +967,15 @@ impl OroCommand for HelpMarkdownCmd {
 }
 
 fn indet_term_progress() {
-    eprintln!("\u{1b}]9;4;3;0\u{1b}\\");
+    if std::io::stderr().is_terminal() {
+        eprintln!("\u{1b}]9;4;3;0\u{1b}\\");
+    }
 }
 
 fn reset_term_progress() {
-    eprintln!("\u{1b}]9;4;0;0\u{1b}\\");
+    if std::io::stderr().is_terminal() {
+        eprintln!("\u{1b}]9;4;0;0\u{1b}\\");
+    }
 }
 
 // fn set_progress(progress: u32) {

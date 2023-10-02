@@ -172,40 +172,6 @@ jobs:
       - name: print tag
         run: echo "ok we're publishing!"
 
-  publish-homebrew-formula:
-    needs: [plan, should-publish]
-    runs-on: "ubuntu-20.04"
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PLAN: ${{ needs.plan.outputs.val }}
-      GITHUB_USER: "axo bot"
-      GITHUB_EMAIL: "admin+bot@axo.dev"
-    if: ${{ !fromJson(needs.plan.outputs.val).announcement_is_prerelease || fromJson(needs.plan.outputs.val).publish_prereleases }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: "orogene/homebrew-tap"
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-      # So we have access to the formula
-      - name: Fetch local artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: artifacts
-          path: Formula/
-      - name: Commit formula files
-        run: |
-          git config --global user.name "${GITHUB_USER}"
-          git config --global user.email "${GITHUB_EMAIL}"
-
-          for release in $(echo "$PLAN" | jq --compact-output '.releases[]'); do
-            name=$(echo "$release" | jq .app_name --raw-output)
-            version=$(echo "$release" | jq .app_version --raw-output)
-
-            git add Formula/${name}.rb
-            git commit -m "${name} ${version}"
-          done
-          git push
-
   # Create a Github Release with all the results once everything is done,
   publish-release:
     needs: [plan, should-publish]
