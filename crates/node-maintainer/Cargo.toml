@@ -23,13 +23,13 @@ indexmap = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
-petgraph = { version = "0.6.2", default-features = false, features = ["stable_graph"] }
+petgraph = { workspace = true, default-features = false, features = ["stable_graph"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-unicase = "2.6.0"
+unicase = { workspace = true }
 url = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
