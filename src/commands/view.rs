@@ -85,7 +85,7 @@ impl OroCommand for ViewCmd {
                 packument.versions.len().to_string().yellow(),
             );
 
-            // <descrition>
+            // <description>
             if let Some(desc) = description.as_ref() {
                 println!("{desc}");
             }

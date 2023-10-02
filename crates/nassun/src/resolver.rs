@@ -320,7 +320,7 @@ mod tests {
     #[test_case("1.5.2", "1.4.x", false; "mismatch x patch version")]
     #[test_case("2.4.2", "1.*", false; "mismatch star minor version")]
     #[test_case("1.5.2", "1.4.*", false; "mismatch star patch version")]
-    fn satisfies_npm_specs(package_version: &str, expected_version: &str, satifies: bool) {
+    fn satisfies_npm_specs(package_version: &str, expected_version: &str, satisfies: bool) {
         let resolution = PackageResolution::Npm {
             name: "oro-test-package".to_owned(),
             version: SemVerVersion::parse(package_version).unwrap(),
@@ -334,6 +334,6 @@ mod tests {
                 SemVerRange::parse(expected_version).unwrap(),
             )),
         };
-        assert_eq!(resolution.satisfies(&package_spec).unwrap(), satifies);
+        assert_eq!(resolution.satisfies(&package_spec).unwrap(), satisfies);
     }
 }
