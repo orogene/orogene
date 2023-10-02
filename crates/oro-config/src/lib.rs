@@ -71,27 +71,39 @@ impl OroConfigLayerExt for Command {
                 let opt = opt.replace('_', "-");
                 if !args.contains(&OsString::from(format!("--no-{opt}"))) {
                     if let Ok(bool) = config.get_bool(&opt) {
-                        if bool {
-                            args.push(OsString::from(format!("--{}", opt)));
+                        let formatted_arg = if bool {
+                            OsString::from(format!("--{}", opt))
                         } else {
-                            args.push(OsString::from(format!("--no-{}", opt)));
+                            OsString::from(format!("--no-{}", opt))
+                        };
+                        if !args.contains(&formatted_arg) {
+                            args.push(formatted_arg);
                         }
                     } else if let Ok(value) = config.get_string(&opt) {
-                        args.push(OsString::from(format!("--{}", opt)));
-                        args.push(OsString::from(value));
+                        let formatted_arg = OsString::from(format!("--{}", opt));
+                        if !args.contains(&formatted_arg) {
+                            args.push(formatted_arg);
+                            args.push(OsString::from(value));
+                        }
                     } else if let Ok(value) = config.get_table(&opt) {
                         for (key, val) in value {
                             match &val.kind {
                                 ValueKind::Table(map) => {
                                     for (k, v) in map {
-                                        args.push(OsString::from(format!("--{}", opt)));
-                                        args.push(OsString::from(format!("{{{key}}}{k}={v}")));
+                                        let formatted_arg = OsString::from(format!("--{}", opt));
+                                        if !args.contains(&formatted_arg) {
+                                            args.push(formatted_arg);
+                                            args.push(OsString::from(format!("{{{key}}}{k}={v}")));
+                                        }
                                     }
                                 }
                                 // TODO: error if val.kind is an Array
                                 _ => {
-                                    args.push(OsString::from(format!("--{}", opt)));
-                                    args.push(OsString::from(format!("{key}={val}")));
+                                    let formatted_arg = OsString::from(format!("--{}", opt));
+                                    if !args.contains(&formatted_arg) {
+                                        args.push(formatted_arg);
+                                        args.push(OsString::from(format!("{key}={val}")));
+                                    }
                                 }
                             }
                         }
