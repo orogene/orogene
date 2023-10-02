@@ -16,7 +16,7 @@ Of note here is the contrast between the subsecond (!) installation by
 orogene, versus the much more noticeable install times of literally
 everything else.
 
-![](./assets/benchmarks-warm-cache.png)
+![](/assets/benchmarks-warm-cache.png)
 
 ## Cold Cache
 
@@ -25,7 +25,7 @@ existing lockfile. This scenario is common in CI scenarios that don't
 cache the package manager caches between runs, and for initial installs by
 teammates on relatively "clean" machines.
 
-![](./assets/benchmarks-cold-cache.png)
+![](/assets/benchmarks-cold-cache.png)
 
 ## Initial Installs
 
@@ -34,7 +34,7 @@ still cold. While relatively unusual, this can give an idea of what the
 experience is like when adding one or more dependencies, or when regenerating
 lockfiles from scratch.
 
-![](./assets/benchmarks-initial-install.png)
+![](/assets/benchmarks-initial-install.png)
 
 ## Memory Usage
 

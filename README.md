@@ -8,11 +8,6 @@
 
 </div>
 
-[Warm cache comparison]: ./assets/benchmarks-warm-cache.png
-[the benchmarks page]: ./BENCHMARKS.md
-[our contribution guide]: ./CONTRIBUTING.md
-[Apache 2.0 License]: ./LICENSE
-
 > Makes `node_modules/` happen. Fast. No fuss.
 
 [![release](https://img.shields.io/github/v/release/orogene/orogene?display_name=tag&include_prereleases)](https://github.com/orogene/orogene/releases/latest)
@@ -97,7 +92,6 @@ Orogene and all its sub-crates are licensed under the terms of the [Apache
 
 [Warm cache comparison]:
     https://orogene.dev/assets/benchmarks-warm-cache.png
-[the benchmarks page]: https://orogene.dev/BENCHMARKS.html
-[our contribution guide]:
-    https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
+[the benchmarks page]: https://orogene.dev/BENCHMARKS
+[our contribution guide]: https://orogene.dev/CONTRIBUTING/
 [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE

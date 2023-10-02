@@ -82,9 +82,8 @@
 //!
 //! [Warm cache comparison]:
 //!     https://orogene.dev/assets/benchmarks-warm-cache.png
-//! [the benchmarks page]: https://orogene.dev/BENCHMARKS.html
-//! [our contribution guide]:
-//!     https://github.com/orogene/orogene/blob/main/CONTRIBUTING.md
+//! [the benchmarks page]: https://orogene.dev/BENCHMARKS
+//! [our contribution guide]: https://orogene.dev/CONTRIBUTING/
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
 use std::{
