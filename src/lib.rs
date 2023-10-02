@@ -967,11 +967,15 @@ impl OroCommand for HelpMarkdownCmd {
 }
 
 fn indet_term_progress() {
-    eprintln!("\u{1b}]9;4;3;0\u{1b}\\");
+    if std::io::stderr().is_terminal() {
+        eprintln!("\u{1b}]9;4;3;0\u{1b}\\");
+    }
 }
 
 fn reset_term_progress() {
-    eprintln!("\u{1b}]9;4;0;0\u{1b}\\");
+    if std::io::stderr().is_terminal() {
+        eprintln!("\u{1b}]9;4;0;0\u{1b}\\");
+    }
 }
 
 // fn set_progress(progress: u32) {
