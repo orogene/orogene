@@ -516,13 +516,12 @@ impl Orogene {
             if let Some(config_path) = self
                 .config
                 .clone()
-                .or_else(|| ProjectDirs::from("", "", "orogene").map(|p| p.config_dir().to_owned()))
+                .or_else(|| ProjectDirs::from("", "", "orogene").map(|p| p.config_dir().to_owned().join("oro.kdl")))
             {
                 let config_dir = config_path.parent().expect("must have parent");
                 if !config_dir.exists() {
                     std::fs::create_dir_all(config_dir).unwrap();
                 }
-                let config_path = config_dir.join("oro.kdl");
                 let mut config: KdlDocument = std::fs::read_to_string(&config_path)
                     .unwrap_or_default()
                     .parse()?;
