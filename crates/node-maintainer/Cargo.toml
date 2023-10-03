@@ -1,6 +1,6 @@
 [package]
 name = "node-maintainer"
-version = "0.3.32"
+version = "0.3.33"
 description = "NPM dependency tree resolver for Orogene."
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,9 +12,9 @@ homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-nassun = { version = "=0.3.32", path = "../nassun" }
-oro-common = { version = "=0.3.32", path = "../oro-common" }
-oro-package-spec = { version = "=0.3.32", path = "../oro-package-spec" }
+nassun = { version = "=0.3.33", path = "../nassun" }
+oro-common = { version = "=0.3.33", path = "../oro-common" }
+oro-package-spec = { version = "=0.3.33", path = "../oro-package-spec" }
 
 async-std = { workspace = true }
 colored = { workspace = true }
@@ -23,21 +23,21 @@ indexmap = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true }
 node-semver = { workspace = true }
-petgraph = { version = "0.6.2", default-features = false, features = ["stable_graph"] }
+petgraph = { workspace = true, default-features = false, features = ["stable_graph"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-unicase = "2.6.0"
+unicase = { workspace = true }
 url = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 junction = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-oro-script = { version = "=0.3.32", path = "../oro-script" }
-oro-shim-bin = { version = "=0.3.32", path = "../oro-shim-bin" }
+oro-script = { version = "=0.3.33", path = "../oro-script" }
+oro-shim-bin = { version = "=0.3.33", path = "../oro-shim-bin" }
 
 reflink-copy = { workspace = true }
 indicatif = { workspace = true }
