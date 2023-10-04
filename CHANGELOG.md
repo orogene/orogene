@@ -1,4 +1,20 @@
 # Orogene Release Changelog
+<a name="0.3.33"></a>
+## 0.3.33 (2023-10-02)
+
+### Features
+
+* **terminal:** display indeterminate progress while orogene is running ([d4f3e845](https://github.com/orogene/orogene/commit/d4f3e8450afdc5cc5481daeb9477efd46153f066))
+* **release:** automatically bump official brew formula on release ([deceec38](https://github.com/orogene/orogene/commit/deceec38b33f8b6b327bf10f00105a0531ce70db))
+
+### Bug Fixes
+
+* **manifest:** handle boolean bundledDependencies values ([d6c16a44](https://github.com/orogene/orogene/commit/d6c16a445fd7f3a58bf66a61c58048de2062aef8))
+* **fmt:** cargo fmt --all ([6fd8b279](https://github.com/orogene/orogene/commit/6fd8b2792922898862cbcae5e0b9b45ff2aab4b2))
+* **bin:** fix bin linking for the isolated linker and fix cmd shims ([8b58caba](https://github.com/orogene/orogene/commit/8b58caba8e34bb031fd8f4e37891c5d136ea8ace))
+* **docs:** fix broken links ([e182ce76](https://github.com/orogene/orogene/commit/e182ce764a8c2952c1995b334e6d0a3874d0b129))
+* **terminal:** don't print out terminal progress codes unless stderr is a terminal ([1228ebea](https://github.com/orogene/orogene/commit/1228ebea3d4612b45c9caa30c7536d0032fa0072))
+
 <a name="0.3.32"></a>
 ## 0.3.32 (2023-09-30)
 
