@@ -7,6 +7,7 @@ use std::{
     },
 };
 
+use dashmap::DashSet;
 use futures::{lock::Mutex, StreamExt, TryStreamExt};
 use oro_common::BuildManifest;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
@@ -19,6 +20,7 @@ use super::LinkerOptions;
 pub(crate) struct IsolatedLinker {
     pub(crate) pending_rebuild: Arc<Mutex<HashSet<NodeIndex>>>,
     pub(crate) pending_bin_link: Arc<Mutex<BinaryHeap<NodeIndex>>>,
+    pub(crate) created_dirs: Arc<DashSet<PathBuf>>,
     pub(crate) opts: LinkerOptions,
 }
 
@@ -27,6 +29,7 @@ impl IsolatedLinker {
         Self {
             pending_rebuild: Arc::new(Mutex::new(HashSet::new())),
             pending_bin_link: Arc::new(Mutex::new(BinaryHeap::new())),
+            created_dirs: Arc::new(DashSet::new()),
             opts,
         }
     }
@@ -379,7 +382,8 @@ impl IsolatedLinker {
                     pending_bin_link,
                 )| async move {
                     if child_idx == graph.root {
-                        link_deps(graph, child_idx, store_ref, &root.join("node_modules")).await?;
+                        self.link_deps(graph, child_idx, store_ref, &root.join("node_modules"))
+                            .await?;
                         return Ok(());
                     }
 
@@ -424,7 +428,7 @@ impl IsolatedLinker {
                         }
                     }
 
-                    link_deps(
+                    self.link_deps(
                         graph,
                         child_idx,
                         store_ref,
@@ -474,7 +478,7 @@ impl IsolatedLinker {
 
         let mut pending = self.pending_bin_link.lock().await;
         while let Some(idx) = pending.pop() {
-            let added = link_dep_bins(graph, idx, root, store_ref).await?;
+            let added = self.link_dep_bins(graph, idx, root, store_ref).await?;
             linked += added;
         }
         Ok(linked)
@@ -492,6 +496,141 @@ impl IsolatedLinker {
             .join(pkg.name());
         (dir.clone(), dir)
     }
+
+    async fn link_deps(
+        &self,
+        graph: &Graph,
+        node: NodeIndex,
+        store_ref: &Path,
+        target_nm: &Path,
+    ) -> Result<(), NodeMaintainerError> {
+        // Then we symlink/junction all of the package's dependencies into its `node_modules` dir.
+        for edge in graph.inner.edges_directed(node, Direction::Outgoing) {
+            let dep_pkg = &graph[edge.target()].package;
+            let dep_store_dir = store_ref
+                .join(package_dir_name(graph, edge.target()))
+                .join("node_modules")
+                .join(dep_pkg.name());
+            let dep_nm_entry = target_nm.join(dep_pkg.name());
+            if dep_nm_entry.exists() {
+                continue;
+            }
+            let relative = pathdiff::diff_paths(
+                &dep_store_dir,
+                dep_nm_entry.parent().expect("must have a parent"),
+            )
+            .expect("this should never fail");
+            let created_dirs = self.created_dirs.clone();
+            async_std::task::spawn_blocking(move || {
+                let path = dep_nm_entry.parent().expect("definitely has a parent");
+                if !created_dirs.contains(path) {
+                    std::fs::create_dir_all(path).io_context(|| {
+                        format!("Failed to create directory for dependency in package store at {} while linking dep.", path.display())
+                    })?;
+                    for path in path.ancestors() {
+                        created_dirs.insert(path.to_path_buf());
+                    }
+                }
+                if dep_nm_entry.symlink_metadata().is_err() {
+                    // We don't check the link target here because we assume prune() has already been run and removed any incorrect links.
+                    #[cfg(windows)]
+                    std::os::windows::fs::symlink_dir(&relative, &dep_nm_entry)
+                        .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry)).map_err(|e| {
+                            NodeMaintainerError::JunctionsNotSupported(dep_store_dir, dep_nm_entry, e)
+                        })?;
+                    #[cfg(unix)]
+                    std::os::unix::fs::symlink(&relative, &dep_nm_entry).io_context(|| format!("Failed to create symlink while linking dependency, from {} to {}.", relative.display(), dep_nm_entry.display()))?;
+                }
+                Ok::<(), NodeMaintainerError>(())
+            })
+            .await?;
+        }
+        Ok(())
+    }
+
+    async fn link_dep_bins(
+        &self,
+        graph: &Graph,
+        node: NodeIndex,
+        root_path: &Path,
+        store_ref: &Path,
+    ) -> Result<usize, NodeMaintainerError> {
+        if node == graph.root {
+            return Ok(0);
+        }
+        let mut linked = 0;
+        let node_path = store_ref
+            .join(package_dir_name(graph, node))
+            .join("node_modules")
+            .join(&graph[node].name.to_string());
+        let build_mani = BuildManifest::from_path(node_path.join("package.json")).map_err(|e| {
+            NodeMaintainerError::BuildManifestReadError(node_path.join("package.json"), e)
+        })?;
+        for edge in graph.inner.edges_directed(node, Direction::Incoming) {
+            let dep_node = &graph[edge.source()];
+            let dep_store_dir = if dep_node.idx == graph.root {
+                root_path.to_owned()
+            } else {
+                store_ref
+                    .join(package_dir_name(graph, edge.source()))
+                    .join("node_modules")
+                    .join(&dep_node.name.to_string())
+            };
+            let dep_bin_dir = dep_store_dir.join("node_modules").join(".bin");
+            for (name, path) in &build_mani.bin {
+                let to = dep_bin_dir.join(name);
+                let from = dep_store_dir.join("node_modules").join(name).join(path);
+                let name = name.clone();
+                let created_dirs = self.created_dirs.clone();
+                async_std::task::spawn_blocking(move || {
+                    // We only create a symlink if the target bin exists.
+                    if from.symlink_metadata().is_ok() {
+                        let parent = to.parent().expect("has a parent");
+                        if !created_dirs.contains(parent) {
+                            std::fs::create_dir_all(to.parent().expect("has a parent"))
+                                .io_context(|| {
+                                    format!(
+                                        "Failed to create target bin directory at {}.",
+                                        to.parent().unwrap().display()
+                                    )
+                                })?;
+                            for path in parent.ancestors() {
+                                created_dirs.insert(path.to_path_buf());
+                            }
+                        }
+                        if let Ok(meta) = to.symlink_metadata() {
+                            if meta.is_dir() {
+                                std::fs::remove_dir_all(&to).io_context(|| {
+                                    format!(
+                                        "Failed to rimraf existing bin directory at {}.",
+                                        to.display()
+                                    )
+                                })?;
+                            } else {
+                                std::fs::remove_file(&to).io_context(|| {
+                                    format!(
+                                    "Failed to rm existing file in bin directory location at {}.",
+                                    to.display()
+                                )
+                                })?;
+                            }
+                        }
+                        super::link_bin(&from, &to)?;
+                        tracing::trace!(
+                            "Linked bin for {} from {} to {}",
+                            name,
+                            from.display(),
+                            to.display()
+                        );
+                    }
+                    Ok::<_, NodeMaintainerError>(())
+                })
+                .await?;
+                linked += 1;
+            }
+        }
+        Ok(linked)
+    }
 }
 
 fn package_dir_name(graph: &Graph, idx: NodeIndex) -> String {
@@ -504,125 +643,4 @@ fn package_dir_name(graph: &Graph, idx: NodeIndex) -> String {
     hex.truncate(8);
     name.push_str(&hex);
     name
-}
-
-async fn link_deps(
-    graph: &Graph,
-    node: NodeIndex,
-    store_ref: &Path,
-    target_nm: &Path,
-) -> Result<(), NodeMaintainerError> {
-    // Then we symlink/junction all of the package's dependencies into its `node_modules` dir.
-    for edge in graph.inner.edges_directed(node, Direction::Outgoing) {
-        let dep_pkg = &graph[edge.target()].package;
-        let dep_store_dir = store_ref
-            .join(package_dir_name(graph, edge.target()))
-            .join("node_modules")
-            .join(dep_pkg.name());
-        let dep_nm_entry = target_nm.join(dep_pkg.name());
-        if dep_nm_entry.exists() {
-            continue;
-        }
-        let relative = pathdiff::diff_paths(
-            &dep_store_dir,
-            dep_nm_entry.parent().expect("must have a parent"),
-        )
-        .expect("this should never fail");
-        async_std::task::spawn_blocking(move || {
-            let path = dep_nm_entry.parent().expect("definitely has a parent");
-            std::fs::create_dir_all(path).io_context(|| {
-                format!("Failed to create directory for dependency in package store at {} while linking dep.", path.display())
-            })?;
-            if dep_nm_entry.symlink_metadata().is_err() {
-                // We don't check the link target here because we assume prune() has already been run and removed any incorrect links.
-                #[cfg(windows)]
-                std::os::windows::fs::symlink_dir(&relative, &dep_nm_entry)
-                    .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry)).map_err(|e| {
-                        NodeMaintainerError::JunctionsNotSupported(dep_store_dir, dep_nm_entry, e)
-                    })?;
-                #[cfg(unix)]
-                std::os::unix::fs::symlink(&relative, &dep_nm_entry).io_context(|| format!("Failed to create symlink while linking dependency, from {} to {}.", relative.display(), dep_nm_entry.display()))?;
-            }
-            Ok::<(), NodeMaintainerError>(())
-        })
-        .await?;
-    }
-    Ok(())
-}
-
-async fn link_dep_bins(
-    graph: &Graph,
-    node: NodeIndex,
-    root_path: &Path,
-    store_ref: &Path,
-) -> Result<usize, NodeMaintainerError> {
-    if node == graph.root {
-        return Ok(0);
-    }
-    let mut linked = 0;
-    let node_path = store_ref
-        .join(package_dir_name(graph, node))
-        .join("node_modules")
-        .join(&graph[node].name.to_string());
-    let build_mani = BuildManifest::from_path(node_path.join("package.json")).map_err(|e| {
-        NodeMaintainerError::BuildManifestReadError(node_path.join("package.json"), e)
-    })?;
-    for edge in graph.inner.edges_directed(node, Direction::Incoming) {
-        let dep_node = &graph[edge.source()];
-        let dep_store_dir = if dep_node.idx == graph.root {
-            root_path.to_owned()
-        } else {
-            store_ref
-                .join(package_dir_name(graph, edge.source()))
-                .join("node_modules")
-                .join(&dep_node.name.to_string())
-        };
-        let dep_bin_dir = dep_store_dir.join("node_modules").join(".bin");
-        for (name, path) in &build_mani.bin {
-            let to = dep_bin_dir.join(name);
-            let from = dep_store_dir.join("node_modules").join(name).join(path);
-            let name = name.clone();
-            async_std::task::spawn_blocking(move || {
-                // We only create a symlink if the target bin exists.
-                if from.symlink_metadata().is_ok() {
-                    std::fs::create_dir_all(to.parent().expect("has a parent")).io_context(
-                        || {
-                            format!(
-                                "Failed to create target bin directory at {}.",
-                                to.parent().unwrap().display()
-                            )
-                        },
-                    )?;
-                    if let Ok(meta) = to.symlink_metadata() {
-                        if meta.is_dir() {
-                            std::fs::remove_dir_all(&to).io_context(|| {
-                                format!(
-                                    "Failed to rimraf existing bin directory at {}.",
-                                    to.display()
-                                )
-                            })?;
-                        } else {
-                            std::fs::remove_file(&to).io_context(|| {
-                                format!(
-                                    "Failed to rm existing file in bin directory location at {}.",
-                                    to.display()
-                                )
-                            })?;
-                        }
-                    }
-                    super::link_bin(&from, &to)?;
-                    tracing::trace!(
-                        "Linked bin for {} from {} to {}",
-                        name,
-                        from.display(),
-                        to.display()
-                    );
-                }
-                Ok::<_, NodeMaintainerError>(())
-            })
-            .await?;
-            linked += 1;
-        }
-    }
-    Ok(linked)
 }
