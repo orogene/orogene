@@ -2036,6 +2036,7 @@ dependencies = [
  "async-std",
  "colored",
  "console_error_panic_hook",
+ "dashmap",
  "futures 0.3.28",
  "indexmap 1.9.3",
  "indicatif",
