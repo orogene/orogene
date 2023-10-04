@@ -513,11 +513,10 @@ impl Orogene {
         // We skip first-time-setup operations in CI entirely.
         if self.first_time && !is_ci::cached() {
             tracing::info!("Performing first-time setup...");
-            if let Some(config_path) = self
-                .config
-                .clone()
-                .or_else(|| ProjectDirs::from("", "", "orogene").map(|p| p.config_dir().to_owned().join("oro.kdl")))
-            {
+            if let Some(config_path) = self.config.clone().or_else(|| {
+                ProjectDirs::from("", "", "orogene")
+                    .map(|p| p.config_dir().to_owned().join("oro.kdl"))
+            }) {
                 let config_dir = config_path.parent().expect("must have parent");
                 if !config_dir.exists() {
                     std::fs::create_dir_all(config_dir).unwrap();
