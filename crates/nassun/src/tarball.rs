@@ -1,5 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
+use std::collections::HashSet;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 #[cfg(not(target_arch = "wasm32"))]
@@ -253,14 +254,21 @@ impl TempTarball {
                 .unwrap_or_else(|| entry_path.as_ref())
                 .to_path_buf();
             let path = dir.join(&entry_subpath);
+            let mut created = HashSet::new();
             if let tar::EntryType::Regular = header.entry_type() {
-                std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| {
-                    NassunError::ExtractIoError(
-                        e,
-                        Some(path.parent().unwrap().into()),
-                        "creating parent directory for entry.".into(),
-                    )
-                })?;
+                let parent = path.parent().unwrap();
+                if !created.contains(parent) {
+                    std::fs::create_dir_all(parent).map_err(|e| {
+                        NassunError::ExtractIoError(
+                            e,
+                            Some(path.parent().unwrap().into()),
+                            "creating parent directory for entry.".into(),
+                        )
+                    })?;
+                    for path in parent.ancestors() {
+                        created.insert(path.to_path_buf());
+                    }
+                }
 
                 if let Some(cache) = cache {
                     let mut writer = WriteOpts::new()
@@ -467,14 +475,16 @@ pub(crate) fn extract_from_cache(
     }
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(to, std::fs::Permissions::from_mode(mode)).map_err(|e| {
-            NassunError::ExtractIoError(
-                e,
-                Some(to.to_path_buf()),
-                "setting permissions on extracted file.".into(),
-            )
-        })?;
+        if mode != 0o644 {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(to, std::fs::Permissions::from_mode(mode)).map_err(|e| {
+                NassunError::ExtractIoError(
+                    e,
+                    Some(to.to_path_buf()),
+                    "setting permissions on extracted file.".into(),
+                )
+            })?;
+        }
     }
     Ok(())
 }
@@ -502,14 +512,14 @@ pub(crate) fn set_bin_mode(path: &Path) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::copy_hash_sync(cache, sri, to)
+    cacache::copy_hash_unchecked_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::hard_link_hash_sync(cache, sri, to)
+    cacache::hard_link_hash_unchecked_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }

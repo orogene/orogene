@@ -2036,6 +2036,7 @@ dependencies = [
  "async-std",
  "colored",
  "console_error_panic_hook",
+ "dashmap",
  "futures 0.3.28",
  "indexmap 1.9.3",
  "indicatif",
@@ -2761,13 +2762,12 @@ dependencies = [
 
 [[package]]
 name = "reflink-copy"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e062faffd49af27131ed7fa8fcb8a777dec096932c4f1751bc1c0e61c797907"
+checksum = "f9e3947399fd46f412918bafde71ec68f9b3505f11ef082eeb80bc7fdf4d7caf"
 dependencies = [
  "cfg-if",
  "ioctl-sys",
- "libc",
  "windows 0.51.1",
 ]
 
