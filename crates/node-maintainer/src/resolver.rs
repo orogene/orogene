@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Instant;
 
 use async_std::sync::Mutex;
 #[cfg(not(target_arch = "wasm32"))]
@@ -32,6 +33,7 @@ struct NodeDependency {
     spec: PackageSpec,
     dep_type: DepType,
     node_idx: NodeIndex,
+    start: Instant,
 }
 
 pub(crate) struct Resolver<'a> {
@@ -118,6 +120,7 @@ impl<'a> Resolver<'a> {
                         spec,
                         dep_type,
                         node_idx,
+                        start: Instant::now(),
                     };
 
                     if let Some(handler) = &self.on_resolution_added {
@@ -126,7 +129,7 @@ impl<'a> Resolver<'a> {
 
                     if let Some(_child_idx) = Self::satisfy_dependency(&mut self.graph, &dep)? {
                         if let Some(handler) = &self.on_resolve_progress {
-                            handler(&self.graph[_child_idx].package);
+                            handler(&self.graph[_child_idx].package, dep.start.elapsed());
                         }
                     }
                     // Walk up the current hierarchy to see if we find a
@@ -164,7 +167,7 @@ impl<'a> Resolver<'a> {
                                 q.push_back(child_idx);
 
                                 if let Some(handler) = &self.on_resolve_progress {
-                                    handler(&self.graph[child_idx].package);
+                                    handler(&self.graph[child_idx].package, dep.start.elapsed());
                                 }
                                 continue;
                             }
@@ -220,7 +223,7 @@ impl<'a> Resolver<'a> {
                                 Self::satisfy_dependency(&mut self.graph, &dep)?
                             {
                                 if let Some(handler) = &self.on_resolve_progress {
-                                    handler(&self.graph[_child_idx].package);
+                                    handler(&self.graph[_child_idx].package, dep.start.elapsed());
                                 }
                                 continue;
                             }
@@ -236,7 +239,7 @@ impl<'a> Resolver<'a> {
                             q.push_back(child_idx);
 
                             if let Some(handler) = &self.on_resolve_progress {
-                                handler(&self.graph[child_idx].package);
+                                handler(&self.graph[child_idx].package, dep.start.elapsed());
                             }
                         }
                     }

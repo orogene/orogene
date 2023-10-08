@@ -54,12 +54,7 @@ impl std::fmt::Debug for PackageResolution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use PackageResolution::*;
         match self {
-            Npm {
-                tarball,
-                name,
-                version,
-                ..
-            } => write!(f, "{name}@{version} ({tarball})"),
+            Npm { name, version, .. } => write!(f, "{name}@{version}"),
             Dir { path, name } => write!(f, "{name}@{}", path.to_string_lossy()),
             Git { name, info } => write!(f, "{name}@{info}"),
         }

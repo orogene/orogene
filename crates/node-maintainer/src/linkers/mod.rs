@@ -388,18 +388,56 @@ pub(crate) fn supports_reflink(src_dir: &Path, dest_dir: &Path) -> bool {
     let supports_reflink = reflink_copy::reflink(temp.path(), tempdir.path().join("b"))
         .map(|_| true)
         .map_err(|e| {
-            tracing::debug!(
-                "reflink support check failed. Files will be hard linked or copied. ({e})"
-            );
+            tracing::debug!("reflink support check failed.({e})");
             e
         })
         .unwrap_or(false);
 
     if supports_reflink {
-        tracing::debug!("Verified reflink support. Extracted data will use copy-on-write reflinks instead of hard links or full copies.")
+        tracing::debug!("Verified reflink support")
     }
 
     supports_reflink
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn supports_hardlink(src_dir: &Path, dest_dir: &Path) -> bool {
+    let temp = match tempfile::NamedTempFile::new_in(src_dir) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::debug!("error creating tempfile while checking for hardlink support: {e}.");
+            return false;
+        }
+    };
+    match std::fs::write(&temp, "a") {
+        Ok(_) => {}
+        Err(e) => {
+            tracing::debug!("error writing to tempfile while checking for hardlink support: {e}.");
+            return false;
+        }
+    };
+    let tempdir = match tempfile::TempDir::new_in(dest_dir) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::debug!(
+                "error creating destination tempdir while checking for hardlink support: {e}."
+            );
+            return false;
+        }
+    };
+    let supports_hardlink = std::fs::hard_link(temp.path(), tempdir.path().join("b"))
+        .map(|_| true)
+        .map_err(|e| {
+            tracing::debug!("hardlink support check failed. ({e})");
+            e
+        })
+        .unwrap_or(false);
+
+    if supports_hardlink {
+        tracing::debug!("Verified hardlink support.")
+    }
+
+    supports_hardlink
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -437,6 +475,40 @@ pub(crate) fn link_bin(from: &Path, to: &Path) -> Result<(), NodeMaintainerError
                 to.display()
             )
         })?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn mkdirp(
+    path: &Path,
+    cache: &dashmap::DashSet<PathBuf>,
+) -> Result<(), NodeMaintainerError> {
+    if !cache.contains(path) {
+        let grandpa_present = if let Some(grandpa) = path.parent() {
+            cache.contains(grandpa)
+        } else {
+            true
+        };
+        if grandpa_present {
+            std::fs::create_dir(path).io_context(|| {
+                format!(
+                    "Failed to create directory {} while extracting.",
+                    path.display()
+                )
+            })?;
+            cache.insert(path.to_path_buf());
+        } else {
+            std::fs::create_dir_all(path).io_context(|| {
+                format!(
+                    "Failed to create directory {} while extracting.",
+                    path.display()
+                )
+            })?;
+            for path in path.ancestors() {
+                cache.insert(path.to_path_buf());
+            }
+        }
     }
     Ok(())
 }

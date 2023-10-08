@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 #[cfg(not(target_arch = "wasm32"))]
 use async_std::fs;
@@ -28,7 +29,7 @@ pub const META_FILE_NAME: &str = ".orogene-meta.kdl";
 pub const STORE_DIR_NAME: &str = ".oro-store";
 
 pub type ProgressAdded = Arc<dyn Fn() + Send + Sync>;
-pub type ProgressHandler = Arc<dyn Fn(&Package) + Send + Sync>;
+pub type ProgressHandler = Arc<dyn Fn(&Package, Duration) + Send + Sync>;
 pub type PruneProgress = Arc<dyn Fn(&Path) + Send + Sync>;
 pub type ScriptStartHandler = Arc<dyn Fn(&Package, &str) + Send + Sync>;
 pub type ScriptLineHandler = Arc<dyn Fn(&str) + Send + Sync>;
@@ -239,7 +240,7 @@ impl NodeMaintainerOptions {
 
     pub fn on_resolve_progress<F>(mut self, f: F) -> Self
     where
-        F: Fn(&Package) + Send + Sync + 'static,
+        F: Fn(&Package, Duration) + Send + Sync + 'static,
     {
         self.on_resolve_progress = Some(Arc::new(f));
         self
@@ -257,7 +258,7 @@ impl NodeMaintainerOptions {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn on_extract_progress<F>(mut self, f: F) -> Self
     where
-        F: Fn(&Package) + Send + Sync + 'static,
+        F: Fn(&Package, Duration) + Send + Sync + 'static,
     {
         self.on_extract_progress = Some(Arc::new(f));
         self

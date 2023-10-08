@@ -18,6 +18,32 @@ use crate::tarball::Tarball;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::tarball::TarballIndex;
 
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExtractMode {
+    /// Automatically decide whether to Copy or Reflink, based on fallbacks. Will never hardlink.
+    #[default]
+    Auto,
+    /// Copy contents from the cache in their entirety.
+    Copy,
+    /// Reflink contents from the cache instead of doing full copies.
+    Reflink,
+    /// Try to hard link contents from the cache. Fall back to reflink, then copy if that fails.
+    AutoHardlink,
+    /// Hard link contents from the cache instead of doing full copies.
+    Hardlink,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl ExtractMode {
+    pub fn is_copy(&self) -> bool {
+        matches!(
+            self,
+            ExtractMode::Copy | ExtractMode::Auto | ExtractMode::Reflink
+        )
+    }
+}
+
 /// A resolved package. A concrete version has been determined from its
 /// PackageSpec by the version resolver.
 #[derive(Clone)]
@@ -131,13 +157,13 @@ impl Package {
     pub async fn extract_to_dir(
         &self,
         dir: impl AsRef<Path>,
-        prefer_copy: bool,
+        extract_mode: ExtractMode,
     ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, me.resolved.integrity(), prefer_copy)
+        async fn inner(me: &Package, dir: &Path, extract_mode: ExtractMode) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, me.resolved.integrity(), extract_mode)
                 .await
         }
-        inner(self, dir.as_ref(), prefer_copy).await
+        inner(self, dir.as_ref(), extract_mode).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -147,12 +173,12 @@ impl Package {
     pub async fn extract_to_dir_unchecked(
         &self,
         dir: impl AsRef<Path>,
-        prefer_copy: bool,
+        extract_mode: ExtractMode,
     ) -> Result<Integrity> {
-        async fn inner(me: &Package, dir: &Path, prefer_copy: bool) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, None, prefer_copy).await
+        async fn inner(me: &Package, dir: &Path, extract_mode: ExtractMode) -> Result<Integrity> {
+            me.extract_to_dir_inner(dir, None, extract_mode).await
         }
-        inner(self, dir.as_ref(), prefer_copy).await
+        inner(self, dir.as_ref(), extract_mode).await
     }
 
     /// Extract tarball to a directory, optionally caching its contents. The
@@ -163,17 +189,17 @@ impl Package {
         &self,
         dir: impl AsRef<Path>,
         sri: Integrity,
-        prefer_copy: bool,
+        extract_mode: ExtractMode,
     ) -> Result<Integrity> {
         async fn inner(
             me: &Package,
             dir: &Path,
             sri: Integrity,
-            prefer_copy: bool,
+            extract_mode: ExtractMode,
         ) -> Result<Integrity> {
-            me.extract_to_dir_inner(dir, Some(&sri), prefer_copy).await
+            me.extract_to_dir_inner(dir, Some(&sri), extract_mode).await
         }
-        inner(self, dir.as_ref(), sri, prefer_copy).await
+        inner(self, dir.as_ref(), sri, extract_mode).await
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -181,7 +207,7 @@ impl Package {
         &self,
         dir: &Path,
         integrity: Option<&Integrity>,
-        prefer_copy: bool,
+        extract_mode: ExtractMode,
     ) -> Result<Integrity> {
         if let Some(sri) = integrity {
             if let Some(cache) = self.cache.as_deref() {
@@ -190,7 +216,7 @@ impl Package {
                 {
                     let sri = sri.clone();
                     match self
-                        .extract_from_cache(dir, cache, entry, prefer_copy)
+                        .extract_from_cache(dir, cache, entry, extract_mode)
                         .await
                     {
                         Ok(_) => return Ok(sri),
@@ -209,7 +235,7 @@ impl Package {
                             return self
                                 .tarball_checked(sri)
                                 .await?
-                                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
+                                .extract_from_tarball_data(dir, self.cache.as_deref(), extract_mode)
                                 .await;
                         }
                     }
@@ -217,18 +243,18 @@ impl Package {
                     return self
                         .tarball_checked(sri.clone())
                         .await?
-                        .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
+                        .extract_from_tarball_data(dir, self.cache.as_deref(), extract_mode)
                         .await;
                 }
             }
             self.tarball_checked(sri.clone())
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
+                .extract_from_tarball_data(dir, self.cache.as_deref(), extract_mode)
                 .await
         } else {
             self.tarball_unchecked()
                 .await?
-                .extract_from_tarball_data(dir, self.cache.as_deref(), prefer_copy)
+                .extract_from_tarball_data(dir, self.cache.as_deref(), extract_mode)
                 .await
         }
     }
@@ -239,13 +265,13 @@ impl Package {
         dir: &Path,
         cache: &Path,
         entry: cacache::Metadata,
-        mut prefer_copy: bool,
+        mut extract_mode: ExtractMode,
     ) -> Result<()> {
         let dir = PathBuf::from(dir);
         let cache = PathBuf::from(cache);
         let name = self.name().to_owned();
         async_std::task::spawn_blocking(move || {
-            let mut created = std::collections::HashSet::new();
+            let created = dashmap::DashSet::new();
             let index = rkyv::check_archived_root::<TarballIndex>(
                 entry
                     .raw_metadata
@@ -253,22 +279,19 @@ impl Package {
                     .ok_or_else(|| NassunError::CacheMissingIndexError(name))?,
             )
             .map_err(|e| NassunError::DeserializeCacheError(e.to_string()))?;
-            prefer_copy = index.should_copy || prefer_copy;
+            extract_mode = if index.should_copy && !extract_mode.is_copy() {
+                // In general, if reflinks are supported, we would have
+                // received them as extract_mode already. So there's no need
+                // to try and do a fallback here.
+                ExtractMode::Copy
+            } else {
+                extract_mode
+            };
             for (archived_path, (sri, mode)) in index.files.iter() {
                 let sri: Integrity = sri.parse()?;
                 let path = dir.join(&archived_path[..]);
                 let parent = PathBuf::from(path.parent().expect("this will always have a parent"));
-                if !created.contains(&parent) {
-                    std::fs::create_dir_all(path.parent().expect("this will always have a parent"))
-                        .map_err(|e| {
-                            NassunError::ExtractIoError(
-                                e,
-                                Some(PathBuf::from(path.parent().unwrap())),
-                                "creating destination directory for tarball.".into(),
-                            )
-                        })?;
-                    created.insert(parent);
-                }
+                crate::tarball::mkdirp(&parent, &created)?;
 
                 let mode = if index.bin_paths.contains(archived_path) {
                     *mode | 0o111
@@ -276,7 +299,7 @@ impl Package {
                     *mode
                 };
 
-                crate::tarball::extract_from_cache(&cache, &sri, &path, prefer_copy, mode)?;
+                crate::tarball::extract_from_cache(&cache, &sri, &path, extract_mode, mode)?;
             }
             Ok::<_, NassunError>(())
         })
