@@ -182,20 +182,20 @@ impl ApplyArgs {
             .on_resolution_added(move || {
                 Span::current().pb_inc_length(1);
             })
-            .on_resolve_progress(move |pkg| {
+            .on_resolve_progress(move |pkg, elapsed| {
                 let span = Span::current();
                 span.pb_inc(1);
-                span.pb_set_message(&format!("{:?}", pkg.resolved()));
+                span.pb_set_message(&format!("{:?} ({}ms)", pkg.resolved(), elapsed.as_micros() / 1000));
             })
             .on_prune_progress(move |path| {
                 let span = Span::current();
                 span.pb_inc(1);
                 span.pb_set_message(&format!("{}", path.display()));
             })
-            .on_extract_progress(move |pkg| {
+            .on_extract_progress(move |pkg, elapsed| {
                 let span = Span::current();
                 span.pb_inc(1);
-                span.pb_set_message(&format!("{:?}", pkg.resolved()))
+                span.pb_set_message(&format!("{:?} ({}ms)", pkg.resolved(), elapsed.as_micros() / 1000))
             })
             .on_script_start(|pkg, event| {
                 let span = Span::current();

@@ -9,6 +9,7 @@ use std::{
 
 use dashmap::DashSet;
 use futures::{lock::Mutex, StreamExt, TryStreamExt};
+use nassun::ExtractMode;
 use oro_common::BuildManifest;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use ssri::Integrity;
@@ -20,7 +21,7 @@ use super::LinkerOptions;
 pub(crate) struct IsolatedLinker {
     pub(crate) pending_rebuild: Arc<Mutex<HashSet<NodeIndex>>>,
     pub(crate) pending_bin_link: Arc<Mutex<BinaryHeap<NodeIndex>>>,
-    pub(crate) created_dirs: Arc<DashSet<PathBuf>>,
+    pub(crate) mkdir_cache: Arc<DashSet<PathBuf>>,
     pub(crate) opts: LinkerOptions,
 }
 
@@ -29,7 +30,7 @@ impl IsolatedLinker {
         Self {
             pending_rebuild: Arc::new(Mutex::new(HashSet::new())),
             pending_bin_link: Arc::new(Mutex::new(BinaryHeap::new())),
-            created_dirs: Arc::new(DashSet::new()),
+            mkdir_cache: Arc::new(DashSet::new()),
             opts,
         }
     }
@@ -349,17 +350,20 @@ impl IsolatedLinker {
         let total = graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
         let node_modules = root.join("node_modules");
-        std::fs::create_dir_all(&node_modules).io_context(|| {
-            format!(
-                "Failed to create node_modules directory at {} for extraction.",
-                node_modules.display()
-            )
-        })?;
-        let prefer_copy = self.opts.prefer_copy
-            || match self.opts.cache.as_deref() {
-                Some(cache) => super::supports_reflink(cache, &node_modules),
-                None => false,
-            };
+        super::mkdirp(&node_modules, &self.mkdir_cache)?;
+        let extract_mode = if let Some(cache) = self.opts.cache.as_deref() {
+            if super::supports_reflink(cache, &node_modules) {
+                ExtractMode::Reflink
+            } else if self.opts.prefer_copy {
+                ExtractMode::Copy
+            } else if super::supports_hardlink(cache, &node_modules) {
+                ExtractMode::Hardlink
+            } else {
+                ExtractMode::Copy
+            }
+        } else {
+            ExtractMode::AutoHardlink
+        };
         stream
             .map(|idx| {
                 Ok((
@@ -403,7 +407,7 @@ impl IsolatedLinker {
                     if !target_dir.exists() {
                         graph[child_idx]
                             .package
-                            .extract_to_dir(&target_dir, prefer_copy)
+                            .extract_to_dir(&target_dir, extract_mode)
                             .await?;
                         actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
                         let target_dir = target_dir.clone();
@@ -436,8 +440,10 @@ impl IsolatedLinker {
                     )
                     .await?;
 
+                    let elapsed = start.elapsed();
+
                     if let Some(on_extract) = &self.opts.on_extract_progress {
-                        on_extract(&graph[child_idx].package);
+                        on_extract(&graph[child_idx].package, elapsed);
                     }
 
                     tracing::trace!(
@@ -445,7 +451,7 @@ impl IsolatedLinker {
                         "Extracted {} to {} in {:?}ms. {}/{total} done.",
                         graph[child_idx].package.name(),
                         target_dir.display(),
-                        start.elapsed().as_millis(),
+                        elapsed.as_micros() / 1000,
                         total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
                     );
 
@@ -520,26 +526,30 @@ impl IsolatedLinker {
                 dep_nm_entry.parent().expect("must have a parent"),
             )
             .expect("this should never fail");
-            let created_dirs = self.created_dirs.clone();
+            let mkdir_cache = self.mkdir_cache.clone();
             async_std::task::spawn_blocking(move || {
                 let path = dep_nm_entry.parent().expect("definitely has a parent");
-                if !created_dirs.contains(path) {
-                    std::fs::create_dir_all(path).io_context(|| {
-                        format!("Failed to create directory for dependency in package store at {} while linking dep.", path.display())
-                    })?;
-                    for path in path.ancestors() {
-                        created_dirs.insert(path.to_path_buf());
-                    }
-                }
+                super::mkdirp(path, &mkdir_cache)?;
                 if dep_nm_entry.symlink_metadata().is_err() {
                     // We don't check the link target here because we assume prune() has already been run and removed any incorrect links.
                     #[cfg(windows)]
                     std::os::windows::fs::symlink_dir(&relative, &dep_nm_entry)
-                        .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry)).map_err(|e| {
-                            NodeMaintainerError::JunctionsNotSupported(dep_store_dir, dep_nm_entry, e)
+                        .or_else(|_| junction::create(&dep_store_dir, &dep_nm_entry))
+                        .map_err(|e| {
+                            NodeMaintainerError::JunctionsNotSupported(
+                                dep_store_dir,
+                                dep_nm_entry,
+                                e,
+                            )
                         })?;
                     #[cfg(unix)]
-                    std::os::unix::fs::symlink(&relative, &dep_nm_entry).io_context(|| format!("Failed to create symlink while linking dependency, from {} to {}.", relative.display(), dep_nm_entry.display()))?;
+                    std::os::unix::fs::symlink(&relative, &dep_nm_entry).io_context(|| {
+                        format!(
+                            "Failed to create symlink while linking dependency, from {} to {}.",
+                            relative.display(),
+                            dep_nm_entry.display()
+                        )
+                    })?;
                 }
                 Ok::<(), NodeMaintainerError>(())
             })
@@ -581,23 +591,12 @@ impl IsolatedLinker {
                 let to = dep_bin_dir.join(name);
                 let from = dep_store_dir.join("node_modules").join(name).join(path);
                 let name = name.clone();
-                let created_dirs = self.created_dirs.clone();
+                let mkdir_cache = self.mkdir_cache.clone();
                 async_std::task::spawn_blocking(move || {
                     // We only create a symlink if the target bin exists.
                     if from.symlink_metadata().is_ok() {
                         let parent = to.parent().expect("has a parent");
-                        if !created_dirs.contains(parent) {
-                            std::fs::create_dir_all(to.parent().expect("has a parent"))
-                                .io_context(|| {
-                                    format!(
-                                        "Failed to create target bin directory at {}.",
-                                        to.parent().unwrap().display()
-                                    )
-                                })?;
-                            for path in parent.ancestors() {
-                                created_dirs.insert(path.to_path_buf());
-                            }
-                        }
+                        super::mkdirp(parent, &mkdir_cache)?;
                         if let Ok(meta) = to.symlink_metadata() {
                             if meta.is_dir() {
                                 std::fs::remove_dir_all(&to).io_context(|| {

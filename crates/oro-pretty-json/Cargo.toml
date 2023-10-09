@@ -1,6 +1,6 @@
 [package]
 name = "oro-pretty-json"
-version = "0.3.33"
+version = "0.3.34"
 description = "Utility for pretty printing JSON while preserving the order of keys and the original indentation and line endings from a JSON source."
 readme = "README.md"
 license = "Apache-2.0"

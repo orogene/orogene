@@ -1,8 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
 #[cfg(not(target_arch = "wasm32"))]
-use std::collections::HashSet;
-#[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Seek};
@@ -35,6 +33,8 @@ use crate::entries::{Entries, Entry};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::IoContext;
 use crate::error::{NassunError, Result};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::package::ExtractMode;
 use crate::TarballStream;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -75,14 +75,14 @@ impl Tarball {
         mut self,
         dir: &Path,
         cache: Option<&Path>,
-        prefer_copy: bool,
+        extract_mode: ExtractMode,
     ) -> Result<Integrity> {
         let integrity = self.integrity.take();
         let temp = self.into_temp().await?;
         let dir = PathBuf::from(dir);
         let cache = cache.map(PathBuf::from);
         async_std::task::spawn_blocking(move || {
-            temp.extract_to_dir(&dir, integrity, cache.as_deref(), prefer_copy)
+            temp.extract_to_dir(&dir, integrity, cache.as_deref(), extract_mode)
         })
         .await
     }
@@ -208,11 +208,12 @@ impl TempTarball {
         dir: &Path,
         tarball_integrity: Option<Integrity>,
         cache: Option<&Path>,
-        mut prefer_copy: bool,
+        mut extract_mode: ExtractMode,
     ) -> Result<Integrity> {
         let mut build_mani: Option<BuildManifest> = None;
         let mut tarball_index = TarballIndex::default();
         let mut drain_buf = [0u8; 1024 * 8];
+        let created = dashmap::DashSet::new();
 
         self.rewind().io_context(|| {
             format!(
@@ -230,13 +231,7 @@ impl TempTarball {
             NassunError::ExtractIoError(e, None, "getting tarball entries iterator".into())
         })?;
 
-        std::fs::create_dir_all(dir).map_err(|e| {
-            NassunError::ExtractIoError(
-                e,
-                Some(PathBuf::from(dir)),
-                "creating destination directory for tarball.".into(),
-            )
-        })?;
+        mkdirp(dir, &created)?;
 
         for file in files {
             let mut file = file.map_err(|e| {
@@ -255,21 +250,9 @@ impl TempTarball {
                 .unwrap_or_else(|| entry_path.as_ref())
                 .to_path_buf();
             let path = dir.join(&entry_subpath);
-            let mut created = HashSet::new();
             if let tar::EntryType::Regular = header.entry_type() {
                 let parent = path.parent().unwrap();
-                if !created.contains(parent) {
-                    std::fs::create_dir_all(parent).map_err(|e| {
-                        NassunError::ExtractIoError(
-                            e,
-                            Some(path.parent().unwrap().into()),
-                            "creating parent directory for entry.".into(),
-                        )
-                    })?;
-                    for path in parent.ancestors() {
-                        created.insert(path.to_path_buf());
-                    }
-                }
+                mkdirp(parent, &created)?;
 
                 if let Some(cache) = cache {
                     let mut writer = WriteOpts::new()
@@ -289,7 +272,7 @@ impl TempTarball {
                         .commit()
                         .map_err(|e| NassunError::ExtractCacheError(e, Some(path.clone())))?;
 
-                    extract_from_cache(cache, &sri, &path, prefer_copy, mode)?;
+                    extract_from_cache(cache, &sri, &path, extract_mode, mode)?;
 
                     let entry_subpath = entry_subpath.to_string_lossy().to_string();
 
@@ -306,16 +289,15 @@ impl TempTarball {
                         if ["preinstall", "install", "postinstall"]
                             .iter()
                             .any(|s| manifest.scripts.contains_key(*s))
-                            || !manifest.bin.is_empty()
                         {
                             tarball_index.should_copy = true;
-                            if !prefer_copy {
-                                prefer_copy = true;
+                            if !extract_mode.is_copy() {
+                                extract_mode = ExtractMode::Auto;
                                 for (entry, (sri, mode)) in &tarball_index.files {
                                     let path = dir.join(entry);
                                     std::fs::remove_file(&path).io_context(|| format!("Failed to remove target file while extracting a new version, at {}.", path.display()))?;
                                     let sri = sri.parse()?;
-                                    extract_from_cache(cache, &sri, &path, prefer_copy, *mode)?;
+                                    extract_from_cache(cache, &sri, &path, extract_mode, *mode)?;
                                 }
                             }
                         }
@@ -452,27 +434,34 @@ pub(crate) fn extract_from_cache(
     cache: &Path,
     sri: &Integrity,
     to: &Path,
-    prefer_copy: bool,
+    extract_mode: ExtractMode,
     #[allow(unused_variables)] mode: u32,
 ) -> Result<()> {
-    if prefer_copy {
-        copy_from_cache(cache, sri, to)?;
-    } else {
-        // HACK: This is horrible, but on wsl2 (at least), this
-        // was sometimes crashing with an ENOENT (?!), which
-        // really REALLY shouldn't happen. So we just retry a few
-        // times and hope the problem goes away.
-        let op = || hard_link_from_cache(cache, sri, to);
-        op.retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
-            .notify(|err, wait| {
-                tracing::debug!(
-                    "Error hard linking from cache: {}. Retrying after {}ms",
-                    err,
-                    wait.as_micros() / 1000
-                )
-            })
-            .call()
-            .or_else(|_| copy_from_cache(cache, sri, to))?;
+    match extract_mode {
+        ExtractMode::Auto => {
+            reflink_from_cache(cache, sri, to).or_else(|_| copy_from_cache(cache, sri, to))?;
+        }
+        ExtractMode::AutoHardlink | ExtractMode::Hardlink => {
+            // HACK: This is horrible, but on wsl2 (at least), this
+            // was sometimes crashing with an ENOENT (?!), which
+            // really REALLY shouldn't happen. So we just retry a few
+            // times and hope the problem goes away.
+            (|| hard_link_from_cache(cache, sri, to))
+                .retry(&ConstantBuilder::default().with_delay(Duration::from_millis(50)))
+                .notify(|err, wait| {
+                    tracing::debug!(
+                        "Error hard linking from cache: {}. Retrying after {}ms",
+                        err,
+                        wait.as_micros() / 1000
+                    )
+                })
+                .call()
+                // NOTE: we still want the operation to complete if hard linking fails.
+                .or_else(|_| reflink_from_cache(cache, sri, to))
+                .or_else(|_| copy_from_cache(cache, sri, to))?;
+        }
+        ExtractMode::Copy => copy_from_cache(cache, sri, to)?,
+        ExtractMode::Reflink => reflink_from_cache(cache, sri, to)?,
     }
     #[cfg(unix)]
     {
@@ -513,14 +502,54 @@ pub(crate) fn set_bin_mode(path: &Path) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::copy_hash_unchecked_sync(cache, sri, to)
+    cacache::copy_hash_sync(cache, sri, to)
+        .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn reflink_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
+    cacache::reflink_hash_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::hard_link_hash_unchecked_sync(cache, sri, to)
+    cacache::hard_link_hash_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn mkdirp(path: &Path, cache: &dashmap::DashSet<PathBuf>) -> Result<()> {
+    if !cache.contains(path) {
+        let grandpa_present = if let Some(grandpa) = path.parent() {
+            cache.contains(grandpa)
+        } else {
+            true
+        };
+        if grandpa_present {
+            std::fs::create_dir(path).map_err(|e| {
+                NassunError::ExtractIoError(
+                    e,
+                    Some(path.parent().unwrap().into()),
+                    "creating parent directory for entry.".into(),
+                )
+            })?;
+            cache.insert(path.to_path_buf());
+        } else {
+            std::fs::create_dir_all(path).map_err(|e| {
+                NassunError::ExtractIoError(
+                    e,
+                    Some(path.parent().unwrap().into()),
+                    "creating parent directory for entry.".into(),
+                )
+            })?;
+            for path in path.ancestors() {
+                cache.insert(path.to_path_buf());
+            }
+        }
+    }
     Ok(())
 }

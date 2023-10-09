@@ -1,6 +1,6 @@
 [package]
 name = "oro-npm-account"
-version = "0.3.33"
+version = "0.3.34"
 description = "Configure access token and execute the login process."
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,7 +12,7 @@ homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-oro-client = { version = "=0.3.33", path = "../oro-client" }
+oro-client = { version = "=0.3.34", path = "../oro-client" }
 
 async-std = { workspace = true }
 base64 = { workspace = true }

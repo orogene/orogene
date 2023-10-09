@@ -1,4 +1,21 @@
 # Orogene Release Changelog
+<a name="0.3.34"></a>
+## 0.3.34 (2023-10-09)
+
+This release is largely a series of attempts at making Orogene faster, most of
+which didn't have much of an effect. Properly supporting reflinks on DeDrive
+is nice, though.
+
+### Features
+
+* **reflink:** bump reflink-copy to add support for reflinks on Windows Dev Drive ([32c169c7](https://github.com/orogene/orogene/commit/32c169c71aaf252acf14a79bfd776d5e1e82d022))
+* **perf:** be smarter about reflinks and mkdirp ([581dda60](https://github.com/orogene/orogene/commit/581dda60f931c6a474a283f6904e496d9c7c6d98))
+
+### Bug Fixes
+
+* **setup:** fix issue with repeatedly being asked about telemetry ([a0111278](https://github.com/orogene/orogene/commit/a0111278a6398d2314a6c37c19c503dad6d78435))
+* **perf:** reduce number of syscalls a bit ([3f005c1f](https://github.com/orogene/orogene/commit/3f005c1f862848c9a20176ab8ece5e2056ba61c9))
+
 <a name="0.3.33"></a>
 ## 0.3.33 (2023-10-02)
 

@@ -1,6 +1,6 @@
 [package]
 name = "nassun"
-version = "0.3.33"
+version = "0.3.34"
 description = "NPM package interface for resolving, fetching metadata, downloading, and extracting individual packages."
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,9 +12,9 @@ homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-oro-common = { version = "=0.3.33", path = "../oro-common" }
-oro-client = { version = "=0.3.33", path = "../oro-client" }
-oro-package-spec = { version = "=0.3.33", path = "../oro-package-spec" }
+oro-common = { version = "=0.3.34", path = "../oro-common" }
+oro-client = { version = "=0.3.34", path = "../oro-client" }
+oro-package-spec = { version = "=0.3.34", path = "../oro-package-spec" }
 
 async-compression = { workspace = true, features = ["gzip", "futures-io"] }
 async-std = { workspace = true, features = [

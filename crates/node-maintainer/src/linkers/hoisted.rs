@@ -4,8 +4,10 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{atomic, Arc};
 
+use dashmap::DashSet;
 use futures::lock::Mutex;
 use futures::{StreamExt, TryStreamExt};
+use nassun::ExtractMode;
 use oro_common::BuildManifest;
 use petgraph::stable_graph::NodeIndex;
 use unicase::UniCase;
@@ -19,6 +21,7 @@ use super::LinkerOptions;
 
 pub(crate) struct HoistedLinker {
     pub(crate) pending_rebuild: Arc<Mutex<HashSet<NodeIndex>>>,
+    pub(crate) mkdir_cache: Arc<DashSet<PathBuf>>,
     pub(crate) opts: LinkerOptions,
 }
 
@@ -26,6 +29,7 @@ impl HoistedLinker {
     pub fn new(opts: LinkerOptions) -> Self {
         Self {
             pending_rebuild: Arc::new(Mutex::new(HashSet::new())),
+            mkdir_cache: Arc::new(DashSet::new()),
             opts,
         }
     }
@@ -247,17 +251,20 @@ impl HoistedLinker {
         let total = graph.inner.node_count();
         let total_completed = Arc::new(AtomicUsize::new(0));
         let node_modules = root.join("node_modules");
-        std::fs::create_dir_all(&node_modules).io_context(|| {
-            format!(
-                "Failed to create project node_modules directory at {}.",
-                node_modules.display()
-            )
-        })?;
-        let prefer_copy = self.opts.prefer_copy
-            || match self.opts.cache.as_deref() {
-                Some(cache) => super::supports_reflink(cache, &node_modules),
-                None => false,
-            };
+        super::mkdirp(&node_modules, &self.mkdir_cache)?;
+        let extract_mode = if let Some(cache) = self.opts.cache.as_deref() {
+            if super::supports_reflink(cache, &node_modules) {
+                ExtractMode::Reflink
+            } else if self.opts.prefer_copy {
+                ExtractMode::Copy
+            } else if super::supports_hardlink(cache, &node_modules) {
+                ExtractMode::Hardlink
+            } else {
+                ExtractMode::Copy
+            }
+        } else {
+            ExtractMode::AutoHardlink
+        };
         stream
             .map(|idx| {
                 Ok((
@@ -295,7 +302,7 @@ impl HoistedLinker {
                     if !target_dir.exists() {
                         graph[child_idx]
                             .package
-                            .extract_to_dir(&target_dir, prefer_copy)
+                            .extract_to_dir(&target_dir, extract_mode)
                             .await?;
                         actually_extracted.fetch_add(1, atomic::Ordering::SeqCst);
                         let target_dir = target_dir.clone();
@@ -318,8 +325,10 @@ impl HoistedLinker {
                         }
                     }
 
+                    let elapsed = start.elapsed();
+
                     if let Some(on_extract) = &self.opts.on_extract_progress {
-                        on_extract(&graph[child_idx].package);
+                        on_extract(&graph[child_idx].package, elapsed);
                     }
 
                     tracing::trace!(
@@ -327,7 +336,7 @@ impl HoistedLinker {
                         "Extracted {} to {} in {:?}ms. {}/{total} done.",
                         graph[child_idx].package.name(),
                         target_dir.display(),
-                        start.elapsed().as_millis(),
+                        elapsed.as_micros() / 1000,
                         total_completed.fetch_add(1, atomic::Ordering::SeqCst) + 1,
                     );
                     Ok::<_, NodeMaintainerError>(())
@@ -399,17 +408,12 @@ impl HoistedLinker {
                     let to = target_dir.join(name);
                     let from = package_dir.join(path);
                     let name = name.clone();
+                    let mkdir_cache = self.mkdir_cache.clone();
                     async_std::task::spawn_blocking(move || {
                         // We only create a symlink if the target bin exists.
                         let target_dir = &target_dir;
                         if from.symlink_metadata().is_ok() {
-                            std::fs::create_dir_all(target_dir).io_context(|| {
-                                format!(
-                                    "Failed to create .bin dir at {} while linking {} bin.",
-                                    target_dir.display(),
-                                    name,
-                                )
-                            })?;
+                            super::mkdirp(target_dir, &mkdir_cache)?;
                             // TODO: use a DashMap here to prevent race conditions, maybe?
                             if let Ok(meta) = to.symlink_metadata() {
                                 if meta.is_dir() {

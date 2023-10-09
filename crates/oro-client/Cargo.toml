@@ -1,6 +1,6 @@
 [package]
 name = "oro-client"
-version = "0.3.33"
+version = "0.3.34"
 description = "Generic client for the HTTP NPM api."
 readme = "README.md"
 license = "Apache-2.0"
@@ -12,7 +12,7 @@ homepage.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-oro-common = { version = "=0.3.33", path = "../oro-common" }
+oro-common = { version = "=0.3.34", path = "../oro-common" }
 
 anyhow = { workspace = true }
 async-trait = { workspace = true }
