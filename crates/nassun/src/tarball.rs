@@ -502,21 +502,21 @@ pub(crate) fn set_bin_mode(path: &Path) -> Result<()> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn copy_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::copy_hash_unchecked_sync(cache, sri, to)
+    cacache::copy_hash_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn reflink_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::reflink_hash_unchecked_sync(cache, sri, to)
+    cacache::reflink_hash_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 fn hard_link_from_cache(cache: &Path, sri: &Integrity, to: &Path) -> Result<()> {
-    cacache::hard_link_hash_unchecked_sync(cache, sri, to)
+    cacache::hard_link_hash_sync(cache, sri, to)
         .map_err(|e| NassunError::ExtractCacheError(e, Some(PathBuf::from(to))))?;
     Ok(())
 }
