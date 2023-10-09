@@ -1,0 +1,591 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js oranda-dark">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Changelog - Orogene</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="oranda-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oranda-dark" : "oranda-dark";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('orandamdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('orandamdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('orandamdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('oranda-dark')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><li class="part-title">User Guide</li><li class="chapter-item expanded "><a href="guide/configuration.html"><strong aria-hidden="true">1.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="guide/node_modules.html"><strong aria-hidden="true">2.</strong> Managing node_modules/</a></li><li class="chapter-item expanded "><a href="guide/authentication.html"><strong aria-hidden="true">3.</strong> Authentication</a></li><li class="chapter-item expanded "><a href="guide/telemetry.html"><strong aria-hidden="true">4.</strong> Telemetry</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><li class="part-title">Commands</li><li class="chapter-item expanded "><a href="commands/add.html"><strong aria-hidden="true">5.</strong> add</a></li><li class="chapter-item expanded "><a href="commands/apply.html"><strong aria-hidden="true">6.</strong> apply</a></li><li class="chapter-item expanded "><a href="commands/login.html"><strong aria-hidden="true">7.</strong> login</a></li><li class="chapter-item expanded "><a href="commands/logout.html"><strong aria-hidden="true">8.</strong> logout</a></li><li class="chapter-item expanded "><a href="commands/ping.html"><strong aria-hidden="true">9.</strong> ping</a></li><li class="chapter-item expanded "><a href="commands/reapply.html"><strong aria-hidden="true">10.</strong> reapply</a></li><li class="chapter-item expanded "><a href="commands/remove.html"><strong aria-hidden="true">11.</strong> remove</a></li><li class="chapter-item expanded "><a href="commands/view.html"><strong aria-hidden="true">12.</strong> view</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><li class="part-title">Development</li><li class="chapter-item expanded "><a href="contributing.html"><strong aria-hidden="true">13.</strong> Contributing Guide</a></li><li class="chapter-item expanded "><a href="code-of-conduct.html"><strong aria-hidden="true">14.</strong> Code of Conduct</a></li><li class="chapter-item expanded "><a href="changelog.html" class="active"><strong aria-hidden="true">15.</strong> Changelog</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="oranda-dark">Oranda Dark</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="oranda-light">Oranda Light</button></li>
+
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Orogene</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="orogene-release-changelog"><a class="header" href="#orogene-release-changelog">Orogene Release Changelog</a></h1>
+<p><a name="0.3.34"></a></p>
+<h2 id="0334-2023-10-09"><a class="header" href="#0334-2023-10-09">0.3.34 (2023-10-09)</a></h2>
+<p>This release is largely a series of attempts at making Orogene faster, most of
+which didn't have much of an effect. Properly supporting reflinks on DeDrive
+is nice, though.</p>
+<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<ul>
+<li><strong>reflink:</strong> bump reflink-copy to add support for reflinks on Windows Dev Drive (<a href="https://github.com/orogene/orogene/commit/32c169c71aaf252acf14a79bfd776d5e1e82d022">32c169c7</a>)</li>
+<li><strong>perf:</strong> be smarter about reflinks and mkdirp (<a href="https://github.com/orogene/orogene/commit/581dda60f931c6a474a283f6904e496d9c7c6d98">581dda60</a>)</li>
+</ul>
+<h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
+<ul>
+<li><strong>setup:</strong> fix issue with repeatedly being asked about telemetry (<a href="https://github.com/orogene/orogene/commit/a0111278a6398d2314a6c37c19c503dad6d78435">a0111278</a>)</li>
+<li><strong>perf:</strong> reduce number of syscalls a bit (<a href="https://github.com/orogene/orogene/commit/3f005c1f862848c9a20176ab8ece5e2056ba61c9">3f005c1f</a>)</li>
+</ul>
+<p><a name="0.3.33"></a></p>
+<h2 id="0333-2023-10-02"><a class="header" href="#0333-2023-10-02">0.3.33 (2023-10-02)</a></h2>
+<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
+<ul>
+<li><strong>terminal:</strong> display indeterminate progress while orogene is running (<a href="https://github.com/orogene/orogene/commit/d4f3e8450afdc5cc5481daeb9477efd46153f066">d4f3e845</a>)</li>
+<li><strong>release:</strong> automatically bump official brew formula on release (<a href="https://github.com/orogene/orogene/commit/deceec38b33f8b6b327bf10f00105a0531ce70db">deceec38</a>)</li>
+</ul>
+<h3 id="bug-fixes-1"><a class="header" href="#bug-fixes-1">Bug Fixes</a></h3>
+<ul>
+<li><strong>manifest:</strong> handle boolean bundledDependencies values (<a href="https://github.com/orogene/orogene/commit/d6c16a445fd7f3a58bf66a61c58048de2062aef8">d6c16a44</a>)</li>
+<li><strong>fmt:</strong> cargo fmt --all (<a href="https://github.com/orogene/orogene/commit/6fd8b2792922898862cbcae5e0b9b45ff2aab4b2">6fd8b279</a>)</li>
+<li><strong>bin:</strong> fix bin linking for the isolated linker and fix cmd shims (<a href="https://github.com/orogene/orogene/commit/8b58caba8e34bb031fd8f4e37891c5d136ea8ace">8b58caba</a>)</li>
+<li><strong>docs:</strong> fix broken links (<a href="https://github.com/orogene/orogene/commit/e182ce764a8c2952c1995b334e6d0a3874d0b129">e182ce76</a>)</li>
+<li><strong>terminal:</strong> don't print out terminal progress codes unless stderr is a terminal (<a href="https://github.com/orogene/orogene/commit/1228ebea3d4612b45c9caa30c7536d0032fa0072">1228ebea</a>)</li>
+</ul>
+<p><a name="0.3.32"></a></p>
+<h2 id="0332-2023-09-30"><a class="header" href="#0332-2023-09-30">0.3.32 (2023-09-30)</a></h2>
+<h3 id="features-2"><a class="header" href="#features-2">Features</a></h3>
+<ul>
+<li><strong>dist:</strong> automatically publish to a homebrew tap (<a href="https://github.com/orogene/orogene/commit/023ebcca7d2b859b5c798535eaef16556f909341">023ebcca</a>)</li>
+</ul>
+<h3 id="bug-fixes-2"><a class="header" href="#bug-fixes-2">Bug Fixes</a></h3>
+<ul>
+<li><strong>cache:</strong> cache recovery was working off JSON metadata, not new rkyv-based one (<a href="https://github.com/orogene/orogene/commit/7c56628731581a225890946aa6b292f0cf6f3ec9">7c566287</a>)</li>
+<li><strong>unsafe:</strong> use safe version of method that verifies data. No perf impact noticeable (<a href="https://github.com/orogene/orogene/commit/1a6b54ac34c9b03ab1eab069d464c5475fa2adeb">1a6b54ac</a>)</li>
+<li><strong>resolver:</strong> fix issue with aliases not being handled properly (<a href="https://github.com/orogene/orogene/commit/85d3171300375ae3799294f3ff759ad947aa8443">85d31713</a>)</li>
+<li><strong>resolver:</strong> node paths should use their fs name (<a href="https://github.com/orogene/orogene/commit/544639b7685a2738d1c2999b1ee10eb125236d23">544639b7</a>)</li>
+<li><strong>resolver:</strong> go ahead and try to resolve if we just have a version (<a href="https://github.com/orogene/orogene/commit/8d04d84b245ccd4599964c445c58193edf089664">8d04d84b</a>)</li>
+</ul>
+<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
+<ul>
+<li><strong>build:</strong> document build requirements (<a href="https://github.com/orogene/orogene/commit/16391becd01f9236fc22207faef38e94cfaa6e60">16391bec</a>)</li>
+</ul>
+<p><a name="0.3.31"></a></p>
+<h2 id="0331-2023-09-28"><a class="header" href="#0331-2023-09-28">0.3.31 (2023-09-28)</a></h2>
+<h3 id="bug-fixes-3"><a class="header" href="#bug-fixes-3">Bug Fixes</a></h3>
+<ul>
+<li><strong>dist:</strong> temporarily allow-dirty and remove license stuff (#293) (<a href="https://github.com/orogene/orogene/commit/3968582665fe35d1e01388df2030b88f1ab3c31c">39685826</a>)</li>
+</ul>
+<p><a name="0.3.30"></a></p>
+<h2 id="0330-2023-09-28"><a class="header" href="#0330-2023-09-28">0.3.30 (2023-09-28)</a></h2>
+<h3 id="features-3"><a class="header" href="#features-3">Features</a></h3>
+<ul>
+<li><strong>docker:</strong> add Dockerfile to compile orogene in a rust-debian-bookworm container (#288) (<a href="https://github.com/orogene/orogene/commit/10575974ab7c2f6fcb2f862b281be14a9f7dbfdf">10575974</a>)</li>
+<li><strong>auth:</strong> add registry authentication support (<a href="https://github.com/orogene/orogene/commit/0513019f87f6d047bbb38864baa193e3a3711569">0513019f</a>)</li>
+<li><strong>login:</strong> add support for all auth types to <code>oro login</code>, including direct <code>--token</code> passing (<a href="https://github.com/orogene/orogene/commit/cf70994664938ad45cb26c58d6b7c636c75e5fe8">cf709946</a>)</li>
+</ul>
+<h3 id="bug-fixes-4"><a class="header" href="#bug-fixes-4">Bug Fixes</a></h3>
+<ul>
+<li><strong>auth:</strong> glue login and authentication stuff, refactor, and make it all work (<a href="https://github.com/orogene/orogene/commit/23cf1bc8b03a0c8b4f46a634ac2faff195dfd050">23cf1bc8</a>)</li>
+<li><strong>auth:</strong> don't send auth to non-registry URLs (<a href="https://github.com/orogene/orogene/commit/e84a25768d0328c407224416680bf09ac48490f2">e84a2576</a>)</li>
+<li><strong>misc:</strong> get rid of annoying default-features warnings (<a href="https://github.com/orogene/orogene/commit/84f45865267b61bb2f783b5cbc7cbccb475a2e46">84f45865</a>)</li>
+</ul>
+<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
+<ul>
+<li><strong>auth:</strong> Add authentication/authorization docs (<a href="https://github.com/orogene/orogene/commit/7ee6a742b4e5b7005b9e48a9a8acc1a8e02bae56">7ee6a742</a>)</li>
+</ul>
+<p><a name="0.3.29"></a></p>
+<h2 id="0329-2023-09-27"><a class="header" href="#0329-2023-09-27">0.3.29 (2023-09-27)</a></h2>
+<h3 id="features-4"><a class="header" href="#features-4">Features</a></h3>
+<ul>
+<li><strong>wasm:</strong> publish NPM packages for nassun and node-maintainer as part of release (<a href="https://github.com/orogene/orogene/commit/f4f2ff22cd6fec4bb5594f924c0773b9d92effa6">f4f2ff22</a>)</li>
+</ul>
+<p><a name="0.3.28"></a></p>
+<h2 id="0328-2023-09-27"><a class="header" href="#0328-2023-09-27">0.3.28 (2023-09-27)</a></h2>
+<h3 id="features-5"><a class="header" href="#features-5">Features</a></h3>
+<ul>
+<li><strong>proxy:</strong> support proxy configuration (#283) (<a href="https://github.com/orogene/orogene/commit/87facfe44a14a61e94ee50c0a5f64724b065bdd8">87facfe4</a>)</li>
+<li><strong>login:</strong> Add <code>oro login </code> and <code>oro logout</code> commands (#290) (<a href="https://github.com/orogene/orogene/commit/39b3c6bdfa5327276666ef86bf08cb02d3800a7d">39b3c6bd</a>)</li>
+<li><strong>dist:</strong> bump cargo dist and add homebrew and msi artifacts (<a href="https://github.com/orogene/orogene/commit/218392d061fd234effb9fd12b5ba52e0d84c05c9">218392d0</a>)</li>
+<li><strong>retry:</strong> enable request retries on wasm, too (<a href="https://github.com/orogene/orogene/commit/1f25aa3383793e40e64d20939fb9702050b2ff24">1f25aa33</a>)</li>
+<li><strong>wasm:</strong> nicer TS types (<a href="https://github.com/orogene/orogene/commit/64d20dcc2361be9bc91894e1686e678ca827c836">64d20dcc</a>)</li>
+</ul>
+<h3 id="bug-fixes-5"><a class="header" href="#bug-fixes-5">Bug Fixes</a></h3>
+<ul>
+<li><strong>proxy:</strong> thread proxy settings through and tweak a few things along the way (<a href="https://github.com/orogene/orogene/commit/7d9b476ed2f732485b9f25655ed0598f0c2110aa">7d9b476e</a>)</li>
+<li><strong>site:</strong> modernize oranda config (<a href="https://github.com/orogene/orogene/commit/427f672f8ffa3da699c42612ea642eb824587de3">427f672f</a>)</li>
+<li><strong>wasm:</strong> get things working on wasm again! (<a href="https://github.com/orogene/orogene/commit/ec9e6e36ce72719dacd15710ed7e3e3ae7498913">ec9e6e36</a>)</li>
+<li><strong>lib:</strong> fix readme/license fields in oro-npm-account (<a href="https://github.com/orogene/orogene/commit/0842d2bf00e825cebda3fe110a07451ffcea5c72">0842d2bf</a>)</li>
+</ul>
+<p><a name="0.3.27"></a></p>
+<h2 id="0327-2023-05-21"><a class="header" href="#0327-2023-05-21">0.3.27 (2023-05-21)</a></h2>
+<h3 id="features-6"><a class="header" href="#features-6">Features</a></h3>
+<ul>
+<li><strong>xxhash:</strong> switch to xxhash, and always validate extraction (#274) (<a href="https://github.com/orogene/orogene/commit/dfdb378cbd5a7c7aa30012323c43770b933dcb14">dfdb378c</a>)</li>
+</ul>
+<h3 id="bug-fixes-6"><a class="header" href="#bug-fixes-6">Bug Fixes</a></h3>
+<ul>
+<li><strong>reapply:</strong> stop erroring on reapply if node_modules doesn't exist (<a href="https://github.com/orogene/orogene/commit/940333a96f865905b83debc5ea90704652c600ae">940333a9</a>)</li>
+<li><strong>node-maintainer:</strong> return a more useful error message when symlink/junction creation both fail on Windows (#270) (<a href="https://github.com/orogene/orogene/commit/e254c39367bc662209bfb4c4a3b165d2ba849d0b">e254c393</a>)</li>
+</ul>
+<p><a name="0.3.26"></a></p>
+<h2 id="0326-2023-05-19"><a class="header" href="#0326-2023-05-19">0.3.26 (2023-05-19)</a></h2>
+<h3 id="features-7"><a class="header" href="#features-7">Features</a></h3>
+<ul>
+<li><strong>scripts:</strong> run lifecycle scripts in correct dependency order (#263) (<a href="https://github.com/orogene/orogene/commit/00979ae8af581ffeb37786f7da71b7a80022f826">00979ae8</a>)</li>
+<li><strong>error:</strong> Add extra context to all std::io::Error messages (#268) (<a href="https://github.com/orogene/orogene/commit/8749a5262d0b0412e0fbc5f3d8b8d2c4f179c0a3">8749a526</a>)</li>
+</ul>
+<h3 id="bug-fixes-7"><a class="header" href="#bug-fixes-7">Bug Fixes</a></h3>
+<ul>
+<li><strong>resolver:</strong> <code>PackageResolution::satisfies()</code> should use the spec target (<a href="https://github.com/orogene/orogene/commit/4f0fbba75fe04f89383c23a39c354a67fdca1f00">4f0fbba7</a>)</li>
+<li><strong>node-maintainer:</strong> stop failing when root package entry in lockfile is missing package name (<a href="https://github.com/orogene/orogene/commit/b7ac680b161003cc67683597ce65d28119803fc6">b7ac680b</a>)</li>
+</ul>
+<p><a name="0.3.25"></a></p>
+<h2 id="0325-2023-05-10"><a class="header" href="#0325-2023-05-10">0.3.25 (2023-05-10)</a></h2>
+<h3 id="bug-fixes-8"><a class="header" href="#bug-fixes-8">Bug Fixes</a></h3>
+<ul>
+<li><strong>fmt:</strong> cargo fmt --all (<a href="https://github.com/orogene/orogene/commit/887c2576ed5b771d7c863384b980ecaa21abc361">887c2576</a>)</li>
+<li><strong>telemetry:</strong> lower telemetry sample rate (<a href="https://github.com/orogene/orogene/commit/ffbd6a88fbc395ee9a8327b0b2fa09b8619425ab">ffbd6a88</a>)</li>
+</ul>
+<p><a name="0.3.24"></a></p>
+<h2 id="0324-2023-05-10"><a class="header" href="#0324-2023-05-10">0.3.24 (2023-05-10)</a></h2>
+<h3 id="features-8"><a class="header" href="#features-8">Features</a></h3>
+<ul>
+<li><strong>optional:</strong> ignore install script failures for truly optional dependencies (<a href="https://github.com/orogene/orogene/commit/09fcc77dc1ce0c3c0ce29c376c8cf53fe600a576">09fcc77d</a>)</li>
+<li><strong>credentials:</strong> add support for parsing credentials (for later consumption) (<a href="https://github.com/orogene/orogene/commit/59f0a11c0b0e3639359780767b868f6f3c036df1">59f0a11c</a>)</li>
+<li><strong>telemetry:</strong> implement opt-in crash and usage telemetry (#262) (<a href="https://github.com/orogene/orogene/commit/8d5e1f591aedc0bbc2691b4e65b4652147f236d6">8d5e1f59</a>)</li>
+</ul>
+<h3 id="bug-fixes-9"><a class="header" href="#bug-fixes-9">Bug Fixes</a></h3>
+<ul>
+<li><strong>apply:</strong> only update package.json on apply success (<a href="https://github.com/orogene/orogene/commit/1e775ad006a265b7162fbac6ff4f11de039f393c">1e775ad0</a>)</li>
+<li><strong>wasm:</strong> missed a spot again with wasm (<a href="https://github.com/orogene/orogene/commit/c4fcb328e2cd92c2efd391c2ae72a271c126d93c">c4fcb328</a>)</li>
+<li><strong>wasm:</strong> again (<a href="https://github.com/orogene/orogene/commit/b745c5bb76ae238e65bfac8238485d269e96253e">b745c5bb</a>)</li>
+<li><strong>docs:</strong> add --credentials to command docs (<a href="https://github.com/orogene/orogene/commit/24b60124399c0e6b36da4efe156dad3f3b85d4b3">24b60124</a>)</li>
+<li><strong>debug-log:</strong> stop printing ansi codes to debug log (<a href="https://github.com/orogene/orogene/commit/3c1cd69fd8c3dab6cebea45162dab153751c12b4">3c1cd69f</a>)</li>
+<li><strong>bin:</strong> semi-preserve file modes and make binaries executable (#259) (<a href="https://github.com/orogene/orogene/commit/f01ed09d4b24db42e3901feebfc5bbc2dc0f4254">f01ed09d</a>)</li>
+<li><strong>apply:</strong> fix regression where only hoisted linker was used (<a href="https://github.com/orogene/orogene/commit/78f4120254fe21bf788accc60bf35dc3c054628d">78f41202</a>)</li>
+<li><strong>misc:</strong> fix a couple of straggler warnings (<a href="https://github.com/orogene/orogene/commit/594081f40db64624cd0aacf1c165118c6ce14b42">594081f4</a>)</li>
+</ul>
+<h3 id="documentation-2"><a class="header" href="#documentation-2">Documentation</a></h3>
+<ul>
+<li><strong>readme:</strong> improvements to README (<a href="https://github.com/orogene/orogene/commit/7b63b073f3d68135133686c5defe941c8e5637a3">7b63b073</a>)</li>
+</ul>
+<p><a name="0.3.23"></a></p>
+<h2 id="0323-2023-04-18"><a class="header" href="#0323-2023-04-18">0.3.23 (2023-04-18)</a></h2>
+<h3 id="bug-fixes-10"><a class="header" href="#bug-fixes-10">Bug Fixes</a></h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97">b1f6bc82</a>)</li>
+</ul>
+<h3 id="miscellaneous-tasks"><a class="header" href="#miscellaneous-tasks">Miscellaneous Tasks</a></h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f">be5712e2</a>)</li>
+</ul>
+<p><a name="0.3.22"></a></p>
+<h2 id="0322-2023-04-18"><a class="header" href="#0322-2023-04-18">0.3.22 (2023-04-18)</a></h2>
+<p>no-op due to release failure. Refer to 0.3.2 for actual release details.</p>
+<p><a name="0.3.21"></a></p>
+<h2 id="0321-2023-04-18"><a class="header" href="#0321-2023-04-18">0.3.21 (2023-04-18)</a></h2>
+<h3 id="bug-fixes-11"><a class="header" href="#bug-fixes-11">Bug Fixes</a></h3>
+<ul>
+<li><strong>release:</strong> update cargo-dist release thing properly (<a href="https://github.com/orogene/orogene/commit/4a204a5148122674fc719677cc848e6bbba01f53">4a204a51</a>)</li>
+</ul>
+<p><a name="0.3.20"></a></p>
+<h2 id="0320-2023-04-18"><a class="header" href="#0320-2023-04-18">0.3.20 (2023-04-18)</a></h2>
+<h3 id="features-9"><a class="header" href="#features-9">Features</a></h3>
+<ul>
+<li><strong>reapply:</strong> add reapply command and refactor apply to be reusable (#237) (<a href="https://github.com/orogene/orogene/commit/bf6b150462e40dc2d0a7f16ecf49130a336e67e3">bf6b1504</a>)</li>
+<li><strong>json:</strong> add module for format-preserving JSON manipulation (<a href="https://github.com/orogene/orogene/commit/3fa23e4602ffc4a8f7038f48b9c7bb40994d94cb">3fa23e46</a>)</li>
+<li><strong>add:</strong> add <code>oro add</code> command for adding new deps (<a href="https://github.com/orogene/orogene/commit/7ed9f777e886163ea9e02fc7dc011980d2c61036">7ed9f777</a>)</li>
+<li><strong>rm:</strong> add oro rm command (<a href="https://github.com/orogene/orogene/commit/ec301bbfbce36c562fbd00419b12261aed5f1e96">ec301bbf</a>)</li>
+<li><strong>git:</strong> support specifying semver ranges for git dependencies (#217) (<a href="https://github.com/orogene/orogene/commit/56e05f5b1417024ac65520d68e261f49ea70ab19">56e05f5b</a>)</li>
+<li><strong>locked:</strong> add --locked mode support (<a href="https://github.com/orogene/orogene/commit/ffce208fd1edff3f1e62093f19e567662ce8e1df">ffce208f</a>)</li>
+<li><strong>docs:</strong> write up a section about adding dependencies + specifiers (<a href="https://github.com/orogene/orogene/commit/e66936c47ad6fd7b4f0b308d0b3cbece63386293">e66936c4</a>)</li>
+<li><strong>errors:</strong> better docs and url(docsrs) for all errors (<a href="https://github.com/orogene/orogene/commit/0629a08076c800f60789fe8f9feb60d176f5c432">0629a080</a>)</li>
+</ul>
+<h3 id="bug-fixes-12"><a class="header" href="#bug-fixes-12">Bug Fixes</a></h3>
+<ul>
+<li><strong>metadata:</strong> add support for boolean deserialization for <code>deprecated</code> tag of version metadata (#235) (<a href="https://github.com/orogene/orogene/commit/0505793ad92d3b9638034eee1943af46f396e9d5">0505793a</a>)</li>
+<li><strong>common:</strong> handle deprecation booleans in registry response (#246) (<a href="https://github.com/orogene/orogene/commit/8ae121963b91fd75c347102621f9c86b2db9fbce">8ae12196</a>)</li>
+<li><strong>resolve:</strong> stop lockfile from clobbering dependencies (#247) (<a href="https://github.com/orogene/orogene/commit/b3af2ddd45335b7d937efa54f1a7110e0d3576cd">b3af2ddd</a>)</li>
+<li><strong>log:</strong> log the 'debug log way written' message as WARN (<a href="https://github.com/orogene/orogene/commit/dbcbe9cc12c471543d3cf84e496a7fb4400651c8">dbcbe9cc</a>)</li>
+<li><strong>rm:</strong> warn/error when something other than a package name is provided (<a href="https://github.com/orogene/orogene/commit/26b0132822f82e92ce5362c3a30e4862e67bfe13">26b01328</a>)</li>
+<li><strong>error:</strong> fix PackageSpecError docs and help not printing (<a href="https://github.com/orogene/orogene/commit/f8e8e27a4205d2fbfdfd2a33123df27c90943d88">f8e8e27a</a>)</li>
+<li><strong>config:</strong> apply config options from subcommands, too (<a href="https://github.com/orogene/orogene/commit/3c31caaca2c22267e7659848a8987297dcd51d61">3c31caac</a>)</li>
+<li><strong>rm:</strong> more random rm fixes (<a href="https://github.com/orogene/orogene/commit/1c7334522a00405a25f117155bb52d50d93d5d9f">1c733452</a>)</li>
+</ul>
+<h3 id="miscellaneous-tasks-1"><a class="header" href="#miscellaneous-tasks-1">Miscellaneous Tasks</a></h3>
+<ul>
+<li><strong>deps:</strong> bump h2 from 0.3.16 to 0.3.17 (#242) (<a href="https://github.com/orogene/orogene/commit/8123013f6c69464ef510a09aa09d9ac33e2db8a8">8123013f</a>)</li>
+</ul>
+<p><a name="0.3.19"></a></p>
+<h2 id="0319-2023-04-10"><a class="header" href="#0319-2023-04-10">0.3.19 (2023-04-10)</a></h2>
+<h3 id="features-10"><a class="header" href="#features-10">Features</a></h3>
+<ul>
+<li><strong>debug:</strong> Include errors in debug log when possible (<a href="https://github.com/orogene/orogene/commit/9551239ee634244dc2fbef86627696614726c0ac">9551239e</a>)</li>
+<li><strong>isolated:</strong> add support for isolated dependency installation (#226) (<a href="https://github.com/orogene/orogene/commit/9da2e1e7231054437fbde2c7f8eaace9c1b67897">9da2e1e7</a>)</li>
+<li><strong>apply:</strong> rename <code>restore</code> to <code>apply</code> (<a href="https://github.com/orogene/orogene/commit/82f7b623b3d657a5e02757c90567acefa9521481">82f7b623</a>)</li>
+</ul>
+<h3 id="bug-fixes-13"><a class="header" href="#bug-fixes-13">Bug Fixes</a></h3>
+<ul>
+<li><strong>binlink:</strong> properly normalize non-object bin names (<a href="https://github.com/orogene/orogene/commit/aea368e92c5d336b4c70d8f6506fb8fcc22b3273">aea368e9</a>)</li>
+<li><strong>resolve:</strong> use PackageSpec::target() for recursive alias support (<a href="https://github.com/orogene/orogene/commit/bd884703dafb32912883a8823a70a64d3fa71ae0">bd884703</a>)</li>
+<li><strong>ci:</strong> how did this even happen (<a href="https://github.com/orogene/orogene/commit/d77a915e4c1d64503ed2b325b93501d7259d4bc0">d77a915e</a>)</li>
+</ul>
+<p><a name="0.3.18"></a></p>
+<h2 id="0318-2023-04-07"><a class="header" href="#0318-2023-04-07">0.3.18 (2023-04-07)</a></h2>
+<h3 id="features-11"><a class="header" href="#features-11">Features</a></h3>
+<ul>
+<li><strong>config:</strong> load options from env, too (<a href="https://github.com/orogene/orogene/commit/ccfa812b54d6f22089369773e2780c48b927d670">ccfa812b</a>)</li>
+<li><strong>docs:</strong> More detailed configuration docs (<a href="https://github.com/orogene/orogene/commit/6165e8083bbbac7ce864ccf329b9adf61be9bda4">6165e808</a>)</li>
+<li><strong>ping:</strong> emojify ping (<a href="https://github.com/orogene/orogene/commit/a66276570dec663c1bec43b681e72e232f10d2b5">a6627657</a>)</li>
+<li><strong>config:</strong> read config file options from <code>options</code> node (<a href="https://github.com/orogene/orogene/commit/41b281eecc4a66275bc0abdfdc1e0afadad195ff">41b281ee</a>)</li>
+<li><strong>docs:</strong> show command aliases in docs (<a href="https://github.com/orogene/orogene/commit/0dc706725f534c48daaae648323f25145b1b34c6">0dc70672</a>)</li>
+<li><strong>config:</strong> add support for nested arrays and maps to kdl configs (<a href="https://github.com/orogene/orogene/commit/f5e71d0c9f83d1a9ef2376bc402d1d78d6e15fbc">f5e71d0c</a>)</li>
+<li><strong>config:</strong> support for specifying scope registries (<a href="https://github.com/orogene/orogene/commit/49c2190e7a40a4b7ca19ac7ddc342f647b96ce63">49c2190e</a>)</li>
+<li><strong>config:</strong> support for arrays, too (<a href="https://github.com/orogene/orogene/commit/ef46e5aa84a3c3ce389a8f45d8441acf09d0c719">ef46e5aa</a>)</li>
+<li><strong>config:</strong> overhaul how scoped registries are provided (<a href="https://github.com/orogene/orogene/commit/31c3ae742988dd0ff0235156ae7b302f3e6a4421">31c3ae74</a>)</li>
+</ul>
+<h3 id="bug-fixes-14"><a class="header" href="#bug-fixes-14">Bug Fixes</a></h3>
+<ul>
+<li><strong>view:</strong> remove stray <code>dbg!</code> (<a href="https://github.com/orogene/orogene/commit/03f7a7ddcf39b6e7afd3bdb11c645dbdd147ef25">03f7a7dd</a>)</li>
+</ul>
+<p><a name="0.3.17"></a></p>
+<h2 id="0317-2023-04-03"><a class="header" href="#0317-2023-04-03">0.3.17 (2023-04-03)</a></h2>
+<h3 id="bug-fixes-15"><a class="header" href="#bug-fixes-15">Bug Fixes</a></h3>
+<ul>
+<li><strong>log:</strong> go back to not displaying targets for terminal logs (<a href="https://github.com/orogene/orogene/commit/5cb06a75613c670fd1bc05bc8226a3223de5fdb7">5cb06a75</a>)</li>
+</ul>
+<h3 id="features-12"><a class="header" href="#features-12">Features</a></h3>
+<ul>
+<li><strong>config:</strong> add support for <code>--no-&lt;conf&gt;</code> and overhaul config fallbacks (<a href="https://github.com/orogene/orogene/commit/868a42b5bb30654b150f3b2dfec3438c8db8b301">868a42b5</a>)</li>
+<li><strong>config:</strong> config files are now kdl-based (<a href="https://github.com/orogene/orogene/commit/09e81bd9260b79f1e7a1d94aef4766d29f0f5582">09e81bd9</a>)</li>
+</ul>
+<p><a name="0.3.16"></a></p>
+<h2 id="0316-2023-04-01"><a class="header" href="#0316-2023-04-01">0.3.16 (2023-04-01)</a></h2>
+<h3 id="bug-fixes-16"><a class="header" href="#bug-fixes-16">Bug Fixes</a></h3>
+<ul>
+<li><strong>deps:</strong> bump deps/miette/etc (<a href="https://github.com/orogene/orogene/commit/b987939ea78902bf63f14f8d6dbd109d20872d35">b987939e</a>)</li>
+<li><strong>node-maintainer:</strong> improve api docs and remove some undesirable APIs in node-maintainer (<a href="https://github.com/orogene/orogene/commit/2dea36c05eeacd5467108e7b7d6ae629723188a0">2dea36c0</a>)</li>
+<li><strong>docs:</strong> update CLI docs (<a href="https://github.com/orogene/orogene/commit/bd0d7fda76a52d77d994c628fecd8b14c515448b">bd0d7fda</a>)</li>
+<li><strong>ci:</strong> add rust-versions and re-enable minimal version checks (<a href="https://github.com/orogene/orogene/commit/b509cc2042884ac373f57d25705a615772ded3d8">b509cc20</a>)</li>
+</ul>
+<h3 id="features-13"><a class="header" href="#features-13">Features</a></h3>
+<ul>
+<li><strong>wasm:</strong> more wasm fixes + expose iteration functionality (#218) (<a href="https://github.com/orogene/orogene/commit/03dce2e92a7f05dd0e0700286f343a9b14e718d7">03dce2e9</a>)</li>
+<li><strong>restore:</strong> allow configuring script concurrency and whether to write lockfiles (<a href="https://github.com/orogene/orogene/commit/a681e64a6cb8d38a9e7396b7f5ec5cc4326906dc">a681e64a</a>)</li>
+<li><strong>config:</strong> have OroLayerConfig obey <code>#[arg(skip)]</code> (<a href="https://github.com/orogene/orogene/commit/fc5f53ae7eed8f78dd08dfb77f4833d97d92612d">fc5f53ae</a>)</li>
+</ul>
+<p><a name="0.3.15"></a></p>
+<h2 id="0315-2023-03-31"><a class="header" href="#0315-2023-03-31">0.3.15 (2023-03-31)</a></h2>
+<h3 id="bug-fixes-17"><a class="header" href="#bug-fixes-17">Bug Fixes</a></h3>
+<ul>
+<li><strong>shim:</strong> fix .cmd shim targets (<a href="https://github.com/orogene/orogene/commit/020d96cf9537f56982c53cfa9768691edf6207d3">020d96cf</a>)</li>
+<li><strong>manifest:</strong> unshadow the actual output of BuildManifest::normalize (#216) (<a href="https://github.com/orogene/orogene/commit/e5c8d4bbb9ee08d1e75f032550ac5eed4522edff">e5c8d4bb</a>)</li>
+</ul>
+<h3 id="features-14"><a class="header" href="#features-14">Features</a></h3>
+<ul>
+<li><strong>manifests:</strong> add a from_manifest method to BuildManifest and do some drive-by docs work (#213) (<a href="https://github.com/orogene/orogene/commit/2e9c4f51008456e34dda7d3be3465702a433180e">2e9c4f51</a>)</li>
+<li><strong>scripts:</strong> run lifecycle scripts (#209) (<a href="https://github.com/orogene/orogene/commit/48392c3e62cdf244a960a3fb1e83cda0f320f198">48392c3e</a>)</li>
+</ul>
+<p><a name="0.3.14"></a></p>
+<h2 id="0314-2023-03-26"><a class="header" href="#0314-2023-03-26">0.3.14 (2023-03-26)</a></h2>
+<h3 id="features-15"><a class="header" href="#features-15">Features</a></h3>
+<ul>
+<li><strong>build:</strong> link bins (#212) (<a href="https://github.com/orogene/orogene/commit/e8ed3ff5a83d56dcb347f2734ac63738ae15bd91">e8ed3ff5</a>)</li>
+</ul>
+<p><a name="0.3.13"></a></p>
+<h2 id="0313-2023-03-25"><a class="header" href="#0313-2023-03-25">0.3.13 (2023-03-25)</a></h2>
+<h3 id="security"><a class="header" href="#security">Security</a></h3>
+<ul>
+<li><strong>deps:</strong> bump openssl from 0.10.45 to 0.10.48 (#211) (<a href="https://github.com/orogene/orogene/commit/e87243c2e22bbbffd8e3d30782c48fe6994c9416">e87243c2</a>)</li>
+</ul>
+<p><a name="0.3.12"></a></p>
+<h2 id="0312-2023-03-25"><a class="header" href="#0312-2023-03-25">0.3.12 (2023-03-25)</a></h2>
+<h3 id="features-16"><a class="header" href="#features-16">Features</a></h3>
+<ul>
+<li><strong>log:</strong> improved logging/output by changing levels and formatting (<a href="https://github.com/orogene/orogene/commit/e1cafd0cce46d989f1ee913a1d18f41c8097162d">e1cafd0c</a>)</li>
+<li><strong>gitinfo:</strong> add a FromStr impl for GitInfo (<a href="https://github.com/orogene/orogene/commit/308d9ab7b08c9d143efe6fd3466b93b67bb58c40">308d9ab7</a>)</li>
+</ul>
+<h3 id="bug-fixes-18"><a class="header" href="#bug-fixes-18">Bug Fixes</a></h3>
+<ul>
+<li><strong>tests:</strong> Nassun baseline tests (#196) (<a href="https://github.com/orogene/orogene/commit/58e768535e86f6b9aef81d92fa8b69a95f0aaf69">58e76853</a>)</li>
+</ul>
+<p><a name="0.3.11"></a></p>
+<h2 id="0311-2023-03-19"><a class="header" href="#0311-2023-03-19">0.3.11 (2023-03-19)</a></h2>
+<p>Most of this release was docs (which are available through <a href="https://orogene.dev/book">the Orogene
+site!</a>), but there's some emoji-related stuff fixed,
+too that might be handy.</p>
+<h3 id="features-17"><a class="header" href="#features-17">Features</a></h3>
+<ul>
+<li><strong>msg:</strong> fasterthanlime is basically the lemonodor of rust, no? (<a href="https://github.com/orogene/orogene/commit/fcc5a2565622317aad5ce4c669813cbeef44a1cf">fcc5a256</a>)</li>
+<li><strong>docs:</strong> initial mdbook setup and hookup to oranda (#205) (<a href="https://github.com/orogene/orogene/commit/b66a66e0567fdb4993a6c03b848ef4d9ab0d4f45">b66a66e0</a>)</li>
+<li><strong>emoji:</strong> add global flag to disable emoji display (<a href="https://github.com/orogene/orogene/commit/bafbe802f3c3014525c79a39a182f0e89b8c6487">bafbe802</a>)</li>
+</ul>
+<h3 id="bug-fixes-19"><a class="header" href="#bug-fixes-19">Bug Fixes</a></h3>
+<ul>
+<li><strong>emoji:</strong> don't print emoji when unicode isn't supported (<a href="https://github.com/orogene/orogene/commit/e8a8af791a9974c7eb29547700d336bbe37b47ce">e8a8af79</a>)</li>
+<li><strong>wasm:</strong> missed a couple of wasm spots after recent changes (<a href="https://github.com/orogene/orogene/commit/0e4d8b030724599172dfc1d3ce0437271fef8336">0e4d8b03</a>)</li>
+<li><strong>git:</strong> use once_cell instead of mutexes for git cache path (<a href="https://github.com/orogene/orogene/commit/5961dfbc03fc93fe458f98057af266b4f2ee240f">5961dfbc</a>)</li>
+</ul>
+<p><a name="0.3.10"></a></p>
+<h2 id="0310-2023-03-13"><a class="header" href="#0310-2023-03-13">0.3.10 (2023-03-13)</a></h2>
+<h3 id="features-18"><a class="header" href="#features-18">Features</a></h3>
+<ul>
+<li><strong>restore:</strong> improvements to restore command, and removal of resolve command (<a href="https://github.com/orogene/orogene/commit/4e9940dd04e632ecbf5c7a1b2068b66638e80824">4e9940dd</a>)</li>
+<li><strong>restore:</strong> print timings in seconds (<a href="https://github.com/orogene/orogene/commit/608d3f599bbaf8591193a917157f243ae81dab16">608d3f59</a>)</li>
+<li><strong>memory:</strong> significantly reduce memory use during resolution (#203) (<a href="https://github.com/orogene/orogene/commit/f7fb85d60a5839b218916d8d54a331f390527716">f7fb85d6</a>)</li>
+<li><strong>hax:</strong> offer hackerish words of encouragement! (<a href="https://github.com/orogene/orogene/commit/cf467da40e2b9daa8762d79a0c96d516b0447388">cf467da4</a>)</li>
+</ul>
+<h3 id="bug-fixes-20"><a class="header" href="#bug-fixes-20">Bug Fixes</a></h3>
+<ul>
+<li><strong>progress:</strong> only show one progress bar at a time (<a href="https://github.com/orogene/orogene/commit/e36356c64c61ccb5b4fd43c9d252578a36855362">e36356c6</a>)</li>
+</ul>
+<p><a name="0.3.9"></a></p>
+<h2 id="039-2023-03-12"><a class="header" href="#039-2023-03-12">0.3.9 (2023-03-12)</a></h2>
+<h3 id="features-19"><a class="header" href="#features-19">Features</a></h3>
+<ul>
+<li><strong>wasm:</strong> get nassun and node-maintainer working well in wasm (#131) (<a href="https://github.com/orogene/orogene/commit/16ad5bae83d15155571464c5dfca1c7de3544057">16ad5bae</a>)</li>
+<li><strong>validate:</strong> optionally validate cache contents during extraction (#197) (<a href="https://github.com/orogene/orogene/commit/0e22a5f44d02423b9d4b49fe88254ae8bd90a699">0e22a5f4</a>)</li>
+<li><strong>extract:</strong> remove existing modules as needed (<a href="https://github.com/orogene/orogene/commit/d3303b007301fb668db3108af6d0ebd6dae7e7bf">d3303b00</a>)</li>
+<li><strong>prune:</strong> check for an prune extraneous packages, and skip extracting valid ones (#200) (<a href="https://github.com/orogene/orogene/commit/544a2c5c3065041f351aeba46506e725eb6a769a">544a2c5c</a>)</li>
+<li><strong>progress:</strong> refactored progress bar out of node-maintainer (#201) (<a href="https://github.com/orogene/orogene/commit/e1908ad6bfa248b82b99fdf3bd75f2f7dff6d9a4">e1908ad6</a>)</li>
+<li><strong>progresss:</strong> add flags to disable progress bars (<a href="https://github.com/orogene/orogene/commit/f988a824a9202080ba7d592be67e04a8c11472ee">f988a824</a>)</li>
+</ul>
+<h3 id="bug-fixes-21"><a class="header" href="#bug-fixes-21">Bug Fixes</a></h3>
+<ul>
+<li><strong>nassun:</strong> use cfg_attr to reduce duplication (<a href="https://github.com/orogene/orogene/commit/f126d5ca0d32d76b35d93e65acda60d86e152852">f126d5ca</a>)</li>
+</ul>
+<p><a name="0.3.8"></a></p>
+<h2 id="038-2023-03-09"><a class="header" href="#038-2023-03-09">0.3.8 (2023-03-09)</a></h2>
+<h3 id="bug-fixes-22"><a class="header" href="#bug-fixes-22">Bug Fixes</a></h3>
+<ul>
+<li><strong>reflink:</strong> move reflink checks up to node-maintainer (#195) (<a href="https://github.com/orogene/orogene/commit/9506edc7456eefb826aaa3850873f615be09136f">9506edc7</a>)</li>
+</ul>
+<h3 id="features-20"><a class="header" href="#features-20">Features</a></h3>
+<ul>
+<li><strong>log:</strong> write verbose trace to a separate debug logfile (#192) (<a href="https://github.com/orogene/orogene/commit/8c995125e9d142547e8eadb712473d0cb09d9b36">8c995125</a>)</li>
+<li><strong>log:</strong> log a bit more detail about lack of reflink support (<a href="https://github.com/orogene/orogene/commit/545dff0c9b82b69a663117ce1bdbb91214682ee2">545dff0c</a>)</li>
+<li><strong>docs:</strong> add initial benchmark tables (<a href="https://github.com/orogene/orogene/commit/2bbd2616ed592486450d134dc4e8208b5de0a0a0">2bbd2616</a>)</li>
+</ul>
+<p><a name="0.3.6"></a></p>
+<h2 id="036-2023-03-07"><a class="header" href="#036-2023-03-07">0.3.6 (2023-03-07)</a></h2>
+<h3 id="features-21"><a class="header" href="#features-21">Features</a></h3>
+<ul>
+<li><strong>cow:</strong> prefer CoW on systems that support it. Also, fall back to copy when hard links fail. (<a href="https://github.com/orogene/orogene/commit/0e29632a84fe21c83dc32ad7111bbef78f2789f0">0e29632a</a>)</li>
+</ul>
+<p><a name="0.3.5"></a></p>
+<h2 id="035-2023-03-06"><a class="header" href="#035-2023-03-06">0.3.5 (2023-03-06)</a></h2>
+<h3 id="bug-fixes-23"><a class="header" href="#bug-fixes-23">Bug Fixes</a></h3>
+<ul>
+<li><strong>tests:</strong> remove debug leftover (#190) (<a href="https://github.com/orogene/orogene/commit/45ab7738c8c0d7c4c223e29aa69bc717faea5f4c">45ab7738</a>)</li>
+<li><strong>extract:</strong> need to rewind NamedTempFile before extraction (<a href="https://github.com/orogene/orogene/commit/eb8c0af5222efb88e236c9d68b720f1a3a42ada4">eb8c0af5</a>)</li>
+</ul>
+<p><a name="0.3.4"></a></p>
+<h2 id="034-2023-03-06"><a class="header" href="#034-2023-03-06">0.3.4 (2023-03-06)</a></h2>
+<h3 id="bug-fixes-24"><a class="header" href="#bug-fixes-24">Bug Fixes</a></h3>
+<ul>
+<li><strong>error:</strong> make IoErrors during extraction less vague (<a href="https://github.com/orogene/orogene/commit/318fd2d288353f22c18fddd8cfa8e9433acc1eb3">318fd2d2</a>)</li>
+</ul>
+<p><a name="0.3.3"></a></p>
+<h2 id="033-2023-03-06"><a class="header" href="#033-2023-03-06">0.3.3 (2023-03-06)</a></h2>
+<h3 id="bug-fixes-25"><a class="header" href="#bug-fixes-25">Bug Fixes</a></h3>
+<ul>
+<li><strong>progress:</strong> extraction should be based on node count (minus root node) (<a href="https://github.com/orogene/orogene/commit/088da2951ac98afeaf98d817cd25557de446c764">088da295</a>)</li>
+<li><strong>extract:</strong> extract_to should only be available on non-wasm (<a href="https://github.com/orogene/orogene/commit/f8792adcde6b55998347d9aa858039775a901614">f8792adc</a>)</li>
+</ul>
+<h3 id="features-22"><a class="header" href="#features-22">Features</a></h3>
+<ul>
+<li><strong>deprecated:</strong> Warn when resolving npm packages marked as <code>deprecated</code> (#184) (<a href="https://github.com/orogene/orogene/commit/45a953b04b8301f4a280be7cd82d6597fe2d40a3">45a953b0</a>)</li>
+<li><strong>maintainer:</strong> export iterator over graph modules (#187) (<a href="https://github.com/orogene/orogene/commit/fa109bf4eb2448a56ffc86ccfae54e4838b77230">fa109bf4</a>)</li>
+<li><strong>maintainer:</strong> s/parallelism/concurrency/g (<a href="https://github.com/orogene/orogene/commit/17e1fb49685aee4ccfce71e0c1ea455d548989d9">17e1fb49</a>)</li>
+<li><strong>modules:</strong> wrap iterator in its own type (<a href="https://github.com/orogene/orogene/commit/ee99bee47ae2d240f9ff904e8f7208860486ad66">ee99bee4</a>)</li>
+<li><strong>extraction:</strong> add support for faster, cached extraction (#191) (<a href="https://github.com/orogene/orogene/commit/5bf0425b56daadfc34ca47c71bedee814913fdc5">5bf0425b</a>)</li>
+</ul>
+<p><a name="0.2.1"></a></p>
+<h2 id="021-2023-02-26"><a class="header" href="#021-2023-02-26">0.2.1 (2023-02-26)</a></h2>
+<p>No changes. Just getting the release system working.</p>
+<p><a name="0.2.0"></a></p>
+<h2 id="020-2023-02-26"><a class="header" href="#020-2023-02-26">0.2.0 (2023-02-26)</a></h2>
+<p>This is an initial &quot;release&quot; mostly to make sure the release workflow is all
+working, and just to get the current prototype out there and available for
+people to poke at.</p>
+<h3 id="features-23"><a class="header" href="#features-23">Features</a></h3>
+<ul>
+<li><strong>cli:</strong> Add resolve &amp; link progress bars (#145) (<a href="https://github.com/orogene/orogene/commit/dd4c6ca2f6ef441903d479bcad36d09c86f28612">dd4c6ca2</a>)</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="code-of-conduct.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="code-of-conduct.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
