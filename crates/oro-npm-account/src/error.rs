@@ -20,7 +20,7 @@ pub enum OroNpmAccountError {
 
     /// Invalid header value
     #[error(transparent)]
-    #[diagnostic(code(oro_npm_accout::invalid_header_value), url(docsrs))]
+    #[diagnostic(code(oro_npm_account::invalid_header_value), url(docsrs))]
     InvalidHeaderValueError(#[from] reqwest::header::InvalidHeaderValue),
 
     /// Unsupported conversion

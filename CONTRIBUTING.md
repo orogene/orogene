@@ -46,7 +46,7 @@ orogene is built against relatively recent `stable` versions of Rust. For a
 specific version to install, refer to `Cargo.toml`'s `[package]` section, as
 `rust-version`.
 
-If you plan on builing wasm packages for orogene sub-crates, you'll also need:
+If you plan on building wasm packages for orogene sub-crates, you'll also need:
 
 1. `cargo install -f wasm-bindgen-cli`
 2. `cargo install -f wasm-pack` (or installed [prebuilt binaries](https://rustwasm.github.io/wasm-pack/installer/))
@@ -126,12 +126,12 @@ based on the module name, not the crate.)
 Releasing orogene is a four-step process:
 
 1. First, we make sure all the READMEs are up-to-date.
-2. Then, a changelog is generated, editorialized, and commited.
+2. Then, a changelog is generated, editorialized, and committed.
 3. After that, a command is run to release the entire repository in lockstep.
 4. Finally, an automated process takes care of generating a GitHub release and
 building prebuilt binaries for distribution.
 
-In order to follow these steps, you'll need to intall `cargo-make`:
+In order to follow these steps, you'll need to install `cargo-make`:
 
 ```sh
 $ cargo install -f cargo-make

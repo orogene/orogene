@@ -34,7 +34,7 @@
                       where "<CARGO_TARGET>" is replaced with the "CargoTarget"
                       variable value and "<CARGO_PROFILE>" is replaced with the
                       value from the "CargoProfile" variable. This can also
-                      be overriden manually with tne "target-bin-dir" flag.
+                      be overridden manually with the "target-bin-dir" flag.
   CargoTargetDir    = The path to the directory for the build artifacts, i.e.
                       "target".
   CargoProfile      = The cargo profile used to build the binaries

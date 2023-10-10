@@ -224,7 +224,7 @@ impl Package {
                         // (bad data, etc), then go ahead and do a network
                         // extract.
                         Err(e) => {
-                            tracing::warn!("extracting package {:?} from cache failed, possily due to cache corruption: {e}", self.resolved());
+                            tracing::warn!("extracting package {:?} from cache failed, possibly due to cache corruption: {e}", self.resolved());
                             if let Some(entry) =
                                 cacache::index::find(cache, &crate::tarball::tarball_key(&sri))
                                     .map_err(|e| NassunError::ExtractCacheError(e, None))?
