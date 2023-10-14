@@ -38,6 +38,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "alabaster"
+version = "0.3.34"
+dependencies = [
+ "swift-bridge",
+ "swift-bridge-build",
+]
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3544,6 +3552,51 @@ checksum = "98ffacedcdcf1da6579c907279b4f3c5492fbce99fbbf227f5ed270a589c2765"
 dependencies = [
  "kurbo 0.9.5",
  "siphasher",
+]
+
+[[package]]
+name = "swift-bridge"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f72aa49fc376893673e6b7ace589802877d2dad554da1fde5aa1445498e1929c"
+dependencies = [
+ "swift-bridge-build",
+ "swift-bridge-macro",
+]
+
+[[package]]
+name = "swift-bridge-build"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba4282dc94afa1b7d8f2445532a7c0b7508d470cee261132e26ec001b3185c3b"
+dependencies = [
+ "proc-macro2",
+ "swift-bridge-ir",
+ "syn 1.0.109",
+ "tempfile",
+]
+
+[[package]]
+name = "swift-bridge-ir"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2096a82fb42280699d9b5dde6674cb4f802931eca8623f1edc4587c50dc58da"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "swift-bridge-macro"
+version = "0.1.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c2f4d5b41976c351ecb735eb9336bdd3cbaaebc9990300023ea2b6874a2d68c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "swift-bridge-ir",
+ "syn 1.0.109",
 ]
 
 [[package]]

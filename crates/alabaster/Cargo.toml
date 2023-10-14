@@ -1,0 +1,24 @@
+[package]
+name = "alabaster"
+version = "0.3.34"
+description = "Cross-platform node_modules/ virtualizer for Orogene."
+readme = "README.md"
+license = "Apache-2.0"
+
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[target.'cfg(target_os = "macos")'.dependencies]
+swift-bridge = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.build-dependencies]
+swift-bridge-build = { workspace = true }
