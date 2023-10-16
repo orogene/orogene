@@ -1,5 +1,7 @@
+use crate::AlabasterError;
+
 mod bridge;
 
-pub fn init() {
-    bridge::init();
+pub async fn init() -> Result<(), AlabasterError> {
+    bridge::init().await
 }

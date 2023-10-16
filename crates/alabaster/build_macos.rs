@@ -1,9 +1,11 @@
 use std::{path::PathBuf, process::Command};
 
 pub(crate) fn build() {
+    println!("cargo:rerun-if-changed=src/macos/alabaster-swift");
+
     // 1. Use `swift-bridge-build` to generate Swift/C FFI glue.
     //    You can also use the `swift-bridge` CLI.
-    let bridge_files = vec!["src/macos/mod.rs"];
+    let bridge_files = vec!["src/macos/bridge.rs"];
     swift_bridge_build::parse_bridges(bridge_files)
         .write_all_concatenated(swift_bridge_out_dir(), "alabaster");
 

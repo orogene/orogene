@@ -849,6 +849,8 @@ pub enum OroCmd {
 
     Logout(commands::logout::LogoutCmd),
 
+    Mount(commands::mount::MountCmd),
+
     Ping(commands::ping::PingCmd),
 
     Reapply(commands::reapply::ReapplyCmd),
@@ -870,6 +872,7 @@ impl OroCommand for Orogene {
             OroCmd::Apply(cmd) => cmd.execute().await,
             OroCmd::Login(cmd) => cmd.execute().await,
             OroCmd::Logout(cmd) => cmd.execute().await,
+            OroCmd::Mount(cmd) => cmd.execute().await,
             OroCmd::Ping(cmd) => cmd.execute().await,
             OroCmd::Reapply(cmd) => cmd.execute().await,
             OroCmd::Remove(cmd) => cmd.execute().await,

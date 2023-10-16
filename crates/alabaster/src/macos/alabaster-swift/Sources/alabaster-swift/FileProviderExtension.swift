@@ -1,15 +1,19 @@
 import FileProvider
 
+func installFileProvider(completionHandler: @escaping (FileProviderError?) -> Void) {
+  NSFileProviderManager.add(
+    FileProviderExtension.domain
+  ) { completionHandler($0.map({ FileProviderError(message: RustString($0.localizedDescription)) })) }
+}
+
+func helloWorld() {
+  print("Hello world!")
+}
+
 class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
   static let domain = NSFileProviderDomain.init(
     identifier: NSFileProviderDomainIdentifier.init("dev.orogene.file-provider"),
     displayName: "OrogeneModules")
-
-  static func install(completionHandler: @escaping (FileProviderError?) -> Void) {
-    NSFileProviderManager.add(
-      FileProviderExtension.domain
-    ) { completionHandler($0.map({ FileProviderError.init(error: $0) })) }
-  }
 
   required init(domain: NSFileProviderDomain) {
     // TODO: The containing application must create a domain using `NSFileProviderManager.add(_:, completionHandler:)`. The system will then launch the application extension process, call `FileProviderExtension.init(domain:)` to instantiate the extension for that domain, and call methods on the instance.

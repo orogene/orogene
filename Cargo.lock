@@ -41,8 +41,11 @@ dependencies = [
 name = "alabaster"
 version = "0.3.34"
 dependencies = [
+ "futures 0.3.28",
+ "miette",
  "swift-bridge",
  "swift-bridge-build",
+ "thiserror",
 ]
 
 [[package]]
@@ -2333,6 +2336,7 @@ dependencies = [
 name = "orogene"
 version = "0.3.34"
 dependencies = [
+ "alabaster",
  "async-std",
  "async-trait",
  "backon",

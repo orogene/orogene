@@ -21,6 +21,7 @@ path-guid = "D7A7057F-9CE2-4FB0-A0CF-1293469361C5"
 
 [dependencies]
 # Workspace Deps
+alabaster = { version = "=0.3.34", path = "./crates/alabaster" }
 nassun = { version = "=0.3.34", path = "./crates/nassun" }
 node-maintainer = { version = "=0.3.34", path = "./crates/node-maintainer" }
 oro-client = { version = "=0.3.34", path = "./crates/oro-client" }

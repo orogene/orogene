@@ -4,4 +4,4 @@
 #import "./generated/SwiftBridgeCore.h"
 #import "./generated/alabaster/alabaster.h"
 
-#endif BRIDGING_HEADER_H
+#endif
