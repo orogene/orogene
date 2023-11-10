@@ -438,7 +438,8 @@ pub(crate) fn extract_from_cache(
     #[allow(unused_variables)] mode: u32,
 ) -> Result<()> {
     match extract_mode {
-        ExtractMode::Auto => {
+        ExtractMode::Auto | ExtractMode::Reflink => {
+            // TODO: Remove the copy_from_cache fallback when we support bundleDeps
             reflink_from_cache(cache, sri, to).or_else(|_| copy_from_cache(cache, sri, to))?;
         }
         ExtractMode::AutoHardlink | ExtractMode::Hardlink => {
@@ -461,7 +462,6 @@ pub(crate) fn extract_from_cache(
                 .or_else(|_| copy_from_cache(cache, sri, to))?;
         }
         ExtractMode::Copy => copy_from_cache(cache, sri, to)?,
-        ExtractMode::Reflink => reflink_from_cache(cache, sri, to)?,
     }
     #[cfg(unix)]
     {
