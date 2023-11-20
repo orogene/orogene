@@ -1,0 +1,22 @@
+[package]
+name = "oro-package-json"
+version = "0.3.34"
+readme = "README.md"
+license = "Apache-2.0"
+
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+oro-common = { version = "=0.3.34", path = "../oro-common" }
+
+async-std = { workspace = true }
+git2 = { workspace = true }
+walkdir = { workspace = true }
+pathdiff = { workspace = true }
+miette = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

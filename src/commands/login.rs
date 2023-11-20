@@ -10,7 +10,6 @@ use oro_client::OroClientBuilder;
 use oro_npm_account::config::{self, Credentials};
 use oro_npm_account::login::login;
 use std::path::PathBuf;
-use url::Url;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum LoginType {
@@ -30,9 +29,6 @@ impl From<LoginType> for AuthType {
 /// Log in to the registry.
 #[derive(Debug, Args)]
 pub struct LoginCmd {
-    #[arg(from_global)]
-    registry: Url,
-
     #[arg(from_global)]
     config: Option<PathBuf>,
 
@@ -76,8 +72,9 @@ impl OroCommand for LoginCmd {
             let mut config: KdlDocument = std::fs::read_to_string(config_path)
                 .into_diagnostic()?
                 .parse()?;
+            let registry = self.client_args.registry.clone();
 
-            tracing::info!("Logging in to {}", self.registry);
+            tracing::info!("Logging in to {}", registry);
 
             let builder: OroClientBuilder = self.client_args.try_into()?;
 
@@ -93,10 +90,10 @@ impl OroCommand for LoginCmd {
             } else {
                 let token = login(
                     &self.auth_type.into(),
-                    &self.registry,
+                    &registry,
                     &LoginOptions {
                         scope: self.scope.clone(),
-                        client: Some(builder.registry(self.registry.clone()).build()),
+                        client: Some(builder.build()),
                     },
                 )
                 .await
@@ -105,10 +102,10 @@ impl OroCommand for LoginCmd {
                 Credentials::Token(token.token)
             };
 
-            config::set_credentials_by_uri(&self.registry, &credentials, &mut config);
+            config::set_credentials_by_uri(&registry, &credentials, &mut config);
 
             if let Some(scope) = self.scope {
-                config::set_scoped_registry(&scope, &self.registry, &mut config);
+                config::set_scoped_registry(&scope, &registry, &mut config);
             }
 
             std::fs::write(config_path, config.to_string()).into_diagnostic()?;

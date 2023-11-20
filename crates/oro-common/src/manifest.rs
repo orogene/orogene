@@ -78,6 +78,10 @@ pub struct Manifest {
     #[builder(setter(strip_option), default)]
     pub author: Option<PersonField>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(setter(strip_option), default)]
+    pub browser: Option<String>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub contributors: Vec<PersonField>,
@@ -191,6 +195,30 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub workspaces: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub tag: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub gypfile: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub readme: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub readme_filename: Option<PathBuf>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub funding: Option<Funding>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub git_head: Option<String>,
 
     #[serde(flatten, default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
@@ -357,6 +385,13 @@ pub enum Repository {
         url: Option<String>,
         directory: Option<String>,
     },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum Funding {
+    Str(String),
+    Obj { url: Option<String> },
 }
 
 #[cfg(test)]

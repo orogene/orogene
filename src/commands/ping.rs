@@ -5,16 +5,12 @@ use clap::Args;
 use miette::{IntoDiagnostic, Result, WrapErr};
 use oro_client::{self, OroClientBuilder};
 use serde_json::Value;
-use url::Url;
 
 use crate::{client_args::ClientArgs, commands::OroCommand};
 
 /// Ping the registry.
 #[derive(Debug, Args)]
 pub struct PingCmd {
-    #[arg(from_global)]
-    registry: Url,
-
     #[arg(from_global)]
     json: bool,
 
@@ -29,7 +25,7 @@ pub struct PingCmd {
 impl OroCommand for PingCmd {
     async fn execute(self) -> Result<()> {
         let start = Instant::now();
-        let registry = self.registry;
+        let registry = self.client_args.registry.clone();
         tracing::info!("{}ping: {registry}", if self.emoji { "➡️ " } else { "" });
         let client_builder: OroClientBuilder = self.client_args.try_into()?;
         let client = client_builder.registry(registry.clone()).build();

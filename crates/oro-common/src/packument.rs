@@ -24,12 +24,26 @@ pub struct CorgiPackument {
 /// object containing information about package versions, dist-tags, etc.
 #[derive(Builder, Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Packument {
+    #[serde(default, rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
     #[serde(default)]
     pub versions: HashMap<Version, VersionMetadata>,
     #[serde(default)]
     pub time: HashMap<String, String>,
     #[serde(default, rename = "dist-tags")]
     pub tags: HashMap<String, Version>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access: Option<Access>,
+    #[serde(
+        default,
+        rename = "_attachments",
+        skip_serializing_if = "HashMap::is_empty"
+    )]
+    pub attachments: HashMap<String, Attachments>,
     #[serde(flatten)]
     pub rest: HashMap<String, Value>,
 }
@@ -100,6 +114,9 @@ pub struct VersionMetadata {
     )]
     pub deprecated: Option<DeprecationInfo>,
 
+    #[serde(default, rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+
     #[serde(flatten)]
     pub manifest: Manifest,
 }
@@ -158,6 +175,31 @@ pub enum Bin {
 pub struct NpmUser {
     pub name: String,
     pub email: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub enum Access {
+    Restricted,
+    Public,
+}
+
+impl Serialize for Access {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Public => serializer.serialize_str("public"),
+            Self::Restricted => serializer.serialize_str("restricted"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Attachments {
+    pub content_type: String,
+    pub data: String,
+    pub length: usize,
 }
 
 /// Represents the deprecation state of a package.
@@ -223,15 +265,18 @@ pub struct CorgiDist {
 /// Distribution information for a particular package version.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Dist {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub shasum: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tarball: Option<Url>,
 
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub integrity: Option<String>,
-    #[serde(rename = "fileCount")]
+    #[serde(rename = "fileCount", skip_serializing_if = "Option::is_none")]
     pub file_count: Option<usize>,
-    #[serde(rename = "unpackedSize")]
+    #[serde(rename = "unpackedSize", skip_serializing_if = "Option::is_none")]
     pub unpacked_size: Option<usize>,
-    #[serde(rename = "npm-signature")]
+    #[serde(rename = "npm-signature", skip_serializing_if = "Option::is_none")]
     pub npm_signature: Option<String>,
 
     #[serde(flatten)]

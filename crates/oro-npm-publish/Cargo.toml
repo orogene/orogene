@@ -1,0 +1,34 @@
+[package]
+name = "oro-npm-publish"
+version = "0.3.34"
+readme = "README.md"
+license = "Apache-2.0"
+
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+oro-common = { version = "=0.3.34", path = "../oro-common" }
+oro-client = { version = "=0.3.34", path = "../oro-client" }
+
+async-std = { workspace = true, features = ["attributes", "tokio1"] }
+base64 = { workspace = true }
+dialoguer = { workspace = true }
+hex = { workspace = true }
+url = { workspace = true }
+sha-1 = { workspace = true }
+ssri = { workspace = true }
+futures = { workspace = true }
+miette = { workspace = true }
+open = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+async-compression = { workspace = true, features = ["gzip", "futures-io"] }
+async-tar-wasm = "0.4.2-wasm.1"
+percent-encoding = { workspace = true }
+serde_json = { workspace = true }
+wiremock = { workspace = true }

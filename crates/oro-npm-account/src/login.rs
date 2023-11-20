@@ -3,7 +3,7 @@ use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, Password};
 use open::that as open;
 use oro_client::login::{AuthType, DoneURLResponse, LoginCouchResponse, LoginOptions, Token};
-use oro_client::OroClient;
+use oro_client::{OTPResponse, OroClient};
 use url::Url;
 
 pub async fn login(
@@ -45,7 +45,7 @@ pub async fn login(
                 .login_couch(&username, &password, None, options)
                 .await?
             {
-                LoginCouchResponse::WebOTP { auth_url, done_url } => {
+                LoginCouchResponse::OTPRequired(OTPResponse::WebOTP { auth_url, done_url }) => {
                     open(auth_url).map_err(OroNpmAccountError::OpenURLError)?;
 
                     loop {
@@ -57,7 +57,7 @@ pub async fn login(
                         }
                     }
                 }
-                LoginCouchResponse::ClassicOTP => {
+                LoginCouchResponse::OTPRequired(OTPResponse::ClassicOTP) => {
                     let otp: String = Input::with_theme(&ColorfulTheme::default())
                         .with_prompt("This operation requires a one-time password. Enter OTP:")
                         .interact()

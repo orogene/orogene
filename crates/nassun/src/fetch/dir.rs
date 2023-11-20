@@ -1,21 +1,52 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use async_std::sync::Arc;
+use async_compression::futures::bufread::GzipEncoder;
+use async_std::fs::File;
 use async_trait::async_trait;
-use futures::io::AsyncRead;
+use futures::io::{AsyncRead, AsyncSeekExt, SeekFrom};
 use node_semver::Version;
+use once_cell::sync::Lazy;
 use oro_common::{
-    CorgiManifest, CorgiPackument, CorgiVersionMetadata, Manifest as OroManifest, Packument,
+    Bin, CorgiManifest, CorgiPackument, CorgiVersionMetadata, Manifest as OroManifest, Packument,
     VersionMetadata,
 };
 use oro_package_spec::PackageSpec;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{NassunError, Result};
+use crate::error::{IoContext, NassunError, Result};
 use crate::fetch::PackageFetcher;
 use crate::package::Package;
 use crate::resolver::PackageResolution;
+
+pub(crate) const DEFAULT_WHITE_LIST: [&str; 22] = [
+    "!.npmignore",
+    "!.gitignore",
+    "!**/.git",
+    "!**/.svn",
+    "!**/.hg",
+    "!**/CVS",
+    "!**/.git/**",
+    "!**/.svn/**",
+    "!**/.hg/**",
+    "!**/CVS/**",
+    "!/.lock-wscript",
+    "!/.wafpickle-*",
+    "!/build/config.gypi",
+    "!npm-debug.log",
+    "!**/.npmrc",
+    "!.*.swp",
+    "!.DS_Store",
+    "!**/.DS_Store/**",
+    "!._*",
+    "!**/._*/**",
+    "!*.orig",
+    "!/archived-packages/**",
+];
+
+static PATH_REPLACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^!+").unwrap());
 
 #[derive(Debug)]
 pub(crate) struct DirFetcher;
@@ -94,6 +125,141 @@ impl DirFetcher {
     pub(crate) async fn packument_from_path(&self, path: &Path) -> Result<Arc<Packument>> {
         Ok(Arc::new(self.manifest(path).await?.into_packument(path)?))
     }
+
+    pub(crate) async fn tarball_from_path(
+        &self,
+        path: PathBuf,
+    ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+        let manifest = Arc::new(self.manifest(&path).await?);
+        let mut cursor = async_std::io::Cursor::new(Vec::new());
+        let package_path = std::path::Path::new("./package");
+        let cloned_path = path.clone();
+
+        let files = async_std::task::spawn_blocking(
+            move || -> std::result::Result<Vec<PathBuf>, ignore::Error> {
+                let mut walk_builder = ignore::WalkBuilder::new(&path);
+                let walk_builder = walk_builder.standard_filters(false);
+                let npmignore = path.join(".npmignore");
+
+                match &*manifest {
+                    Manifest::FullFat(manifest) => {
+                        let mut override_builder = ignore::overrides::OverrideBuilder::new(&path);
+
+                        for file in DEFAULT_WHITE_LIST {
+                            override_builder.add(file)?;
+                        }
+
+                        match manifest.files.clone() {
+                            Some(files) => {
+                                for mut file in files {
+                                    if file.starts_with('/') {
+                                        file = file[1..].to_owned();
+                                    } else if file.starts_with("./") {
+                                        file = file[2..].to_owned();
+                                    } else if file.ends_with("/*") {
+                                        file = file[..(file.len() - 2)].to_owned();
+                                    }
+                                    if path
+                                        .join(PATH_REPLACE_REGEX.replace(&file, "").into_owned())
+                                        .is_dir()
+                                    {
+                                        override_builder.add(&file)?;
+                                        override_builder.add(&format!("{file}/**"))?;
+                                    } else {
+                                        override_builder.add(&file)?;
+                                    }
+                                }
+                                Ok::<(), ignore::Error>(())
+                            }
+                            None if npmignore.exists() => {
+                                walk_builder.add_custom_ignore_filename(".npmignore");
+                                Ok(())
+                            }
+                            None => {
+                                walk_builder.add_custom_ignore_filename(".gitignore");
+                                Ok(())
+                            }
+                        }?;
+
+                        if let Some(ref browser) = manifest.browser {
+                            override_builder.add(browser)?;
+                        }
+                        if let Some(ref main) = manifest.main {
+                            override_builder.add(main)?;
+                        }
+                        if let Some(ref bin) = manifest.bin {
+                            match bin {
+                                Bin::Array(paths) => {
+                                    for path in paths {
+                                        override_builder.add(&format!("{}", path.display()))?;
+                                    }
+                                }
+                                Bin::Hash(paths) => {
+                                    for path in paths.values() {
+                                        override_builder.add(&format!("{}", path.display()))?;
+                                    }
+                                }
+                                Bin::Str(path) => {
+                                    override_builder.add(path)?;
+                                }
+                            }
+                        }
+                        override_builder.add("/package.json")?;
+                        override_builder.add("!/.git")?;
+                        override_builder.add("!/node_modules")?;
+                        override_builder.add("!/package-lock.json")?;
+                        override_builder.add("!/yarn.lock")?;
+                        override_builder.add("!/pnpm-lock.yaml")?;
+                        override_builder.add("!/package-lock.kdl")?;
+
+                        walk_builder.overrides(override_builder.build()?);
+
+                        Ok::<(), ignore::Error>(())
+                    }
+                    Manifest::Corgi(_) => Ok(()),
+                }?;
+
+                walk_builder
+                    .build()
+                    .map(|e| e.map(|e| e.into_path()))
+                    .collect::<std::result::Result<Vec<PathBuf>, ignore::Error>>()
+            },
+        )
+        .await?;
+
+        {
+            let mut builder = async_tar_wasm::Builder::new(&mut cursor);
+
+            for file in &*files {
+                if file.is_file() {
+                    let dst_file = pathdiff::diff_paths(file, &cloned_path).expect("TODO");
+                    let dst_file = package_path.join(dst_file);
+                    let mut content = match File::open(file).await {
+                        Ok(content) => Ok(content),
+                        Err(err) if err.kind() == std::io::ErrorKind::NotFound => continue,
+                        Err(err) => Err(err)
+                            .io_context(|| format!("Failed to open file at {}", file.display())),
+                    }?;
+
+                    builder
+                        .append_file(&dst_file, &mut content)
+                        .await
+                        .io_context(|| "Failed to add file to tarball entries".to_owned())?;
+                }
+            }
+            builder
+                .finish()
+                .await
+                .io_context(|| "Failed to emit the termination sections.".to_owned())?;
+        }
+
+        let _ = cursor
+            .seek(SeekFrom::Start(0))
+            .await
+            .io_context(|| "Failed to seek file content".to_owned());
+
+        Ok(Box::new(GzipEncoder::new(cursor)))
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -144,9 +310,12 @@ impl PackageFetcher for DirFetcher {
         self.corgi_packument_from_path(&path).await
     }
 
-    async fn tarball(&self, _pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
-        // TODO: need to implement pack before this can be implemented :(
-        unimplemented!()
+    async fn tarball(&self, pkg: &Package) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
+        let path = match pkg.resolved() {
+            PackageResolution::Dir { path, .. } => path.to_owned(),
+            _ => panic!("There shouldn't be anything but Dirs here"),
+        };
+        self.tarball_from_path(path).await
     }
 }
 
@@ -223,6 +392,7 @@ impl Manifest {
             time: HashMap::new(),
             tags: HashMap::new(),
             rest: HashMap::new(),
+            ..Default::default()
         };
         let version = metadata
             .manifest
@@ -238,7 +408,14 @@ impl Manifest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::{fs::File, io::Write, path::PathBuf};
+    use crate::client::Nassun;
+    use async_compression::futures::bufread::GzipDecoder;
+    use async_std::io::BufReader;
+    use async_std::path::PathBuf as AsyncPathBuf;
+    use async_std::stream::StreamExt;
+    use miette::IntoDiagnostic;
+    use oro_common::Manifest;
+    use std::{fs::File, io::Write, path::PathBuf, str::FromStr};
 
     use tempfile::{tempdir, TempDir};
 
@@ -301,6 +478,59 @@ mod test {
                 .file_count,
             None
         );
+        Ok(())
+    }
+
+    #[async_std::test]
+    async fn read_tarball() -> miette::Result<()> {
+        let (fetcher, package_spec, _tmp, package_path, _cache_path) = setup_dirs()?;
+        let package = Nassun::new().resolve_spec(package_spec).await?;
+
+        {
+            File::create(package_path.join("package.json"))
+                .io_context(|| "Failed to create file".to_owned())?
+                .write_all(
+                    serde_json::to_string(&Manifest {
+                        name: Some("oro-test-package".to_owned()),
+                        files: Some(vec!["/src/index.js".to_owned()]),
+                        ..Default::default()
+                    })
+                    .into_diagnostic()?
+                    .as_bytes(),
+                )
+                .io_context(|| "Failed to write contents to package.json".to_owned())?;
+
+            std::fs::create_dir_all(package_path.join("src"))
+                .io_context(|| "Failed to create directory".to_owned())?;
+            File::create(package_path.join("src/index.js"))
+                .io_context(|| "Failed to create file".to_owned())?;
+            File::create(package_path.join("src/types.d.ts"))
+                .io_context(|| "Failed to create file".to_owned())?;
+            File::create(package_path.join("webpack.config.js"))
+                .io_context(|| "Failed to create file".to_owned())?;
+        }
+        let gzip_encoded_tarball = fetcher.tarball(&package).await?;
+        let tarball = GzipDecoder::new(BufReader::new(gzip_encoded_tarball));
+        let tarball = async_tar_wasm::Archive::new(tarball);
+        let mut try_tarball_entries = tarball.entries().into_diagnostic()?;
+        let mut tarball_entries = Vec::new();
+        while let Some(file) = try_tarball_entries.next().await {
+            tarball_entries.push(
+                file.into_diagnostic()?
+                    .path()
+                    .into_diagnostic()?
+                    .into_owned(),
+            );
+        }
+
+        assert_eq!(
+            tarball_entries,
+            vec![
+                AsyncPathBuf::from_str("package/package.json").into_diagnostic()?,
+                AsyncPathBuf::from_str("package/src/index.js").into_diagnostic()?,
+            ]
+        );
+
         Ok(())
     }
 }

@@ -23,8 +23,18 @@ fn logout_markdown() {
 }
 
 #[test]
+fn pack_markdown() {
+    insta::assert_snapshot!("pack", sub_md("pack"));
+}
+
+#[test]
 fn ping_markdown() {
     insta::assert_snapshot!("ping", sub_md("ping"));
+}
+
+#[test]
+fn publish_markdown() {
+    insta::assert_snapshot!("publish", sub_md("publish"));
 }
 
 #[test]

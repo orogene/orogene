@@ -1,9 +1,10 @@
 use miette::{Diagnostic, NamedSource, SourceOffset};
-use reqwest::Url;
+use reqwest::{Error, Response, StatusCode, Url};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug)]
-pub struct Response(Option<String>);
+pub struct ResponseInfo(StatusCode, Option<String>);
 
 #[derive(Debug, Error, Diagnostic)]
 pub enum OroClientError {
@@ -41,7 +42,7 @@ pub enum OroClientError {
     /// Recived unexpected response.
     #[error("Received unexpected response. \n {0}")]
     #[diagnostic(code(oro_client::response_error), url(docsrs))]
-    ResponseError(Response),
+    ResponseError(ResponseInfo),
 
     /// No such user.
     #[error("No such user. (provided username: {0})")]
@@ -62,6 +63,11 @@ pub enum OroClientError {
     #[error("This operation requires a one-time password from your authenticator.")]
     #[diagnostic(code(oro_client::otp_required_error), url(docsrs))]
     OTPRequiredError,
+
+    /// Unable to authenticate, You need to authorize this machine using `oro login`.
+    #[error("You need to authorize this machine using `oro login`")]
+    #[diagnostic(code(oro_client::unauthorized_error), url(docsrs))]
+    UnauthorizedError,
 
     /// A generic request middleware error happened while making a request.
     /// Refer to the error message for more details.
@@ -85,6 +91,11 @@ pub enum OroClientError {
     Base64DecodeError(#[from] base64::DecodeError),
 }
 
+#[derive(Serialize, Deserialize)]
+struct ErrorResponse {
+    error: String,
+}
+
 impl OroClientError {
     pub fn from_json_err(err: serde_json::Error, url: String, json: String) -> Self {
         // These json strings can get VERY LONG and miette doesn't (yet?)
@@ -103,24 +114,19 @@ impl OroClientError {
             err_loc: (err_offset.offset() - local_offset, 0),
         }
     }
-}
 
-impl From<Option<String>> for Response {
-    fn from(value: Option<String>) -> Self {
-        Response(value)
+    pub async fn from_response(response: Response) -> Result<Self, Error> {
+        let status = response.status();
+        let error = serde_json::from_str::<ErrorResponse>(&response.text().await?)
+            .map(|res| res.error)
+            .ok();
+        Ok(Self::ResponseError(ResponseInfo(status, error)))
     }
 }
 
-impl std::fmt::Display for Response {
+impl std::fmt::Display for ResponseInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            if let Some(response) = &self.0 {
-                response
-            } else {
-                ""
-            }
-        )
+        let error = self.1.clone().map_or("".to_owned(), |v| format!("- {v}"));
+        write!(f, "{} {error}", self.0)
     }
 }

@@ -179,6 +179,11 @@ pub enum NassunError {
     #[error("{0}")]
     #[diagnostic(code(nassun::misc), url(docsrs))]
     MiscError(String),
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[error(transparent)]
+    #[diagnostic(code(nassun::ignore_error), url(docsrs))]
+    IgnoreError(#[from] ignore::Error),
 }
 
 /// The result type returned by calls to this library

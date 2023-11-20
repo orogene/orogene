@@ -1,7 +1,8 @@
-use crate::notify::Notify;
+use crate::authentication_helper::{AuthenticationHelper, OTPResponse};
+use crate::traits::{Notify, Otp};
 use crate::{OroClient, OroClientError};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
-use reqwest::header::{HeaderMap, WWW_AUTHENTICATE};
+use reqwest::header::HeaderMap;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,8 +22,7 @@ pub enum AuthType {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum LoginCouchResponse {
-    WebOTP { auth_url: String, done_url: String },
-    ClassicOTP,
+    OTPRequired(OTPResponse),
     Token(String),
 }
 
@@ -110,18 +110,11 @@ impl OroClient {
         otp: Option<&str>,
         options: &LoginOptions,
     ) -> Result<LoginCouchResponse, OroClientError> {
-        let mut headers = Self::build_header(AuthType::Legacy, options);
+        let headers = Self::build_header(AuthType::Legacy, options);
         let username_ = utf8_percent_encode(username, NON_ALPHANUMERIC).to_string();
         let url = self
             .registry
             .join(&format!("-/user/org.couchdb.user:{username_}"))?;
-
-        if let Some(otp) = otp {
-            headers.insert(
-                "npm-otp",
-                otp.try_into().expect("This type conversion should work"),
-            );
-        }
 
         let response = self
             .client
@@ -139,47 +132,19 @@ impl OroClient {
                 })
                 .expect("This type conversion should work"),
             )
+            .otp(otp)
             .send()
             .await?
             .notify();
 
         match response.status() {
             StatusCode::BAD_REQUEST => Err(OroClientError::NoSuchUserError(username.to_owned())),
-            StatusCode::UNAUTHORIZED => {
-                let www_authenticate = response
-                    .headers()
-                    .get(WWW_AUTHENTICATE)
-                    .map_or(String::default(), |header| {
-                        header.to_str().unwrap().to_lowercase()
-                    });
-
-                let text = response.text().await?;
-                let json = serde_json::from_str::<WebOTPResponse>(&text).unwrap_or_default();
-
-                if www_authenticate.contains("otp") || text.to_lowercase().contains("one-time pass")
-                {
-                    if otp.is_none() {
-                        if let (Some(auth_url), Some(done_url)) = (json.auth_url, json.done_url) {
-                            Ok(LoginCouchResponse::WebOTP { auth_url, done_url })
-                        } else {
-                            Ok(LoginCouchResponse::ClassicOTP)
-                        }
-                    } else {
-                        Err(OroClientError::OTPRequiredError)
-                    }
-                } else {
-                    Err(if www_authenticate.contains("basic") {
-                        OroClientError::IncorrectPasswordError
-                    } else if www_authenticate.contains("bearer") {
-                        OroClientError::InvalidTokenError
-                    } else {
-                        OroClientError::ResponseError(Some(text).into())
-                    })
-                }
+            StatusCode::UNAUTHORIZED => Ok(LoginCouchResponse::OTPRequired(
+                AuthenticationHelper::check_response(response, otp).await?,
+            )),
+            _ if response.status() >= StatusCode::BAD_REQUEST => {
+                Err(OroClientError::from_response(response).await?)
             }
-            _ if response.status() >= StatusCode::BAD_REQUEST => Err(
-                OroClientError::ResponseError(Some(response.text().await?).into()),
-            ),
             _ => {
                 let text = response.text().await?;
                 Ok(LoginCouchResponse::Token(
@@ -225,14 +190,10 @@ impl OroClient {
                         .expect("The \"retry-after\" header that's included in the response should be able to parse to number.");
                     Ok(DoneURLResponse::Duration(Duration::from_secs(retry_after)))
                 } else {
-                    Err(OroClientError::ResponseError(
-                        Some(response.text().await?).into(),
-                    ))
+                    Err(OroClientError::from_response(response).await?)
                 }
             }
-            _ => Err(OroClientError::ResponseError(
-                Some(response.text().await?).into(),
-            )),
+            _ => Err(OroClientError::from_response(response).await?),
         }
     }
 }
@@ -334,10 +295,10 @@ mod test {
                 client
                     .login_couch("test", "password", None, &LoginOptions::default())
                     .await?,
-                LoginCouchResponse::WebOTP {
+                LoginCouchResponse::OTPRequired(OTPResponse::WebOTP {
                     auth_url: body.auth_url.unwrap(),
                     done_url: body.done_url.unwrap()
-                }
+                })
             )
         }
 
@@ -356,7 +317,7 @@ mod test {
                 client
                     .login_couch("test", "password", None, &LoginOptions::default())
                     .await?,
-                LoginCouchResponse::ClassicOTP
+                LoginCouchResponse::OTPRequired(OTPResponse::ClassicOTP)
             )
         }
 

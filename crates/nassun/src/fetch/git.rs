@@ -267,8 +267,17 @@ impl PackageFetcher for GitFetcher {
             .await
     }
 
-    async fn tarball(&self, _pkg: &crate::Package) -> Result<crate::TarballStream> {
-        todo!()
+    async fn tarball(&self, pkg: &crate::Package) -> Result<crate::TarballStream> {
+        use PackageResolution::*;
+        let info = match pkg.resolved() {
+            Git { info, .. } => info,
+            _ => panic!("Only git specs allowed."),
+        };
+        let dir = tempfile::tempdir().map_err(NassunError::GitIoError)?;
+        self.fetch_to_temp_dir(info, dir.path()).await?;
+        self.dir_fetcher
+            .tarball_from_path(dir.path().join("package"))
+            .await
     }
 }
 

@@ -27,8 +27,11 @@ oro-client = { version = "=0.3.34", path = "./crates/oro-client" }
 oro-common = { version = "=0.3.34", path = "./crates/oro-common" }
 oro-config = { version = "=0.3.34", path = "./crates/oro-config" }
 oro-npm-account = { version = "=0.3.34", path = "./crates/oro-npm-account" }
+oro-npm-publish = { version = "=0.3.34", path = "./crates/oro-npm-publish" }
 oro-package-spec = { version = "=0.3.34", path = "./crates/oro-package-spec" }
+oro-package-json = { version = "=0.3.34", path = "./crates/oro-package-json" }
 oro-pretty-json = { version = "=0.3.34", path = "./crates/oro-pretty-json" }
+oro-script = { version = "=0.3.34", path = "./crates/oro-script" }
 
 # Regular deps
 async-std = { workspace = true, features = [
@@ -98,12 +101,15 @@ directories = "4.0.1"
 dunce = "1.0.3"
 flate2 = "1.0.25"
 futures = "0.3.26"
+git2 = "0.18.1"
 indexmap = "1.9.3"
 indicatif = "0.17.3"
 io_tee = "0.1.1"
 is-terminal = "0.4.7"
 is_ci = "1.1.1"
+ignore = "0.4.20"
 http-cache-reqwest = "0.6.0"
+hex = "0.4.3"
 humansize = "1.1.0"
 insta = "1.28.0"
 js-sys = "0.3.61"
@@ -134,6 +140,7 @@ sentry = "0.31.0"
 serde = "1.0.152"
 serde_json = "1.0.93"
 serde-wasm-bindgen = "0.4.5"
+sha-1 = "0.10.1"
 ssri = "9.0.0"
 supports-unicode = "2.0.0"
 syn = "1.0.33"
