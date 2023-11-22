@@ -130,9 +130,9 @@ impl DirFetcher {
         &self,
         path: PathBuf,
     ) -> Result<Box<dyn AsyncRead + Unpin + Send + Sync>> {
-        let manifest = Arc::new(self.manifest(&path).await?);
         let mut cursor = async_std::io::Cursor::new(Vec::new());
         let package_path = std::path::Path::new("./package");
+        let manifest = self.manifest(&path).await?;
         let cloned_path = path.clone();
 
         let files = async_std::task::spawn_blocking(
@@ -141,7 +141,7 @@ impl DirFetcher {
                 let walk_builder = walk_builder.standard_filters(false);
                 let npmignore = path.join(".npmignore");
 
-                match &*manifest {
+                match manifest {
                     Manifest::FullFat(manifest) => {
                         let mut override_builder = ignore::overrides::OverrideBuilder::new(&path);
 
@@ -230,7 +230,7 @@ impl DirFetcher {
         {
             let mut builder = async_tar_wasm::Builder::new(&mut cursor);
 
-            for file in &*files {
+            for file in &files {
                 if file.is_file() {
                     let dst_file = pathdiff::diff_paths(file, &cloned_path).expect("TODO");
                     let dst_file = package_path.join(dst_file);

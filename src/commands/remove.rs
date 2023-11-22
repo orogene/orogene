@@ -26,7 +26,7 @@ pub struct RemoveCmd {
 impl OroCommand for RemoveCmd {
     async fn execute(mut self) -> Result<()> {
         let mut manifest = oro_pretty_json::from_str(
-            &async_std::fs::read_to_string(self.apply.root.join("package.json"))
+            async_std::fs::read_to_string(self.apply.root.join("package.json"))
                 .await
                 .into_diagnostic()?,
         )

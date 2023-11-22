@@ -72,7 +72,7 @@ impl PackCmd {
         if manifest.scripts.get("prepack").is_some() {
             if let PackageSpec::Dir { path } = spec {
                 async_std::task::spawn_blocking(move || {
-                    OroScript::new(&*path, "prepack")?
+                    OroScript::new(path, "prepack")?
                         .stdout(Stdio::inherit())
                         .spawn()?
                         .wait()
@@ -90,7 +90,7 @@ impl PackCmd {
         if manifest.scripts.get("postpack").is_some() {
             if let PackageSpec::Dir { path } = spec {
                 async_std::task::spawn_blocking(move || {
-                    OroScript::new(&*path, "postpack")?
+                    OroScript::new(path, "postpack")?
                         .stdout(Stdio::inherit())
                         .spawn()?
                         .wait()
