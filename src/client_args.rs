@@ -65,6 +65,7 @@ impl ClientArgs {
         config: Option<&Credentials>,
     ) -> Result<OroClientBuilder, OroClientError> {
         let mut builder = OroClientBuilder::new()
+            .registry(self.registry.clone())
             .retries(self.retries)
             .proxy(self.proxy);
         if let Some(cache) = self.cache {
