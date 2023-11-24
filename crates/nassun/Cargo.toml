@@ -48,7 +48,11 @@ async-std = { workspace = true, features = ["attributes", "std"] }
 backon = { workspace = true }
 cacache = { workspace = true }
 flate2 = { workspace = true }
+pathdiff = { workspace = true }
 io_tee = { workspace = true }
+once_cell = { workspace = true }
+ignore = { workspace = true }
+regex = { workspace = true }
 rkyv = { workspace = true, features = ["validation"] }
 tar = { workspace = true }
 tempfile = { workspace = true }

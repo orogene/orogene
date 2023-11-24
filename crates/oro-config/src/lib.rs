@@ -61,7 +61,7 @@ impl OroConfigLayerExt for Command {
         let matches = self
             .clone()
             .ignore_errors(true)
-            .get_matches_from(&args.clone());
+            .get_matches_from(args.clone());
         for opt in long_opts {
             // TODO: _prepend_ args unconditionally if they're coming from
             // config, so multi-args get parsed right. Right now, if you have

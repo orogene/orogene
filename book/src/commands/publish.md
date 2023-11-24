@@ -1,0 +1,1 @@
+{{#include ../../../tests/snapshots/help__publish.snap:8:}}

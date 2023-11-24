@@ -7,14 +7,10 @@ use miette::{IntoDiagnostic, Result};
 use oro_client::OroClientBuilder;
 use oro_npm_account::config::{self, Credentials};
 use std::path::PathBuf;
-use url::Url;
 
 /// Logout from the registry.
 #[derive(Debug, Args)]
 pub struct LogoutCmd {
-    #[arg(from_global)]
-    registry: Url,
-
     #[arg(from_global)]
     config: Option<PathBuf>,
 
@@ -29,8 +25,9 @@ impl OroCommand for LogoutCmd {
             ProjectDirs::from("", "", "orogene")
                 .map(|config| config.config_dir().to_path_buf().join("oro.kdl"))
         }) {
+            let registry = self.client_args.registry.clone();
             let builder: OroClientBuilder = self.client_args.try_into()?;
-            let client = builder.registry(self.registry.clone()).build();
+            let client = builder.build();
             std::fs::create_dir_all(config_path.parent().expect("must have parent"))
                 .into_diagnostic()?;
             let mut config: KdlDocument = std::fs::read_to_string(config_path)
@@ -38,12 +35,12 @@ impl OroCommand for LogoutCmd {
                 .parse()?;
 
             if let Some(Credentials::Token(token)) =
-                config::get_credentials_by_uri(&self.registry, &config)
+                config::get_credentials_by_uri(&registry, &config)
             {
                 client.delete_token(&token).await.into_diagnostic()?;
             }
 
-            config::clear_crendentials_by_uri(&self.registry, &mut config);
+            config::clear_crendentials_by_uri(&registry, &mut config);
             std::fs::write(config_path, config.to_string()).into_diagnostic()?;
         }
         Ok(())

@@ -6,7 +6,7 @@ use node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-use crate::{CorgiVersionMetadata, VersionMetadata};
+use crate::{Access, CorgiVersionMetadata, VersionMetadata};
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -77,6 +77,10 @@ pub struct Manifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(setter(strip_option), default)]
     pub author: Option<PersonField>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(setter(strip_option), default)]
+    pub browser: Option<String>,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
@@ -157,10 +161,10 @@ pub struct Manifest {
     #[serde(
         default,
         rename = "publishConfig",
-        skip_serializing_if = "HashMap::is_empty"
+        skip_serializing_if = "Option::is_none"
     )]
     #[builder(default)]
-    pub publish_config: HashMap<String, Value>,
+    pub publish_config: Option<PublishConfig>,
 
     // Deps
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
@@ -191,6 +195,30 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[builder(default)]
     pub workspaces: Vec<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub tag: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub gypfile: Option<bool>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub readme: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub readme_filename: Option<PathBuf>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub funding: Option<Funding>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
+    pub git_head: Option<String>,
 
     #[serde(flatten, default, skip_serializing_if = "HashMap::is_empty")]
     #[builder(default)]
@@ -357,6 +385,21 @@ pub enum Repository {
         url: Option<String>,
         directory: Option<String>,
     },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum Funding {
+    Str(String),
+    Obj { url: Option<String> },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct PublishConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access: Option<Access>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_tag: Option<String>,
 }
 
 #[cfg(test)]

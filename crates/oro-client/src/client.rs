@@ -205,7 +205,7 @@ impl OroClientBuilder {
 
 #[derive(Clone, Debug)]
 pub struct OroClient {
-    pub(crate) registry: Arc<Url>,
+    pub registry: Arc<Url>,
     pub(crate) client: ClientWithMiddleware,
     pub(crate) client_uncached: ClientWithMiddleware,
 }

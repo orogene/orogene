@@ -572,7 +572,7 @@ impl IsolatedLinker {
         let node_path = store_ref
             .join(package_dir_name(graph, node))
             .join("node_modules")
-            .join(&graph[node].name.to_string());
+            .join(graph[node].name.to_string());
         let build_mani = BuildManifest::from_path(node_path.join("package.json")).map_err(|e| {
             NodeMaintainerError::BuildManifestReadError(node_path.join("package.json"), e)
         })?;
