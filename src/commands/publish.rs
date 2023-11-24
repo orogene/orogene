@@ -77,6 +77,7 @@ impl OroCommand for PublishCmd {
             let client: ClientArgs = self.nassun_args.into();
             let client = client.into_client_builder(credentials.as_ref())?.build();
             let mut manifest = package.metadata().await?.manifest;
+            let publish_config = manifest.publish_config.clone();
             oro_package_json::normalize(&mut manifest, root.clone(), true).await?;
             Self::run_prepublishonly_script(spec.clone(), &manifest).await?;
             Packer::run_prepack_script(spec.clone(), &manifest).await?;
@@ -103,7 +104,8 @@ impl OroCommand for PublishCmd {
                         access: self.access.into(),
                         client,
                         ..Default::default()
-                    },
+                    }
+                    .maybe_merge(publish_config),
                 )
                 .await?;
             }

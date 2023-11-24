@@ -6,7 +6,7 @@ use node_semver::{Range, Version};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-use crate::{CorgiVersionMetadata, VersionMetadata};
+use crate::{Access, CorgiVersionMetadata, VersionMetadata};
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -161,10 +161,10 @@ pub struct Manifest {
     #[serde(
         default,
         rename = "publishConfig",
-        skip_serializing_if = "HashMap::is_empty"
+        skip_serializing_if = "Option::is_none"
     )]
     #[builder(default)]
-    pub publish_config: HashMap<String, Value>,
+    pub publish_config: Option<PublishConfig>,
 
     // Deps
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
@@ -392,6 +392,14 @@ pub enum Repository {
 pub enum Funding {
     Str(String),
     Obj { url: Option<String> },
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct PublishConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub access: Option<Access>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_tag: Option<String>,
 }
 
 #[cfg(test)]

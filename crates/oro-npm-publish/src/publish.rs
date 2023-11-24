@@ -4,7 +4,7 @@ use futures::io::{AsyncRead, AsyncReadExt};
 use open::that as open;
 use oro_client::login::DoneURLResponse;
 use oro_client::{publish::PublishResponse, OTPResponse, OroClient};
-use oro_common::{Access, Attachments, Dist, Manifest, Packument, VersionMetadata};
+use oro_common::{Access, Attachments, Dist, Manifest, Packument, PublishConfig, VersionMetadata};
 use sha1::{Digest, Sha1};
 use ssri::{Algorithm, IntegrityOpts};
 use std::collections::HashMap;
@@ -145,6 +145,23 @@ impl Default for PublishOptions {
             default_tag: "latest".to_owned(),
             client: OroClient::new(Url::parse("https://registry.npmjs.org").unwrap()),
         }
+    }
+}
+
+impl PublishOptions {
+    pub fn merge(self, config: PublishConfig) -> Self {
+        Self {
+            access: config.access.unwrap_or(self.access),
+            default_tag: config.default_tag.unwrap_or(self.default_tag),
+            ..self
+        }
+    }
+
+    pub fn maybe_merge(self, config: Option<PublishConfig>) -> Self {
+        if let Some(config) = config {
+            return self.merge(config);
+        }
+        self
     }
 }
 
