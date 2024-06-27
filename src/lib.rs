@@ -86,6 +86,7 @@
 //! [our contribution guide]: https://orogene.dev/CONTRIBUTING/
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
+use std::time::Instant;
 use std::{
     borrow::Cow,
     collections::VecDeque,
@@ -678,21 +679,35 @@ impl Orogene {
     }
 
     pub async fn load() -> Result<()> {
-        let start = std::time::Instant::now();
+        Self::init_and_run(
+            Self::current_command(),
+            std::env::args_os().collect::<Vec<_>>(),
+        )
+        .await
+    }
+
+    pub async fn init_and_run(command: Command, args: Vec<OsString>) -> Result<()> {
+        let start = Instant::now();
         // We have to instantiate Orogene twice: once to pick up "base" config
         // options, like `root` and `config`, which affect our overall config
         // parsing, and then a second time to pick up config options from the
         // config file(s). The first instantiation also ignores errors,
         // because what we really need to apply the negations to is the
         // subcommand we're interested in.
-        let command = Self::current_command();
-        let matches = command.clone().get_matches();
-        let oro = Orogene::from_arg_matches(&matches).into_diagnostic()?;
+        let matches = command.clone().get_matches_from(args.clone());
+        let oro = Orogene::from_arg_matches(&matches).expect("Failed to match args");
         let config = oro.build_config()?;
-        let mut args = std::env::args_os().collect::<Vec<_>>();
+        Self::entry(start, oro, config, command, args).await
+    }
+
+    pub async fn entry(
+        start: Instant,
+        mut oro: Orogene,
+        config: OroConfig,
+        command: Command,
+        mut args: Vec<OsString>,
+    ) -> Result<()> {
         Self::layer_command_args(&command, &mut args, &config)?;
-        let mut oro =
-            Orogene::from_arg_matches(&command.get_matches_from(&args)).into_diagnostic()?;
         let log_file = oro
             .cache
             .clone()
