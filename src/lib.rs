@@ -86,13 +86,12 @@
 //! [our contribution guide]: https://orogene.dev/CONTRIBUTING/
 //! [Apache 2.0 License]: https://github.com/orogene/orogene/blob/main/LICENSE
 
+#[cfg(feature = "error-reporting")]
+use std::{borrow::Cow, panic::PanicInfo, sync::Arc};
 use std::{
-    borrow::Cow,
     collections::VecDeque,
     ffi::OsString,
-    panic::PanicInfo,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use async_trait::async_trait;
@@ -598,6 +597,7 @@ impl Orogene {
             .into_diagnostic()
     }
 
+    #[cfg(feature = "error-reporting")]
     fn setup_telemetry(
         &self,
         log_file: Option<PathBuf>,
@@ -700,6 +700,7 @@ impl Orogene {
             .map(|c| c.join("_logs").join(log_file_name()));
         let _logging_guard = oro.setup_logging(log_file.as_deref())?;
         oro.first_time_setup()?;
+        #[cfg(feature = "error-reporting")]
         let _telemetry_guard = oro.setup_telemetry(log_file.clone())?;
         let do_term_progress = !oro.quiet && oro.progress;
         if do_term_progress {
@@ -723,6 +724,7 @@ impl Orogene {
                 tracing::debug!("{e:?}");
                 if let Some(log_file) = log_file.as_deref() {
                     tracing::warn!("A debug log was written to {}", log_file.display());
+                    #[cfg(feature = "error-reporting")]
                     sentry::configure_scope(|s| {
                         s.add_attachment(sentry::protocol::Attachment {
                             filename: log_file
@@ -735,7 +737,9 @@ impl Orogene {
                         });
                     });
                 }
+                #[cfg(feature = "error-reporting")]
                 let dyn_err: &dyn std::error::Error = e.as_ref();
+                #[cfg(feature = "error-reporting")]
                 sentry::capture_error(dyn_err);
                 e
             })?;
