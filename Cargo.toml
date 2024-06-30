@@ -50,7 +50,7 @@ is-terminal = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
 rand = { workspace = true, features = ["thread_rng"], default_features = false }
-sentry = { workspace = true }
+sentry = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 supports-unicode = { workspace = true }
@@ -72,6 +72,10 @@ edition = "2024"
 repository = "https://github.com/orogene/orogene"
 homepage = "https://orogene.dev"
 rust-version = "1.85"
+
+[features]
+default = ["error-reporting"]
+error-reporting = ["sentry"]
 
 [workspace.dependencies]
 anyhow = "1.0.96"
