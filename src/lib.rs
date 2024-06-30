@@ -510,16 +510,45 @@ impl Orogene {
     }
 
     fn first_time_setup(&mut self) -> Result<()> {
-        // We skip first-time-setup operations in CI entirely.
-        if self.first_time && !is_ci::cached() {
-            tracing::info!("Performing first-time setup...");
-            if let Some(config_path) = self.config.clone().or_else(|| {
-                ProjectDirs::from("", "", "orogene")
-                    .map(|p| p.config_dir().to_owned().join("oro.kdl"))
-            }) {
+        if let Some(config_path) = self.config.clone().or_else(|| {
+            ProjectDirs::from("", "", "orogene")
+                .map(|p| p.config_dir().to_owned().join("oro.kdl"))
+        }) {
+            let config_dir = config_path.parent().expect("must have parent");
+            if !config_dir.exists() {
+                std::fs::create_dir_all(config_dir).expect("failed to create config dir");
+            }
+            let mut config: KdlDocument = std::fs::read_to_string(&config_path)
+                .unwrap_or_default()
+                .parse()?;
+
+            // do we have a config file?
+            if !config.is_empty() {
+                // restore first-time as global config
+                if let Some(opt) = config
+                    .get_mut("options")
+                    .expect("must have options")
+                    .children()
+                    .expect("options must have children")
+                    .get("first-time")
+                {
+                    if let Some(val) = opt.get(0) {
+                        // we've been here before; bail
+                        if !val.as_bool().unwrap_or(false) {
+                            self.first_time = false;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+
+            // We skip first-time-setup operations in CI entirely.
+            if self.first_time && !is_ci::cached() {
+                tracing::info!("Performing first-time setup...");
+
                 let config_dir = config_path.parent().expect("must have parent");
                 if !config_dir.exists() {
-                    std::fs::create_dir_all(config_dir).unwrap();
+                    std::fs::create_dir_all(config_dir).expect("failed to create config dir");
                 }
                 let mut config: KdlDocument = std::fs::read_to_string(&config_path)
                     .unwrap_or_default()
@@ -589,7 +618,7 @@ impl Orogene {
                 }
                 std::fs::write(config_path, config.to_string()).into_diagnostic()?;
             }
-        }
+        };
         Ok(())
     }
 
