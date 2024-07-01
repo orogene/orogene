@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+    <head>
+        <title>orogene</title>
+        
+            <meta property="og:url" content="https://orogene.dev" />
+        
+        
+            <link rel="icon" href="/favicon.ico" />
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        
+            <meta name="description" content="`node_modules/` package manager and utility toolkit." />
+            <meta property="og:description" content="`node_modules/` package manager and utility toolkit." />
+        
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="orogene" />
+        
+        
+        
+        <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+        <link rel="stylesheet" href="/oranda-v0.4.1.css" />
+        
+        
+    </head>
+    <body>
+        <div class="container">
+            <div class="page-body">
+                
+                    <div class="repo_banner">
+                        <a href="https://github.com/orogene/orogene">
+                            <div class="github-icon" aria-hidden="true"></div>
+                            Check out our GitHub!
+                        </a>
+                    </div>
+                
+
+                <main>
+                    <header>
+                        
+                        <h1 class="title">orogene</h1>
+                        
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+
+            
+                
+                    <li><a href="/./BENCHMARKS/">Benchmarks</a></li>
+                
+                    <li><a href="/./CONTRIBUTING/">Contributing</a></li>
+                
+            
+
+            
+                <li><a href="/artifacts/">Install</a></li>
+            
+
+            
+                <li><a href="/book/">Docs</a></li>
+            
+
+            
+                <li><a href="/funding/">Funding</a></li>
+            
+
+            
+                <li><a href="/changelog/">Changelog</a></li>
+            
+        </ul>
+    </nav>
+
+                    </header>
+
+                    
+<h1>Contributing to orogene</h1>
+<h2>Finding Something to Do</h2>
+<p>Orogene <a href="https://github.com/orgs/orogene/projects/2/views/1" rel="noopener noreferrer">has a roadmap</a>
+and welcomes contributions! Issues looking for outside help are tagged as
+<a href="https://github.com/orogene/orogene/labels/help%20wanted" rel="noopener noreferrer"><code>help wanted</code></a>. On
+top of that, there are <a href="https://github.com/orogene/orogene/labels/good%20first%20issue" rel="noopener noreferrer"><code>good first issue</code></a> for
+those looking to get started more entry-level tasks.</p>
+<h2>Coding Conventions</h2>
+<p>Orogene uses <a href="https://www.conventionalcommits.org/en/v1.0.0/" rel="noopener noreferrer">conventional
+commits</a> as its commit message
+format. Ideally, any pull requests will already use this style when
+submitting, but commit messages will simply be editorialized on merge if not,
+so consider this a soft request.</p>
+<p>This repo uses both <code>clippy</code> and <code>rustfmt</code> to maintain consistency. Before
+submitting a pull request, please make sure to run both <code>cargo clippy --all</code>
+and <code>cargo fmt --all</code>.</p>
+<h2>Getting up and running</h2>
+<p>Orogene is a pretty run-of-the-mill Rust app and only requires a couple of
+steps to get up and running.</p>
+<h3>Build Dependencies</h3>
+<p>You will need <a href="https://git-scm.com/downloads" rel="noopener noreferrer">git</a> in order to fetch the
+orogene sources. Next, to get a checkout:</p>
+<pre style="background-color:#263238;"><span style="color:#eeffff;">git clone https://github.com/orogene/orogene.git
+</span><span style="color:#eeffff;">cd orogene
+</span></pre>
+
+<p>Additionally, some tools are required to compile/build orogene:</p>
+<ol>
+<li>(Linux only) An available OpenSSL installation: <a href="https://docs.rs/openssl/latest/openssl/#automatic" rel="noopener noreferrer">https://docs.rs/openssl/latest/openssl/#automatic</a></li>
+<li>Cargo, which can be installed using <a href="https://rustup.rs/" rel="noopener noreferrer">rustup</a></li>
+<li>Clippy, which is a component that should be added through rustup.</li>
+</ol>
+<p>orogene is built against relatively recent <code>stable</code> versions of Rust. For a
+specific version to install, refer to <code>Cargo.toml</code>'s <code>[package]</code> section, as
+<code>rust-version</code>.</p>
+<p>If you plan on builing wasm packages for orogene sub-crates, you'll also need:</p>
+<ol>
+<li><code>cargo install -f wasm-bindgen-cli</code></li>
+<li><code>cargo install -f wasm-pack</code> (or installed <a href="https://rustwasm.github.io/wasm-pack/installer/" rel="noopener noreferrer">prebuilt binaries</a>)</li>
+</ol>
+<h3>Building the CLI</h3>
+<p>Linux has a couple of build requirements. These can be installed on ubuntu
+with the following command. Adapt as needed for your distro:</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">sudo apt-get install build-essential pkg-config libssl-dev
+</span></pre>
+
+<p>On Windows, you'll need a working <code>msvc</code>.</p>
+<p>You can build the CLI using a plain <code>cargo build</code> (optionally with
+<code>--release</code>), and binaries will be available in your local
+<code>./target/{debug,release}/oro[.exe]</code> directory.</p>
+<p>The <code>oro</code>/<code>oro.exe</code> is a standalone binary but, <strong>on Linux</strong>, does require a
+valid installation of <code>openssl 1</code> installed on the system in order to run.</p>
+<h3>Building WASM packages</h3>
+<p>There's currently two packages with support for WASM, only one of which should
+really be used right now: <code>crates/nassun</code> and <code>crates/node-maintainer</code>. Both
+of them are published to the NPM registry as part of <code>orogene</code>'s release
+process.</p>
+<p><code>node-maintainer</code> is orogene's dependency resolver and is responsible for
+calculating dependency trees based on package.json, lockfiles, etc. Extraction
+to filesystems is not supported in WASM mode because it is built for
+<code>wasm32-unknown-unknown</code>, not <code>wasm-wasi</code>. <code>node-maintainer</code> also exports
+<code>nassun</code>'s APIs under the same wasm package, so it's not recommended to
+install <em>both</em> <code>nassun</code> and <code>node-maintainer</code> wasm packages.</p>
+<p>To build <code>node-maintainer</code>:</p>
+<ol>
+<li>Make sure you're in the orogene project root.</li>
+<li><code>wasm-pack build crates/node-maintainer --target web</code></li>
+<li>There will now be an NPM package under <code>crates/node-maintainer/pkg</code> that
+can be packed, copied (to vendor it somewhere, etc).</li>
+</ol>
+<h2>Working on the installer</h2>
+<p>Orogene's "install" command is called <code>apply</code>. During development, you can
+call it like this:</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">$ cargo run </span><span style="font-style:italic;color:#c792ea;">[</span><span style="color:#82aaff;">-</span><span style="color:#89ddff;">-</span><span style="color:#82aaff;">release</span><span style="font-style:italic;color:#c792ea;">]</span><span style="color:#89ddff;"> --</span><span style="color:#82aaff;"> apply </span><span style="font-style:italic;color:#c792ea;">[</span><span style="color:#82aaff;">-</span><span style="color:#89ddff;">-</span><span style="color:#82aaff;">root ../path/to/test/react</span><span style="color:#89ddff;">-</span><span style="color:#82aaff;">app</span><span style="font-style:italic;color:#c792ea;">] [</span><span style="color:#82aaff;">-</span><span style="color:#89ddff;">-</span><span style="color:#82aaff;">oro</span><span style="color:#89ddff;">-</span><span style="color:#82aaff;">cache ./path/to/cache</span><span style="font-style:italic;color:#c792ea;">] [</span><span style="color:#82aaff;">-</span><span style="color:#89ddff;">-</span><span style="color:#82aaff;">loglevel info</span><span style="font-style:italic;color:#c792ea;">]
+</span></pre>
+
+<p>It might be worth it to run with <code>--release</code> every time if you plan on seeing
+applies to completion, because debug builds of orogene are pretty slow.</p>
+<p>The apply command itself is defined in <code>src/commands/apply.rs</code>, and is
+pretty much a UI wrapper around <code>crates/node-maintainer</code>'s APIs.</p>
+<p>If you're only interested in the dependency resolution aspect of <code>apply</code>,
+you can run with <code>--lockfile-only</code>, which will skip the much more expensive
+extraction process.</p>
+<h2>Logging</h2>
+<p>orogene uses <a href="https://docs.rs/tracing" rel="noopener noreferrer">tracing</a> and
+<a href="https://docs.rs/tracing-subscriber" rel="noopener noreferrer">tracing-subscriber</a> for tracing and
+logging capabilities, which can be configured through <code>--loglevel</code>. The syntax
+for this option is documented
+<a href="https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives" rel="noopener noreferrer">here</a>.
+For example, <code>cargo run -- apply --loglevel node_maintainer=trace,info</code> will
+default to INFO-level logging for everything, but also include TRACE-level
+logging for anything logged by <code>node-maintainer</code> (node the underscore. It's
+based on the module name, not the crate.)</p>
+<h2>Tagging and Releasing New Versions</h2>
+<p>Releasing orogene is a four-step process:</p>
+<ol>
+<li>First, we make sure all the READMEs are up-to-date.</li>
+<li>Then, a changelog is generated, editorialized, and commited.</li>
+<li>After that, a command is run to release the entire repository in lockstep.</li>
+<li>Finally, an automated process takes care of generating a GitHub release and
+building prebuilt binaries for distribution.</li>
+</ol>
+<p>In order to follow these steps, you'll need to intall <code>cargo-make</code>:</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">$ cargo install</span><span style="color:#89ddff;"> -</span><span style="color:#f78c6c;">f</span><span style="color:#82aaff;"> cargo-make
+</span></pre>
+
+<h3>Generate/Update READMEs</h3>
+<p>First, make sure <code>crates/README.md</code> is up-to-date with the latest crates
+available under <code>crates/</code>, in case any of them have been added, removed, or
+had significant description changes.</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">$ cargo make readmes
+</span></pre>
+
+<p>This command will update and/or update crate READMEs based on rustdoc from
+their main modules.</p>
+<p>If there were any changes, add and commit them with <code>git add</code> and <code>git commit -m 'docs: update READMEs'</code></p>
+<h3>Changelog</h3>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">$ cargo make changelog X.Y.Z
+</span></pre>
+
+<p>Where <code>X.Y.Z</code> is the full target semver version of the intended upcoming
+release.</p>
+<p>This will automatically update <code>CHANGELOG.md</code> with commits based on
+conventional-commits in the git log.</p>
+<p>If any additional messages are to be included, please add them under the new
+version header.</p>
+<p><code>git add CHANGELOG.md</code> and <code>git commit -m 'docs: update changelog'</code> to
+complete this step.</p>
+<h3>Tag and Release</h3>
+<p>First, do a quick dry run:</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">$ cargo make release X.Y.Z
+</span></pre>
+
+<p>If everything looks good, execute it for real. You'll need to make sure you're
+logged into both GitHub and crates.io and allowed to publish and push to
+GitHub main:</p>
+<pre style="background-color:#263238;"><span style="color:#82aaff;">$ cargo make release X.Y.Z</span><span style="color:#89ddff;"> --</span><span style="color:#f78c6c;">execute
+</span></pre>
+
+<p>This will take care of publishing all the crates in the repository under
+version <code>X.Y.Z</code> to crates.io, tagging a new git tag, and pushing everything to
+GitHub when it's done.</p>
+<h3>GitHub Release</h3>
+<p>orogene uses <a href="https://opensource.axo.dev/cargo-dist/" rel="noopener noreferrer">cargo-dist</a> for
+generating prebuilt binaries and GitHub Releases. No intervention is necessary
+here. This is handled by a GitHub Action configured under
+<a href="https://github.com/orogene/orogene/actions/workflows/release.yml" rel="noopener noreferrer"><code>.github/workflows/release.yml</code></a>.</p>
+<p>It may take some time for everything to build, but the final release will be
+made available under <code>https://github.com/orogene/orogene/releases/tag/vX.Y.Z</code>,
+at which point the new version may be announced.</p>
+
+
+                </main>
+            </div>
+
+            <footer>
+                
+                    <a href="https://github.com/orogene/orogene"><div class="github-icon" aria-hidden="true"></div></a>
+                
+                <span>
+                    orogene, Apache-2.0
+                </span>
+            </footer>
+        </div>
+
+        
+        
+
+        
+    </body>
+</html>

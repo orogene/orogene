@@ -1,0 +1,1760 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js oranda-dark">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Orogene</title>
+        <meta name="robots" content="noindex" />
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+        <link rel="stylesheet" href="oranda-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oranda-dark" : "oranda-dark";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('orandamdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('orandamdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('orandamdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('oranda-dark')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="introduction.html">Introduction</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><li class="part-title">User Guide</li><li class="chapter-item expanded "><a href="guide/configuration.html"><strong aria-hidden="true">1.</strong> Configuration</a></li><li class="chapter-item expanded "><a href="guide/node_modules.html"><strong aria-hidden="true">2.</strong> Managing node_modules/</a></li><li class="chapter-item expanded "><a href="guide/authentication.html"><strong aria-hidden="true">3.</strong> Authentication</a></li><li class="chapter-item expanded "><a href="guide/telemetry.html"><strong aria-hidden="true">4.</strong> Telemetry</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><li class="part-title">Commands</li><li class="chapter-item expanded "><a href="commands/add.html"><strong aria-hidden="true">5.</strong> add</a></li><li class="chapter-item expanded "><a href="commands/apply.html"><strong aria-hidden="true">6.</strong> apply</a></li><li class="chapter-item expanded "><a href="commands/login.html"><strong aria-hidden="true">7.</strong> login</a></li><li class="chapter-item expanded "><a href="commands/logout.html"><strong aria-hidden="true">8.</strong> logout</a></li><li class="chapter-item expanded "><a href="commands/ping.html"><strong aria-hidden="true">9.</strong> ping</a></li><li class="chapter-item expanded "><a href="commands/reapply.html"><strong aria-hidden="true">10.</strong> reapply</a></li><li class="chapter-item expanded "><a href="commands/remove.html"><strong aria-hidden="true">11.</strong> remove</a></li><li class="chapter-item expanded "><a href="commands/view.html"><strong aria-hidden="true">12.</strong> view</a></li><li class="spacer"></li><li class="chapter-item expanded affix "><li class="part-title">Development</li><li class="chapter-item expanded "><a href="contributing.html"><strong aria-hidden="true">13.</strong> Contributing Guide</a></li><li class="chapter-item expanded "><a href="code-of-conduct.html"><strong aria-hidden="true">14.</strong> Code of Conduct</a></li><li class="chapter-item expanded "><a href="changelog.html"><strong aria-hidden="true">15.</strong> Changelog</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="oranda-dark">Oranda Dark</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="oranda-light">Oranda Light</button></li>
+
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Orogene</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<div style="display: flex; justify-content: center;">
+    <img src="../../assets/logo-optimized.png" width="50%">
+</div>
+<p>Orogene is a package manager for building up and writing <code>node_modules/</code>
+directories, as well as a general toolkit for working with related packages
+and APIs.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
+<h2 id="the-orokdl-config-file"><a class="header" href="#the-orokdl-config-file">The <code>oro.kdl</code> Config File</a></h2>
+<p>Options are read from three possible <code>oro.kdl</code> file locations:</p>
+<ol>
+<li><code>oro.kdl</code>, located in the root of the current project.</li>
+<li><code>oro.kdl</code>, located in a <a href="https://docs.rs/directories/latest/directories/struct.ProjectDirs.html#method.config_dir">system-dependent
+location</a></li>
+<li>Any file specified by using the global <code>--config FILE</code> CLI option. When
+this option is specified, neither of the other configuration files are
+loaded, and file-based configuration happens entirely off the given file.
+Environment variables and command line options will still be loaded
+normally.</li>
+</ol>
+<p>All files files use <a href="https://kdl.dev">KDL</a> as their configuration language.
+Key/value options are typically specified using <code>node-name &quot;value&quot;</code> format.
+For example, <code>foo &quot;bar&quot;</code> would be the equivalent of <code>--foo bar</code>. For boolean
+operations, use <code>foo true</code> and <code>foo false</code>. If an empty node name is found,
+that will be treated as if it had a value of <code>true</code>. Negations (<code>no-foo</code>) are
+not supported.</p>
+<p>Some configurations, such a <a href="guide/configuration.html#options-from-orokdl">Options</a>, exist in nested
+nodes. Refer to their dedicated sections for more details.</p>
+<h2 id="options"><a class="header" href="#options">Options</a></h2>
+<p>In Orogene, &quot;options&quot; refers to configurations that can be provided through
+the command line.</p>
+<h3 id="available-options"><a class="header" href="#available-options">Available Options</a></h3>
+<p>All available options for individual commands are available by doing <code>oro &lt;subcommand&gt; --help</code>, or by visiting the individual commands' documentation
+pages on this site.</p>
+<p>&quot;Global Options&quot; can potentially be used across all commands and have a shared
+meaning. Global options are always listed and accepted for all commands, even
+if the individual commands do not make use of them.</p>
+<p>Commands with an &quot;Apply Options&quot; section support <a href="guide/./node_modules.html">implicit dependency
+application</a>. Any that don't have that section do not
+interact with <code>node_modules</code> at all.</p>
+<h3 id="specifying-options"><a class="header" href="#specifying-options">Specifying Options</a></h3>
+<p>Orogene options can be provided in three different ways, in order of precedence:</p>
+<ol>
+<li>Direct command line flags (<code>--foo blah</code>), which can be negated (<code>--no-foo</code>)</li>
+<li><a href="https://kdl.dev">KDL</a> <a href="guide/configuration.html#configuration-files">configuration file(s)</a>
+(<code>oro.kdl</code>), inside the <code>options</code> node.</li>
+<li>Environment variables, prefixed by <code>oro_config_</code> (<code>oro_config_foo=blah</code>)</li>
+</ol>
+<h2 id="options-from-orokdl"><a class="header" href="#options-from-orokdl">Options from <code>oro.kdl</code></a></h2>
+<p>Options can be specified through <code>oro.kdl</code> by using the toplevel <code>options</code>
+node. For example:</p>
+<pre><code class="language-kdl">// ./oro.kdl
+options {
+    registry &quot;https://my.private.registry/_path&quot;
+    emoji false
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="managing-node_modules"><a class="header" href="#managing-node_modules">Managing <code>node_modules/</code></a></h1>
+<p>The whole point of Orogene is to manage <code>node_modules/</code> directories for
+consumption by various tooling, such as Node.js, transpilers, bundlers,
+linters, etc.</p>
+<p>The process of managing <code>node_modules/</code> and making sure all the appropriate
+dependencies are in place is called &quot;apply&quot; in orogene. Application happens
+through a number of commands, automatically. For example, <code>oro reapply</code>, <code>oro add</code>, <code>oro remove</code>, and <code>oro run</code> all make sure to apply your dependencies as
+needed, to make sure your <code>node_modules/</code> corresponds to your manifest and
+lockfile as much as possible. You can <a href="guide/node_modules.html#--no-apply">disable this behavior</a>, as
+desired.</p>
+<h2 id="application-blow-by-blow"><a class="header" href="#application-blow-by-blow">Application blow-by-blow</a></h2>
+<p>By default, the <code>apply</code> operation will do the following things:</p>
+<ol>
+<li>Read dependencies declared in <code>package.json</code>.</li>
+<li>Generate a dependency tree based on those.
+<ol>
+<li>If a lockfile (<code>package-lock.kdl</code> or <code>package-lock.json</code>) already
+exists, it will be used to <strong>supplement</strong> the resolution.</li>
+<li>If any dependencies in the lockfile are missing or don't correspond to
+expected dependencies, the tree will ignore that particular lockfile
+data and resolve the item(s) itself.</li>
+</ol>
+</li>
+<li>Scan through the existing <code>node_modules/</code>, if any, and prune anything
+&quot;extraneous&quot; (aka, removed/outdated dependencies, stray files, etc).</li>
+<li>Extract any missing packages into <code>node_modules</code>, into one of two modes:
+<ol>
+<li>isolated (default, preferred)</li>
+<li>hoisted (possibly more compatible, discouraged because it exposes
+<a href="guide/node_modules.html#phantom-dependencies">phantom dependencies</a>)</li>
+</ol>
+</li>
+<li>Execute any <code>preinstall</code> scripts on the entire tree, including the root
+package.</li>
+<li>Link/shim any bins in the dependencies to their appropriate
+<code>node_modules/.bin</code> directories.</li>
+<li>Execute <code>install</code> and <code>postinstall</code> scripts on the entire tree, including
+the root package.</li>
+<li>Finally, the updated lockfile is written to <code>package-lock.kdl</code>.</li>
+</ol>
+<h3 id="modifying-application"><a class="header" href="#modifying-application">Modifying Application</a></h3>
+<p>All commands that execute implicit apply accept the same options for modifying
+its behavior. To see the full list, refer to the <a href="guide/../commands/apply.html#apply-options">apply command
+options</a>, which are also listed in the
+<code>-h</code>/<code>--help</code> for any command that performs implicit apply.</p>
+<p>Some options of note:</p>
+<h4 id="--no-apply"><a class="header" href="#--no-apply"><code>--no-apply</code></a></h4>
+<p>Skips the entire apply operation. This option will have no effect on the <code>oro apply</code> command, which forces an apply regardless of your settings.</p>
+<p>This option can be useful if you don't like implicit applies and would like to
+generally configure Orogene to skip them by default, but let you use <code>--apply</code>
+when you happen to want to apply something. To do this, add <code>apply false</code> to
+your <a href="guide/./configuration.html#options-from-orokdl"><code>oro.kdl</code> options node</a>.</p>
+<h4 id="--locked"><a class="header" href="#--locked"><code>--locked</code></a></h4>
+<p>Instead of using lockfiles as a suggestion/optimization, this option will
+force an error if the dependencies declared in <code>package.json</code> don't correspond
+to the ones declared in an existing <code>package-lock.kdl</code>.</p>
+<p>This option has no effect in <code>oro add</code>/<code>oro remove</code>, for hopefully obvious reasons.</p>
+<h4 id="--lockfile-only"><a class="header" href="#--lockfile-only"><code>--lockfile-only</code></a></h4>
+<p>Resolves the dependency tree and writes the lockfile as appropriate, but skips
+anything having to do with <code>node_modules</code> itself, including pruning and
+scripts.</p>
+<h4 id="--no-lockfile"><a class="header" href="#--no-lockfile"><code>--no-lockfile</code></a></h4>
+<p>Skips writing, or updating the lockfile entirely. As of right now, this will
+still <strong>read</strong> the lockfile to inform resolution.</p>
+<h2 id="adding-or-removing-dependencies"><a class="header" href="#adding-or-removing-dependencies">Adding or Removing Dependencies</a></h2>
+<p>You can modify your current project's dependencies three different ways:</p>
+<ol>
+<li>Use the <a href="guide/../commands/add.html"><code>oro add</code></a> command.</li>
+<li>Use the <a href="guide/../commands/remove.html"><code>oro remove</code></a> command.</li>
+<li>Edit <code>package.json</code> manually and rerun <a href="guide/../commands/apply.html"><code>oro apply</code></a>.</li>
+</ol>
+<p>When any of these methods are used, orogene will update the current dependency
+tree such that the changed dependencies are reflected. This process means that
+the dependencies specified in <code>package-lock.kdl</code> won't necessarily be obeyed:
+In general, Orogene will do its best to preserve a dependency's previous
+position in the tree, but if a conflict happens, it may be moved or replaced.</p>
+<p>In order to guarantee that Orogene only accepts tree modifications on <code>oro add</code>/<code>oro remove</code>, you can use the <a href="guide/node_modules.html#locked"><code>--locked</code></a> option.</p>
+<h2 id="specifier-syntax"><a class="header" href="#specifier-syntax">Specifier syntax</a></h2>
+<p>A package specifier in orogene is a string describing which package should be
+resolved. This string, in some cases (such as in the CLI) can include a name
+under which to install that dependency. Specifiers are used both through the
+<code>add</code> CLI commands, or in the value field in your dependency objects, next to
+the requested package names.</p>
+<h3 id="alias"><a class="header" href="#alias">Alias</a></h3>
+<p>Syntax: <code>&lt;alias&gt;@&lt;specifier&gt;</code></p>
+<p>Alias specifiers work a lot like NPM specifiers, but are able to force a
+dependency to use a certain name in the <code>node_modules</code> tree.</p>
+<p>When specifying an alias for an NPM registry package, you must use the <code>npm:</code>
+prefix before the NPM specifier itself. All other specifiers can be provided
+as-is.</p>
+<p><em>Examples: <code>underscore@npm:lodash</code>, <code>underscore@github:lodash/lodash</code></em></p>
+<h3 id="npm"><a class="header" href="#npm">NPM</a></h3>
+<p>Syntax: <code>&lt;package-name&gt;[@(&lt;semver&gt; | &lt;tag&gt;)]</code></p>
+<p>NPM specifiers refer to &quot;regular&quot; NPM packages from a registry. The
+<code>&lt;package-name&gt;</code> can be any valid scoped or unscoped package name. If followed
+by an <code>@</code>, either a semver range or a dist-tag can be specified.</p>
+<p>When used in <code>package.json</code>, the <code>&lt;package-name&gt;</code> must be omitted, and it is
+recommended that only semver ranges be used.</p>
+<p><em>Examples: <code>lodash</code>, <code>lodash@3</code>, <code>@axodotdev/oranda@1.2.3</code></em></p>
+<h3 id="path"><a class="header" href="#path">Path</a></h3>
+<p>Syntax: <code>&lt;./relative/path&gt; | &lt;C:\absolute\path&gt;</code></p>
+<p>Path specifiers refer to the directory in the local machine where a package
+exists. They can either be relative (in which case they must be prefixed by
+<code>./</code> or <code>.\</code>), or absolute (in which case they must start with either <code>/</code> or a
+drive letter).</p>
+<p><em>Examples</em>: <code>./path/to/my/proj</code>, <code>C:\src\foo</code></p>
+<h3 id="hosted-git"><a class="header" href="#hosted-git">Hosted Git</a></h3>
+<p>Syntax: <code>&lt;host&gt;:&lt;org&gt;/&lt;proj&gt;[#(&lt;rev&gt; | semver:&lt;semver&gt;)]</code></p>
+<p>Hosted git specifiers refer to packages on a handful of well-known hosted git
+platforms, and can be used as a shorthand. You may optionally provide either a
+git rev or a <code>semver:</code>-prefixed semver range following a <code>#</code> to resolve to a
+particular version, instead of the latest <code>HEAD</code>.</p>
+<p>Supported platforms: <code>github</code>, <code>gitlab</code>, <code>gist</code>, <code>bitbucket</code>.</p>
+<p><em>Examples: <code>github:orogene/orogene</code>, <code>gist:foo/bar#deadcafe</code>, <code>gitlab:baz/quux#semver:^1.2</code></em></p>
+<h3 id="git"><a class="header" href="#git">Git</a></h3>
+<p>Syntax: <code>[git+]&lt;git-url&gt;[#(&lt;rev&gt; | semver:&lt;semver&gt;)]</code></p>
+<p>Arbitrary git URLs can also be provided to Orogene. For <code>git://</code> URLs, no
+prefix is necessary, but other URL types must include a <code>git+</code> prefix. You may
+optionally provide either a git rev or a <code>semver:</code>-prefixed semver range
+following a <code>#</code> to resolve to a particular version, instead of the latest
+<code>HEAD</code>.</p>
+<p><em>Examples: <code>git://github.com/lodash/lodash</code>, <code>git+ssh://codeberg.org/foo/bar.git#semver:^1.2.3</code></em></p>
+<h2 id="phantom-dependencies"><a class="header" href="#phantom-dependencies">Phantom Dependencies</a></h2>
+<p>&quot;Phantom dependencies&quot; refers to a phenomenon where dependencies that weren't
+directly declared in a package's <code>package.json</code> can be imported from those
+packages. It arises primarily from &quot;hoisted&quot; <code>node_modules</code> trees where, in
+order to reduce duplication, shared dependencies are moved as high up the tree
+as possible, exposing them to everyone <em>else</em> at that level or deeper.</p>
+<p>By default, Orogene uses an &quot;isolated&quot; linking strategy to avoid this: All
+dependencies are first written to
+<code>&lt;root&gt;/node_modules/.oro-store/&lt;dep&gt;-12345/node_modules/&lt;dep&gt;</code>, then every
+dependency inside the store, along with the root package,  gets their own
+individual <code>node_modules</code> that contains symlinks <em>back into the store</em>, only
+for dependencies directly declared in their <code>package.json</code>. This avoids the
+phantom dependencies problems and ensures that you don't accidentally forget
+to add a dependency to your <code>package.json</code> just because of the state of your
+dependency tree at any given point in time.</p>
+<p>The catch with this isolated mode is that most NPM packages in the public
+registry have been written in a world where the NPM CLI defaults to &quot;hoisted&quot;
+installations, so a number of packages out in the wild depend on this
+behavior, purely by accident. The best fix for this is simply to patch the
+offending package and install an updated version.</p>
+<p>When this is not possible, you can use <code>--hoisted</code> to force Orogene to apply
+dependencies in a classic, flattened-as-much-as-possible style. As with other
+options, this can be added to your <code>oro.kdl</code> as needed.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="authentication-and-private-registries"><a class="header" href="#authentication-and-private-registries">Authentication and Private Registries</a></h1>
+<p>Orogene supports logging in/out of both the main regisry, as well as
+alternative/private registries. It supports three authentication methods:</p>
+<h2 id="using-oro-login"><a class="header" href="#using-oro-login">Using <code>oro login</code></a></h2>
+<p><code>oro login</code> supports configuring all authorization methods, and is able to
+authenticate and log in and fetch a token for <a href="guide/authentication.html#bearer-token">Bearer Token</a>
+authorization.</p>
+<p>When done, it will automatically add the relevant authorization credentials to
+your global <code>oro.kdl</code>. If <code>--config &lt;file&gt;</code> is passed in, credentials will be
+written to <code>&lt;file&gt;</code> instead. You can also pass in <code>--registry</code> to specify a
+registry to log in to, and <code>--scope</code> to associate this registry with a
+particular scope.</p>
+<h2 id="authorization-credentials"><a class="header" href="#authorization-credentials">Authorization Credentials</a></h2>
+<p>There's three possible method of providing authorization information when
+interacting with a registry. Each of these can be configured by the <code>options &gt; auth</code> node in <code>oro.kdl</code>, with the node name being the registry the auth
+information applies to. Additionally, <code>options &gt; scoped-registries</code> will be
+used to determine which registry auth should be picked for a particular
+package.</p>
+<p>For example:</p>
+<pre><code class="language-kdl">// oro.kdl
+options {
+    scoped-registries {
+        &quot;@mycompany&quot; &quot;https://my.company.registry.net&quot;
+    }
+    auth {
+        &quot;https://registry.npmjs.org&quot; token=&quot;deadbeef&quot;
+        &quot;https://my.company.registry.net&quot; username=&quot;myuser&quot; password=&quot;mypassword&quot;
+    }
+}
+</code></pre>
+<p>When making any requests to a registry, configured credentials will <em>always</em>
+be automatically included in the <code>Authorization</code> header, encoded
+appropriately. Authorization will also take into account scopes when fetching
+or pushing individual packages and their metadata.</p>
+<p>When package tarballs are hosted on a separate registry than the package's
+configured registry (as determined by its scope or lack thereof),
+authorization information will not be sent.</p>
+<h3 id="bearer-token"><a class="header" href="#bearer-token">Bearer Token</a></h3>
+<p>This is usually acquired through a login operation with the registry, and is
+the preferred and more secure way of managing authorization.</p>
+<p>Bearer token auth will be sent in the form of an HTTP header that looks like:</p>
+<pre><code>Authorization: Bearer deadbeefbadc0ffee
+</code></pre>
+<p>You can configure a bearer token using <code>oro login</code> by either invoking it
+as-is, in which case you will be taken through an actual login flow with the
+registry, or you can pass a <code>--token &lt;token&gt;</code> option directly to skip this, if
+you already have a known token. You can also pass <code>--auth-type legacy</code> to log
+in using classic command-line-prompt username/password instead of web-based
+login. Unlike the main NPM CLI, an email is not collected, and a new account
+cannot be create using <code>oro login</code>.</p>
+<p>Given an invocation like <code>oro login --registry https://my.custom.registry.net --scope @mycompany</code>, you will be taken to that registry's login page, and,
+when done, your <code>oro.kdl</code> will look something like this:</p>
+<pre><code class="language-kdl">// oro.kdl
+options {
+    scoped-registries {
+        &quot;@mycompany&quot; &quot;https://my.custom.registry.net&quot;
+    }
+    auth {
+        &quot;https://my.custom.registry.net&quot; token=&quot;deadbeef&quot;
+    }
+}
+</code></pre>
+<p>In NPM CLI terms, this maps to <code>:_authToken</code> and <code>:token</code>, which are synonyms.</p>
+<h3 id="basic-auth"><a class="header" href="#basic-auth">Basic Auth</a></h3>
+<p>You can provide a username and (optional) password to send to the configured
+registry. This is not recommended if you can avoid it, since it involves
+storing your auth information in plain text in an <code>oro.kdl</code> file, but is a
+common practice for third-party registries.</p>
+<p>Note that unlike the official NPM CLI, the password should <em>not</em> be
+base64-encoded, and should be stored in its original unencoded text.</p>
+<p>You can use <code>oro login</code> to configure this authorization method, although no
+authentication will happen: it will simply write it to your <code>oro.kdl</code>. To do
+this, pass <code>--username &lt;username&gt;</code> and an optional <code>--password &lt;password&gt;</code>
+when invoking <code>oro login</code>.</p>
+<p>Basic auth will be sent in the form of an HTTP header that looks like:</p>
+<pre><code>Authorization: Basic ${toBase64(username + &quot;:&quot; + password)}
+</code></pre>
+<p>In NPM CLI terms, this maps to <code>:username</code> and <code>:_password</code>, and does not
+require an <code>:email</code> equivalent to be set.</p>
+<h3 id="legacy-auth"><a class="header" href="#legacy-auth">Legacy Auth</a></h3>
+<p>Finally, you can provide what Orogene calls a &quot;legacy&quot; auth token, which is
+essentially basic auth, and is used by certain tools to configure login
+information. This token is not usually secure, since it's supposed to be
+base64-encoded username and password information.</p>
+<p>You can use <code>oro login</code> to configure this authorization method, although no
+authentication will happen: it will simply write it to your <code>oro.kdl</code>. To do
+this, pass <code>--legacy-token &lt;token&gt;</code> when invoking <code>oro login</code>.</p>
+<p>Legacy auth will be sent as-is to the chosen registry:</p>
+<pre><code>Authorization: Basic deadbeefbadc0ffee
+</code></pre>
+<p>In NPM CLI terms, this maps to <code>:_auth</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="telemetry"><a class="header" href="#telemetry">Telemetry</a></h1>
+<p>Orogene supports fully opt-in, anonymous telemetry in order to improve the
+project and find issues that would otherwise not get reported, or lack enough
+information to take action on.</p>
+<h2 id="configuration-1"><a class="header" href="#configuration-1">Configuration</a></h2>
+<p>You'll be prompted on first orogene run if you would like to enable telemetry.
+It will not be enabled unless you explicitly say yes to the prompt. The
+configuration will then be saved to your <a href="guide/./configuration.html#the-orokdl-config-file">global <code>oro.kdl</code> config
+file</a>, under <code>options { telemetry &lt;value&gt;; }</code>. You can change your decision at any time by changing this
+setting.</p>
+<p>Telemetry is currently processed using <a href="https://sentry.io">Sentry.io</a>. If
+you'd like to send telemetry information to your own Sentry organization, you
+can do so with the <code>--sentry-dsn</code> option (or <code>sentry-dsn</code> in your <code>oro.kdl</code>
+files, either global or per-project, or <code>oro_sentry_dsn</code> environment
+variable).</p>
+<h2 id="privacy--pii"><a class="header" href="#privacy--pii">Privacy &amp; PII</a></h2>
+<p>Orogene uses as many settings as possible in Sentry to make sure all possible
+PII is scrubbed from telemetry events. Additionally, data is only retained for
+90 days, including error reports, at which point it's automatically scrubbed
+by Sentry. Unfortunately, this is not configurable.</p>
+<p>Additionally, when errors happen, the <code>oro-debug-*.log</code> file may be uploaded
+as an attachment to the error report. This may contain paths related to your
+project, which may include the username, and the names of registries and
+packages you may be using. It is recommended that you not opt in to telemetry
+if this is unacceptable.</p>
+<h2 id="public-dashboard"><a class="header" href="#public-dashboard">Public Dashboard</a></h2>
+<p>In the interest of sharing, transparency, and helping Orogene's users, a
+number of anonymous statistics collected from telemetry are made available <a href="https://orogene.grafana.net/public-dashboards/f75247ab87e14eac9e11ad2034ae3f66?orgId=1">on
+a public Grafana
+dashboard</a>.</p>
+<p>Please note that dashboard queries may change at any time, but the general
+intentions behind privacy/PII concerns will be maintained.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-add"><a class="header" href="#oro-add">oro add</a></h1>
+<p>Adds one or more dependencies to the target package</p>
+<h3 id="usage"><a class="header" href="#usage">Usage:</a></h3>
+<pre><code>oro add [OPTIONS] &lt;SPECS&gt;...
+</code></pre>
+<h3 id="arguments"><a class="header" href="#arguments">Arguments</a></h3>
+<h4 id="specs"><a class="header" href="#specs"><code>&lt;SPECS&gt;...</code></a></h4>
+<p>Specifiers for packages to add</p>
+<h3 id="options-1"><a class="header" href="#options-1">Options</a></h3>
+<h4 id="--prefix-prefix"><a class="header" href="#--prefix-prefix"><code>--prefix &lt;PREFIX&gt;</code></a></h4>
+<p>Prefix to prepend to package versions for resolved NPM dependencies.</p>
+<p>For example, if you do <code>oro add foo@1.2.3 --prefix ~</code>, this will write <code>&quot;foo&quot;: &quot;~1.2.3&quot;</code> to your <code>package.json</code>.</p>
+<p>[default: ^]</p>
+<h4 id="-d---dev"><a class="header" href="#-d---dev"><code>-D, --dev</code></a></h4>
+<p>Add packages as devDependencies</p>
+<h4 id="-o---opt"><a class="header" href="#-o---opt"><code>-O, --opt</code></a></h4>
+<p>Add packages as optionalDependencies</p>
+<p>[aliases: optional]</p>
+<h4 id="-h---help"><a class="header" href="#-h---help"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version"><a class="header" href="#-v---version"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="apply-options"><a class="header" href="#apply-options">Apply Options</a></h3>
+<h4 id="--no-apply-1"><a class="header" href="#--no-apply-1"><code>--no-apply</code></a></h4>
+<p>Prevent all apply operations from executing</p>
+<h4 id="--prefer-copy"><a class="header" href="#--prefer-copy"><code>--prefer-copy</code></a></h4>
+<p>When extracting packages, prefer to copy files files instead of linking them.</p>
+<p>This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).</p>
+<h4 id="--lockfile-only-1"><a class="header" href="#--lockfile-only-1"><code>--lockfile-only</code></a></h4>
+<p>Whether to skip restoring packages into <code>node_modules</code> and just resolve the tree and write the lockfile</p>
+<h4 id="--locked-1"><a class="header" href="#--locked-1"><code>--locked</code></a></h4>
+<p>Make the resolver error if the newly-resolved tree would defer from an existing lockfile</p>
+<p>[aliases: frozen]</p>
+<h4 id="--no-scripts"><a class="header" href="#--no-scripts"><code>--no-scripts</code></a></h4>
+<p>Skip running install scripts</p>
+<h4 id="--default-tag-default_tag"><a class="header" href="#--default-tag-default_tag"><code>--default-tag &lt;DEFAULT_TAG&gt;</code></a></h4>
+<p>Default dist-tag to use when resolving package versions</p>
+<p>[default: latest]</p>
+<h4 id="--concurrency-concurrency"><a class="header" href="#--concurrency-concurrency"><code>--concurrency &lt;CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent operations during various apply steps (resolution fetches, extractions, etc).</p>
+<p>Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).</p>
+<p>[default: 50]</p>
+<h4 id="--script-concurrency-script_concurrency"><a class="header" href="#--script-concurrency-script_concurrency"><code>--script-concurrency &lt;SCRIPT_CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent script executions while running <code>run_script</code>.</p>
+<p>This option is separate from <code>concurrency</code> because executing concurrent scripts is a much heavier operation.</p>
+<p>[default: 6]</p>
+<h4 id="--no-lockfile-1"><a class="header" href="#--no-lockfile-1"><code>--no-lockfile</code></a></h4>
+<p>Disable writing the lockfile after operations complete.</p>
+<p>Note that lockfiles are only written after all operations complete successfully.</p>
+<h4 id="--hoisted"><a class="header" href="#--hoisted"><code>--hoisted</code></a></h4>
+<p>Use the hoisted installation mode, where all dependencies and their transitive dependencies are installed as high up in the <code>node_modules</code> tree as possible.</p>
+<p>This can potentially mean that packages have access to dependencies they did not specify in their package.json, but it might be useful for compatibility.</p>
+<p>By default, dependencies are installed in &quot;isolated&quot; mode, using a symlink/junction structure to simulate a dependency tree.</p>
+<h3 id="global-options"><a class="header" href="#global-options">Global Options</a></h3>
+<h4 id="--root-root"><a class="header" href="#--root-root"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry"><a class="header" href="#--registry-registry"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries"><a class="header" href="#--scoped-registry-scoped_registries"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth"><a class="header" href="#--auth-auth"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache"><a class="header" href="#--cache-cache"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config"><a class="header" href="#--config-config"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel"><a class="header" href="#--loglevel-loglevel"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet"><a class="header" href="#-q---quiet"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json"><a class="header" href="#--json"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress"><a class="header" href="#--no-progress"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji"><a class="header" href="#--no-emoji"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time"><a class="header" href="#--no-first-time"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry"><a class="header" href="#--no-telemetry"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn"><a class="header" href="#--sentry-dsn-sentry_dsn"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy"><a class="header" href="#--proxy"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url"><a class="header" href="#--proxy-url-proxy_url"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain"><a class="header" href="#--no-proxy-domain-no_proxy_domain"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries"><a class="header" href="#--retries-retries"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-apply"><a class="header" href="#oro-apply">oro apply</a></h1>
+<p>Applies the current project's requested dependencies to <code>node_modules/</code>, adding, removing, and updating dependencies as needed. This command is intended to be an idempotent way to make sure your <code>node_modules</code> is in the right state to execute, based on your declared dependencies.</p>
+<p>This command is automatically executed by a number of Orogene subcommands. To force a full reapplication of <code>node_modules</code>, consider using the <code>oro reapply</code> command.</p>
+<h3 id="usage-1"><a class="header" href="#usage-1">Usage:</a></h3>
+<pre><code>oro apply [OPTIONS]
+</code></pre>
+<p>[aliases: a, ap, app]</p>
+<h3 id="options-2"><a class="header" href="#options-2">Options</a></h3>
+<h4 id="-h---help-1"><a class="header" href="#-h---help-1"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-1"><a class="header" href="#-v---version-1"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="apply-options-1"><a class="header" href="#apply-options-1">Apply Options</a></h3>
+<h4 id="--no-apply-2"><a class="header" href="#--no-apply-2"><code>--no-apply</code></a></h4>
+<p>Prevent all apply operations from executing</p>
+<h4 id="--prefer-copy-1"><a class="header" href="#--prefer-copy-1"><code>--prefer-copy</code></a></h4>
+<p>When extracting packages, prefer to copy files files instead of linking them.</p>
+<p>This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).</p>
+<h4 id="--lockfile-only-2"><a class="header" href="#--lockfile-only-2"><code>--lockfile-only</code></a></h4>
+<p>Whether to skip restoring packages into <code>node_modules</code> and just resolve the tree and write the lockfile</p>
+<h4 id="--locked-2"><a class="header" href="#--locked-2"><code>--locked</code></a></h4>
+<p>Make the resolver error if the newly-resolved tree would defer from an existing lockfile</p>
+<p>[aliases: frozen]</p>
+<h4 id="--no-scripts-1"><a class="header" href="#--no-scripts-1"><code>--no-scripts</code></a></h4>
+<p>Skip running install scripts</p>
+<h4 id="--default-tag-default_tag-1"><a class="header" href="#--default-tag-default_tag-1"><code>--default-tag &lt;DEFAULT_TAG&gt;</code></a></h4>
+<p>Default dist-tag to use when resolving package versions</p>
+<p>[default: latest]</p>
+<h4 id="--concurrency-concurrency-1"><a class="header" href="#--concurrency-concurrency-1"><code>--concurrency &lt;CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent operations during various apply steps (resolution fetches, extractions, etc).</p>
+<p>Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).</p>
+<p>[default: 50]</p>
+<h4 id="--script-concurrency-script_concurrency-1"><a class="header" href="#--script-concurrency-script_concurrency-1"><code>--script-concurrency &lt;SCRIPT_CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent script executions while running <code>run_script</code>.</p>
+<p>This option is separate from <code>concurrency</code> because executing concurrent scripts is a much heavier operation.</p>
+<p>[default: 6]</p>
+<h4 id="--no-lockfile-2"><a class="header" href="#--no-lockfile-2"><code>--no-lockfile</code></a></h4>
+<p>Disable writing the lockfile after operations complete.</p>
+<p>Note that lockfiles are only written after all operations complete successfully.</p>
+<h4 id="--hoisted-1"><a class="header" href="#--hoisted-1"><code>--hoisted</code></a></h4>
+<p>Use the hoisted installation mode, where all dependencies and their transitive dependencies are installed as high up in the <code>node_modules</code> tree as possible.</p>
+<p>This can potentially mean that packages have access to dependencies they did not specify in their package.json, but it might be useful for compatibility.</p>
+<p>By default, dependencies are installed in &quot;isolated&quot; mode, using a symlink/junction structure to simulate a dependency tree.</p>
+<h3 id="global-options-1"><a class="header" href="#global-options-1">Global Options</a></h3>
+<h4 id="--root-root-1"><a class="header" href="#--root-root-1"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-1"><a class="header" href="#--registry-registry-1"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-1"><a class="header" href="#--scoped-registry-scoped_registries-1"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-1"><a class="header" href="#--auth-auth-1"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-1"><a class="header" href="#--cache-cache-1"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-1"><a class="header" href="#--config-config-1"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-1"><a class="header" href="#--loglevel-loglevel-1"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-1"><a class="header" href="#-q---quiet-1"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-1"><a class="header" href="#--json-1"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-1"><a class="header" href="#--no-progress-1"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-1"><a class="header" href="#--no-emoji-1"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-1"><a class="header" href="#--no-first-time-1"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-1"><a class="header" href="#--no-telemetry-1"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-1"><a class="header" href="#--sentry-dsn-sentry_dsn-1"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-1"><a class="header" href="#--proxy-1"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-1"><a class="header" href="#--proxy-url-proxy_url-1"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-1"><a class="header" href="#--no-proxy-domain-no_proxy_domain-1"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-1"><a class="header" href="#--retries-retries-1"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-login"><a class="header" href="#oro-login">oro login</a></h1>
+<p>Log in to the registry</p>
+<h3 id="usage-2"><a class="header" href="#usage-2">Usage:</a></h3>
+<pre><code>oro login [OPTIONS]
+</code></pre>
+<h3 id="options-3"><a class="header" href="#options-3">Options</a></h3>
+<h4 id="--auth-type-auth_type"><a class="header" href="#--auth-type-auth_type"><code>--auth-type &lt;AUTH_TYPE&gt;</code></a></h4>
+<p>What authentication strategy to use with login</p>
+<p>[default: web]
+[possible values: web, legacy]</p>
+<h4 id="--token-token"><a class="header" href="#--token-token"><code>--token &lt;TOKEN&gt;</code></a></h4>
+<p>Set an authorization token directly (the equivalent of NPM's <code>:token</code> or <code>:_authToken</code>)</p>
+<h4 id="--username-username"><a class="header" href="#--username-username"><code>--username &lt;USERNAME&gt;</code></a></h4>
+<p>Set a username directly instead of logging in to a registry</p>
+<h4 id="--password-password"><a class="header" href="#--password-password"><code>--password &lt;PASSWORD&gt;</code></a></h4>
+<p>If a <code>username</code> is provided, this (optional) password will be set along with it</p>
+<h4 id="--legacy-token-legacy_token"><a class="header" href="#--legacy-token-legacy_token"><code>--legacy-token &lt;LEGACY_TOKEN&gt;</code></a></h4>
+<p>Set a legacy authorization token (the equivalent of NPM's <code>:_auth</code>)</p>
+<h4 id="--scope-scope"><a class="header" href="#--scope-scope"><code>--scope &lt;SCOPE&gt;</code></a></h4>
+<p>Associate an operation with a scope for a scoped registry</p>
+<h4 id="-h---help-2"><a class="header" href="#-h---help-2"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-2"><a class="header" href="#-v---version-2"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="global-options-2"><a class="header" href="#global-options-2">Global Options</a></h3>
+<h4 id="--root-root-2"><a class="header" href="#--root-root-2"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-2"><a class="header" href="#--registry-registry-2"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-2"><a class="header" href="#--scoped-registry-scoped_registries-2"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-2"><a class="header" href="#--auth-auth-2"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-2"><a class="header" href="#--cache-cache-2"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-2"><a class="header" href="#--config-config-2"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-2"><a class="header" href="#--loglevel-loglevel-2"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-2"><a class="header" href="#-q---quiet-2"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-2"><a class="header" href="#--json-2"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-2"><a class="header" href="#--no-progress-2"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-2"><a class="header" href="#--no-emoji-2"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-2"><a class="header" href="#--no-first-time-2"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-2"><a class="header" href="#--no-telemetry-2"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-2"><a class="header" href="#--sentry-dsn-sentry_dsn-2"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-2"><a class="header" href="#--proxy-2"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-2"><a class="header" href="#--proxy-url-proxy_url-2"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-2"><a class="header" href="#--no-proxy-domain-no_proxy_domain-2"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-2"><a class="header" href="#--retries-retries-2"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-logout"><a class="header" href="#oro-logout">oro logout</a></h1>
+<p>Logout from the registry</p>
+<h3 id="usage-3"><a class="header" href="#usage-3">Usage:</a></h3>
+<pre><code>oro logout [OPTIONS]
+</code></pre>
+<h3 id="options-4"><a class="header" href="#options-4">Options</a></h3>
+<h4 id="-h---help-3"><a class="header" href="#-h---help-3"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-3"><a class="header" href="#-v---version-3"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="global-options-3"><a class="header" href="#global-options-3">Global Options</a></h3>
+<h4 id="--root-root-3"><a class="header" href="#--root-root-3"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-3"><a class="header" href="#--registry-registry-3"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-3"><a class="header" href="#--scoped-registry-scoped_registries-3"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-3"><a class="header" href="#--auth-auth-3"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-3"><a class="header" href="#--cache-cache-3"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-3"><a class="header" href="#--config-config-3"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-3"><a class="header" href="#--loglevel-loglevel-3"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-3"><a class="header" href="#-q---quiet-3"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-3"><a class="header" href="#--json-3"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-3"><a class="header" href="#--no-progress-3"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-3"><a class="header" href="#--no-emoji-3"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-3"><a class="header" href="#--no-first-time-3"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-3"><a class="header" href="#--no-telemetry-3"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-3"><a class="header" href="#--sentry-dsn-sentry_dsn-3"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-3"><a class="header" href="#--proxy-3"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-3"><a class="header" href="#--proxy-url-proxy_url-3"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-3"><a class="header" href="#--no-proxy-domain-no_proxy_domain-3"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-3"><a class="header" href="#--retries-retries-3"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-ping"><a class="header" href="#oro-ping">oro ping</a></h1>
+<p>Ping the registry</p>
+<h3 id="usage-4"><a class="header" href="#usage-4">Usage:</a></h3>
+<pre><code>oro ping [OPTIONS]
+</code></pre>
+<h3 id="options-5"><a class="header" href="#options-5">Options</a></h3>
+<h4 id="-h---help-4"><a class="header" href="#-h---help-4"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-4"><a class="header" href="#-v---version-4"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="global-options-4"><a class="header" href="#global-options-4">Global Options</a></h3>
+<h4 id="--root-root-4"><a class="header" href="#--root-root-4"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-4"><a class="header" href="#--registry-registry-4"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-4"><a class="header" href="#--scoped-registry-scoped_registries-4"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-4"><a class="header" href="#--auth-auth-4"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-4"><a class="header" href="#--cache-cache-4"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-4"><a class="header" href="#--config-config-4"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-4"><a class="header" href="#--loglevel-loglevel-4"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-4"><a class="header" href="#-q---quiet-4"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-4"><a class="header" href="#--json-4"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-4"><a class="header" href="#--no-progress-4"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-4"><a class="header" href="#--no-emoji-4"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-4"><a class="header" href="#--no-first-time-4"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-4"><a class="header" href="#--no-telemetry-4"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-4"><a class="header" href="#--sentry-dsn-sentry_dsn-4"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-4"><a class="header" href="#--proxy-4"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-4"><a class="header" href="#--proxy-url-proxy_url-4"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-4"><a class="header" href="#--no-proxy-domain-no_proxy_domain-4"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-4"><a class="header" href="#--retries-retries-4"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-reapply"><a class="header" href="#oro-reapply">oro reapply</a></h1>
+<p>Removes the existing <code>node_modules</code>, if any, and reapplies it from scratch. You can use this to make sure you have a pristine <code>node_modules</code></p>
+<h3 id="usage-5"><a class="header" href="#usage-5">Usage:</a></h3>
+<pre><code>oro reapply [OPTIONS]
+</code></pre>
+<h3 id="options-6"><a class="header" href="#options-6">Options</a></h3>
+<h4 id="-h---help-5"><a class="header" href="#-h---help-5"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-5"><a class="header" href="#-v---version-5"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="apply-options-2"><a class="header" href="#apply-options-2">Apply Options</a></h3>
+<h4 id="--no-apply-3"><a class="header" href="#--no-apply-3"><code>--no-apply</code></a></h4>
+<p>Prevent all apply operations from executing</p>
+<h4 id="--prefer-copy-2"><a class="header" href="#--prefer-copy-2"><code>--prefer-copy</code></a></h4>
+<p>When extracting packages, prefer to copy files files instead of linking them.</p>
+<p>This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).</p>
+<h4 id="--lockfile-only-3"><a class="header" href="#--lockfile-only-3"><code>--lockfile-only</code></a></h4>
+<p>Whether to skip restoring packages into <code>node_modules</code> and just resolve the tree and write the lockfile</p>
+<h4 id="--locked-3"><a class="header" href="#--locked-3"><code>--locked</code></a></h4>
+<p>Make the resolver error if the newly-resolved tree would defer from an existing lockfile</p>
+<p>[aliases: frozen]</p>
+<h4 id="--no-scripts-2"><a class="header" href="#--no-scripts-2"><code>--no-scripts</code></a></h4>
+<p>Skip running install scripts</p>
+<h4 id="--default-tag-default_tag-2"><a class="header" href="#--default-tag-default_tag-2"><code>--default-tag &lt;DEFAULT_TAG&gt;</code></a></h4>
+<p>Default dist-tag to use when resolving package versions</p>
+<p>[default: latest]</p>
+<h4 id="--concurrency-concurrency-2"><a class="header" href="#--concurrency-concurrency-2"><code>--concurrency &lt;CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent operations during various apply steps (resolution fetches, extractions, etc).</p>
+<p>Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).</p>
+<p>[default: 50]</p>
+<h4 id="--script-concurrency-script_concurrency-2"><a class="header" href="#--script-concurrency-script_concurrency-2"><code>--script-concurrency &lt;SCRIPT_CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent script executions while running <code>run_script</code>.</p>
+<p>This option is separate from <code>concurrency</code> because executing concurrent scripts is a much heavier operation.</p>
+<p>[default: 6]</p>
+<h4 id="--no-lockfile-3"><a class="header" href="#--no-lockfile-3"><code>--no-lockfile</code></a></h4>
+<p>Disable writing the lockfile after operations complete.</p>
+<p>Note that lockfiles are only written after all operations complete successfully.</p>
+<h4 id="--hoisted-2"><a class="header" href="#--hoisted-2"><code>--hoisted</code></a></h4>
+<p>Use the hoisted installation mode, where all dependencies and their transitive dependencies are installed as high up in the <code>node_modules</code> tree as possible.</p>
+<p>This can potentially mean that packages have access to dependencies they did not specify in their package.json, but it might be useful for compatibility.</p>
+<p>By default, dependencies are installed in &quot;isolated&quot; mode, using a symlink/junction structure to simulate a dependency tree.</p>
+<h3 id="global-options-5"><a class="header" href="#global-options-5">Global Options</a></h3>
+<h4 id="--root-root-5"><a class="header" href="#--root-root-5"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-5"><a class="header" href="#--registry-registry-5"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-5"><a class="header" href="#--scoped-registry-scoped_registries-5"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-5"><a class="header" href="#--auth-auth-5"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-5"><a class="header" href="#--cache-cache-5"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-5"><a class="header" href="#--config-config-5"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-5"><a class="header" href="#--loglevel-loglevel-5"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-5"><a class="header" href="#-q---quiet-5"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-5"><a class="header" href="#--json-5"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-5"><a class="header" href="#--no-progress-5"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-5"><a class="header" href="#--no-emoji-5"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-5"><a class="header" href="#--no-first-time-5"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-5"><a class="header" href="#--no-telemetry-5"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-5"><a class="header" href="#--sentry-dsn-sentry_dsn-5"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-5"><a class="header" href="#--proxy-5"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-5"><a class="header" href="#--proxy-url-proxy_url-5"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-5"><a class="header" href="#--no-proxy-domain-no_proxy_domain-5"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-5"><a class="header" href="#--retries-retries-5"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-remove"><a class="header" href="#oro-remove">oro remove</a></h1>
+<p>Removes one or more dependencies from the target package</p>
+<h3 id="usage-6"><a class="header" href="#usage-6">Usage:</a></h3>
+<pre><code>oro remove [OPTIONS] &lt;NAMES&gt;...
+</code></pre>
+<p>[alias: rm]</p>
+<h3 id="arguments-1"><a class="header" href="#arguments-1">Arguments</a></h3>
+<h4 id="names"><a class="header" href="#names"><code>&lt;NAMES&gt;...</code></a></h4>
+<p>Package names of dependencies to remove. These will be removed from all dependency types</p>
+<h3 id="options-7"><a class="header" href="#options-7">Options</a></h3>
+<h4 id="-h---help-6"><a class="header" href="#-h---help-6"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-6"><a class="header" href="#-v---version-6"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="apply-options-3"><a class="header" href="#apply-options-3">Apply Options</a></h3>
+<h4 id="--no-apply-4"><a class="header" href="#--no-apply-4"><code>--no-apply</code></a></h4>
+<p>Prevent all apply operations from executing</p>
+<h4 id="--prefer-copy-3"><a class="header" href="#--prefer-copy-3"><code>--prefer-copy</code></a></h4>
+<p>When extracting packages, prefer to copy files files instead of linking them.</p>
+<p>This option has no effect if hard linking fails (for example, if the cache is on a different drive), or if the project is on a filesystem that supports Copy-on-Write (zfs, btrfs, APFS (macOS), etc).</p>
+<h4 id="--lockfile-only-4"><a class="header" href="#--lockfile-only-4"><code>--lockfile-only</code></a></h4>
+<p>Whether to skip restoring packages into <code>node_modules</code> and just resolve the tree and write the lockfile</p>
+<h4 id="--locked-4"><a class="header" href="#--locked-4"><code>--locked</code></a></h4>
+<p>Make the resolver error if the newly-resolved tree would defer from an existing lockfile</p>
+<p>[aliases: frozen]</p>
+<h4 id="--no-scripts-3"><a class="header" href="#--no-scripts-3"><code>--no-scripts</code></a></h4>
+<p>Skip running install scripts</p>
+<h4 id="--default-tag-default_tag-3"><a class="header" href="#--default-tag-default_tag-3"><code>--default-tag &lt;DEFAULT_TAG&gt;</code></a></h4>
+<p>Default dist-tag to use when resolving package versions</p>
+<p>[default: latest]</p>
+<h4 id="--concurrency-concurrency-3"><a class="header" href="#--concurrency-concurrency-3"><code>--concurrency &lt;CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent operations during various apply steps (resolution fetches, extractions, etc).</p>
+<p>Tuning this might help reduce memory usage (if lowered), or improve performance (if increased).</p>
+<p>[default: 50]</p>
+<h4 id="--script-concurrency-script_concurrency-3"><a class="header" href="#--script-concurrency-script_concurrency-3"><code>--script-concurrency &lt;SCRIPT_CONCURRENCY&gt;</code></a></h4>
+<p>Controls number of concurrent script executions while running <code>run_script</code>.</p>
+<p>This option is separate from <code>concurrency</code> because executing concurrent scripts is a much heavier operation.</p>
+<p>[default: 6]</p>
+<h4 id="--no-lockfile-4"><a class="header" href="#--no-lockfile-4"><code>--no-lockfile</code></a></h4>
+<p>Disable writing the lockfile after operations complete.</p>
+<p>Note that lockfiles are only written after all operations complete successfully.</p>
+<h4 id="--hoisted-3"><a class="header" href="#--hoisted-3"><code>--hoisted</code></a></h4>
+<p>Use the hoisted installation mode, where all dependencies and their transitive dependencies are installed as high up in the <code>node_modules</code> tree as possible.</p>
+<p>This can potentially mean that packages have access to dependencies they did not specify in their package.json, but it might be useful for compatibility.</p>
+<p>By default, dependencies are installed in &quot;isolated&quot; mode, using a symlink/junction structure to simulate a dependency tree.</p>
+<h3 id="global-options-6"><a class="header" href="#global-options-6">Global Options</a></h3>
+<h4 id="--root-root-6"><a class="header" href="#--root-root-6"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-6"><a class="header" href="#--registry-registry-6"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-6"><a class="header" href="#--scoped-registry-scoped_registries-6"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-6"><a class="header" href="#--auth-auth-6"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-6"><a class="header" href="#--cache-cache-6"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-6"><a class="header" href="#--config-config-6"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-6"><a class="header" href="#--loglevel-loglevel-6"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-6"><a class="header" href="#-q---quiet-6"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-6"><a class="header" href="#--json-6"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-6"><a class="header" href="#--no-progress-6"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-6"><a class="header" href="#--no-emoji-6"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-6"><a class="header" href="#--no-first-time-6"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-6"><a class="header" href="#--no-telemetry-6"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-6"><a class="header" href="#--sentry-dsn-sentry_dsn-6"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-6"><a class="header" href="#--proxy-6"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-6"><a class="header" href="#--proxy-url-proxy_url-6"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-6"><a class="header" href="#--no-proxy-domain-no_proxy_domain-6"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-6"><a class="header" href="#--retries-retries-6"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="oro-view"><a class="header" href="#oro-view">oro view</a></h1>
+<p>Get information about a package</p>
+<h3 id="usage-7"><a class="header" href="#usage-7">Usage:</a></h3>
+<pre><code>oro view [OPTIONS] &lt;PKG&gt;
+</code></pre>
+<p>[aliases: v, info]</p>
+<h3 id="arguments-2"><a class="header" href="#arguments-2">Arguments</a></h3>
+<h4 id="pkg"><a class="header" href="#pkg"><code>&lt;PKG&gt;</code></a></h4>
+<p>Package spec to look up</p>
+<h3 id="options-8"><a class="header" href="#options-8">Options</a></h3>
+<h4 id="--default-tag-default_tag-4"><a class="header" href="#--default-tag-default_tag-4"><code>--default-tag &lt;DEFAULT_TAG&gt;</code></a></h4>
+<p>Default dist-tag to use when resolving package versions</p>
+<p>[default: latest]</p>
+<h4 id="-h---help-7"><a class="header" href="#-h---help-7"><code>-h, --help</code></a></h4>
+<p>Print help (see a summary with '-h')</p>
+<h4 id="-v---version-7"><a class="header" href="#-v---version-7"><code>-V, --version</code></a></h4>
+<p>Print version</p>
+<h3 id="global-options-7"><a class="header" href="#global-options-7">Global Options</a></h3>
+<h4 id="--root-root-7"><a class="header" href="#--root-root-7"><code>--root &lt;ROOT&gt;</code></a></h4>
+<p>Path to the project to operate on.</p>
+<p>By default, Orogene will look up from the current working directory until it finds a directory with a <code>package.json</code> file or a <code>node_modules/</code> directory.</p>
+<p>[default: .]</p>
+<h4 id="--registry-registry-7"><a class="header" href="#--registry-registry-7"><code>--registry &lt;REGISTRY&gt;</code></a></h4>
+<p>Registry used for unscoped packages</p>
+<p>[default: https://registry.npmjs.org]</p>
+<h4 id="--scoped-registry-scoped_registries-7"><a class="header" href="#--scoped-registry-scoped_registries-7"><code>--scoped-registry &lt;SCOPED_REGISTRIES&gt;</code></a></h4>
+<p>Registry to use for a specific <code>@scope</code>, using <code>--scoped-registry @scope=https://foo.com</code> format.</p>
+<p>Can be provided multiple times to specify multiple scoped registries.</p>
+<h4 id="--auth-auth-7"><a class="header" href="#--auth-auth-7"><code>--auth &lt;AUTH&gt;</code></a></h4>
+<p>Credentials to apply to registries when they're accessed. You can provide credentials for multiple registries at a time, and different credential fields for a registry.</p>
+<p>The syntax is <code>--auth {my.registry.com}token=deadbeef --auth {my.registry.com}username=myuser</code>.</p>
+<p>Valid auth fields are: <code>token</code>, <code>username</code>, <code>password</code>, and <code>legacy-auth</code>.</p>
+<h4 id="--cache-cache-7"><a class="header" href="#--cache-cache-7"><code>--cache &lt;CACHE&gt;</code></a></h4>
+<p>Location of disk cache.</p>
+<p>Default location varies by platform.</p>
+<h4 id="--config-config-7"><a class="header" href="#--config-config-7"><code>--config &lt;CONFIG&gt;</code></a></h4>
+<p>File to read configuration values from.</p>
+<p>When specified, global configuration loading is disabled and configuration values will only be read from this location.</p>
+<h4 id="--loglevel-loglevel-7"><a class="header" href="#--loglevel-loglevel-7"><code>--loglevel &lt;LOGLEVEL&gt;</code></a></h4>
+<p>Log output level/directive.</p>
+<p>Supports plain loglevels (off, error, warn, info, debug, trace) as well as more advanced directives in the format <code>target[span{field=value}]=level</code>.</p>
+<p>[default: info]</p>
+<h4 id="-q---quiet-7"><a class="header" href="#-q---quiet-7"><code>-q, --quiet</code></a></h4>
+<p>Disable all output</p>
+<h4 id="--json-7"><a class="header" href="#--json-7"><code>--json</code></a></h4>
+<p>Format output as JSON</p>
+<h4 id="--no-progress-7"><a class="header" href="#--no-progress-7"><code>--no-progress</code></a></h4>
+<p>Disable the progress bars</p>
+<h4 id="--no-emoji-7"><a class="header" href="#--no-emoji-7"><code>--no-emoji</code></a></h4>
+<p>Disable printing emoji.</p>
+<p>By default, this will show emoji when outputting to a TTY that supports unicode.</p>
+<h4 id="--no-first-time-7"><a class="header" href="#--no-first-time-7"><code>--no-first-time</code></a></h4>
+<p>Skip first-time setup</p>
+<h4 id="--no-telemetry-7"><a class="header" href="#--no-telemetry-7"><code>--no-telemetry</code></a></h4>
+<p>Disable telemetry.</p>
+<p>Telemetry for Orogene is opt-in, anonymous, and is used to help the team improve the product. It is usually configured on first run, but you can use this flag to force-disable it either in an individual CLI call, or in a project-local oro.kdl.</p>
+<h4 id="--sentry-dsn-sentry_dsn-7"><a class="header" href="#--sentry-dsn-sentry_dsn-7"><code>--sentry-dsn &lt;SENTRY_DSN&gt;</code></a></h4>
+<p>Sentry DSN (access token) where telemetry will be sent (if enabled)</p>
+<h4 id="--proxy-7"><a class="header" href="#--proxy-7"><code>--proxy</code></a></h4>
+<p>Use proxy to delegate the network.</p>
+<p>Proxy is opt-in, it uses for outgoing http/https request. If enabled, should set proxy-url too.</p>
+<h4 id="--proxy-url-proxy_url-7"><a class="header" href="#--proxy-url-proxy_url-7"><code>--proxy-url &lt;PROXY_URL&gt;</code></a></h4>
+<p>A proxy to use for outgoing http requests</p>
+<h4 id="--no-proxy-domain-no_proxy_domain-7"><a class="header" href="#--no-proxy-domain-no_proxy_domain-7"><code>--no-proxy-domain &lt;NO_PROXY_DOMAIN&gt;</code></a></h4>
+<p>Use commas to separate multiple entries, e.g. <code>.host1.com,.host2.com</code>.</p>
+<p>Can also be configured through the <code>NO_PROXY</code> environment variable, like <code>NO_PROXY=.host1.com</code>.</p>
+<h4 id="--retries-retries-7"><a class="header" href="#--retries-retries-7"><code>--retries &lt;RETRIES&gt;</code></a></h4>
+<p>How many times to retry failed network operations</p>
+<p>[default: 2]</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contributing-to-orogene"><a class="header" href="#contributing-to-orogene">Contributing to orogene</a></h1>
+<h2 id="finding-something-to-do"><a class="header" href="#finding-something-to-do">Finding Something to Do</a></h2>
+<p>Orogene <a href="https://github.com/orgs/orogene/projects/2/views/1">has a roadmap</a>
+and welcomes contributions! Issues looking for outside help are tagged as
+<a href="https://github.com/orogene/orogene/labels/help%20wanted"><code>help wanted</code></a>. On
+top of that, there are <a href="https://github.com/orogene/orogene/labels/good%20first%20issue"><code>good first issue</code></a> for
+those looking to get started more entry-level tasks.</p>
+<h2 id="coding-conventions"><a class="header" href="#coding-conventions">Coding Conventions</a></h2>
+<p>Orogene uses <a href="https://www.conventionalcommits.org/en/v1.0.0/">conventional
+commits</a> as its commit message
+format. Ideally, any pull requests will already use this style when
+submitting, but commit messages will simply be editorialized on merge if not,
+so consider this a soft request.</p>
+<p>This repo uses both <code>clippy</code> and <code>rustfmt</code> to maintain consistency. Before
+submitting a pull request, please make sure to run both <code>cargo clippy --all</code>
+and <code>cargo fmt --all</code>.</p>
+<h2 id="getting-up-and-running"><a class="header" href="#getting-up-and-running">Getting up and running</a></h2>
+<p>Orogene is a pretty run-of-the-mill Rust app and only requires a couple of
+steps to get up and running.</p>
+<h3 id="build-dependencies"><a class="header" href="#build-dependencies">Build Dependencies</a></h3>
+<p>You will need <a href="https://git-scm.com/downloads">git</a> in order to fetch the
+orogene sources. Next, to get a checkout:</p>
+<pre><code>git clone https://github.com/orogene/orogene.git
+cd orogene
+</code></pre>
+<p>Additionally, some tools are required to compile/build orogene:</p>
+<ol>
+<li>(Linux only) An available OpenSSL installation: https://docs.rs/openssl/latest/openssl/#automatic</li>
+<li>Cargo, which can be installed using <a href="https://rustup.rs/">rustup</a></li>
+<li>Clippy, which is a component that should be added through rustup.</li>
+</ol>
+<p>orogene is built against relatively recent <code>stable</code> versions of Rust. For a
+specific version to install, refer to <code>Cargo.toml</code>'s <code>[package]</code> section, as
+<code>rust-version</code>.</p>
+<p>If you plan on builing wasm packages for orogene sub-crates, you'll also need:</p>
+<ol>
+<li><code>cargo install -f wasm-bindgen-cli</code></li>
+<li><code>cargo install -f wasm-pack</code> (or installed <a href="https://rustwasm.github.io/wasm-pack/installer/">prebuilt binaries</a>)</li>
+</ol>
+<h3 id="building-the-cli"><a class="header" href="#building-the-cli">Building the CLI</a></h3>
+<p>Linux has a couple of build requirements. These can be installed on ubuntu
+with the following command. Adapt as needed for your distro:</p>
+<pre><code class="language-sh">sudo apt-get install build-essential pkg-config libssl-dev
+</code></pre>
+<p>On Windows, you'll need a working <code>msvc</code>.</p>
+<p>You can build the CLI using a plain <code>cargo build</code> (optionally with
+<code>--release</code>), and binaries will be available in your local
+<code>./target/{debug,release}/oro[.exe]</code> directory.</p>
+<p>The <code>oro</code>/<code>oro.exe</code> is a standalone binary but, <strong>on Linux</strong>, does require a
+valid installation of <code>openssl 1</code> installed on the system in order to run.</p>
+<h3 id="building-wasm-packages"><a class="header" href="#building-wasm-packages">Building WASM packages</a></h3>
+<p>There's currently two packages with support for WASM, only one of which should
+really be used right now: <code>crates/nassun</code> and <code>crates/node-maintainer</code>. Both
+of them are published to the NPM registry as part of <code>orogene</code>'s release
+process.</p>
+<p><code>node-maintainer</code> is orogene's dependency resolver and is responsible for
+calculating dependency trees based on package.json, lockfiles, etc. Extraction
+to filesystems is not supported in WASM mode because it is built for
+<code>wasm32-unknown-unknown</code>, not <code>wasm-wasi</code>. <code>node-maintainer</code> also exports
+<code>nassun</code>'s APIs under the same wasm package, so it's not recommended to
+install <em>both</em> <code>nassun</code> and <code>node-maintainer</code> wasm packages.</p>
+<p>To build <code>node-maintainer</code>:</p>
+<ol>
+<li>Make sure you're in the orogene project root.</li>
+<li><code>wasm-pack build crates/node-maintainer --target web</code></li>
+<li>There will now be an NPM package under <code>crates/node-maintainer/pkg</code> that
+can be packed, copied (to vendor it somewhere, etc).</li>
+</ol>
+<h2 id="working-on-the-installer"><a class="header" href="#working-on-the-installer">Working on the installer</a></h2>
+<p>Orogene's &quot;install&quot; command is called <code>apply</code>. During development, you can
+call it like this:</p>
+<pre><code class="language-sh">$ cargo run [--release] -- apply [--root ../path/to/test/react-app] [--oro-cache ./path/to/cache] [--loglevel info]
+</code></pre>
+<p>It might be worth it to run with <code>--release</code> every time if you plan on seeing
+applies to completion, because debug builds of orogene are pretty slow.</p>
+<p>The apply command itself is defined in <code>src/commands/apply.rs</code>, and is
+pretty much a UI wrapper around <code>crates/node-maintainer</code>'s APIs.</p>
+<p>If you're only interested in the dependency resolution aspect of <code>apply</code>,
+you can run with <code>--lockfile-only</code>, which will skip the much more expensive
+extraction process.</p>
+<h2 id="logging"><a class="header" href="#logging">Logging</a></h2>
+<p>orogene uses <a href="https://docs.rs/tracing">tracing</a> and
+<a href="https://docs.rs/tracing-subscriber">tracing-subscriber</a> for tracing and
+logging capabilities, which can be configured through <code>--loglevel</code>. The syntax
+for this option is documented
+<a href="https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#directives">here</a>.
+For example, <code>cargo run -- apply --loglevel node_maintainer=trace,info</code> will
+default to INFO-level logging for everything, but also include TRACE-level
+logging for anything logged by <code>node-maintainer</code> (node the underscore. It's
+based on the module name, not the crate.)</p>
+<h2 id="tagging-and-releasing-new-versions"><a class="header" href="#tagging-and-releasing-new-versions">Tagging and Releasing New Versions</a></h2>
+<p>Releasing orogene is a four-step process:</p>
+<ol>
+<li>First, we make sure all the READMEs are up-to-date.</li>
+<li>Then, a changelog is generated, editorialized, and commited.</li>
+<li>After that, a command is run to release the entire repository in lockstep.</li>
+<li>Finally, an automated process takes care of generating a GitHub release and
+building prebuilt binaries for distribution.</li>
+</ol>
+<p>In order to follow these steps, you'll need to intall <code>cargo-make</code>:</p>
+<pre><code class="language-sh">$ cargo install -f cargo-make
+</code></pre>
+<h3 id="generateupdate-readmes"><a class="header" href="#generateupdate-readmes">Generate/Update READMEs</a></h3>
+<p>First, make sure <code>crates/README.md</code> is up-to-date with the latest crates
+available under <code>crates/</code>, in case any of them have been added, removed, or
+had significant description changes.</p>
+<pre><code class="language-sh">$ cargo make readmes
+</code></pre>
+<p>This command will update and/or update crate READMEs based on rustdoc from
+their main modules.</p>
+<p>If there were any changes, add and commit them with <code>git add</code> and <code>git commit -m 'docs: update READMEs'</code></p>
+<h3 id="changelog"><a class="header" href="#changelog">Changelog</a></h3>
+<pre><code class="language-sh">$ cargo make changelog X.Y.Z
+</code></pre>
+<p>Where <code>X.Y.Z</code> is the full target semver version of the intended upcoming
+release.</p>
+<p>This will automatically update <code>CHANGELOG.md</code> with commits based on
+conventional-commits in the git log.</p>
+<p>If any additional messages are to be included, please add them under the new
+version header.</p>
+<p><code>git add CHANGELOG.md</code> and <code>git commit -m 'docs: update changelog'</code> to
+complete this step.</p>
+<h3 id="tag-and-release"><a class="header" href="#tag-and-release">Tag and Release</a></h3>
+<p>First, do a quick dry run:</p>
+<pre><code class="language-sh">$ cargo make release X.Y.Z
+</code></pre>
+<p>If everything looks good, execute it for real. You'll need to make sure you're
+logged into both GitHub and crates.io and allowed to publish and push to
+GitHub main:</p>
+<pre><code class="language-sh">$ cargo make release X.Y.Z --execute
+</code></pre>
+<p>This will take care of publishing all the crates in the repository under
+version <code>X.Y.Z</code> to crates.io, tagging a new git tag, and pushing everything to
+GitHub when it's done.</p>
+<h3 id="github-release"><a class="header" href="#github-release">GitHub Release</a></h3>
+<p>orogene uses <a href="https://opensource.axo.dev/cargo-dist/">cargo-dist</a> for
+generating prebuilt binaries and GitHub Releases. No intervention is necessary
+here. This is handled by a GitHub Action configured under
+<a href="https://github.com/orogene/orogene/actions/workflows/release.yml"><code>.github/workflows/release.yml</code></a>.</p>
+<p>It may take some time for everything to build, but the final release will be
+made available under <code>https://github.com/orogene/orogene/releases/tag/vX.Y.Z</code>,
+at which point the new version may be announced.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="code-of-conduct"><a class="header" href="#code-of-conduct">Code of Conduct</a></h1>
+<h2 id="when-something-happens"><a class="header" href="#when-something-happens">When something happens</a></h2>
+<p>If you see a violation of our community's standards of <a href="code-of-conduct.html#conduct">Conduct</a>, follow these steps:</p>
+<ol>
+<li>Let the person know that what they did is not appropriate and ask them to stop and/or edit their messages.</li>
+<li>That person should immediately stop the behavior and correct the issue.</li>
+<li>If this doesn’t happen, or if you're uncomfortable speaking up, contact the moderation team.</li>
+<li>As soon as available, a moderator will look into the issue, and take further action, starting with a warning, then temporary block, then long-term repo or organization ban.</li>
+</ol>
+<p>When reporting, please include any relevant details, links, screenshots, context, or other information that may be used to better understand and resolve the situation. See <a href="code-of-conduct.html#moderation">Moderation</a> for more information about the moderation process.</p>
+<h2 id="community-commitment"><a class="header" href="#community-commitment">Community Commitment</a></h2>
+<p>We as a community are committed to providing a friendly, inclusive, safe and harassment-free environment for all, regardless of level of experience, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, ethnicity, age, religion, nationality, or other similar characteristics.</p>
+<h2 id="conduct"><a class="header" href="#conduct">Conduct</a></h2>
+<p>In this community we strive to go the extra step to look out for each other. Don’t just aim to be technically unimpeachable, try to be your best self. In particular, avoid flirting with offensive or sensitive issues, particularly if they’re off-topic; this all too often leads to unnecessary fights, hurt feelings, and damaged trust; worse, it can drive people away from the community entirely.</p>
+<p>And if someone takes issue with something you said or did, resist the urge to be defensive. Just stop doing what it was they complained about and apologize. Even if you feel you were misinterpreted or unfairly accused, chances are good there was something you could’ve communicated better — remember that it’s your responsibility to make your fellow community memebers comfortable. Everyone wants to get along and we are all here first and foremost because we want to talk about cool technology. You will find that people will be eager to assume good intent and forgive as long as you earn their trust.</p>
+<ul>
+<li>Please avoid using overtly sexual aliases or other nicknames that might detract from a friendly, safe and welcoming environment for all.</li>
+<li>Please be kind and courteous. There’s no need to be mean or rude.</li>
+<li>Respect that people have differences of opinion and that every design or implementation choice carries a trade-off and numerous costs. There is seldom a right answer.</li>
+<li>Please keep unstructured critique to a minimum. If you have solid ideas you want to experiment with, make a fork and see how it works.</li>
+<li>We will exclude you from interaction if you insult, demean or harass anyone. That is not welcome behavior. We interpret the term “harassment” as including the definition in the <a href="https://github.com/stumpsyn/policies/blob/master/citizen_code_of_conduct.md">Citizen Code of Conduct</a>; if you have any lack of clarity about what might be included in that concept, please read their definition. In particular, we don’t tolerate behavior that excludes people in socially marginalized groups.</li>
+<li>Private harassment is also unacceptable. No matter who you are, if you feel you have been or are being harassed or made uncomfortable by a community member, please contact the moderation team immediately. Whether you’re a regular contributor or a newcomer, we care about making this community a safe place for you and we’ve got your back.</li>
+<li>Please do not try to present &quot;reverse-ism&quot; versions of the conduct violations that apply specifically to underrepresented groups. Examples of reverse-isms are &quot;reverse racism&quot;, &quot;reverse sexism&quot;, &quot;heterophobia&quot;, and &quot;cisphobia&quot;.</li>
+<li>Do not make casual mention of slavery or indentured servitude and/or false comparisons of one's occupation or situation to slavery. Please consider using or asking about alternate terminology when referring to such metaphors in technology.</li>
+<li>Likewise any spamming, trolling, flaming, baiting or other attention-stealing behavior is not welcome.</li>
+</ul>
+<p>These standards of conduct apply to all official venues, including Discord channels, GitHub repositories, the Twitter community and all other forums.</p>
+<h2 id="moderation"><a class="header" href="#moderation">Moderation</a></h2>
+<p>These are the policies for upholding our community’s standards of <a href="code-of-conduct.html#conduct">Conduct</a>. If you feel that a thread needs moderation, please contact the moderation team.</p>
+<ol>
+<li>Remarks that violate the community standards of conduct, including hateful, hurtful, oppressive, or exclusionary remarks, are not allowed. (Cursing is allowed, but never targeting another user, and never in a hateful manner).</li>
+<li>Remarks that moderators find inappropriate, whether listed in the code of conduct or not, are also not allowed.</li>
+<li>Moderators will first respond to such remarks with a warning.</li>
+<li>If the warning is unheeded, the user will be “kicked,” i.e., kicked out of the communication channel to cool off.</li>
+<li>If the user comes back and continues to make trouble, they will be banned, i.e., indefinitely excluded.</li>
+<li>Moderators may choose at their discretion to un-ban the user if it was a first offense and they offer the offended party a genuine apology.</li>
+<li>If a moderator bans someone and you think it was unjustified, please take it up with that moderator, or with a different moderator, in private. Complaints about bans in-channel are not allowed.</li>
+<li>Moderators are held to a higher standard than other community members. If a moderator creates an inappropriate situation, they should expect less leeway than others.</li>
+</ol>
+<p>The moderators will prioritize the well-being and comfort of the recipients of the violation over the comfort of the violator.</p>
+<p>Please note that the intent of this Code of Conduct is to create the environment envisioned in our Community Commitment. As such, recurring individual behavior that does not run afoul of any specific policy here but which creates a harmfully toxic or notably unwelcome environment will be considered in overall violation: our policy is to give a single formal warning. It is not this community's responsibility to educate people on how to change their behavior going from there, but specific events might be pointed to. Note however, there will only be <em>one</em> warning. As a community we are committed to avoiding issues like &quot;<a href="https://en.wikipedia.org/wiki/Missing_stair">missing stairs</a>&quot; in regards to this.</p>
+<h2 id="attribution"><a class="header" href="#attribution">Attribution</a></h2>
+<p>This Code of Conduct is based on the <a href="https://www.rust-lang.org/policies/code-of-conduct">Rust Code of Conduct</a>, which is adapted from the <a href="http://blog.izs.me/post/30036893703/policy-on-trolling">Node.js Policy on Trolling</a> as well as the <a href="https://www.contributor-covenant.org/version/1/3/0/code-of-conduct/">Contributor Covenant version 1.3</a>; and also the <a href="https://wealljs.org/code-of-conduct">WeAllJS Code of Conduct</a>, which is itself based on <a href="https://www.contributor-covenant.org/version/1/4/code-of-conduct/">Contributor Covenant version 1.4</a>, and the <a href="http://lgbtq.technology/coc.html">LGBTQ in Technology Slack Code of Conduct</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="orogene-release-changelog"><a class="header" href="#orogene-release-changelog">Orogene Release Changelog</a></h1>
+<p><a name="0.3.34"></a></p>
+<h2 id="0334-2023-10-09"><a class="header" href="#0334-2023-10-09">0.3.34 (2023-10-09)</a></h2>
+<p>This release is largely a series of attempts at making Orogene faster, most of
+which didn't have much of an effect. Properly supporting reflinks on DeDrive
+is nice, though.</p>
+<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<ul>
+<li><strong>reflink:</strong> bump reflink-copy to add support for reflinks on Windows Dev Drive (<a href="https://github.com/orogene/orogene/commit/32c169c71aaf252acf14a79bfd776d5e1e82d022">32c169c7</a>)</li>
+<li><strong>perf:</strong> be smarter about reflinks and mkdirp (<a href="https://github.com/orogene/orogene/commit/581dda60f931c6a474a283f6904e496d9c7c6d98">581dda60</a>)</li>
+</ul>
+<h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
+<ul>
+<li><strong>setup:</strong> fix issue with repeatedly being asked about telemetry (<a href="https://github.com/orogene/orogene/commit/a0111278a6398d2314a6c37c19c503dad6d78435">a0111278</a>)</li>
+<li><strong>perf:</strong> reduce number of syscalls a bit (<a href="https://github.com/orogene/orogene/commit/3f005c1f862848c9a20176ab8ece5e2056ba61c9">3f005c1f</a>)</li>
+</ul>
+<p><a name="0.3.33"></a></p>
+<h2 id="0333-2023-10-02"><a class="header" href="#0333-2023-10-02">0.3.33 (2023-10-02)</a></h2>
+<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
+<ul>
+<li><strong>terminal:</strong> display indeterminate progress while orogene is running (<a href="https://github.com/orogene/orogene/commit/d4f3e8450afdc5cc5481daeb9477efd46153f066">d4f3e845</a>)</li>
+<li><strong>release:</strong> automatically bump official brew formula on release (<a href="https://github.com/orogene/orogene/commit/deceec38b33f8b6b327bf10f00105a0531ce70db">deceec38</a>)</li>
+</ul>
+<h3 id="bug-fixes-1"><a class="header" href="#bug-fixes-1">Bug Fixes</a></h3>
+<ul>
+<li><strong>manifest:</strong> handle boolean bundledDependencies values (<a href="https://github.com/orogene/orogene/commit/d6c16a445fd7f3a58bf66a61c58048de2062aef8">d6c16a44</a>)</li>
+<li><strong>fmt:</strong> cargo fmt --all (<a href="https://github.com/orogene/orogene/commit/6fd8b2792922898862cbcae5e0b9b45ff2aab4b2">6fd8b279</a>)</li>
+<li><strong>bin:</strong> fix bin linking for the isolated linker and fix cmd shims (<a href="https://github.com/orogene/orogene/commit/8b58caba8e34bb031fd8f4e37891c5d136ea8ace">8b58caba</a>)</li>
+<li><strong>docs:</strong> fix broken links (<a href="https://github.com/orogene/orogene/commit/e182ce764a8c2952c1995b334e6d0a3874d0b129">e182ce76</a>)</li>
+<li><strong>terminal:</strong> don't print out terminal progress codes unless stderr is a terminal (<a href="https://github.com/orogene/orogene/commit/1228ebea3d4612b45c9caa30c7536d0032fa0072">1228ebea</a>)</li>
+</ul>
+<p><a name="0.3.32"></a></p>
+<h2 id="0332-2023-09-30"><a class="header" href="#0332-2023-09-30">0.3.32 (2023-09-30)</a></h2>
+<h3 id="features-2"><a class="header" href="#features-2">Features</a></h3>
+<ul>
+<li><strong>dist:</strong> automatically publish to a homebrew tap (<a href="https://github.com/orogene/orogene/commit/023ebcca7d2b859b5c798535eaef16556f909341">023ebcca</a>)</li>
+</ul>
+<h3 id="bug-fixes-2"><a class="header" href="#bug-fixes-2">Bug Fixes</a></h3>
+<ul>
+<li><strong>cache:</strong> cache recovery was working off JSON metadata, not new rkyv-based one (<a href="https://github.com/orogene/orogene/commit/7c56628731581a225890946aa6b292f0cf6f3ec9">7c566287</a>)</li>
+<li><strong>unsafe:</strong> use safe version of method that verifies data. No perf impact noticeable (<a href="https://github.com/orogene/orogene/commit/1a6b54ac34c9b03ab1eab069d464c5475fa2adeb">1a6b54ac</a>)</li>
+<li><strong>resolver:</strong> fix issue with aliases not being handled properly (<a href="https://github.com/orogene/orogene/commit/85d3171300375ae3799294f3ff759ad947aa8443">85d31713</a>)</li>
+<li><strong>resolver:</strong> node paths should use their fs name (<a href="https://github.com/orogene/orogene/commit/544639b7685a2738d1c2999b1ee10eb125236d23">544639b7</a>)</li>
+<li><strong>resolver:</strong> go ahead and try to resolve if we just have a version (<a href="https://github.com/orogene/orogene/commit/8d04d84b245ccd4599964c445c58193edf089664">8d04d84b</a>)</li>
+</ul>
+<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
+<ul>
+<li><strong>build:</strong> document build requirements (<a href="https://github.com/orogene/orogene/commit/16391becd01f9236fc22207faef38e94cfaa6e60">16391bec</a>)</li>
+</ul>
+<p><a name="0.3.31"></a></p>
+<h2 id="0331-2023-09-28"><a class="header" href="#0331-2023-09-28">0.3.31 (2023-09-28)</a></h2>
+<h3 id="bug-fixes-3"><a class="header" href="#bug-fixes-3">Bug Fixes</a></h3>
+<ul>
+<li><strong>dist:</strong> temporarily allow-dirty and remove license stuff (#293) (<a href="https://github.com/orogene/orogene/commit/3968582665fe35d1e01388df2030b88f1ab3c31c">39685826</a>)</li>
+</ul>
+<p><a name="0.3.30"></a></p>
+<h2 id="0330-2023-09-28"><a class="header" href="#0330-2023-09-28">0.3.30 (2023-09-28)</a></h2>
+<h3 id="features-3"><a class="header" href="#features-3">Features</a></h3>
+<ul>
+<li><strong>docker:</strong> add Dockerfile to compile orogene in a rust-debian-bookworm container (#288) (<a href="https://github.com/orogene/orogene/commit/10575974ab7c2f6fcb2f862b281be14a9f7dbfdf">10575974</a>)</li>
+<li><strong>auth:</strong> add registry authentication support (<a href="https://github.com/orogene/orogene/commit/0513019f87f6d047bbb38864baa193e3a3711569">0513019f</a>)</li>
+<li><strong>login:</strong> add support for all auth types to <code>oro login</code>, including direct <code>--token</code> passing (<a href="https://github.com/orogene/orogene/commit/cf70994664938ad45cb26c58d6b7c636c75e5fe8">cf709946</a>)</li>
+</ul>
+<h3 id="bug-fixes-4"><a class="header" href="#bug-fixes-4">Bug Fixes</a></h3>
+<ul>
+<li><strong>auth:</strong> glue login and authentication stuff, refactor, and make it all work (<a href="https://github.com/orogene/orogene/commit/23cf1bc8b03a0c8b4f46a634ac2faff195dfd050">23cf1bc8</a>)</li>
+<li><strong>auth:</strong> don't send auth to non-registry URLs (<a href="https://github.com/orogene/orogene/commit/e84a25768d0328c407224416680bf09ac48490f2">e84a2576</a>)</li>
+<li><strong>misc:</strong> get rid of annoying default-features warnings (<a href="https://github.com/orogene/orogene/commit/84f45865267b61bb2f783b5cbc7cbccb475a2e46">84f45865</a>)</li>
+</ul>
+<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
+<ul>
+<li><strong>auth:</strong> Add authentication/authorization docs (<a href="https://github.com/orogene/orogene/commit/7ee6a742b4e5b7005b9e48a9a8acc1a8e02bae56">7ee6a742</a>)</li>
+</ul>
+<p><a name="0.3.29"></a></p>
+<h2 id="0329-2023-09-27"><a class="header" href="#0329-2023-09-27">0.3.29 (2023-09-27)</a></h2>
+<h3 id="features-4"><a class="header" href="#features-4">Features</a></h3>
+<ul>
+<li><strong>wasm:</strong> publish NPM packages for nassun and node-maintainer as part of release (<a href="https://github.com/orogene/orogene/commit/f4f2ff22cd6fec4bb5594f924c0773b9d92effa6">f4f2ff22</a>)</li>
+</ul>
+<p><a name="0.3.28"></a></p>
+<h2 id="0328-2023-09-27"><a class="header" href="#0328-2023-09-27">0.3.28 (2023-09-27)</a></h2>
+<h3 id="features-5"><a class="header" href="#features-5">Features</a></h3>
+<ul>
+<li><strong>proxy:</strong> support proxy configuration (#283) (<a href="https://github.com/orogene/orogene/commit/87facfe44a14a61e94ee50c0a5f64724b065bdd8">87facfe4</a>)</li>
+<li><strong>login:</strong> Add <code>oro login </code> and <code>oro logout</code> commands (#290) (<a href="https://github.com/orogene/orogene/commit/39b3c6bdfa5327276666ef86bf08cb02d3800a7d">39b3c6bd</a>)</li>
+<li><strong>dist:</strong> bump cargo dist and add homebrew and msi artifacts (<a href="https://github.com/orogene/orogene/commit/218392d061fd234effb9fd12b5ba52e0d84c05c9">218392d0</a>)</li>
+<li><strong>retry:</strong> enable request retries on wasm, too (<a href="https://github.com/orogene/orogene/commit/1f25aa3383793e40e64d20939fb9702050b2ff24">1f25aa33</a>)</li>
+<li><strong>wasm:</strong> nicer TS types (<a href="https://github.com/orogene/orogene/commit/64d20dcc2361be9bc91894e1686e678ca827c836">64d20dcc</a>)</li>
+</ul>
+<h3 id="bug-fixes-5"><a class="header" href="#bug-fixes-5">Bug Fixes</a></h3>
+<ul>
+<li><strong>proxy:</strong> thread proxy settings through and tweak a few things along the way (<a href="https://github.com/orogene/orogene/commit/7d9b476ed2f732485b9f25655ed0598f0c2110aa">7d9b476e</a>)</li>
+<li><strong>site:</strong> modernize oranda config (<a href="https://github.com/orogene/orogene/commit/427f672f8ffa3da699c42612ea642eb824587de3">427f672f</a>)</li>
+<li><strong>wasm:</strong> get things working on wasm again! (<a href="https://github.com/orogene/orogene/commit/ec9e6e36ce72719dacd15710ed7e3e3ae7498913">ec9e6e36</a>)</li>
+<li><strong>lib:</strong> fix readme/license fields in oro-npm-account (<a href="https://github.com/orogene/orogene/commit/0842d2bf00e825cebda3fe110a07451ffcea5c72">0842d2bf</a>)</li>
+</ul>
+<p><a name="0.3.27"></a></p>
+<h2 id="0327-2023-05-21"><a class="header" href="#0327-2023-05-21">0.3.27 (2023-05-21)</a></h2>
+<h3 id="features-6"><a class="header" href="#features-6">Features</a></h3>
+<ul>
+<li><strong>xxhash:</strong> switch to xxhash, and always validate extraction (#274) (<a href="https://github.com/orogene/orogene/commit/dfdb378cbd5a7c7aa30012323c43770b933dcb14">dfdb378c</a>)</li>
+</ul>
+<h3 id="bug-fixes-6"><a class="header" href="#bug-fixes-6">Bug Fixes</a></h3>
+<ul>
+<li><strong>reapply:</strong> stop erroring on reapply if node_modules doesn't exist (<a href="https://github.com/orogene/orogene/commit/940333a96f865905b83debc5ea90704652c600ae">940333a9</a>)</li>
+<li><strong>node-maintainer:</strong> return a more useful error message when symlink/junction creation both fail on Windows (#270) (<a href="https://github.com/orogene/orogene/commit/e254c39367bc662209bfb4c4a3b165d2ba849d0b">e254c393</a>)</li>
+</ul>
+<p><a name="0.3.26"></a></p>
+<h2 id="0326-2023-05-19"><a class="header" href="#0326-2023-05-19">0.3.26 (2023-05-19)</a></h2>
+<h3 id="features-7"><a class="header" href="#features-7">Features</a></h3>
+<ul>
+<li><strong>scripts:</strong> run lifecycle scripts in correct dependency order (#263) (<a href="https://github.com/orogene/orogene/commit/00979ae8af581ffeb37786f7da71b7a80022f826">00979ae8</a>)</li>
+<li><strong>error:</strong> Add extra context to all std::io::Error messages (#268) (<a href="https://github.com/orogene/orogene/commit/8749a5262d0b0412e0fbc5f3d8b8d2c4f179c0a3">8749a526</a>)</li>
+</ul>
+<h3 id="bug-fixes-7"><a class="header" href="#bug-fixes-7">Bug Fixes</a></h3>
+<ul>
+<li><strong>resolver:</strong> <code>PackageResolution::satisfies()</code> should use the spec target (<a href="https://github.com/orogene/orogene/commit/4f0fbba75fe04f89383c23a39c354a67fdca1f00">4f0fbba7</a>)</li>
+<li><strong>node-maintainer:</strong> stop failing when root package entry in lockfile is missing package name (<a href="https://github.com/orogene/orogene/commit/b7ac680b161003cc67683597ce65d28119803fc6">b7ac680b</a>)</li>
+</ul>
+<p><a name="0.3.25"></a></p>
+<h2 id="0325-2023-05-10"><a class="header" href="#0325-2023-05-10">0.3.25 (2023-05-10)</a></h2>
+<h3 id="bug-fixes-8"><a class="header" href="#bug-fixes-8">Bug Fixes</a></h3>
+<ul>
+<li><strong>fmt:</strong> cargo fmt --all (<a href="https://github.com/orogene/orogene/commit/887c2576ed5b771d7c863384b980ecaa21abc361">887c2576</a>)</li>
+<li><strong>telemetry:</strong> lower telemetry sample rate (<a href="https://github.com/orogene/orogene/commit/ffbd6a88fbc395ee9a8327b0b2fa09b8619425ab">ffbd6a88</a>)</li>
+</ul>
+<p><a name="0.3.24"></a></p>
+<h2 id="0324-2023-05-10"><a class="header" href="#0324-2023-05-10">0.3.24 (2023-05-10)</a></h2>
+<h3 id="features-8"><a class="header" href="#features-8">Features</a></h3>
+<ul>
+<li><strong>optional:</strong> ignore install script failures for truly optional dependencies (<a href="https://github.com/orogene/orogene/commit/09fcc77dc1ce0c3c0ce29c376c8cf53fe600a576">09fcc77d</a>)</li>
+<li><strong>credentials:</strong> add support for parsing credentials (for later consumption) (<a href="https://github.com/orogene/orogene/commit/59f0a11c0b0e3639359780767b868f6f3c036df1">59f0a11c</a>)</li>
+<li><strong>telemetry:</strong> implement opt-in crash and usage telemetry (#262) (<a href="https://github.com/orogene/orogene/commit/8d5e1f591aedc0bbc2691b4e65b4652147f236d6">8d5e1f59</a>)</li>
+</ul>
+<h3 id="bug-fixes-9"><a class="header" href="#bug-fixes-9">Bug Fixes</a></h3>
+<ul>
+<li><strong>apply:</strong> only update package.json on apply success (<a href="https://github.com/orogene/orogene/commit/1e775ad006a265b7162fbac6ff4f11de039f393c">1e775ad0</a>)</li>
+<li><strong>wasm:</strong> missed a spot again with wasm (<a href="https://github.com/orogene/orogene/commit/c4fcb328e2cd92c2efd391c2ae72a271c126d93c">c4fcb328</a>)</li>
+<li><strong>wasm:</strong> again (<a href="https://github.com/orogene/orogene/commit/b745c5bb76ae238e65bfac8238485d269e96253e">b745c5bb</a>)</li>
+<li><strong>docs:</strong> add --credentials to command docs (<a href="https://github.com/orogene/orogene/commit/24b60124399c0e6b36da4efe156dad3f3b85d4b3">24b60124</a>)</li>
+<li><strong>debug-log:</strong> stop printing ansi codes to debug log (<a href="https://github.com/orogene/orogene/commit/3c1cd69fd8c3dab6cebea45162dab153751c12b4">3c1cd69f</a>)</li>
+<li><strong>bin:</strong> semi-preserve file modes and make binaries executable (#259) (<a href="https://github.com/orogene/orogene/commit/f01ed09d4b24db42e3901feebfc5bbc2dc0f4254">f01ed09d</a>)</li>
+<li><strong>apply:</strong> fix regression where only hoisted linker was used (<a href="https://github.com/orogene/orogene/commit/78f4120254fe21bf788accc60bf35dc3c054628d">78f41202</a>)</li>
+<li><strong>misc:</strong> fix a couple of straggler warnings (<a href="https://github.com/orogene/orogene/commit/594081f40db64624cd0aacf1c165118c6ce14b42">594081f4</a>)</li>
+</ul>
+<h3 id="documentation-2"><a class="header" href="#documentation-2">Documentation</a></h3>
+<ul>
+<li><strong>readme:</strong> improvements to README (<a href="https://github.com/orogene/orogene/commit/7b63b073f3d68135133686c5defe941c8e5637a3">7b63b073</a>)</li>
+</ul>
+<p><a name="0.3.23"></a></p>
+<h2 id="0323-2023-04-18"><a class="header" href="#0323-2023-04-18">0.3.23 (2023-04-18)</a></h2>
+<h3 id="bug-fixes-10"><a class="header" href="#bug-fixes-10">Bug Fixes</a></h3>
+<ul>
+<li><strong>docs:</strong> update docs after <code>--lockfile</code> addition (<a href="https://github.com/orogene/orogene/commit/e1caff41ca41ccef5c993d7ea37b3b9eed26d86d">e1caff41</a>)</li>
+<li><strong>ping:</strong> fix emoji spacing (<a href="https://github.com/orogene/orogene/commit/900383837ab3697dd576f9e078882bf672296e3e">90038383</a>)</li>
+<li><strong>nassun:</strong> try and get rustdoc to show NassunError at the toplevel to play nicer with miette (<a href="https://github.com/orogene/orogene/commit/e5638712bdf9512403102fbda0353e9b171d7a23">e5638712</a>)</li>
+<li><strong>error:</strong> export orogene cmd error enum (<a href="https://github.com/orogene/orogene/commit/b37e1167192aecfbef95556107f75df4dd7dd07b">b37e1167</a>)</li>
+<li><strong>wasm:</strong> get node-maintainer working on wasm again (<a href="https://github.com/orogene/orogene/commit/b1f6bc829dcd7690a238c4d2365f2d83277e3e97">b1f6bc82</a>)</li>
+</ul>
+<h3 id="miscellaneous-tasks"><a class="header" href="#miscellaneous-tasks">Miscellaneous Tasks</a></h3>
+<ul>
+<li><strong>deps:</strong> bump miette to 5.8.0 (<a href="https://github.com/orogene/orogene/commit/e58c256e36e0160f1874260f3fb71516463b4372">e58c256e</a>)</li>
+<li><strong>deps:</strong> bump supports-hyperlinks for more terminal support (<a href="https://github.com/orogene/orogene/commit/be5712e2957db18a11267dc56e7dba099bf3683f">be5712e2</a>)</li>
+</ul>
+<p><a name="0.3.22"></a></p>
+<h2 id="0322-2023-04-18"><a class="header" href="#0322-2023-04-18">0.3.22 (2023-04-18)</a></h2>
+<p>no-op due to release failure. Refer to 0.3.2 for actual release details.</p>
+<p><a name="0.3.21"></a></p>
+<h2 id="0321-2023-04-18"><a class="header" href="#0321-2023-04-18">0.3.21 (2023-04-18)</a></h2>
+<h3 id="bug-fixes-11"><a class="header" href="#bug-fixes-11">Bug Fixes</a></h3>
+<ul>
+<li><strong>release:</strong> update cargo-dist release thing properly (<a href="https://github.com/orogene/orogene/commit/4a204a5148122674fc719677cc848e6bbba01f53">4a204a51</a>)</li>
+</ul>
+<p><a name="0.3.20"></a></p>
+<h2 id="0320-2023-04-18"><a class="header" href="#0320-2023-04-18">0.3.20 (2023-04-18)</a></h2>
+<h3 id="features-9"><a class="header" href="#features-9">Features</a></h3>
+<ul>
+<li><strong>reapply:</strong> add reapply command and refactor apply to be reusable (#237) (<a href="https://github.com/orogene/orogene/commit/bf6b150462e40dc2d0a7f16ecf49130a336e67e3">bf6b1504</a>)</li>
+<li><strong>json:</strong> add module for format-preserving JSON manipulation (<a href="https://github.com/orogene/orogene/commit/3fa23e4602ffc4a8f7038f48b9c7bb40994d94cb">3fa23e46</a>)</li>
+<li><strong>add:</strong> add <code>oro add</code> command for adding new deps (<a href="https://github.com/orogene/orogene/commit/7ed9f777e886163ea9e02fc7dc011980d2c61036">7ed9f777</a>)</li>
+<li><strong>rm:</strong> add oro rm command (<a href="https://github.com/orogene/orogene/commit/ec301bbfbce36c562fbd00419b12261aed5f1e96">ec301bbf</a>)</li>
+<li><strong>git:</strong> support specifying semver ranges for git dependencies (#217) (<a href="https://github.com/orogene/orogene/commit/56e05f5b1417024ac65520d68e261f49ea70ab19">56e05f5b</a>)</li>
+<li><strong>locked:</strong> add --locked mode support (<a href="https://github.com/orogene/orogene/commit/ffce208fd1edff3f1e62093f19e567662ce8e1df">ffce208f</a>)</li>
+<li><strong>docs:</strong> write up a section about adding dependencies + specifiers (<a href="https://github.com/orogene/orogene/commit/e66936c47ad6fd7b4f0b308d0b3cbece63386293">e66936c4</a>)</li>
+<li><strong>errors:</strong> better docs and url(docsrs) for all errors (<a href="https://github.com/orogene/orogene/commit/0629a08076c800f60789fe8f9feb60d176f5c432">0629a080</a>)</li>
+</ul>
+<h3 id="bug-fixes-12"><a class="header" href="#bug-fixes-12">Bug Fixes</a></h3>
+<ul>
+<li><strong>metadata:</strong> add support for boolean deserialization for <code>deprecated</code> tag of version metadata (#235) (<a href="https://github.com/orogene/orogene/commit/0505793ad92d3b9638034eee1943af46f396e9d5">0505793a</a>)</li>
+<li><strong>common:</strong> handle deprecation booleans in registry response (#246) (<a href="https://github.com/orogene/orogene/commit/8ae121963b91fd75c347102621f9c86b2db9fbce">8ae12196</a>)</li>
+<li><strong>resolve:</strong> stop lockfile from clobbering dependencies (#247) (<a href="https://github.com/orogene/orogene/commit/b3af2ddd45335b7d937efa54f1a7110e0d3576cd">b3af2ddd</a>)</li>
+<li><strong>log:</strong> log the 'debug log way written' message as WARN (<a href="https://github.com/orogene/orogene/commit/dbcbe9cc12c471543d3cf84e496a7fb4400651c8">dbcbe9cc</a>)</li>
+<li><strong>rm:</strong> warn/error when something other than a package name is provided (<a href="https://github.com/orogene/orogene/commit/26b0132822f82e92ce5362c3a30e4862e67bfe13">26b01328</a>)</li>
+<li><strong>error:</strong> fix PackageSpecError docs and help not printing (<a href="https://github.com/orogene/orogene/commit/f8e8e27a4205d2fbfdfd2a33123df27c90943d88">f8e8e27a</a>)</li>
+<li><strong>config:</strong> apply config options from subcommands, too (<a href="https://github.com/orogene/orogene/commit/3c31caaca2c22267e7659848a8987297dcd51d61">3c31caac</a>)</li>
+<li><strong>rm:</strong> more random rm fixes (<a href="https://github.com/orogene/orogene/commit/1c7334522a00405a25f117155bb52d50d93d5d9f">1c733452</a>)</li>
+</ul>
+<h3 id="miscellaneous-tasks-1"><a class="header" href="#miscellaneous-tasks-1">Miscellaneous Tasks</a></h3>
+<ul>
+<li><strong>deps:</strong> bump h2 from 0.3.16 to 0.3.17 (#242) (<a href="https://github.com/orogene/orogene/commit/8123013f6c69464ef510a09aa09d9ac33e2db8a8">8123013f</a>)</li>
+</ul>
+<p><a name="0.3.19"></a></p>
+<h2 id="0319-2023-04-10"><a class="header" href="#0319-2023-04-10">0.3.19 (2023-04-10)</a></h2>
+<h3 id="features-10"><a class="header" href="#features-10">Features</a></h3>
+<ul>
+<li><strong>debug:</strong> Include errors in debug log when possible (<a href="https://github.com/orogene/orogene/commit/9551239ee634244dc2fbef86627696614726c0ac">9551239e</a>)</li>
+<li><strong>isolated:</strong> add support for isolated dependency installation (#226) (<a href="https://github.com/orogene/orogene/commit/9da2e1e7231054437fbde2c7f8eaace9c1b67897">9da2e1e7</a>)</li>
+<li><strong>apply:</strong> rename <code>restore</code> to <code>apply</code> (<a href="https://github.com/orogene/orogene/commit/82f7b623b3d657a5e02757c90567acefa9521481">82f7b623</a>)</li>
+</ul>
+<h3 id="bug-fixes-13"><a class="header" href="#bug-fixes-13">Bug Fixes</a></h3>
+<ul>
+<li><strong>binlink:</strong> properly normalize non-object bin names (<a href="https://github.com/orogene/orogene/commit/aea368e92c5d336b4c70d8f6506fb8fcc22b3273">aea368e9</a>)</li>
+<li><strong>resolve:</strong> use PackageSpec::target() for recursive alias support (<a href="https://github.com/orogene/orogene/commit/bd884703dafb32912883a8823a70a64d3fa71ae0">bd884703</a>)</li>
+<li><strong>ci:</strong> how did this even happen (<a href="https://github.com/orogene/orogene/commit/d77a915e4c1d64503ed2b325b93501d7259d4bc0">d77a915e</a>)</li>
+</ul>
+<p><a name="0.3.18"></a></p>
+<h2 id="0318-2023-04-07"><a class="header" href="#0318-2023-04-07">0.3.18 (2023-04-07)</a></h2>
+<h3 id="features-11"><a class="header" href="#features-11">Features</a></h3>
+<ul>
+<li><strong>config:</strong> load options from env, too (<a href="https://github.com/orogene/orogene/commit/ccfa812b54d6f22089369773e2780c48b927d670">ccfa812b</a>)</li>
+<li><strong>docs:</strong> More detailed configuration docs (<a href="https://github.com/orogene/orogene/commit/6165e8083bbbac7ce864ccf329b9adf61be9bda4">6165e808</a>)</li>
+<li><strong>ping:</strong> emojify ping (<a href="https://github.com/orogene/orogene/commit/a66276570dec663c1bec43b681e72e232f10d2b5">a6627657</a>)</li>
+<li><strong>config:</strong> read config file options from <code>options</code> node (<a href="https://github.com/orogene/orogene/commit/41b281eecc4a66275bc0abdfdc1e0afadad195ff">41b281ee</a>)</li>
+<li><strong>docs:</strong> show command aliases in docs (<a href="https://github.com/orogene/orogene/commit/0dc706725f534c48daaae648323f25145b1b34c6">0dc70672</a>)</li>
+<li><strong>config:</strong> add support for nested arrays and maps to kdl configs (<a href="https://github.com/orogene/orogene/commit/f5e71d0c9f83d1a9ef2376bc402d1d78d6e15fbc">f5e71d0c</a>)</li>
+<li><strong>config:</strong> support for specifying scope registries (<a href="https://github.com/orogene/orogene/commit/49c2190e7a40a4b7ca19ac7ddc342f647b96ce63">49c2190e</a>)</li>
+<li><strong>config:</strong> support for arrays, too (<a href="https://github.com/orogene/orogene/commit/ef46e5aa84a3c3ce389a8f45d8441acf09d0c719">ef46e5aa</a>)</li>
+<li><strong>config:</strong> overhaul how scoped registries are provided (<a href="https://github.com/orogene/orogene/commit/31c3ae742988dd0ff0235156ae7b302f3e6a4421">31c3ae74</a>)</li>
+</ul>
+<h3 id="bug-fixes-14"><a class="header" href="#bug-fixes-14">Bug Fixes</a></h3>
+<ul>
+<li><strong>view:</strong> remove stray <code>dbg!</code> (<a href="https://github.com/orogene/orogene/commit/03f7a7ddcf39b6e7afd3bdb11c645dbdd147ef25">03f7a7dd</a>)</li>
+</ul>
+<p><a name="0.3.17"></a></p>
+<h2 id="0317-2023-04-03"><a class="header" href="#0317-2023-04-03">0.3.17 (2023-04-03)</a></h2>
+<h3 id="bug-fixes-15"><a class="header" href="#bug-fixes-15">Bug Fixes</a></h3>
+<ul>
+<li><strong>log:</strong> go back to not displaying targets for terminal logs (<a href="https://github.com/orogene/orogene/commit/5cb06a75613c670fd1bc05bc8226a3223de5fdb7">5cb06a75</a>)</li>
+</ul>
+<h3 id="features-12"><a class="header" href="#features-12">Features</a></h3>
+<ul>
+<li><strong>config:</strong> add support for <code>--no-&lt;conf&gt;</code> and overhaul config fallbacks (<a href="https://github.com/orogene/orogene/commit/868a42b5bb30654b150f3b2dfec3438c8db8b301">868a42b5</a>)</li>
+<li><strong>config:</strong> config files are now kdl-based (<a href="https://github.com/orogene/orogene/commit/09e81bd9260b79f1e7a1d94aef4766d29f0f5582">09e81bd9</a>)</li>
+</ul>
+<p><a name="0.3.16"></a></p>
+<h2 id="0316-2023-04-01"><a class="header" href="#0316-2023-04-01">0.3.16 (2023-04-01)</a></h2>
+<h3 id="bug-fixes-16"><a class="header" href="#bug-fixes-16">Bug Fixes</a></h3>
+<ul>
+<li><strong>deps:</strong> bump deps/miette/etc (<a href="https://github.com/orogene/orogene/commit/b987939ea78902bf63f14f8d6dbd109d20872d35">b987939e</a>)</li>
+<li><strong>node-maintainer:</strong> improve api docs and remove some undesirable APIs in node-maintainer (<a href="https://github.com/orogene/orogene/commit/2dea36c05eeacd5467108e7b7d6ae629723188a0">2dea36c0</a>)</li>
+<li><strong>docs:</strong> update CLI docs (<a href="https://github.com/orogene/orogene/commit/bd0d7fda76a52d77d994c628fecd8b14c515448b">bd0d7fda</a>)</li>
+<li><strong>ci:</strong> add rust-versions and re-enable minimal version checks (<a href="https://github.com/orogene/orogene/commit/b509cc2042884ac373f57d25705a615772ded3d8">b509cc20</a>)</li>
+</ul>
+<h3 id="features-13"><a class="header" href="#features-13">Features</a></h3>
+<ul>
+<li><strong>wasm:</strong> more wasm fixes + expose iteration functionality (#218) (<a href="https://github.com/orogene/orogene/commit/03dce2e92a7f05dd0e0700286f343a9b14e718d7">03dce2e9</a>)</li>
+<li><strong>restore:</strong> allow configuring script concurrency and whether to write lockfiles (<a href="https://github.com/orogene/orogene/commit/a681e64a6cb8d38a9e7396b7f5ec5cc4326906dc">a681e64a</a>)</li>
+<li><strong>config:</strong> have OroLayerConfig obey <code>#[arg(skip)]</code> (<a href="https://github.com/orogene/orogene/commit/fc5f53ae7eed8f78dd08dfb77f4833d97d92612d">fc5f53ae</a>)</li>
+</ul>
+<p><a name="0.3.15"></a></p>
+<h2 id="0315-2023-03-31"><a class="header" href="#0315-2023-03-31">0.3.15 (2023-03-31)</a></h2>
+<h3 id="bug-fixes-17"><a class="header" href="#bug-fixes-17">Bug Fixes</a></h3>
+<ul>
+<li><strong>shim:</strong> fix .cmd shim targets (<a href="https://github.com/orogene/orogene/commit/020d96cf9537f56982c53cfa9768691edf6207d3">020d96cf</a>)</li>
+<li><strong>manifest:</strong> unshadow the actual output of BuildManifest::normalize (#216) (<a href="https://github.com/orogene/orogene/commit/e5c8d4bbb9ee08d1e75f032550ac5eed4522edff">e5c8d4bb</a>)</li>
+</ul>
+<h3 id="features-14"><a class="header" href="#features-14">Features</a></h3>
+<ul>
+<li><strong>manifests:</strong> add a from_manifest method to BuildManifest and do some drive-by docs work (#213) (<a href="https://github.com/orogene/orogene/commit/2e9c4f51008456e34dda7d3be3465702a433180e">2e9c4f51</a>)</li>
+<li><strong>scripts:</strong> run lifecycle scripts (#209) (<a href="https://github.com/orogene/orogene/commit/48392c3e62cdf244a960a3fb1e83cda0f320f198">48392c3e</a>)</li>
+</ul>
+<p><a name="0.3.14"></a></p>
+<h2 id="0314-2023-03-26"><a class="header" href="#0314-2023-03-26">0.3.14 (2023-03-26)</a></h2>
+<h3 id="features-15"><a class="header" href="#features-15">Features</a></h3>
+<ul>
+<li><strong>build:</strong> link bins (#212) (<a href="https://github.com/orogene/orogene/commit/e8ed3ff5a83d56dcb347f2734ac63738ae15bd91">e8ed3ff5</a>)</li>
+</ul>
+<p><a name="0.3.13"></a></p>
+<h2 id="0313-2023-03-25"><a class="header" href="#0313-2023-03-25">0.3.13 (2023-03-25)</a></h2>
+<h3 id="security"><a class="header" href="#security">Security</a></h3>
+<ul>
+<li><strong>deps:</strong> bump openssl from 0.10.45 to 0.10.48 (#211) (<a href="https://github.com/orogene/orogene/commit/e87243c2e22bbbffd8e3d30782c48fe6994c9416">e87243c2</a>)</li>
+</ul>
+<p><a name="0.3.12"></a></p>
+<h2 id="0312-2023-03-25"><a class="header" href="#0312-2023-03-25">0.3.12 (2023-03-25)</a></h2>
+<h3 id="features-16"><a class="header" href="#features-16">Features</a></h3>
+<ul>
+<li><strong>log:</strong> improved logging/output by changing levels and formatting (<a href="https://github.com/orogene/orogene/commit/e1cafd0cce46d989f1ee913a1d18f41c8097162d">e1cafd0c</a>)</li>
+<li><strong>gitinfo:</strong> add a FromStr impl for GitInfo (<a href="https://github.com/orogene/orogene/commit/308d9ab7b08c9d143efe6fd3466b93b67bb58c40">308d9ab7</a>)</li>
+</ul>
+<h3 id="bug-fixes-18"><a class="header" href="#bug-fixes-18">Bug Fixes</a></h3>
+<ul>
+<li><strong>tests:</strong> Nassun baseline tests (#196) (<a href="https://github.com/orogene/orogene/commit/58e768535e86f6b9aef81d92fa8b69a95f0aaf69">58e76853</a>)</li>
+</ul>
+<p><a name="0.3.11"></a></p>
+<h2 id="0311-2023-03-19"><a class="header" href="#0311-2023-03-19">0.3.11 (2023-03-19)</a></h2>
+<p>Most of this release was docs (which are available through <a href="https://orogene.dev/book">the Orogene
+site!</a>), but there's some emoji-related stuff fixed,
+too that might be handy.</p>
+<h3 id="features-17"><a class="header" href="#features-17">Features</a></h3>
+<ul>
+<li><strong>msg:</strong> fasterthanlime is basically the lemonodor of rust, no? (<a href="https://github.com/orogene/orogene/commit/fcc5a2565622317aad5ce4c669813cbeef44a1cf">fcc5a256</a>)</li>
+<li><strong>docs:</strong> initial mdbook setup and hookup to oranda (#205) (<a href="https://github.com/orogene/orogene/commit/b66a66e0567fdb4993a6c03b848ef4d9ab0d4f45">b66a66e0</a>)</li>
+<li><strong>emoji:</strong> add global flag to disable emoji display (<a href="https://github.com/orogene/orogene/commit/bafbe802f3c3014525c79a39a182f0e89b8c6487">bafbe802</a>)</li>
+</ul>
+<h3 id="bug-fixes-19"><a class="header" href="#bug-fixes-19">Bug Fixes</a></h3>
+<ul>
+<li><strong>emoji:</strong> don't print emoji when unicode isn't supported (<a href="https://github.com/orogene/orogene/commit/e8a8af791a9974c7eb29547700d336bbe37b47ce">e8a8af79</a>)</li>
+<li><strong>wasm:</strong> missed a couple of wasm spots after recent changes (<a href="https://github.com/orogene/orogene/commit/0e4d8b030724599172dfc1d3ce0437271fef8336">0e4d8b03</a>)</li>
+<li><strong>git:</strong> use once_cell instead of mutexes for git cache path (<a href="https://github.com/orogene/orogene/commit/5961dfbc03fc93fe458f98057af266b4f2ee240f">5961dfbc</a>)</li>
+</ul>
+<p><a name="0.3.10"></a></p>
+<h2 id="0310-2023-03-13"><a class="header" href="#0310-2023-03-13">0.3.10 (2023-03-13)</a></h2>
+<h3 id="features-18"><a class="header" href="#features-18">Features</a></h3>
+<ul>
+<li><strong>restore:</strong> improvements to restore command, and removal of resolve command (<a href="https://github.com/orogene/orogene/commit/4e9940dd04e632ecbf5c7a1b2068b66638e80824">4e9940dd</a>)</li>
+<li><strong>restore:</strong> print timings in seconds (<a href="https://github.com/orogene/orogene/commit/608d3f599bbaf8591193a917157f243ae81dab16">608d3f59</a>)</li>
+<li><strong>memory:</strong> significantly reduce memory use during resolution (#203) (<a href="https://github.com/orogene/orogene/commit/f7fb85d60a5839b218916d8d54a331f390527716">f7fb85d6</a>)</li>
+<li><strong>hax:</strong> offer hackerish words of encouragement! (<a href="https://github.com/orogene/orogene/commit/cf467da40e2b9daa8762d79a0c96d516b0447388">cf467da4</a>)</li>
+</ul>
+<h3 id="bug-fixes-20"><a class="header" href="#bug-fixes-20">Bug Fixes</a></h3>
+<ul>
+<li><strong>progress:</strong> only show one progress bar at a time (<a href="https://github.com/orogene/orogene/commit/e36356c64c61ccb5b4fd43c9d252578a36855362">e36356c6</a>)</li>
+</ul>
+<p><a name="0.3.9"></a></p>
+<h2 id="039-2023-03-12"><a class="header" href="#039-2023-03-12">0.3.9 (2023-03-12)</a></h2>
+<h3 id="features-19"><a class="header" href="#features-19">Features</a></h3>
+<ul>
+<li><strong>wasm:</strong> get nassun and node-maintainer working well in wasm (#131) (<a href="https://github.com/orogene/orogene/commit/16ad5bae83d15155571464c5dfca1c7de3544057">16ad5bae</a>)</li>
+<li><strong>validate:</strong> optionally validate cache contents during extraction (#197) (<a href="https://github.com/orogene/orogene/commit/0e22a5f44d02423b9d4b49fe88254ae8bd90a699">0e22a5f4</a>)</li>
+<li><strong>extract:</strong> remove existing modules as needed (<a href="https://github.com/orogene/orogene/commit/d3303b007301fb668db3108af6d0ebd6dae7e7bf">d3303b00</a>)</li>
+<li><strong>prune:</strong> check for an prune extraneous packages, and skip extracting valid ones (#200) (<a href="https://github.com/orogene/orogene/commit/544a2c5c3065041f351aeba46506e725eb6a769a">544a2c5c</a>)</li>
+<li><strong>progress:</strong> refactored progress bar out of node-maintainer (#201) (<a href="https://github.com/orogene/orogene/commit/e1908ad6bfa248b82b99fdf3bd75f2f7dff6d9a4">e1908ad6</a>)</li>
+<li><strong>progresss:</strong> add flags to disable progress bars (<a href="https://github.com/orogene/orogene/commit/f988a824a9202080ba7d592be67e04a8c11472ee">f988a824</a>)</li>
+</ul>
+<h3 id="bug-fixes-21"><a class="header" href="#bug-fixes-21">Bug Fixes</a></h3>
+<ul>
+<li><strong>nassun:</strong> use cfg_attr to reduce duplication (<a href="https://github.com/orogene/orogene/commit/f126d5ca0d32d76b35d93e65acda60d86e152852">f126d5ca</a>)</li>
+</ul>
+<p><a name="0.3.8"></a></p>
+<h2 id="038-2023-03-09"><a class="header" href="#038-2023-03-09">0.3.8 (2023-03-09)</a></h2>
+<h3 id="bug-fixes-22"><a class="header" href="#bug-fixes-22">Bug Fixes</a></h3>
+<ul>
+<li><strong>reflink:</strong> move reflink checks up to node-maintainer (#195) (<a href="https://github.com/orogene/orogene/commit/9506edc7456eefb826aaa3850873f615be09136f">9506edc7</a>)</li>
+</ul>
+<h3 id="features-20"><a class="header" href="#features-20">Features</a></h3>
+<ul>
+<li><strong>log:</strong> write verbose trace to a separate debug logfile (#192) (<a href="https://github.com/orogene/orogene/commit/8c995125e9d142547e8eadb712473d0cb09d9b36">8c995125</a>)</li>
+<li><strong>log:</strong> log a bit more detail about lack of reflink support (<a href="https://github.com/orogene/orogene/commit/545dff0c9b82b69a663117ce1bdbb91214682ee2">545dff0c</a>)</li>
+<li><strong>docs:</strong> add initial benchmark tables (<a href="https://github.com/orogene/orogene/commit/2bbd2616ed592486450d134dc4e8208b5de0a0a0">2bbd2616</a>)</li>
+</ul>
+<p><a name="0.3.6"></a></p>
+<h2 id="036-2023-03-07"><a class="header" href="#036-2023-03-07">0.3.6 (2023-03-07)</a></h2>
+<h3 id="features-21"><a class="header" href="#features-21">Features</a></h3>
+<ul>
+<li><strong>cow:</strong> prefer CoW on systems that support it. Also, fall back to copy when hard links fail. (<a href="https://github.com/orogene/orogene/commit/0e29632a84fe21c83dc32ad7111bbef78f2789f0">0e29632a</a>)</li>
+</ul>
+<p><a name="0.3.5"></a></p>
+<h2 id="035-2023-03-06"><a class="header" href="#035-2023-03-06">0.3.5 (2023-03-06)</a></h2>
+<h3 id="bug-fixes-23"><a class="header" href="#bug-fixes-23">Bug Fixes</a></h3>
+<ul>
+<li><strong>tests:</strong> remove debug leftover (#190) (<a href="https://github.com/orogene/orogene/commit/45ab7738c8c0d7c4c223e29aa69bc717faea5f4c">45ab7738</a>)</li>
+<li><strong>extract:</strong> need to rewind NamedTempFile before extraction (<a href="https://github.com/orogene/orogene/commit/eb8c0af5222efb88e236c9d68b720f1a3a42ada4">eb8c0af5</a>)</li>
+</ul>
+<p><a name="0.3.4"></a></p>
+<h2 id="034-2023-03-06"><a class="header" href="#034-2023-03-06">0.3.4 (2023-03-06)</a></h2>
+<h3 id="bug-fixes-24"><a class="header" href="#bug-fixes-24">Bug Fixes</a></h3>
+<ul>
+<li><strong>error:</strong> make IoErrors during extraction less vague (<a href="https://github.com/orogene/orogene/commit/318fd2d288353f22c18fddd8cfa8e9433acc1eb3">318fd2d2</a>)</li>
+</ul>
+<p><a name="0.3.3"></a></p>
+<h2 id="033-2023-03-06"><a class="header" href="#033-2023-03-06">0.3.3 (2023-03-06)</a></h2>
+<h3 id="bug-fixes-25"><a class="header" href="#bug-fixes-25">Bug Fixes</a></h3>
+<ul>
+<li><strong>progress:</strong> extraction should be based on node count (minus root node) (<a href="https://github.com/orogene/orogene/commit/088da2951ac98afeaf98d817cd25557de446c764">088da295</a>)</li>
+<li><strong>extract:</strong> extract_to should only be available on non-wasm (<a href="https://github.com/orogene/orogene/commit/f8792adcde6b55998347d9aa858039775a901614">f8792adc</a>)</li>
+</ul>
+<h3 id="features-22"><a class="header" href="#features-22">Features</a></h3>
+<ul>
+<li><strong>deprecated:</strong> Warn when resolving npm packages marked as <code>deprecated</code> (#184) (<a href="https://github.com/orogene/orogene/commit/45a953b04b8301f4a280be7cd82d6597fe2d40a3">45a953b0</a>)</li>
+<li><strong>maintainer:</strong> export iterator over graph modules (#187) (<a href="https://github.com/orogene/orogene/commit/fa109bf4eb2448a56ffc86ccfae54e4838b77230">fa109bf4</a>)</li>
+<li><strong>maintainer:</strong> s/parallelism/concurrency/g (<a href="https://github.com/orogene/orogene/commit/17e1fb49685aee4ccfce71e0c1ea455d548989d9">17e1fb49</a>)</li>
+<li><strong>modules:</strong> wrap iterator in its own type (<a href="https://github.com/orogene/orogene/commit/ee99bee47ae2d240f9ff904e8f7208860486ad66">ee99bee4</a>)</li>
+<li><strong>extraction:</strong> add support for faster, cached extraction (#191) (<a href="https://github.com/orogene/orogene/commit/5bf0425b56daadfc34ca47c71bedee814913fdc5">5bf0425b</a>)</li>
+</ul>
+<p><a name="0.2.1"></a></p>
+<h2 id="021-2023-02-26"><a class="header" href="#021-2023-02-26">0.2.1 (2023-02-26)</a></h2>
+<p>No changes. Just getting the release system working.</p>
+<p><a name="0.2.0"></a></p>
+<h2 id="020-2023-02-26"><a class="header" href="#020-2023-02-26">0.2.0 (2023-02-26)</a></h2>
+<p>This is an initial &quot;release&quot; mostly to make sure the release workflow is all
+working, and just to get the current prototype out there and available for
+people to poke at.</p>
+<h3 id="features-23"><a class="header" href="#features-23">Features</a></h3>
+<ul>
+<li><strong>cli:</strong> Add resolve &amp; link progress bars (#145) (<a href="https://github.com/orogene/orogene/commit/dd4c6ca2f6ef441903d479bcad36d09c86f28612">dd4c6ca2</a>)</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+    <head>
+        <title>orogene</title>
+        
+            <meta property="og:url" content="https://orogene.dev" />
+        
+        
+            <link rel="icon" href="/favicon.ico" />
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        
+            <meta name="description" content="`node_modules/` package manager and utility toolkit." />
+            <meta property="og:description" content="`node_modules/` package manager and utility toolkit." />
+        
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="orogene" />
+        
+        
+        
+        <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+        <link rel="stylesheet" href="/oranda-v0.4.1.css" />
+        
+        
+    </head>
+    <body>
+        <div class="container">
+            <div class="page-body">
+                
+                    <div class="repo_banner">
+                        <a href="https://github.com/orogene/orogene">
+                            <div class="github-icon" aria-hidden="true"></div>
+                            Check out our GitHub!
+                        </a>
+                    </div>
+                
+
+                <main>
+                    <header>
+                        
+                        <h1 class="title">orogene</h1>
+                        
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+
+            
+                
+                    <li><a href="/./BENCHMARKS/">Benchmarks</a></li>
+                
+                    <li><a href="/./CONTRIBUTING/">Contributing</a></li>
+                
+            
+
+            
+                <li><a href="/artifacts/">Install</a></li>
+            
+
+            
+                <li><a href="/book/">Docs</a></li>
+            
+
+            
+                <li><a href="/funding/">Funding</a></li>
+            
+
+            
+                <li><a href="/changelog/">Changelog</a></li>
+            
+        </ul>
+    </nav>
+
+                    </header>
+
+                    
+<div>
+    <h1>0.3.24 (2023-05-10)</h1>
+    <div class="releases-body">
+        
+        
+        <section class="release ">
+    
+    <div class="release-info">
+        <span class="flex items-center gap-2">
+            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+            v0.3.24
+        </span>
+        <span class="flex items-center gap-2">
+            
+                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+                May 10 2023 at 05:26 UTC
+            
+        </span>
+    </div>
+    <div class="release-body">
+        <h3>Features</h3>
+<ul>
+<li><strong>optional:</strong> ignore install script failures for truly optional dependencies (<a href="https://github.com/orogene/orogene/commit/09fcc77dc1ce0c3c0ce29c376c8cf53fe600a576" rel="noopener noreferrer">09fcc77d</a>)</li>
+<li><strong>credentials:</strong> add support for parsing credentials (for later consumption) (<a href="https://github.com/orogene/orogene/commit/59f0a11c0b0e3639359780767b868f6f3c036df1" rel="noopener noreferrer">59f0a11c</a>)</li>
+<li><strong>telemetry:</strong> implement opt-in crash and usage telemetry (#262) (<a href="https://github.com/orogene/orogene/commit/8d5e1f591aedc0bbc2691b4e65b4652147f236d6" rel="noopener noreferrer">8d5e1f59</a>)</li>
+</ul>
+<h3>Bug Fixes</h3>
+<ul>
+<li><strong>apply:</strong> only update package.json on apply success (<a href="https://github.com/orogene/orogene/commit/1e775ad006a265b7162fbac6ff4f11de039f393c" rel="noopener noreferrer">1e775ad0</a>)</li>
+<li><strong>wasm:</strong> missed a spot again with wasm (<a href="https://github.com/orogene/orogene/commit/c4fcb328e2cd92c2efd391c2ae72a271c126d93c" rel="noopener noreferrer">c4fcb328</a>)</li>
+<li><strong>wasm:</strong> again (<a href="https://github.com/orogene/orogene/commit/b745c5bb76ae238e65bfac8238485d269e96253e" rel="noopener noreferrer">b745c5bb</a>)</li>
+<li><strong>docs:</strong> add --credentials to command docs (<a href="https://github.com/orogene/orogene/commit/24b60124399c0e6b36da4efe156dad3f3b85d4b3" rel="noopener noreferrer">24b60124</a>)</li>
+<li><strong>debug-log:</strong> stop printing ansi codes to debug log (<a href="https://github.com/orogene/orogene/commit/3c1cd69fd8c3dab6cebea45162dab153751c12b4" rel="noopener noreferrer">3c1cd69f</a>)</li>
+<li><strong>bin:</strong> semi-preserve file modes and make binaries executable (#259) (<a href="https://github.com/orogene/orogene/commit/f01ed09d4b24db42e3901feebfc5bbc2dc0f4254" rel="noopener noreferrer">f01ed09d</a>)</li>
+<li><strong>apply:</strong> fix regression where only hoisted linker was used (<a href="https://github.com/orogene/orogene/commit/78f4120254fe21bf788accc60bf35dc3c054628d" rel="noopener noreferrer">78f41202</a>)</li>
+<li><strong>misc:</strong> fix a couple of straggler warnings (<a href="https://github.com/orogene/orogene/commit/594081f40db64624cd0aacf1c165118c6ce14b42" rel="noopener noreferrer">594081f4</a>)</li>
+</ul>
+<h3>Documentation</h3>
+<ul>
+<li><strong>readme:</strong> improvements to README (<a href="https://github.com/orogene/orogene/commit/7b63b073f3d68135133686c5defe941c8e5637a3" rel="noopener noreferrer">7b63b073</a>)</li>
+</ul>
+<p><a rel="noopener noreferrer"></a></p>
+
+    </div>
+</section>
+    </div>
+</div>
+
+                </main>
+            </div>
+
+            <footer>
+                
+                    <a href="https://github.com/orogene/orogene"><div class="github-icon" aria-hidden="true"></div></a>
+                
+                <span>
+                    orogene, Apache-2.0
+                </span>
+            </footer>
+        </div>
+
+        
+        
+
+        
+    </body>
+</html>

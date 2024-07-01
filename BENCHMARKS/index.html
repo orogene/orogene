@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+    <head>
+        <title>orogene</title>
+        
+            <meta property="og:url" content="https://orogene.dev" />
+        
+        
+            <link rel="icon" href="/favicon.ico" />
+        
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        
+            <meta name="description" content="`node_modules/` package manager and utility toolkit." />
+            <meta property="og:description" content="`node_modules/` package manager and utility toolkit." />
+        
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="orogene" />
+        
+        
+        
+        <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+        <link rel="stylesheet" href="/oranda-v0.4.1.css" />
+        
+        
+    </head>
+    <body>
+        <div class="container">
+            <div class="page-body">
+                
+                    <div class="repo_banner">
+                        <a href="https://github.com/orogene/orogene">
+                            <div class="github-icon" aria-hidden="true"></div>
+                            Check out our GitHub!
+                        </a>
+                    </div>
+                
+
+                <main>
+                    <header>
+                        
+                        <h1 class="title">orogene</h1>
+                        
+    <nav class="nav">
+        <ul>
+            <li><a href="/">Home</a></li>
+
+            
+                
+                    <li><a href="/./BENCHMARKS/">Benchmarks</a></li>
+                
+                    <li><a href="/./CONTRIBUTING/">Contributing</a></li>
+                
+            
+
+            
+                <li><a href="/artifacts/">Install</a></li>
+            
+
+            
+                <li><a href="/book/">Docs</a></li>
+            
+
+            
+                <li><a href="/funding/">Funding</a></li>
+            
+
+            
+                <li><a href="/changelog/">Changelog</a></li>
+            
+        </ul>
+    </nav>
+
+                    </header>
+
+                    
+<h1>Benchmarks</h1>
+<p>Even at this early stage, orogene is <strong>very</strong> fast. These benchmarks are
+all on ubuntu linux running under wsl2, with an ext4 filesystem.</p>
+<p>All benchmarks are ordered from fastest to slowest (lower is better):</p>
+<h2>Warm Cache</h2>
+<p>This test shows performance when running off a warm cache, with an
+existing lockfile. This scenario is common in CI scenarios with caching
+enabled, as well as local scenarios where <code>node_modules</code> is wiped out in
+order to "start over" (and potentially when switching branches).</p>
+<p>Of note here is the contrast between the subsecond (!) installation by
+orogene, versus the much more noticeable install times of literally
+everything else.</p>
+<p><img src="/assets/benchmarks-warm-cache.png" alt=""></p>
+<h2>Cold Cache</h2>
+<p>This test shows performance when running off a cold cache, but with an
+existing lockfile. This scenario is common in CI scenarios that don't
+cache the package manager caches between runs, and for initial installs by
+teammates on relatively "clean" machines.</p>
+<p><img src="/assets/benchmarks-cold-cache.png" alt=""></p>
+<h2>Initial Installs</h2>
+<p>This reflects use cases where a lockfile hasn't been generated and caches are
+still cold. While relatively unusual, this can give an idea of what the
+experience is like when adding one or more dependencies, or when regenerating
+lockfiles from scratch.</p>
+<p><img src="/assets/benchmarks-initial-install.png" alt=""></p>
+<h2>Memory Usage</h2>
+<p>Another big advantage of Orogene is significantly lower memory usage
+compared to other package managers, with each scenario below showing the
+peak memory usage (resident set size) for each scenario (collected with
+/usr/bin/time -v):</p>
+<table>
+<thead>
+<tr>
+<th align="left">Package Manager</th>
+<th align="right">no lockfile, no cache</th>
+<th align="right">lockfile, cold cache</th>
+<th align="right">lockfile, warm cache</th>
+<th align="right">existing node_modules</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>orogene</code></td>
+<td align="right">266.8 mb</td>
+<td align="right">155.2 mb</td>
+<td align="right">38.6 mb</td>
+<td align="right">35.5 mb</td>
+</tr>
+<tr>
+<td align="left"><code>bun</code></td>
+<td align="right">2,708.7 mb</td>
+<td align="right">792.1 mb</td>
+<td align="right">34.5 mb</td>
+<td align="right">25.8 mb</td>
+</tr>
+<tr>
+<td align="left"><code>pnpm</code></td>
+<td align="right">950.9 mb</td>
+<td align="right">638.4 mb</td>
+<td align="right">260.1 mb</td>
+<td align="right">168.7 mb</td>
+</tr>
+<tr>
+<td align="left"><code>npm</code></td>
+<td align="right">1,048.9 mb</td>
+<td align="right">448.2 mb</td>
+<td align="right">833.7 mb</td>
+<td align="right">121.7 mb</td>
+</tr>
+<tr>
+<td align="left"><code>yarn</code></td>
+<td align="right">751.1 mb</td>
+<td align="right">334.4 mb</td>
+<td align="right">251.9 mb</td>
+<td align="right">129.3 mb</td>
+</tr>
+</tbody>
+</table>
+<h2>Reproducing Benchmarks</h2>
+<p>The benchmark script has several requirements:</p>
+<ol>
+<li>You must run <code>cargo build --release</code> first.</li>
+<li>You must install <a href="https://github.com/sharkdp/hyperfine" rel="noopener noreferrer"><code>hyperfine</code></a> on
+your system.</li>
+<li>NPM + npx must be installed.</li>
+<li><a href="https://bun.sh/" rel="noopener noreferrer"><code>bun</code></a> must be installed.</li>
+<li>You must do <code>npx pnpm -h</code> and <code>npx yarn -h</code> once before running the script,
+to preload both package managers.</li>
+</ol>
+<p>Once that's done, you can run the benchmarks and regenerate the images using:
+<code>cargo run --example render-benchmarks</code>.</p>
+<h2>Caveat Emptor</h2>
+<p>At the speeds at which orogene operates, these benchmarks can vary widely
+because they depend on the underlying filesystem's performance. For
+example, the gaps might be much smaller on Windows or (sometimes) macOS.
+They may even vary between different filesystems on Linux/FreeBSD. Note
+that orogene uses different installation strategies based on support for
+e.g. reflinking (btrfs, APFS, xfs).</p>
+
+
+                </main>
+            </div>
+
+            <footer>
+                
+                    <a href="https://github.com/orogene/orogene"><div class="github-icon" aria-hidden="true"></div></a>
+                
+                <span>
+                    orogene, Apache-2.0
+                </span>
+            </footer>
+        </div>
+
+        
+        
+
+        
+    </body>
+</html>
