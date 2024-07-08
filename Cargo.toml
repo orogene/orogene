@@ -19,6 +19,9 @@ tag = true
 upgrade-guid = "C5FC7FE8-A6AB-4897-8B26-01220D1C3FAD"
 path-guid = "D7A7057F-9CE2-4FB0-A0CF-1293469361C5"
 
+[features]
+mimalloc = ["dep:mimalloc"]
+
 [dependencies]
 # Workspace Deps
 nassun = { version = "=0.3.34", path = "./crates/nassun" }
@@ -49,6 +52,7 @@ is_ci = { workspace = true }
 is-terminal = { workspace = true }
 kdl = { workspace = true }
 miette = { workspace = true, features = ["fancy"] }
+mimalloc = { workspace = true, optional = true }
 rand = { workspace = true, default_features = false }
 sentry = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -111,6 +115,7 @@ junction = "1.0.0"
 kdl = "5.0.0-alpha.1"
 maplit = "1.0.2"
 miette = "5.8.0"
+mimalloc = "0.1.43"
 mockito = "1.0.0"
 node-semver = "2.1.0"
 nom = "7.1.3"
