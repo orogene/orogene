@@ -154,7 +154,7 @@ impl GitInfo {
                     GitHub => format!("https://codeload.github.com/{owner}/{repo}/tag.gz/{commit}"),
                     Gist => format!("https://codeload.github.com/gist/{repo}/tar.gz/{commit}"),
                     GitLab => format!(
-                        "https://gitlan.com/{owner}/{repo}/repository/archive.tar.gz?ref={commit}"
+                        "https://gitlab.com/{owner}/{repo}/repository/archive.tar.gz?ref={commit}"
                     ),
                     Bitbucket => {
                         format!("https://bitbucket.org/{owner}/{repo}/get/{commit}.tar.gz")
