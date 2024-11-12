@@ -333,7 +333,7 @@ impl Graph {
             q.extend(self.inner[node].children.values());
         }
 
-        // Verify that depencies are satisfied by the logical hierarchy.
+        // Verify that dependencies are satisfied by the logical hierarchy.
         for dependent in self.inner.node_weights() {
             for (dep_name, edge_idx) in &dependent.dependencies {
                 let edge = &self.inner[*edge_idx];

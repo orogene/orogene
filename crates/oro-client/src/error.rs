@@ -38,7 +38,7 @@ pub enum OroClientError {
     #[diagnostic(code(oro_client::request_error), url(docsrs))]
     RequestError(#[from] reqwest::Error),
 
-    /// Recived unexpected response.
+    /// Received unexpected response.
     #[error("Received unexpected response. \n {0}")]
     #[diagnostic(code(oro_client::response_error), url(docsrs))]
     ResponseError(Response),
