@@ -52,7 +52,7 @@ impl NpmFetcher {
 impl NpmFetcher {
     fn _name<'a>(&'a self, spec: &'a PackageSpec) -> &'a str {
         match spec {
-            PackageSpec::Npm { ref name, .. } | PackageSpec::Alias { ref name, .. } => name,
+            PackageSpec::Npm { name, .. } | PackageSpec::Alias { name, .. } => name,
             _ => unreachable!(),
         }
     }
@@ -67,7 +67,7 @@ impl PackageFetcher for NpmFetcher {
 
     async fn corgi_metadata(&self, pkg: &Package) -> Result<CorgiVersionMetadata> {
         let wanted = match pkg.resolved() {
-            PackageResolution::Npm { ref version, .. } => version,
+            PackageResolution::Npm { version, .. } => version,
             _ => unreachable!(),
         };
         let packument = self.corgi_packument(pkg.from(), Path::new("")).await?;
@@ -80,7 +80,7 @@ impl PackageFetcher for NpmFetcher {
 
     async fn metadata(&self, pkg: &Package) -> Result<VersionMetadata> {
         let wanted = match pkg.resolved() {
-            PackageResolution::Npm { ref version, .. } => version,
+            PackageResolution::Npm { version, .. } => version,
             _ => unreachable!(),
         };
         let packument = self.packument(pkg.from(), Path::new("")).await?;
@@ -98,12 +98,7 @@ impl PackageFetcher for NpmFetcher {
     ) -> Result<Arc<CorgiPackument>> {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
-        if let PackageSpec::Npm {
-            ref name,
-            ref scope,
-            ..
-        } = spec.target()
-        {
+        if let PackageSpec::Npm { name, scope, .. } = spec.target() {
             if let Some(packument) = self.corgi_packuments.get(name) {
                 if self.cache_packuments {
                     return Ok(packument.value().clone());
@@ -125,16 +120,11 @@ impl PackageFetcher for NpmFetcher {
         // When fetching the packument itself, we need the _package_ name, not
         // its alias! Hence these shenanigans.
         let pkg = match spec {
-            PackageSpec::Alias { ref spec, .. } => spec,
+            PackageSpec::Alias { spec, .. } => spec,
             pkg @ PackageSpec::Npm { .. } => pkg,
             _ => unreachable!(),
         };
-        if let PackageSpec::Npm {
-            ref name,
-            ref scope,
-            ..
-        } = pkg
-        {
+        if let PackageSpec::Npm { name, scope, .. } = pkg {
             if let Some(packument) = self.packuments.get(name) {
                 if self.cache_packuments {
                     return Ok(packument.value().clone());
@@ -153,7 +143,7 @@ impl PackageFetcher for NpmFetcher {
 
     async fn tarball(&self, pkg: &Package) -> Result<crate::TarballStream> {
         let url = match pkg.resolved() {
-            PackageResolution::Npm { ref tarball, .. } => tarball,
+            PackageResolution::Npm { tarball, .. } => tarball,
             _ => panic!("How did a non-Npm resolution get here?"),
         };
         Ok(self.client.stream_external(url).await?)

@@ -91,7 +91,7 @@ use std::{
     borrow::Cow,
     collections::VecDeque,
     ffi::OsString,
-    panic::PanicInfo,
+    panic::PanicHookInfo,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -634,7 +634,7 @@ impl Orogene {
                 .add_integration(sentry::integrations::backtrace::AttachStacktraceIntegration)
                 .add_integration(
                     sentry::integrations::panic::PanicIntegration::default().add_extractor(
-                        move |info: &PanicInfo| {
+                        move |info: &PanicHookInfo| {
                             if let Some(log_file) = log_file.as_deref() {
                                 sentry::configure_scope(|s| {
                                     s.add_attachment(sentry::protocol::Attachment {

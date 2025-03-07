@@ -272,7 +272,7 @@ impl Package {
         let name = self.name().to_owned();
         async_std::task::spawn_blocking(move || {
             let created = dashmap::DashSet::new();
-            let index = rkyv::check_archived_root::<TarballIndex>(
+            let index = rkyv::from_bytes::<TarballIndex, rkyv::rancor::Error>(
                 entry
                     .raw_metadata
                     .as_ref()
@@ -321,7 +321,7 @@ impl fmt::Debug for Package {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn clean_from_cache(cache: &Path, sri: &Integrity, entry: cacache::Metadata) -> Result<()> {
-    let index = rkyv::check_archived_root::<TarballIndex>(
+    let index = rkyv::from_bytes::<TarballIndex, rkyv::rancor::Error>(
         entry
             .raw_metadata
             .as_ref()

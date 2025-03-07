@@ -27,7 +27,7 @@ pub enum OroClientError {
         source: serde_json::Error,
         url: String,
         #[source_code]
-        json: NamedSource,
+        json: NamedSource<String>,
         #[label("here")]
         err_loc: (usize, usize),
     },

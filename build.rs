@@ -1,3 +1,3 @@
 fn main() {
-    embed_resource::compile("oro-manifest.rc");
+    let _ = embed_resource::compile("oro-manifest.rc", embed_resource::NONE);
 }
