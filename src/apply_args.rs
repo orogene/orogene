@@ -410,7 +410,7 @@ fn hackerish_encouragement() -> &'static str {
         "[Scientifically-proven optimal words of hackerish encouragement here]",
     ];
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     encouragements
         .iter()
         .choose(&mut rng)

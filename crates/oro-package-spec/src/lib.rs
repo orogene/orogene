@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use node_semver::{Range, Version};
 use nom::combinator::all_consuming;
-use nom::Err;
+use nom::{Err, Parser};
 
 pub use crate::error::{PackageSpecError, SpecErrorKind};
 pub use crate::gitinfo::{GitHost, GitInfo};
@@ -58,7 +58,7 @@ impl PackageSpec {
     pub fn target(&self) -> &PackageSpec {
         use PackageSpec::*;
         match self {
-            Alias { ref spec, .. } => {
+            Alias { spec, .. } => {
                 if spec.is_alias() {
                     spec.target()
                 } else {
@@ -88,11 +88,11 @@ impl PackageSpec {
         match self {
             Dir { path } => format!("{}", path.display()),
             Git(info) => format!("{info}"),
-            Npm { ref requested, .. } => requested
+            Npm { requested, .. } => requested
                 .as_ref()
                 .map(|r| r.to_string())
                 .unwrap_or_else(|| "*".to_string()),
-            Alias { ref spec, .. } => {
+            Alias { spec, .. } => {
                 format!(
                     "{}{}",
                     if let Npm { .. } = **spec { "npm:" } else { "" },
@@ -118,9 +118,7 @@ impl fmt::Display for PackageSpec {
             Dir { path } => write!(f, "{}", path.display()),
             Git(info) => write!(f, "{info}"),
             Npm {
-                ref name,
-                ref requested,
-                ..
+                name, requested, ..
             } => {
                 write!(f, "{name}")?;
                 if let Some(req) = requested {
@@ -128,7 +126,7 @@ impl fmt::Display for PackageSpec {
                 }
                 Ok(())
             }
-            Alias { ref name, ref spec } => {
+            Alias { name, spec } => {
                 write!(f, "{name}@")?;
                 if let Npm { .. } = **spec {
                     write!(f, "npm:")?;
@@ -155,7 +153,7 @@ where
     I: AsRef<str>,
 {
     let input = input.as_ref();
-    match all_consuming(package::package_spec)(input) {
+    match all_consuming(package::package_spec).parse(input) {
         Ok((_, arg)) => Ok(arg),
         Err(err) => Err(match err {
             Err::Error(e) | Err::Failure(e) => PackageSpecError {

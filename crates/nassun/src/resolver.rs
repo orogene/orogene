@@ -148,7 +148,7 @@ impl PackageResolver {
         use PackageSpec::*;
         let spec = wanted.target();
 
-        if let Dir { ref path } = spec {
+        if let Dir { path } = spec {
             let p = self.base_dir.join(path);
             return Ok(PackageResolution::Dir {
                 name: name.into(),
@@ -175,7 +175,7 @@ impl PackageResolver {
 
         let mut target: Option<&SemVerVersion> = match spec {
             Npm {
-                requested: Some(VersionSpec::Version(ref version)),
+                requested: Some(VersionSpec::Version(version)),
                 ..
             } => Some(version),
             Npm {
@@ -216,7 +216,7 @@ impl PackageResolver {
 
         if target.is_none() {
             if let Npm {
-                requested: Some(VersionSpec::Range(ref range)),
+                requested: Some(VersionSpec::Range(range)),
                 ..
             } = spec
             {

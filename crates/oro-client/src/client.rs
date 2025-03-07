@@ -1,9 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, sync::Arc};
-
 #[cfg(not(target_arch = "wasm32"))]
-use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache};
+use http_cache_reqwest::{CACacheManager, Cache, CacheMode, HttpCache, HttpCacheOptions};
 #[cfg(target_arch = "wasm32")]
 use reqwest::Client;
 #[cfg(not(target_arch = "wasm32"))]
@@ -171,9 +170,15 @@ impl OroClientBuilder {
             client_builder = client_builder.with(Cache(HttpCache {
                 mode: CacheMode::Default,
                 manager: CACacheManager {
-                    path: cache_loc.to_string_lossy().into(),
+                    path: cache_loc.to_string_lossy().to_string().into(),
                 },
-                options: None,
+                options: HttpCacheOptions {
+                    cache_options: None,
+                    cache_key: None,
+                    cache_mode_fn: None,
+                    cache_bust: None,
+                    cache_status_headers: false,
+                },
             }));
         }
 

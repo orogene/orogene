@@ -4,7 +4,7 @@ use nom::bytes::complete::{tag_no_case as tag, take_till1, take_while};
 use nom::combinator::{cut, map, map_res, opt, peek, rest};
 use nom::error::context;
 use nom::sequence::{preceded, terminated};
-use nom::IResult;
+use nom::{IResult, Parser};
 use url::Url;
 
 use crate::error::SpecParseError;
@@ -16,14 +16,15 @@ pub(crate) fn git_spec(input: &str) -> IResult<&str, PackageSpec, SpecParseError
     context(
         "git package",
         map(alt((git_shorthand, git_url, git_scp)), PackageSpec::Git),
-    )(input)
+    )
+    .parse(input)
 }
 
 /// `git-shorthand := [ hosted-git-prefix ] not('/')+ '/' repo`
 fn git_shorthand(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
-    let (input, maybe_host) = opt(hosted_git_prefix)(input)?;
-    let (input, owner) = map_res(take_till1(|c| c == '/'), util::no_url_encode)(input)?;
-    let (input, repo) = preceded(tag("/"), take_while(|c| c != '#'))(input)?;
+    let (input, maybe_host) = opt(hosted_git_prefix).parse(input)?;
+    let (input, owner) = map_res(take_till1(|c| c == '/'), util::no_url_encode).parse(input)?;
+    let (input, repo) = preceded(tag("/"), take_while(|c| c != '#')).parse(input)?;
     let (input, (committish, semver)) = committish(input)?;
     Ok((
         input,
@@ -31,7 +32,7 @@ fn git_shorthand(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
             host: maybe_host.unwrap_or(GitHost::GitHub),
             owner: owner.into(),
             repo: repo.into(),
-            committish: committish.map(String::from),
+            committish,
             semver,
             requested: None,
         },
@@ -46,7 +47,8 @@ fn hosted_git_prefix(input: &str) -> IResult<&str, GitHost, SpecParseError<&str>
             tag(":"),
         ),
         |host: &str| host.parse(),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn committish(input: &str) -> IResult<&str, (Option<String>, Option<Range>), SpecParseError<&str>> {
@@ -58,7 +60,8 @@ fn committish(input: &str) -> IResult<&str, (Option<String>, Option<Range>), Spe
             }),
             map(map_res(rest, util::no_url_encode), |com| (Some(com), None)),
         )),
-    ))(input)?;
+    ))
+    .parse(input)?;
     Ok((
         input,
         if let Some((maybe_comm, maybe_semver)) = hash {
@@ -70,7 +73,7 @@ fn committish(input: &str) -> IResult<&str, (Option<String>, Option<Range>), Spe
 }
 
 fn semver_range(input: &str) -> IResult<&str, Range, SpecParseError<&str>> {
-    let (input, range) = map_res(take_till1(|_| false), Range::parse)(input)?;
+    let (input, range) = map_res(take_till1(|_| false), Range::parse).parse(input)?;
     Ok((input, range))
 }
 
@@ -78,7 +81,8 @@ fn git_url(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
     let (input, url) = preceded(
         alt((tag("git+"), peek(tag("git://")))),
         map_res(take_till1(|c| c == '#'), Url::parse),
-    )(input)?;
+    )
+    .parse(input)?;
     let (input, (committish, semver)) = committish(input)?;
     match url.host_str() {
         Some(host @ "github.com")
@@ -134,10 +138,10 @@ fn git_url(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
 }
 
 fn git_scp(input: &str) -> IResult<&str, GitInfo, SpecParseError<&str>> {
-    let (input, _) = preceded(opt(tag("git+")), tag("ssh://"))(input)?;
-    let (input, username) = opt(terminated(take_till1(|c| c == '@'), tag("@")))(input)?;
+    let (input, _) = preceded(opt(tag("git+")), tag("ssh://")).parse(input)?;
+    let (input, username) = opt(terminated(take_till1(|c| c == '@'), tag("@"))).parse(input)?;
     let (input, host) = take_till1(|c| c == ':' || c == '#')(input)?;
-    let (input, path) = opt(preceded(tag(":"), take_till1(|c| c == '#')))(input)?;
+    let (input, path) = opt(preceded(tag(":"), take_till1(|c| c == '#'))).parse(input)?;
     let (input, (committish, semver)) = committish(input)?;
     let mut raw = String::new();
     if let Some(username) = username {

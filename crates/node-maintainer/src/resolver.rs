@@ -191,7 +191,7 @@ impl<'a> Resolver<'a> {
             if let Some(packages) = package_stream.next().await {
                 for res in packages {
                     let (package, spec) = res?;
-                    let deps = fetches.lock().await.remove(&spec);
+                    let deps = fetches.lock().await.shift_remove(&spec);
 
                     if let Some(deps) = deps {
                         in_flight -= deps.len();

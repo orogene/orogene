@@ -1,4 +1,4 @@
-use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 
 use crate::error::{SpecErrorKind, SpecParseError};
 
