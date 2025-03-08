@@ -1,6 +1,6 @@
 use futures::{
-    stream::{StreamExt, TryStreamExt},
     AsyncRead,
+    stream::{StreamExt, TryStreamExt},
 };
 use url::Url;
 

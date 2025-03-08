@@ -125,7 +125,9 @@ pub enum NodeMaintainerError {
     #[diagnostic(
         code(node_maintainer::junctions_not_supported),
         url(docsrs),
-        help("The isolated linker requires your Windows user to either be able to create symlinks, which requires Administrator privileges, or create junctions, which require an NTFS filesystem, among other things. If you see this message, you might consider switching to the 'hoisted' linker instead.")
+        help(
+            "The isolated linker requires your Windows user to either be able to create symlinks, which requires Administrator privileges, or create junctions, which require an NTFS filesystem, among other things. If you see this message, you might consider switching to the 'hoisted' linker instead."
+        )
     )]
     JunctionsNotSupported(
         std::path::PathBuf,
@@ -190,7 +192,9 @@ pub enum NodeMaintainerError {
     /// lockfile and get this error without any modifications to package.json,
     /// please [report this as a
     /// bug](https://github.com/orogene/orogene/issues/new).
-    #[error("Locked file was requested, but a new dependency tree was resolved that would cause changes to the lockfile. The contents of `package.json` may have changed since the last time the lockfile was updated.")]
+    #[error(
+        "Locked file was requested, but a new dependency tree was resolved that would cause changes to the lockfile. The contents of `package.json` may have changed since the last time the lockfile was updated."
+    )]
     #[diagnostic(
         code(node_maintainer::lockfile_mismatch),
         url(docsrs),

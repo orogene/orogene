@@ -29,13 +29,13 @@ use ssri::{Integrity, IntegrityChecker};
 #[cfg(not(target_arch = "wasm32"))]
 use tempfile::NamedTempFile;
 
+use crate::TarballStream;
 use crate::entries::{Entries, Entry};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::IoContext;
 use crate::error::{NassunError, Result};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::package::ExtractMode;
-use crate::TarballStream;
 
 #[cfg(not(target_arch = "wasm32"))]
 const MAX_IN_MEMORY_TARBALL_SIZE: usize = 1024 * 1024 * 5;

@@ -4,7 +4,7 @@ use std::{collections::HashSet, ffi::OsString, path::PathBuf};
 
 pub use clap::{ArgMatches, Command};
 pub use config::Config as OroConfig;
-use config::{builder::DefaultState, ConfigBuilder, Environment, File, ValueKind};
+use config::{ConfigBuilder, Environment, File, ValueKind, builder::DefaultState};
 use kdl_source::KdlFormat;
 use miette::Result;
 

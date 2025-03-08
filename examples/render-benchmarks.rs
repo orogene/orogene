@@ -6,7 +6,7 @@ use std::{
 
 use backon::{BlockingRetryable, ConstantBuilder};
 use miette::{IntoDiagnostic, Result};
-use resvg::usvg_text_layout::{fontdb, TreeTextToPath};
+use resvg::usvg_text_layout::{TreeTextToPath, fontdb};
 use serde::Deserialize;
 
 fn main() -> Result<()> {
@@ -38,7 +38,12 @@ fn main() -> Result<()> {
     )?;
 
     render_to_png(
-        &plot_benchmark("Resolution + Cold Cache Comparison", &exec_benchmark("rm -rf node_modules pm-cache ~/.bun/install/cache yarn.lock package-lock.kdl package-lock.json bun.lockb pnpm-lock.yaml")?)?,
+        &plot_benchmark(
+            "Resolution + Cold Cache Comparison",
+            &exec_benchmark(
+                "rm -rf node_modules pm-cache ~/.bun/install/cache yarn.lock package-lock.kdl package-lock.json bun.lockb pnpm-lock.yaml",
+            )?,
+        )?,
         &root.join("assets").join("benchmarks-initial-install.png"),
         &fontdb,
     )?;

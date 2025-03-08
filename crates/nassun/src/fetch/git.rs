@@ -11,8 +11,8 @@ use oro_package_spec::{GitInfo, PackageSpec};
 use url::Url;
 
 use crate::error::{NassunError, Result};
-use crate::fetch::dir::DirFetcher;
 use crate::fetch::PackageFetcher;
+use crate::fetch::dir::DirFetcher;
 use crate::package::Package;
 use crate::resolver::PackageResolution;
 use crate::tarball::Tarball;

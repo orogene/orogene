@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicUsize;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 
 use dashmap::DashSet;
 use futures::lock::Mutex;
@@ -98,7 +98,10 @@ impl HoistedLinker {
                 }
             }
 
-            tracing::debug!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
+            tracing::debug!(
+                "No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.",
+                start.elapsed().as_micros() / 1000
+            );
 
             // TODO: get an accurate count here?
             return Ok(0);

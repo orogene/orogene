@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use kdl::{KdlDocument, KdlNode};
-use nassun::{client::Nassun, package::Package, PackageResolution};
+use nassun::{PackageResolution, client::Nassun, package::Package};
 use node_semver::Version;
 use oro_common::CorgiManifest;
 use oro_package_spec::PackageSpec;
@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use ssri::Integrity;
 use unicase::UniCase;
 
-use crate::{error::NodeMaintainerError, graph::DepType, IntoKdl};
+use crate::{IntoKdl, error::NodeMaintainerError, graph::DepType};
 
 /// A representation of a resolved lockfile.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -247,7 +247,9 @@ impl LockfileNode {
             .and_then(|i| i.as_string())
             .map(|i| i.parse())
             .transpose()
-            .map_err(|e| NodeMaintainerError::KdlLockfileIntegrityParseError(Box::new(node.clone()), e))?;
+            .map_err(|e| {
+                NodeMaintainerError::KdlLockfileIntegrityParseError(Box::new(node.clone()), e)
+            })?;
         let version = children
             .get_arg("version")
             .and_then(|val| val.as_string())

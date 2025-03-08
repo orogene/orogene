@@ -9,7 +9,7 @@ use std::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use futures::{lock::Mutex, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt, lock::Mutex};
 #[cfg(not(target_arch = "wasm32"))]
 use hoisted::HoistedLinker;
 #[cfg(not(target_arch = "wasm32"))]
@@ -23,8 +23,8 @@ use petgraph::stable_graph::NodeIndex;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::{
-    error::IoContext, graph::Graph, Lockfile, NodeMaintainerError, ProgressHandler, PruneProgress,
-    ScriptLineHandler, ScriptStartHandler,
+    Lockfile, NodeMaintainerError, ProgressHandler, PruneProgress, ScriptLineHandler,
+    ScriptStartHandler, error::IoContext, graph::Graph,
 };
 
 #[cfg(not(target_arch = "wasm32"))]

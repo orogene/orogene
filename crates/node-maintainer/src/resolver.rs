@@ -9,22 +9,22 @@ use async_std::sync::Mutex;
 use colored::Colorize;
 use futures::{StreamExt, TryFutureExt};
 use indexmap::IndexMap;
+use nassun::PackageSpec;
 use nassun::client::Nassun;
 use nassun::package::Package;
-use nassun::PackageSpec;
 use oro_common::{CorgiManifest, CorgiVersionMetadata};
+use petgraph::Direction;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
-use petgraph::Direction;
 use unicase::UniCase;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::META_FILE_NAME;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::error::IoContext;
 use crate::error::NodeMaintainerError;
 use crate::graph::{DepType, Edge, Graph, Node};
 use crate::maintainer::{ProgressAdded, ProgressHandler};
-#[cfg(not(target_arch = "wasm32"))]
-use crate::META_FILE_NAME;
 use crate::{Lockfile, LockfileNode};
 
 #[derive(Debug, Clone)]

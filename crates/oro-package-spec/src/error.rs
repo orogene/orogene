@@ -13,7 +13,9 @@ use url::ParseError as UrlParseError;
 #[diagnostic(
     code(package_spec::no_parse),
     url(docsrs),
-    help("The syntax for package specifiers is documented here: https://orogene.dev/book/guide/node_modules.html#specifier-syntax")
+    help(
+        "The syntax for package specifiers is documented here: https://orogene.dev/book/guide/node_modules.html#specifier-syntax"
+    )
 )]
 pub struct PackageSpecError {
     pub input: String,
@@ -58,7 +60,9 @@ pub enum SpecErrorKind {
     InvalidCharacters(String),
     #[error("Drive letters on Windows can only be alphabetical. Got `{0}`.")]
     InvalidDriveLetter(char),
-    #[error("Invalid git host `{0}`. Only github:, gitlab:, gist:, and bitbucket: are supported in shorthands.")]
+    #[error(
+        "Invalid git host `{0}`. Only github:, gitlab:, gist:, and bitbucket: are supported in shorthands."
+    )]
     InvalidGitHost(String),
     #[error(transparent)]
     SemverParseError(SemverError),

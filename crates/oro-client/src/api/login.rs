@@ -1,8 +1,8 @@
 use crate::notify::Notify;
 use crate::{OroClient, OroClientError};
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
-use reqwest::header::{HeaderMap, WWW_AUTHENTICATE};
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use reqwest::StatusCode;
+use reqwest::header::{HeaderMap, WWW_AUTHENTICATE};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;

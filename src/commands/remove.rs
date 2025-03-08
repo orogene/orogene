@@ -5,9 +5,9 @@ use nassun::PackageSpec;
 use oro_common::CorgiManifest;
 use oro_pretty_json::Formatted;
 
+use crate::OroError;
 use crate::apply_args::ApplyArgs;
 use crate::commands::OroCommand;
-use crate::OroError;
 
 /// Removes one or more dependencies from the target package.
 #[derive(Debug, Args)]
@@ -38,7 +38,9 @@ impl OroCommand for RemoveCmd {
             }) = name.parse()
             {
                 if &spec_name != name {
-                    tracing::warn!("Ignoring version specifier in `{name}`. Arguments to `oro remove` should only be package names. Proceeding with `{spec_name}` instead.");
+                    tracing::warn!(
+                        "Ignoring version specifier in `{name}`. Arguments to `oro remove` should only be package names. Proceeding with `{spec_name}` instead."
+                    );
                 }
                 count += self.remove_from_manifest(&mut manifest, &spec_name);
             } else {
@@ -49,7 +51,9 @@ impl OroCommand for RemoveCmd {
         if self.apply.locked {
             // NOTE: we force locked to be false here, because it doesn't make
             // sense to run this command in locked mode.
-            tracing::info!("Ignoring --locked option. It doesn't make sense to run this command in locked mode.");
+            tracing::info!(
+                "Ignoring --locked option. It doesn't make sense to run this command in locked mode."
+            );
             self.apply.locked = false;
         }
 
