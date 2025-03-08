@@ -11,6 +11,9 @@ repository.workspace = true
 homepage.workspace = true
 rust-version.workspace = true
 
+[features]
+experimental-simdjson = ["dep:simd-json"]
+
 [dependencies]
 oro-common = { version = "=0.3.34", path = "../oro-common" }
 oro-client = { version = "=0.3.34", path = "../oro-client" }
@@ -31,6 +34,7 @@ node-semver = { workspace = true }
 once_cell = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+simd-json = { workspace = true, features = ["serde_impl", "known-key"], optional = true }
 ssri = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
