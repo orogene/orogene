@@ -2,8 +2,8 @@ use crate::error::OroNpmAccountError;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, Password};
 use open::that as open;
-use oro_client::login::{AuthType, DoneURLResponse, LoginCouchResponse, LoginOptions, Token};
 use oro_client::OroClient;
+use oro_client::login::{AuthType, DoneURLResponse, LoginCouchResponse, LoginOptions, Token};
 use url::Url;
 
 pub async fn login(

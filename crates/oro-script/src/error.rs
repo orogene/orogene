@@ -35,7 +35,9 @@ pub enum OroScriptError {
     /// means something went wrong while putting the variable back together.
     /// For more details on what may have happened, refer to the error
     /// message.
-    #[error("Failed to join new contents of PATH variable while trying to add a `node_modules/.bin` entry to the PATH.")]
+    #[error(
+        "Failed to join new contents of PATH variable while trying to add a `node_modules/.bin` entry to the PATH."
+    )]
     #[diagnostic(code(oro_script::join_path_error), url(docsrs))]
     JoinPathError(#[from] std::env::JoinPathsError),
 

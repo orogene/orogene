@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use reqwest::{header::HeaderValue, Request, Response};
+use reqwest::{Request, Response, header::HeaderValue};
 use reqwest_middleware::{Middleware, Next, Result};
 use url::Url;
 

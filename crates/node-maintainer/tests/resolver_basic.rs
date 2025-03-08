@@ -6,8 +6,8 @@ use node_maintainer::NodeMaintainer;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use wiremock::{
-    matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
+    matchers::{method, path},
 };
 
 #[async_std::test]

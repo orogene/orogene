@@ -98,7 +98,9 @@ impl OroCommand for AddCmd {
         if self.apply.locked {
             // NOTE: we force locked to be false here, because it doesn't make
             // sense to run this command in locked mode.
-            tracing::info!("Ignoring --locked option. It doesn't make sense to run this command in locked mode.");
+            tracing::info!(
+                "Ignoring --locked option. It doesn't make sense to run this command in locked mode."
+            );
             self.apply.locked = false;
         }
 

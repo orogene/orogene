@@ -2,19 +2,19 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
     path::{Path, PathBuf},
     sync::{
-        atomic::{self, AtomicUsize},
         Arc,
+        atomic::{self, AtomicUsize},
     },
 };
 
 use dashmap::DashSet;
-use futures::{lock::Mutex, StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt, lock::Mutex};
 use nassun::ExtractMode;
 use oro_common::BuildManifest;
-use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
+use petgraph::{Direction, stable_graph::NodeIndex, visit::EdgeRef};
 use ssri::Integrity;
 
-use crate::{error::IoContext, graph::Graph, NodeMaintainerError, META_FILE_NAME, STORE_DIR_NAME};
+use crate::{META_FILE_NAME, NodeMaintainerError, STORE_DIR_NAME, error::IoContext, graph::Graph};
 
 use super::LinkerOptions;
 
@@ -94,7 +94,10 @@ impl IsolatedLinker {
                 }
             }
 
-            tracing::debug!("No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.", start.elapsed().as_micros() / 1000);
+            tracing::debug!(
+                "No metadata file found in node_modules/. Pruned entire node_modules/ directory in {}ms.",
+                start.elapsed().as_micros() / 1000
+            );
 
             // TODO: get an accurate count here?
             return Ok(0);

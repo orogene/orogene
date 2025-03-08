@@ -7,14 +7,14 @@ use std::{
 
 use indexmap::IndexMap;
 use kdl::KdlDocument;
-use nassun::{package::Package, PackageResolution, PackageSpec};
+use nassun::{PackageResolution, PackageSpec, package::Package};
 use oro_common::CorgiManifest;
-use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
 #[cfg(not(target_arch = "wasm32"))]
 use petgraph::Direction;
+use petgraph::stable_graph::{EdgeIndex, NodeIndex, StableGraph};
 use unicase::UniCase;
 
-use crate::{error::NodeMaintainerError, Lockfile, LockfileNode};
+use crate::{Lockfile, LockfileNode, error::NodeMaintainerError};
 
 #[cfg(debug_assertions)]
 use NodeMaintainerError::GraphValidationError;

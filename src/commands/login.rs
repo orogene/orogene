@@ -1,12 +1,12 @@
 use crate::client_args::ClientArgs;
 use crate::commands::OroCommand;
 use async_trait::async_trait;
-use clap::{clap_derive::ValueEnum, Args};
+use clap::{Args, clap_derive::ValueEnum};
 use directories::ProjectDirs;
 use kdl::KdlDocument;
 use miette::{IntoDiagnostic, Result};
-use oro_client::login::{AuthType, LoginOptions};
 use oro_client::OroClientBuilder;
+use oro_client::login::{AuthType, LoginOptions};
 use oro_npm_account::config::{self, Credentials};
 use oro_npm_account::login::login;
 use std::path::PathBuf;

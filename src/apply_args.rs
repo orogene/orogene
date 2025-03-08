@@ -386,11 +386,7 @@ impl ApplyArgs {
     }
 
     fn maybe_emoji(&self, emoji: &'static str) -> &'static str {
-        if self.emoji {
-            emoji
-        } else {
-            ""
-        }
+        if self.emoji { emoji } else { "" }
     }
 }
 

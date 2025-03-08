@@ -97,7 +97,7 @@ use std::{
 
 use async_trait::async_trait;
 use clap::{Args, Command, CommandFactory, FromArgMatches as _, Parser, Subcommand};
-use dialoguer::{theme::ColorfulTheme, Confirm};
+use dialoguer::{Confirm, theme::ColorfulTheme};
 use directories::ProjectDirs;
 use is_terminal::IsTerminal;
 use kdl::{KdlDocument, KdlNode, KdlValue};
@@ -106,10 +106,10 @@ use oro_config::{OroConfig, OroConfigLayerExt, OroConfigOptions};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{
+    EnvFilter,
     filter::{Directive, LevelFilter, Targets},
     fmt,
     prelude::*,
-    EnvFilter,
 };
 use url::Url;
 
