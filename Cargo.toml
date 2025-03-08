@@ -75,7 +75,7 @@ homepage = "https://orogene.dev"
 rust-version = "1.85"
 
 [features]
-default = ["error-reporting", "mimalloc", "experimental-simdjson"]
+default = ["error-reporting"]
 mimalloc = ["dep:mimalloc"]
 error-reporting = ["sentry"]
 experimental-simdjson = ["nassun/experimental-simdjson"]
@@ -207,7 +207,7 @@ name = "oro"
 path = "src/main.rs"
 
 [profile.release]
-lto = "thin"
+lto = "fat"
 opt-level = 3
 # strip = true
 # debug = false
