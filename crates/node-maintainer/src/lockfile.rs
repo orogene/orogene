@@ -240,14 +240,14 @@ impl LockfileNode {
             path.last()
                 .cloned()
                 // TODO: add a miette span here
-                .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(node.clone()))?
+                .ok_or_else(|| NodeMaintainerError::KdlLockMissingName(Box::new(node.clone())))?
         };
         let integrity = children
             .get_arg("integrity")
             .and_then(|i| i.as_string())
             .map(|i| i.parse())
             .transpose()
-            .map_err(|e| NodeMaintainerError::KdlLockfileIntegrityParseError(node.clone(), e))?;
+            .map_err(|e| NodeMaintainerError::KdlLockfileIntegrityParseError(Box::new(node.clone()), e))?;
         let version = children
             .get_arg("version")
             .and_then(|val| val.as_string())

@@ -41,12 +41,12 @@ pub enum NodeMaintainerError {
     /// Failed to parse an integrity value while loading lockfile.
     #[error("Failed to parse an integrity value while loading lockfile node:\n{0}")]
     #[diagnostic(code(node_maintainer::kdl::integrity_parse_error), url(docsrs))]
-    KdlLockfileIntegrityParseError(KdlNode, #[source] ssri::Error),
+    KdlLockfileIntegrityParseError(Box<KdlNode>, #[source] ssri::Error),
 
     /// Missing package node name.
     #[error("Missing package node name:\n{0}")]
     #[diagnostic(code(node_maintainer::kdl::missing_node_name), url(docsrs))]
-    KdlLockMissingName(KdlNode),
+    KdlLockMissingName(Box<KdlNode>),
 
     /// Missing package node name.
     #[error("Missing package name:\n{0:#?}")]
