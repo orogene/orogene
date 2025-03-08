@@ -198,8 +198,7 @@ impl PackageResolver {
             && tag_version.is_some()
             && packument
                 .versions
-                .get(tag_version.as_ref().unwrap())
-                .is_some()
+                .contains_key(tag_version.as_ref().unwrap())
             && match spec {
                 PackageSpec::Npm {
                     requested: None, ..

@@ -48,7 +48,7 @@ pub(crate) struct Resolver<'a> {
     pub(crate) on_resolve_progress: Option<ProgressHandler>,
 }
 
-impl<'a> Resolver<'a> {
+impl Resolver<'_> {
     pub(crate) async fn run_resolver(
         mut self,
         lockfile: Option<Lockfile>,

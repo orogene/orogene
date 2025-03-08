@@ -6,8 +6,8 @@ pub trait IntoKdl: IntoKdlSealed {}
 
 impl IntoKdl for KdlDocument {}
 impl IntoKdl for String {}
-impl<'a> IntoKdl for &'a str {}
-impl<'a> IntoKdl for &'a String {}
+impl IntoKdl for & str {}
+impl IntoKdl for & String {}
 
 impl IntoKdlSealed for KdlDocument {
     fn into_kdl(self) -> Result<KdlDocument, NodeMaintainerError> {
@@ -21,13 +21,13 @@ impl IntoKdlSealed for String {
     }
 }
 
-impl<'a> IntoKdlSealed for &'a str {
+impl IntoKdlSealed for & str {
     fn into_kdl(self) -> Result<KdlDocument, NodeMaintainerError> {
         Ok(self.parse()?)
     }
 }
 
-impl<'a> IntoKdlSealed for &'a String {
+impl IntoKdlSealed for & String {
     fn into_kdl(self) -> Result<KdlDocument, NodeMaintainerError> {
         Ok(self.parse()?)
     }
