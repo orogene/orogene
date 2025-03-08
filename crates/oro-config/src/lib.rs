@@ -195,9 +195,13 @@ mod tests {
     #[test]
     fn env_configs() -> Result<()> {
         let dir = tempdir().into_diagnostic()?;
-        env::set_var("ORO_CONFIG_STORE", dir.path().display().to_string());
+        unsafe {
+            env::set_var("ORO_CONFIG_STORE", dir.path().display().to_string());
+        }
         let config = OroConfigOptions::new().global(false).load()?;
-        env::remove_var("ORO_CONFIG_STORE");
+        unsafe {
+            env::remove_var("ORO_CONFIG_STORE");
+        }
         assert_eq!(
             config.get_string("store").into_diagnostic()?,
             dir.path().display().to_string()

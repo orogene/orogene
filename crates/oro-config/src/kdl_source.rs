@@ -44,9 +44,9 @@ impl FileStoredFormat for KdlFormat {
 fn value_kind(value: &KdlValue) -> ValueKind {
     if let Some(str) = value.as_string() {
         ValueKind::String(str.into())
-    } else if let Some(num) = value.as_i64() {
-        ValueKind::I64(num)
-    } else if let Some(float) = value.as_f64() {
+    } else if let Some(num) = value.as_integer() {
+        ValueKind::I128(num)
+    } else if let Some(float) = value.as_float() {
         ValueKind::Float(float)
     } else if let Some(boolean) = value.as_bool() {
         ValueKind::Boolean(boolean)

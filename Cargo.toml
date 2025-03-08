@@ -116,7 +116,7 @@ humansize = "1.1.0"
 insta = "1.42.2"
 js-sys = "0.3.77"
 junction = "1.2.0"
-kdl = { git = "https://github.com/elide-tools/kdl-rs.git", rev = "b76df4f16ce805798e6d513a6daedf97f6d28e5d" }
+kdl = "6.3.4"
 maplit = "1.0.2"
 miette = "7.5.0"
 mimalloc = "0.1.43"
