@@ -610,7 +610,7 @@ impl Orogene {
         if let Some(dsn) = self
             .sentry_dsn
             .as_deref()
-            .or_else(|| option_env!("OROGENE_SENTRY_DSN"))
+            .or(option_env!("OROGENE_SENTRY_DSN"))
         {
             let ret = sentry::init(
                 sentry::ClientOptions {

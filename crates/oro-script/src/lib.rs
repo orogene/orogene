@@ -21,7 +21,7 @@ pub struct OroScript<'a> {
     workspace_path: Option<PathBuf>,
 }
 
-impl<'a> OroScript<'a> {
+impl OroScript<'_> {
     pub fn new(package_path: impl AsRef<Path>, event: impl AsRef<str>) -> Result<Self> {
         let package_path = package_path.as_ref();
         let package_path = dunce::canonicalize(package_path).io_context(|| format!("Failed to canonicalize package path at {} while preparing to run a package script.", package_path.display()))?;

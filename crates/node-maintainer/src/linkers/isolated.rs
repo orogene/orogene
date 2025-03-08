@@ -105,13 +105,12 @@ impl IsolatedLinker {
         let expected_mut = &mut expected;
         let store_ref = &store;
         // Clean out individual node_modules within
-        let indices = graph.inner.node_indices().map(move |idx| {
+        let indices = graph.inner.node_indices().inspect(move |&idx| {
             if idx != graph.root {
                 let pkg_store_dir = store_ref.join(package_dir_name(graph, idx));
 
                 expected_mut.insert(pkg_store_dir);
             }
-            idx
         });
 
         let prefix_ref = &prefix;
@@ -572,7 +571,7 @@ impl IsolatedLinker {
         let node_path = store_ref
             .join(package_dir_name(graph, node))
             .join("node_modules")
-            .join(&graph[node].name.to_string());
+            .join(graph[node].name.to_string());
         let build_mani = BuildManifest::from_path(node_path.join("package.json")).map_err(|e| {
             NodeMaintainerError::BuildManifestReadError(node_path.join("package.json"), e)
         })?;
@@ -584,7 +583,7 @@ impl IsolatedLinker {
                 store_ref
                     .join(package_dir_name(graph, edge.source()))
                     .join("node_modules")
-                    .join(&dep_node.name.to_string())
+                    .join(dep_node.name.to_string())
             };
             let dep_bin_dir = dep_store_dir.join("node_modules").join(".bin");
             for (name, path) in &build_mani.bin {
