@@ -6,7 +6,7 @@ use std::{
 
 use backon::{BlockingRetryable, ConstantBuilder};
 use miette::{IntoDiagnostic, Result};
-use resvg::usvg_text_layout::{TreeTextToPath, fontdb};
+use resvg::usvg::{TreeParsing, TreeTextToPath, fontdb};
 use serde::Deserialize;
 
 fn main() -> Result<()> {
@@ -146,7 +146,7 @@ fn plot_benchmark(heading: &str, results: &BenchmarkResults) -> Result<String> {
 fn render_to_png(data: &str, path: &Path, fontdb: &fontdb::Database) -> Result<()> {
     let mut tree = resvg::usvg::Tree::from_str(data, &Default::default()).into_diagnostic()?;
     tree.convert_text(fontdb);
-    let fit_to = resvg::usvg::FitTo::Width(1600);
+    let fit_to = resvg::FitTo::Width(1600);
     let size = fit_to
         .fit_to(tree.size.to_screen_size())
         .ok_or_else(|| miette::miette!("failed to fit to screen size"))?;
@@ -166,11 +166,11 @@ fn render_to_png(data: &str, path: &Path, fontdb: &fontdb::Database) -> Result<(
 fn load_fonts() -> fontdb::Database {
     let mut fontdb = fontdb::Database::new();
     fontdb.load_system_fonts();
-    fontdb.set_serif_family("Times New Roman");
-    fontdb.set_sans_serif_family("Arial");
+    fontdb.set_serif_family("FreeSerif");
+    fontdb.set_sans_serif_family("Noto Sans");
     fontdb.set_cursive_family("Comic Sans MS");
     fontdb.set_fantasy_family("Impact");
-    fontdb.set_monospace_family("Courier New");
+    fontdb.set_monospace_family("Ubuntu Mono");
 
     fontdb
 }
