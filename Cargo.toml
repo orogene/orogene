@@ -81,6 +81,9 @@ rust-version = "1.85"
 default = ["error-reporting"]
 error-reporting = ["sentry"]
 
+[features]
+experimental-simdjson = ["nassun/experimental-simdjson"]
+
 [workspace.dependencies]
 anyhow = "1.0.96"
 async-compression = "0.4.12"
@@ -144,6 +147,7 @@ sentry = "0.36.0"
 serde = "1.0.218"
 serde_json = "1.0.139"
 serde-wasm-bindgen = "0.6.5"
+simd-json = "0.14.3"
 ssri = "9.2.0"
 supports-unicode = "3.0.0"
 syn = "2.0.98"
