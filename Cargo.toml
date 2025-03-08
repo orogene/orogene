@@ -19,9 +19,6 @@ tag = true
 upgrade-guid = "C5FC7FE8-A6AB-4897-8B26-01220D1C3FAD"
 path-guid = "D7A7057F-9CE2-4FB0-A0CF-1293469361C5"
 
-[features]
-mimalloc = ["dep:mimalloc"]
-
 [dependencies]
 # Workspace Deps
 nassun = { version = "=0.3.34", path = "./crates/nassun" }
@@ -78,10 +75,9 @@ homepage = "https://orogene.dev"
 rust-version = "1.85"
 
 [features]
-default = ["error-reporting"]
+default = ["error-reporting", "mimalloc", "experimental-simdjson"]
+mimalloc = ["dep:mimalloc"]
 error-reporting = ["sentry"]
-
-[features]
 experimental-simdjson = ["nassun/experimental-simdjson"]
 
 [workspace.dependencies]
