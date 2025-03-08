@@ -90,6 +90,12 @@ pub enum NassunError {
     #[diagnostic(code(nassun::serde), url(docsrs))]
     SerdeError(#[from] serde_json::Error),
 
+    /// A generic serde error, via JSON SIMD.
+    #[cfg(feature = "experimental-simdjson")]
+    #[error(transparent)]
+    #[diagnostic(code(nassun::serde), url(docsrs))]
+    SerdeSimdError(#[from] simd_json::Error),
+
     /// Failed to parse a URL.
     #[error(transparent)]
     #[diagnostic(code(nassun::bad_url), url(docsrs))]

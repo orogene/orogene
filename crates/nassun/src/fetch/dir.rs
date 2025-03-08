@@ -27,7 +27,7 @@ impl DirFetcher {
 }
 
 impl DirFetcher {
-    #[cfg(not(feature = "experimental-simd-json"))]
+    #[cfg(not(feature = "experimental-simdjson"))]
     pub(crate) async fn corgi_manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
         let json = async_std::fs::read(&pkg_path)
@@ -38,7 +38,7 @@ impl DirFetcher {
         Ok(Manifest::Corgi(Box::new(pkgjson)))
     }
 
-    #[cfg(not(feature = "experimental-simd-json"))]
+    #[cfg(not(feature = "experimental-simdjson"))]
     pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
         let json = async_std::fs::read(&pkg_path)
@@ -49,7 +49,7 @@ impl DirFetcher {
         Ok(Manifest::FullFat(Box::new(pkgjson)))
     }
 
-    #[cfg(feature = "experimental-simd-json")]
+    #[cfg(feature = "experimental-simdjson")]
     pub(crate) async fn corgi_manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
         let mut json = async_std::fs::read(&pkg_path)
@@ -60,7 +60,7 @@ impl DirFetcher {
         Ok(Manifest::Corgi(Box::new(pkgjson)))
     }
 
-    #[cfg(feature = "experimental-simd-json")]
+    #[cfg(feature = "experimental-simdjson")]
     pub(crate) async fn manifest(&self, path: &Path) -> Result<Manifest> {
         let pkg_path = path.join("package.json");
         let mut json = async_std::fs::read(&pkg_path)
